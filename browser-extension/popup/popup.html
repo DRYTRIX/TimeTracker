@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TimeTracker</title>
+    <link rel="stylesheet" href="../styles/tokens.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="popup" id="popup">
+      <header class="pop-head">
+        <div class="app-id">
+          <span class="glyph" id="glyph"></span>
+          <strong>TimeTracker</strong>
+        </div>
+        <div class="head-right">
+          <span class="conn" id="conn" hidden>
+            <span class="dot"></span>
+            <span id="conn-text">Connected</span>
+          </span>
+          <button type="button" class="iconbtn" id="btn-settings" aria-label="Settings" title="Settings"></button>
+        </div>
+      </header>
+
+      <div id="message" class="toast hidden" role="status"></div>
+
+      <div id="setup" class="card setup hidden">
+        <span class="glyph glyph-lg" id="setup-glyph"></span>
+        <strong>Connect TimeTracker</strong>
+        <p class="muted" id="setup-text">
+          Sign in to your TimeTracker server to start and stop timers from the toolbar.
+        </p>
+        <button type="button" class="cta" id="btn-open-settings">Open Settings</button>
+      </div>
+
+      <div id="main" class="hidden">
+        <div class="seg" role="tablist" aria-label="Popup sections">
+          <button type="button" role="tab" id="tab-timer" aria-controls="panel-timer" aria-selected="true" class="is-active">Timer</button>
+          <button type="button" role="tab" id="tab-insights" aria-controls="panel-insights" aria-selected="false">Insights</button>
+          <button type="button" role="tab" id="tab-recents" aria-controls="panel-recents" aria-selected="false">Recents</button>
+        </div>
+
+        <!-- ── Timer tab ─────────────────────────────── -->
+        <section id="panel-timer" role="tabpanel" aria-labelledby="tab-timer" class="panel">
+          <!-- Idle: pick something to track -->
+          <div id="view-idle" class="stack">
+            <div class="field search-wrap">
+              <span class="field-icon" id="search-icon"></span>
+              <input type="text" id="search-input" placeholder="Search project or client"
+                     autocomplete="off" spellcheck="false" aria-label="Search project or client" />
+              <kbd id="search-kbd">/</kbd>
+              <div id="search-results" class="results hidden" role="listbox" aria-label="Search results"></div>
+            </div>
+
+            <div id="chips">
+              <div class="chiprow" id="recent-chiprow" hidden>
+                <span class="chiprow-label">Recent</span>
+                <div class="chiprow" id="recent-chips"></div>
+              </div>
+              <div class="chiprow" id="fav-chiprow" hidden>
+                <span class="chiprow-label">Favorites</span>
+                <div class="chiprow" id="fav-chips"></div>
+              </div>
+            </div>
+
+            <div id="selection" class="card sel hidden">
+              <div class="sel-main">
+                <span class="pdot big" id="sel-dot"></span>
+                <div class="sel-txt">
+                  <strong id="sel-project"></strong>
+                  <span id="sel-client"></span>
+                </div>
+                <button type="button" class="iconbtn" id="sel-clear" aria-label="Clear selection"></button>
+              </div>
+              <button type="button" class="sel-row" id="sel-task" aria-haspopup="listbox">
+                <span>Task</span>
+                <span class="sel-val" id="sel-task-name">None</span>
+                <span class="sel-chevron" id="sel-task-chevron"></span>
+              </button>
+              <div id="task-menu" class="task-menu hidden" role="listbox" aria-label="Choose task"></div>
+              <input type="text" id="notes" class="note" placeholder="Add a note…" maxlength="500"
+                     aria-label="Notes" autocomplete="off" />
+              <div class="chiprow note-sugg" id="note-sugg" hidden>
+                <span class="chiprow-label">From recent notes</span>
+                <div class="chiprow" id="note-sugg-chips"></div>
+              </div>
+            </div>
+
+            <button type="button" class="cta" id="btn-start" disabled></button>
+            <p class="hint"><kbd>/</kbd> focus search &nbsp;·&nbsp; <kbd>Enter</kbd> start</p>
+          </div>
+
+          <!-- Running: live clock + controls -->
+          <div id="view-running" class="stack hidden">
+            <div class="card run" id="run-card">
+              <div class="run-head">
+                <span class="pdot big" id="run-dot"></span>
+                <div class="sel-txt">
+                  <strong id="run-project"></strong>
+                  <span id="run-sub"></span>
+                </div>
+                <span class="rec" id="rec-badge"><span class="rec-dot"></span>Rec</span>
+              </div>
+              <div class="clock" id="clock">0:00</div>
+              <div class="run-meta" id="run-meta"></div>
+            </div>
+            <div class="run-actions">
+              <button type="button" class="btn btn-sec" id="btn-pause"></button>
+              <button type="button" class="btn btn-danger" id="btn-stop"></button>
+            </div>
+            <div id="quick-note">
+              <button type="button" class="btn btn-ghost" id="btn-note"></button>
+              <div id="note-editor" class="field note-editor hidden">
+                <span class="field-icon" id="note-icon"></span>
+                <input type="text" id="quick-note-input" placeholder="Update note…" maxlength="500"
+                       aria-label="Quick note" autocomplete="off" />
+                <button type="button" class="iconbtn" id="quick-note-save" aria-label="Save note"></button>
+              </div>
+            </div>
+            <p class="hint">Toolbar badge keeps counting while you work</p>
+          </div>
+        </section>
+
+        <!-- ── Insights tab ──────────────────────────── -->
+        <section id="panel-insights" role="tabpanel" aria-labelledby="tab-insights" class="panel" hidden>
+          <div class="stats">
+            <div class="stat"><span class="stat-v" id="stat-today">–</span><span class="stat-l">Today</span></div>
+            <div class="stat"><span class="stat-v" id="stat-billable">–</span><span class="stat-l">Billable</span></div>
+            <div class="stat"><span class="stat-v" id="stat-entries">–</span><span class="stat-l">Entries</span></div>
+          </div>
+          <div class="card block" id="goal-card" hidden>
+            <div class="block-head"><span>This week</span><strong id="goal-label"></strong></div>
+            <div class="track"><div class="fill" id="goal-fill" style="width:0%"></div></div>
+            <p class="block-sub" id="goal-sub"></p>
+          </div>
+          <div class="card block">
+            <div class="block-head"><span>Last 7 days</span><span class="block-sub2" id="week-avg"></span></div>
+            <div id="week-chart" class="week-chart"></div>
+          </div>
+          <div class="card block">
+            <div class="block-head"><span>Top projects</span><span class="block-sub2">last 7 days</span></div>
+            <div id="top-projects"><p class="block-sub">Loading…</p></div>
+          </div>
+        </section>
+
+        <!-- ── Recents tab ───────────────────────────── -->
+        <section id="panel-recents" role="tabpanel" aria-labelledby="tab-recents" class="panel" hidden>
+          <div id="recents-list"><p class="block-sub">Loading…</p></div>
+          <div class="recents-foot">
+            <button type="button" class="link" id="btn-history">Open full history<span id="history-arrow"></span></button>
+          </div>
+        </section>
+      </div>
+    </div>
+    <script src="../dev/mock.js"></script>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

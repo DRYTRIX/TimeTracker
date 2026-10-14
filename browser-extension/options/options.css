@@ -1,0 +1,209 @@
+/* Options page layout — uses shared tokens from styles/tokens.css */
+
+.page {
+  max-width: 640px;
+  margin: 40px auto 48px;
+  padding: 0 20px;
+}
+
+.opt-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.opt-sub {
+  margin: 5px 0 24px;
+  font-size: 13.5px;
+  color: var(--tt-ink-2);
+}
+
+.opt-h {
+  margin: 20px 6px 7px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tt-ink-2);
+}
+
+.opt-card {
+  background: var(--tt-surface);
+  border: 1px solid var(--tt-line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.form-card {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-card .cta,
+.form-card .btn {
+  width: 100%;
+  flex: none;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 2px;
+  color: var(--tt-ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--tt-line);
+}
+
+.opt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 50px;
+}
+
+.opt-row + .opt-row {
+  border-top: 1px solid var(--tt-line);
+}
+
+.opt-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.opt-row-t {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.opt-row-s {
+  font-size: 11.5px;
+  color: var(--tt-ink-2);
+  margin-top: 1px;
+}
+
+.opt-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex: none;
+}
+
+.opt-val {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--tt-ink-2);
+  white-space: nowrap;
+}
+
+.opt-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--tt-green);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.opt-ok svg {
+  width: 14px;
+  height: 14px;
+}
+
+.opt-managed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--tt-ink-2);
+  background: var(--tt-surface-2);
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.opt-managed svg {
+  width: 11px;
+  height: 11px;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: none;
+  background: linear-gradient(135deg, #5e5ce6, #bf5af2);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.opt-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tt-red);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.opt-danger svg {
+  width: 15px;
+  height: 15px;
+}
+
+.opt-foot {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--tt-ink-3);
+}
+
+kbd,
+.kbd {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  background: var(--tt-surface-2);
+  color: var(--tt-ink-2);
+  border-radius: 6px;
+  padding: 3px 7px;
+  box-shadow: inset 0 -1px 0 var(--tt-line);
+  white-space: nowrap;
+}
+
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  background: var(--tt-surface-2);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+.hint.left {
+  text-align: left;
+  margin: -4px 2px 0;
+}
+
+#disconnect-btn {
+  cursor: pointer;
+}

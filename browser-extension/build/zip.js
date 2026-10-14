@@ -19,13 +19,13 @@ const DIST = join(ROOT, 'dist');
 const INCLUDE = [
   'manifest.json',
   'background.js',
-  'popup.html',
-  'popup.js',
-  'popup.css',
-  'options.html',
-  'options.js',
+  'popup',
+  'options',
+  'styles',
   'lib/api.js',
-  'lib/picker.js',
+  'lib/format.js',
+  'lib/icons.js',
+  'dev/mock.js',
   'icons',
 ];
 

@@ -13,6 +13,7 @@ const ALARM_NAME = 'tt-timer-poll';
 const IDLE_STOP_ALARM = 'tt-idle-stop';
 const IDLE_NOTIFICATION_ID = 'tt-still-working';
 const NEEDS_REVIEW_NOTIFICATION_ID = 'tt-needs-review';
+const CONTEXT_MENU_ID = 'tt-track-selection';
 const POLL_MINUTES = 0.25; // ~15s
 const GRACE_MINUTES = 5;
 const DEFAULT_IDLE_TIMEOUT_MINUTES = 30;
@@ -51,15 +52,17 @@ function setIdleUi() {
   chrome.action.setTitle({ title: 'TimeTracker — idle' });
 }
 
-function setRunningUi(timer) {
+async function setRunningUi(timer) {
   const seconds = elapsedSecondsFromTimer(timer);
-  const badge = formatBadgeText(seconds);
-  chrome.action.setBadgeBackgroundColor({ color: '#DC2626' });
-  chrome.action.setBadgeText({ text: badge });
+  const paused = Boolean(timer.paused_at);
+  const { badge_show_elapsed = true } = await chrome.storage.local.get('badge_show_elapsed');
+  chrome.action.setBadgeBackgroundColor({ color: paused ? '#8E8E93' : '#DC2626' });
+  chrome.action.setBadgeText({ text: badge_show_elapsed ? formatBadgeText(seconds) : '' });
   chrome.action.setIcon({ path: RUNNING_ICONS });
   const project = timer.project || 'Timer';
   const task = timer.task ? ` / ${timer.task}` : '';
-  chrome.action.setTitle({ title: `TimeTracker — ${project}${task}` });
+  const state = paused ? ' — paused' : '';
+  chrome.action.setTitle({ title: `TimeTracker — ${project}${task}${state}` });
 }
 
 function clampIdleTimeoutMinutes(value) {
@@ -219,7 +222,7 @@ async function refreshTimerStatus({ force = false } = {}) {
     await chrome.storage.local.set({ idle_unanswered_action: idleUnansweredAction });
 
     if (active) {
-      setRunningUi(status.timer);
+      await setRunningUi(status.timer);
       // Server already marked this timer idle (#722) — enter the same grace
       // window the local chrome.idle path uses, even if OS idle has not fired.
       const idleNotified = Boolean(
@@ -295,9 +298,121 @@ async function ensureAlarm() {
   }
 }
 
+/** Small transient notification for command/context-menu feedback. */
+async function localNotify(title, message) {
+  try {
+    await chrome.notifications.create('tt-feedback', {
+      type: 'basic',
+      iconUrl: 'icons/idle-128.png',
+      title,
+      message,
+      priority: 1,
+    });
+  } catch (error) {
+    console.debug('[TimeTracker] notify failed:', error);
+  }
+}
+
+/** Resolve an authenticated ApiClient, or notify the user why we can't. */
+async function getClientOrNotify() {
+  const { server_url, api_token, logged_out } = await chrome.storage.local.get([
+    'server_url',
+    'api_token',
+    'logged_out',
+  ]);
+  if (!server_url || !api_token || logged_out) {
+    await localNotify('TimeTracker', 'Connect the extension in Settings first.');
+    return null;
+  }
+  return new ApiClient(server_url, api_token);
+}
+
+/**
+ * Global shortcut: toggle the timer. Starts the most recently used project
+ * (remembered by the popup) or stops the running timer.
+ */
+async function toggleTimerFromCommand() {
+  const client = await getClientOrNotify();
+  if (!client) return;
+  const { last_project } = await chrome.storage.local.get('last_project');
+  try {
+    const status = await client.getTimerStatus();
+    if (status?.active && status?.timer) {
+      await client.stopTimer();
+      await localNotify('Timer stopped', status.timer.project || '');
+    } else if (last_project?.project_id) {
+      const result = await client.startTimer({
+        projectId: last_project.project_id,
+        taskId: last_project.task_id || null,
+      });
+      await localNotify('Timer started', result?.timer?.project || last_project.name || '');
+    } else {
+      await localNotify(
+        'No recent project',
+        'Start a timer once from the popup — its project will be remembered.'
+      );
+    }
+  } catch (error) {
+    await localNotify('TimeTracker', error.message || 'Command failed.');
+  }
+  await refreshTimerStatus({ force: true });
+}
+
+/** Context menu: track the selected text as the note of a new timer. */
+async function trackSelection(selectionText) {
+  const client = await getClientOrNotify();
+  if (!client) return;
+  const note = String(selectionText || '').slice(0, 500);
+  try {
+    const status = await client.getTimerStatus();
+    if (status?.active && status?.timer) {
+      await localNotify('Already tracking', 'Stop the current timer before starting a new one.');
+      return;
+    }
+    const { last_project } = await chrome.storage.local.get('last_project');
+    if (!last_project?.project_id) {
+      await localNotify(
+        'No recent project',
+        'Start a timer once from the popup — its project will be remembered.'
+      );
+      return;
+    }
+    const result = await client.startTimer({
+      projectId: last_project.project_id,
+      taskId: last_project.task_id || null,
+      notes: note,
+    });
+    await localNotify('Timer started', result?.timer?.project || last_project.name || '');
+  } catch (error) {
+    await localNotify('TimeTracker', error.message || 'Could not start timer.');
+  }
+  await refreshTimerStatus({ force: true });
+}
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command === 'toggle-timer') {
+    void toggleTimerFromCommand();
+  }
+});
+
+chrome.contextMenus.onClicked.addListener((info) => {
+  if (info.menuItemId === CONTEXT_MENU_ID) {
+    void trackSelection(info.selectionText);
+  }
+});
+
 chrome.runtime.onInstalled.addListener(() => {
   ensureAlarm();
   refreshTimerStatus({ force: true });
+  try {
+    chrome.contextMenus.create({
+      id: CONTEXT_MENU_ID,
+      title: 'Track time: “%s”',
+      contexts: ['selection'],
+    });
+  } catch (error) {
+    console.debug('[TimeTracker] context menu failed:', error);
+  }
 });
 
 chrome.runtime.onStartup.addListener(() => {

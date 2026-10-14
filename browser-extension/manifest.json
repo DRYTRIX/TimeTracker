@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "TimeTracker Timer",
-  "version": "5.18.2",
+  "version": "5.19.0",
   "description": "Start and stop TimeTracker timers from your browser toolbar.",
   "permissions": [
     "storage",
     "alarms",
     "idle",
-    "notifications"
+    "notifications",
+    "contextMenus"
   ],
   "optional_host_permissions": [
     "http://*/*",
@@ -18,7 +19,7 @@
     "type": "module"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_title": "TimeTracker",
     "default_icon": {
       "16": "icons/idle-16.png",
@@ -27,8 +28,24 @@
       "128": "icons/idle-128.png"
     }
   },
+  "commands": {
+    "toggle-timer": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Start or stop the TimeTracker timer"
+    },
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+T",
+        "mac": "Command+Shift+T"
+      },
+      "description": "Open TimeTracker popup"
+    }
+  },
   "options_ui": {
-    "page": "options.html",
+    "page": "options/options.html",
     "open_in_tab": true
   },
   "icons": {

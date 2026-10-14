@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TimeTracker Settings</title>
+    <link rel="stylesheet" href="../styles/tokens.css" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="page">
+      <h1 class="opt-title">Settings</h1>
+      <p class="opt-sub">TimeTracker extension · same account and tokens as desktop and mobile</p>
+
+      <div id="message" class="toast hidden" role="status"></div>
+
+      <!-- ── connect (shown when not signed in) ────────── -->
+      <div id="connect-card" class="opt-card form-card">
+        <div class="field">
+          <input type="url" id="server-url" placeholder="https://timetracker.example.com"
+                 autocomplete="url" aria-label="Server URL" />
+        </div>
+        <p class="hint left">Base URL only — no path. Example: <code>http://localhost:8080</code></p>
+
+        <div class="field">
+          <input type="text" id="username" placeholder="Username" autocomplete="username" aria-label="Username" />
+        </div>
+        <div class="field">
+          <input type="password" id="password" placeholder="Password" autocomplete="current-password" aria-label="Password" />
+        </div>
+        <div id="twofa-row" class="field hidden">
+          <input type="text" id="twofa-code" placeholder="2FA code" inputmode="numeric"
+                 autocomplete="one-time-code" aria-label="Two-factor code" maxlength="8" />
+        </div>
+        <button type="button" class="cta" id="login-btn">Connect</button>
+
+        <div class="divider"><span>or paste an API token</span></div>
+        <p class="hint left">
+          For OIDC-only installs, or a token from Admin → API tokens. Must start with <code>tt_</code>.
+        </p>
+        <div class="field">
+          <input type="password" id="api-token" placeholder="tt_…" autocomplete="off" aria-label="API token" />
+        </div>
+        <button type="button" class="btn btn-sec" id="token-btn">Save token</button>
+      </div>
+
+      <!-- ── connection status (signed in) ─────────────── -->
+      <div id="connection" class="hidden">
+        <div class="opt-h">Connection</div>
+        <div class="opt-card">
+          <div class="opt-row">
+            <div class="opt-row-main">
+              <div class="opt-row-t" id="server-value">—</div>
+              <div class="opt-row-s">Server</div>
+            </div>
+            <span class="opt-ok" id="server-status"><span id="server-status-icon"></span><span id="server-status-text">Connected</span></span>
+          </div>
+          <div class="opt-row">
+            <span class="avatar" id="avatar">·</span>
+            <div class="opt-row-main">
+              <div class="opt-row-t" id="user-name">—</div>
+              <div class="opt-row-s" id="user-sub">—</div>
+            </div>
+          </div>
+          <div class="opt-row">
+            <div class="opt-row-main">
+              <div class="opt-row-t">Two-factor authentication</div>
+              <div class="opt-row-s">Code requested at sign-in when your account requires it</div>
+            </div>
+            <div class="opt-side"><span class="opt-val">Server-managed</span></div>
+          </div>
+        </div>
+
+        <div class="opt-h">Timer</div>
+        <div class="opt-card">
+          <div class="opt-row">
+            <div class="opt-row-main">
+              <div class="opt-row-t">Show elapsed time in toolbar badge</div>
+              <div class="opt-row-s">Live mm:ss while a timer is running</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="badge-toggle" checked aria-label="Show elapsed time in toolbar badge" />
+              <span class="knob"></span>
+            </label>
+          </div>
+          <div class="opt-row">
+            <div class="opt-row-main">
+              <div class="opt-row-t">Idle prompt</div>
+              <div class="opt-row-s">Server asks “Still working?” when input activity stops</div>
+            </div>
+            <div class="opt-side">
+              <span class="opt-val" id="idle-value">—</span>
+              <span class="opt-managed" id="managed-1"><span class="managed-icon"></span>Managed by server</span>
+            </div>
+          </div>
+          <div class="opt-row">
+            <div class="opt-row-main">
+              <div class="opt-row-t">Unanswered idle checks</div>
+              <div class="opt-row-s">What happens when the prompt goes unanswered</div>
+            </div>
+            <div class="opt-side">
+              <span class="opt-val" id="idle-action-value">—</span>
+              <span class="opt-managed" id="managed-2"><span class="managed-icon"></span>Managed by server</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="opt-h">Keyboard</div>
+      <div class="opt-card">
+        <div class="opt-row">
+          <div class="opt-row-main"><div class="opt-row-t">Start / stop timer</div></div>
+          <span class="kbd" id="shortcut-toggle">Ctrl+Shift+S</span>
+        </div>
+        <div class="opt-row">
+          <div class="opt-row-main"><div class="opt-row-t">Open TimeTracker popup</div></div>
+          <span class="kbd" id="shortcut-popup">Ctrl+Shift+T</span>
+        </div>
+        <div class="opt-row">
+          <div class="opt-row-main">
+            <div class="opt-row-t">Track selected text</div>
+            <div class="opt-row-s">Right-click any selection → start with it as the note</div>
+          </div>
+          <span class="kbd">right-click</span>
+        </div>
+        <div class="opt-row">
+          <div class="opt-row-s">Customize shortcuts at <code>chrome://extensions/shortcuts</code></div>
+        </div>
+      </div>
+
+      <div id="account-section" class="hidden">
+        <div class="opt-h">Account</div>
+        <div class="opt-card">
+          <div class="opt-row">
+            <button type="button" class="opt-danger" id="disconnect-btn">
+              <span class="danger-icon"></span>Disconnect and clear credentials
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p class="opt-foot" id="foot-note">TimeTracker extension · credentials stay in chrome.storage.local on this device</p>
+    </div>
+    <script src="../dev/mock.js"></script>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

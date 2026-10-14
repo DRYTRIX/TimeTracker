@@ -63,3 +63,76 @@ test('ApiClient.stopTimer posts stop_time when provided', async () => {
 
   delete globalThis.fetch;
 });
+
+test('getSummary builds date-range query', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, init });
+    return { ok: true, text: async () => JSON.stringify({ summary: {} }) };
+  };
+
+  const client = new ApiClient('https://tracker.test', 'tt_demo');
+  await client.getSummary({ startDate: '2026-10-13', endDate: '2026-10-13' });
+
+  assert.equal(calls[0].url, 'https://tracker.test/api/v1/reports/summary?start_date=2026-10-13&end_date=2026-10-13');
+
+  delete globalThis.fetch;
+});
+
+test('getTimeEntries passes range, paging and include_active flags', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, init });
+    return { ok: true, text: async () => JSON.stringify({ time_entries: [] }) };
+  };
+
+  const client = new ApiClient('https://tracker.test', 'tt_demo');
+  await client.getTimeEntries({
+    startDate: '2026-10-07',
+    endDate: '2026-10-13',
+    perPage: 200,
+    includeActive: true,
+  });
+
+  const url = new URL(calls[0].url);
+  assert.equal(url.pathname, '/api/v1/time-entries');
+  assert.equal(url.searchParams.get('start_date'), '2026-10-07');
+  assert.equal(url.searchParams.get('end_date'), '2026-10-13');
+  assert.equal(url.searchParams.get('per_page'), '200');
+  assert.equal(url.searchParams.get('include_active'), 'true');
+
+  delete globalThis.fetch;
+});
+
+test('getWeeklyGoals forwards status filter', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, init });
+    return { ok: true, text: async () => JSON.stringify({ weekly_goals: [] }) };
+  };
+
+  const client = new ApiClient('https://tracker.test', 'tt_demo');
+  await client.getWeeklyGoals({ status: 'active' });
+
+  assert.equal(calls[0].url, 'https://tracker.test/api/v1/weekly-goals?status=active');
+
+  delete globalThis.fetch;
+});
+
+test('updateTimeEntry PATCHes partial fields on the entry', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, init });
+    return { ok: true, text: async () => JSON.stringify({ time_entry: { id: 501 } }) };
+  };
+
+  const client = new ApiClient('https://tracker.test', 'tt_demo');
+  await client.updateTimeEntry(501, { notes: 'Design review — updated' });
+
+  assert.equal(calls[0].url, 'https://tracker.test/api/v1/time-entries/501');
+  assert.equal(calls[0].init.method, 'PATCH');
+  const body = JSON.parse(calls[0].init.body);
+  assert.equal(body.notes, 'Design review — updated');
+
+  delete globalThis.fetch;
+});

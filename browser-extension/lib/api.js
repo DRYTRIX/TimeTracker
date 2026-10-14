@@ -368,6 +368,50 @@ export class ApiClient {
   getUsersMe() {
     return this.request('GET', '/api/v1/users/me');
   }
+
+  /**
+   * Summary report (total/billable hours, entries, per-project totals).
+   * startDate/endDate: local 'YYYY-MM-DD'.
+   */
+  getSummary({ startDate = null, endDate = null } = {}) {
+    const qs = new URLSearchParams();
+    if (startDate) qs.set('start_date', startDate);
+    if (endDate) qs.set('end_date', endDate);
+    const q = qs.toString();
+    return this.request('GET', `/api/v1/reports/summary${q ? `?${q}` : ''}`);
+  }
+
+  /**
+   * Time entries for a date range (used by the Recents and Insights tabs).
+   * Entries carry project/client/task display names.
+   */
+  getTimeEntries(params = {}) {
+    const qs = new URLSearchParams();
+    if (params.startDate) qs.set('start_date', params.startDate);
+    if (params.endDate) qs.set('end_date', params.endDate);
+    if (params.projectId) qs.set('project_id', String(params.projectId));
+    if (params.billable === true || params.billable === false) {
+      qs.set('billable', params.billable ? 'true' : 'false');
+    }
+    if (params.includeActive) qs.set('include_active', 'true');
+    if (params.page) qs.set('page', String(params.page));
+    if (params.perPage) qs.set('per_page', String(params.perPage));
+    const q = qs.toString();
+    return this.request('GET', `/api/v1/time-entries${q ? `?${q}` : ''}`);
+  }
+
+  /** Weekly time goals for the authenticated user (read:users scope). */
+  getWeeklyGoals(params = {}) {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    const q = qs.toString();
+    return this.request('GET', `/api/v1/weekly-goals${q ? `?${q}` : ''}`);
+  }
+
+  /** Partial update — used for quick notes on the running entry. */
+  updateTimeEntry(entryId, fields) {
+    return this.request('PATCH', `/api/v1/time-entries/${Number(entryId)}`, fields);
+  }
 }
 
 /** Elapsed work seconds from a timer payload (respects break_seconds and paused_at). */
