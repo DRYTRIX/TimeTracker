@@ -1065,7 +1065,12 @@
         <div class="absolute inset-0 bg-black/50" data-overlay></div>
         <div class="relative max-w-lg mx-auto mt-24 max-h-[90vh] overflow-y-auto bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-lg" data-modal-content>
             <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between gap-2">
-                <div class="text-lg font-semibold">{{ _('Start Timer') }}</div>
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="text-lg font-semibold shrink-0">{{ _('Start Timer') }}</div>
+                    <input type="text" id="startTimerTimeInput" aria-label="{{ _('Start time') }}"
+                           class="form-input text-sm font-normal px-2 py-1" style="width: 7rem;"
+                           inputmode="numeric" autocomplete="off" />
+                </div>
                 <div class="flex items-center gap-2 shrink-0">
                     <button type="submit" form="startTimerForm" id="startTimerSubmitBtn" class="btn btn-primary btn-sm">{{ _('Start') }}</button>
                     <button type="button" data-close class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded">{{ _('Close') }}</button>
@@ -1151,22 +1156,8 @@
                         </datalist>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Comma-separated; recent tags shown as suggestions.') }}</p>
                     </div>
-                    <div>
-                        <label for="startTimerStartOverride" class="form-label">
-                            {{ _('Start Time') }}
-                            <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
-                        </label>
-                        <div class="flex items-center gap-2">
-                            <input type="datetime-local" name="start_time_override" id="startTimerStartOverride"
-                                   class="form-input flex-1 user-datetime-input" />
-                            <button type="button" id="startTimerResetStart"
-                                    class="btn btn-secondary btn-sm whitespace-nowrap">
-                                {{ _('Set to now') }}
-                            </button>
-                        </div>
-                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-                            {{ _('Leave blank to start now, or enter a past time to backdate.') }}
-                        </p>
+                    <div class="hidden">
+                        <input type="hidden" name="start_time_override" id="startTimerStartOverride" />
                     </div>
                 </div>
             </form>
@@ -1493,6 +1484,7 @@
             if (!modal) return;
             modal.classList.add('hidden');
             modal.setAttribute('aria-hidden', 'true');
+            stopStartTimerTick();
         }
 
         function _initStartTimerModal() {
@@ -1508,12 +1500,6 @@
             const selectProjectOrClientText = modal.dataset.selectProjectClient || 'Please select either a project or a client';
             const errorTitleText = modal.dataset.errorTitle || 'Error';
 
-            const resetStartBtn = document.getElementById('startTimerResetStart');
-            if (resetStartBtn) {
-                resetStartBtn.addEventListener('click', function() {
-                    refreshStartTimerOverride();
-                });
-            }
             function buildTasksUrl(projectId) {
                 const pid = String(projectId || '').trim();
                 if (!pid) return tasksApiUrlTemplate;
@@ -1711,6 +1697,7 @@
                         }
                     }
 
+                    ensureFreshStartOverride();
                     startTimerForm.submit();
                 }, true);
             }
@@ -1734,21 +1721,110 @@
                 + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
         }
 
-        function refreshStartTimerOverride() {
-            const startOverrideInput = document.getElementById('startTimerStartOverride');
-            if (!startOverrideInput) return;
+        // Start time lives in a compact time chip next to the modal title. It
+        // shows the current time, keeps ticking while the modal is open, and
+        // the user can overwrite it to backdate the entry within today. The
+        // hidden start_time_override input carries the composed datetime.
+        let _startOverrideAutoValue = null;
+        let _startTimerTimeEdited = false;
+        let _startTimerTickTimer = null;
+
+        function _pad2(n) { return String(n).padStart(2, '0'); }
+
+        // Display follows the in-app time format preference (userPrefs),
+        // not the browser locale — system default 24h unless the user
+        // profile overrides to 12h.
+        function _startTimerUse24hr() {
+            return !(window.userPrefs && window.userPrefs.timeFormat === '12h');
+        }
+        function formatStartTime(date) {
+            if (_startTimerUse24hr()) {
+                return _pad2(date.getHours()) + ':' + _pad2(date.getMinutes());
+            }
+            let h = date.getHours() % 12;
+            if (h === 0) h = 12;
+            return h + ':' + _pad2(date.getMinutes()) + (date.getHours() < 12 ? ' AM' : ' PM');
+        }
+        function parseStartTime(raw) {
+            if (window.__parseUserTimeInput) {
+                return window.__parseUserTimeInput(raw, _startTimerUse24hr());
+            }
+            const m = String(raw || '').trim().match(/^(\d{1,2})[:.](\d{2})$/);
+            if (!m) return null;
+            const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+            if (isNaN(h) || isNaN(min) || h > 23 || min > 59) return null;
+            return { hours: h, minutes: min };
+        }
+
+        function composeStartOverride() {
             const now = new Date();
-            const minDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-            startOverrideInput.value = toDatetimeLocalValue(now);
-            startOverrideInput.max = toDatetimeLocalValue(now);
-            startOverrideInput.min = toDatetimeLocalValue(minDate);
+            const hiddenInput = document.getElementById('startTimerStartOverride');
+            if (!hiddenInput) return;
+            const timeInput = document.getElementById('startTimerTimeInput');
+            const parsed = timeInput ? parseStartTime(timeInput.value) : null;
+            let d = now;
+            if (parsed) {
+                d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parsed.hours, parsed.minutes);
+                // The server rejects future start times; clamp instead.
+                if (d > now) d = now;
+            }
+            hiddenInput.value = toDatetimeLocalValue(d);
+            _startOverrideAutoValue = hiddenInput.value;
+        }
+
+        function refreshStartTimerOverride() {
+            const timeInput = document.getElementById('startTimerTimeInput');
+            if (timeInput && !_startTimerTimeEdited) {
+                timeInput.value = formatStartTime(new Date());
+            }
+            composeStartOverride();
+        }
+
+        function startStartTimerTick() {
+            stopStartTimerTick();
+            _startTimerTickTimer = setInterval(refreshStartTimerOverride, 15000);
+        }
+
+        function stopStartTimerTick() {
+            if (_startTimerTickTimer) {
+                clearInterval(_startTimerTickTimer);
+                _startTimerTickTimer = null;
+            }
+        }
+
+        const _startTimerTimeInput = document.getElementById('startTimerTimeInput');
+        if (_startTimerTimeInput) {
+            _startTimerTimeInput.addEventListener('input', function() {
+                _startTimerTimeEdited = true;
+                composeStartOverride();
+            });
+            // Compact entries like "1345" parse correctly while typing;
+            // normalize the visible chip to 13:45 when leaving the field.
+            _startTimerTimeInput.addEventListener('blur', function() {
+                if (!_startTimerTimeEdited) return;
+                const parsed = parseStartTime(_startTimerTimeInput.value);
+                if (parsed) {
+                    _startTimerTimeInput.value = _pad2(parsed.hours) + ':' + _pad2(parsed.minutes);
+                }
+            });
+        }
+
+        // The field holds the time we last composed ourselves; on submit,
+        // recompose so minutes spent filling the form don't backdate the
+        // entry. A time the user picked is kept as-is.
+        function ensureFreshStartOverride() {
+            const hiddenInput = document.getElementById('startTimerStartOverride');
+            if (!hiddenInput || hiddenInput.value !== _startOverrideAutoValue) return;
+            refreshStartTimerOverride();
         }
 
         function openStartTimerModal(e) {
             if (e) e.preventDefault();
             if (!modal) return;
             _initStartTimerModal();
+            _startTimerTimeEdited = false;
             refreshStartTimerOverride();
+            startStartTimerTick();
             modal.classList.remove('hidden');
             modal.setAttribute('aria-hidden', 'false');
         }
