@@ -1067,8 +1067,9 @@
             <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="text-lg font-semibold shrink-0">{{ _('Start Timer') }}</div>
-                    <input type="time" id="startTimerTimeInput" aria-label="{{ _('Start time') }}"
-                           class="form-input text-sm font-normal px-2 py-1" step="60" style="width: 9.5rem;" />
+                    <input type="text" id="startTimerTimeInput" aria-label="{{ _('Start time') }}"
+                           class="form-input text-sm font-normal px-2 py-1" style="width: 7rem;"
+                           inputmode="numeric" autocomplete="off" />
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                     <button type="submit" form="startTimerForm" id="startTimerSubmitBtn" class="btn btn-primary btn-sm">{{ _('Start') }}</button>
@@ -1730,21 +1731,42 @@
 
         function _pad2(n) { return String(n).padStart(2, '0'); }
 
+        // Display follows the in-app time format preference (userPrefs),
+        // not the browser locale — system default 24h unless the user
+        // profile overrides to 12h.
+        function _startTimerUse24hr() {
+            return !(window.userPrefs && window.userPrefs.timeFormat === '12h');
+        }
+        function formatStartTime(date) {
+            if (_startTimerUse24hr()) {
+                return _pad2(date.getHours()) + ':' + _pad2(date.getMinutes());
+            }
+            let h = date.getHours() % 12;
+            if (h === 0) h = 12;
+            return h + ':' + _pad2(date.getMinutes()) + (date.getHours() < 12 ? ' AM' : ' PM');
+        }
+        function parseStartTime(raw) {
+            if (window.__parseUserTimeInput) {
+                return window.__parseUserTimeInput(raw, _startTimerUse24hr());
+            }
+            const m = String(raw || '').trim().match(/^(\d{1,2})[:.](\d{2})$/);
+            if (!m) return null;
+            const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+            if (isNaN(h) || isNaN(min) || h > 23 || min > 59) return null;
+            return { hours: h, minutes: min };
+        }
+
         function composeStartOverride() {
             const now = new Date();
             const hiddenInput = document.getElementById('startTimerStartOverride');
             if (!hiddenInput) return;
             const timeInput = document.getElementById('startTimerTimeInput');
-            const parts = (timeInput && timeInput.value) ? timeInput.value.split(':') : null;
+            const parsed = timeInput ? parseStartTime(timeInput.value) : null;
             let d = now;
-            if (parts && parts.length === 2) {
-                const h = parseInt(parts[0], 10);
-                const m = parseInt(parts[1], 10);
-                if (!isNaN(h) && !isNaN(m)) {
-                    d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m);
-                    // The server rejects future start times; clamp instead.
-                    if (d > now) d = now;
-                }
+            if (parsed) {
+                d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parsed.hours, parsed.minutes);
+                // The server rejects future start times; clamp instead.
+                if (d > now) d = now;
             }
             hiddenInput.value = toDatetimeLocalValue(d);
             _startOverrideAutoValue = hiddenInput.value;
@@ -1753,8 +1775,7 @@
         function refreshStartTimerOverride() {
             const timeInput = document.getElementById('startTimerTimeInput');
             if (timeInput && !_startTimerTimeEdited) {
-                const now = new Date();
-                timeInput.value = _pad2(now.getHours()) + ':' + _pad2(now.getMinutes());
+                timeInput.value = formatStartTime(new Date());
             }
             composeStartOverride();
         }
