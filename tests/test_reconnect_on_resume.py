@@ -27,11 +27,13 @@ def test_error_handler_quiet_health_and_visibility_reconnect():
     assert "startHealthProbeInterval" in content
     assert "/api/health" in content
     assert "if (quiet)" in content
-    # Delayed probes on resume sweep errors from background fetches (#703 / #746)
-    assert "setTimeout" in content
-    assert "1500" in content
-    assert "5000" in content
-    assert content.count("checkOnlineStatus({ quiet: true, onResume: true })") >= 3
+    # Resume probes retry with backoff before declaring the server offline,
+    # and transient failures during the grace window are toast-suppressed
+    assert "probeAfterResume" in content
+    assert "beginResumeGrace" in content
+    assert "inResumeGraceWindow" in content
+    # Debounced signal for widgets to refetch after the reconnect burst settles
+    assert "tt:tab-resumed" in content
 
 
 def test_idle_background_fetches_are_quiet():
