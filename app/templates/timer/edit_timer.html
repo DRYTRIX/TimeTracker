@@ -245,6 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const startTime = document.getElementById('start_time');
     const endDate = document.getElementById('end_date');
     const endTime = document.getElementById('end_time');
+    const breakTime = document.getElementById('break_time');
     const durationLabel = document.getElementById('adminEditDuration');
     function updateDuration() {
         if (!startDate || !startTime || !endDate || !endTime || !durationLabel) return;
@@ -258,7 +259,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const s = new Date(`${sd}T${st}`);
         const e = new Date(`${ed}T${et}`);
-        const diff = Math.max(0, Math.floor((e - s) / 1000));
+        let diff = Math.max(0, Math.floor((e - s) / 1000));
+        // Subtract break (HH:MM free-text input) like the server does
+        if (breakTime && breakTime.value) {
+            const bp = breakTime.value.trim().match(/^(\d{1,2}):(\d{2})$/);
+            if (bp) diff = Math.max(0, diff - (parseInt(bp[1], 10) * 3600 + parseInt(bp[2], 10) * 60));
+        }
         const h = Math.floor(diff / 3600);
         const m = Math.floor((diff % 3600) / 60);
         const srem = diff % 60;
@@ -269,6 +275,26 @@ document.addEventListener('DOMContentLoaded', function() {
         startTime.addEventListener('change', updateDuration);
         endDate.addEventListener('change', updateDuration);
         endTime.addEventListener('change', updateDuration);
+        if (breakTime) {
+            breakTime.addEventListener('input', updateDuration);
+            breakTime.addEventListener('change', updateDuration);
+        }
+        // These fields are Flatpickr-wrapped (altInput visible, native input
+        // hidden): typing fires events on the altInput, not the native one.
+        [startDate, startTime, endDate, endTime].forEach(function(el) {
+            const fp = el._flatpickr;
+            if (fp) {
+                if (fp.config && fp.config.onChange) fp.config.onChange.push(updateDuration);
+                if (fp.altInput) {
+                    fp.altInput.addEventListener('input', updateDuration);
+                    fp.altInput.addEventListener('change', updateDuration);
+                }
+            }
+        });
+        // date-picker-init may wrap after this script runs; poll lightly so
+        // the label is always current even if event hooks were missed.
+        setInterval(updateDuration, 1000);
+        updateDuration();
     }
 });
 </script>
