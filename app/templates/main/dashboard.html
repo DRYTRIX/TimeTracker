@@ -1798,6 +1798,15 @@
                 _startTimerTimeEdited = true;
                 composeStartOverride();
             });
+            // Compact entries like "1345" parse correctly while typing;
+            // normalize the visible chip to 13:45 when leaving the field.
+            _startTimerTimeInput.addEventListener('blur', function() {
+                if (!_startTimerTimeEdited) return;
+                const parsed = parseStartTime(_startTimerTimeInput.value);
+                if (parsed) {
+                    _startTimerTimeInput.value = _pad2(parsed.hours) + ':' + _pad2(parsed.minutes);
+                }
+            });
         }
 
         // The field holds the time we last composed ourselves; on submit,
