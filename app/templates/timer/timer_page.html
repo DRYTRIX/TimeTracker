@@ -551,29 +551,39 @@ function toDatetimeLocalValue(date) {
 
 const startOverrideInput = document.getElementById('start_time_override');
 const resetStartBtn = document.getElementById('btn-reset-start-time');
-if (startOverrideInput) {
-    startOverrideInput.value = toDatetimeLocalValue(new Date());
+// The visible control for this field is a Flatpickr altInput (the native
+// datetime-local input is hidden by date-picker-init.js), so updates must go
+// through _flatpickr.setDate() — writing .value on the hidden native input
+// changes nothing the user can see.
+let startOverrideAutoValue = null;
+function setStartOverride(date) {
+    if (!startOverrideInput) return;
+    if (startOverrideInput._flatpickr) {
+        startOverrideInput._flatpickr.setDate(date, false);
+    }
+    startOverrideInput.value = toDatetimeLocalValue(date);
+    startOverrideAutoValue = startOverrideInput.value;
 }
-if (resetStartBtn && startOverrideInput) {
+if (startOverrideInput) {
+    setStartOverride(new Date());
+}
+if (resetStartBtn) {
     resetStartBtn.addEventListener('click', function() {
-        startOverrideInput.value = toDatetimeLocalValue(new Date());
+        setStartOverride(new Date());
     });
 }
 // The field is pre-filled at page load; if the user takes minutes to fill the
 // form, that stale pre-filled value would start the timer in the past. Unless
-// the user edited the field themselves, refresh it to the actual current time
-// when the form is submitted.
+// the field still holds the value we set ourselves, refresh it to the actual
+// current time when the form is submitted. A value the user picked (Flatpickr
+// syncs its own edits into the native input) differs from
+// startOverrideAutoValue and is kept.
 if (startOverrideInput) {
-    let startOverrideTouched = false;
-    startOverrideInput.addEventListener('input', function() {
-        startOverrideTouched = true;
-    });
     const timerStartFormEl = document.getElementById('timer-start-form');
     if (timerStartFormEl) {
         timerStartFormEl.addEventListener('submit', function() {
-            if (!startOverrideTouched) {
-                startOverrideInput.value = toDatetimeLocalValue(new Date());
-            }
+            if (startOverrideInput.value !== startOverrideAutoValue) return;
+            setStartOverride(new Date());
         });
     }
 }
