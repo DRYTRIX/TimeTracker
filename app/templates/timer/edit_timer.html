@@ -247,6 +247,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const endTime = document.getElementById('end_time');
     const breakTime = document.getElementById('break_time');
     const durationLabel = document.getElementById('adminEditDuration');
+    function parseBreakToSeconds(raw) {
+        const s = (raw || '').trim();
+        if (!s) return 0;
+        let m = s.match(/^(\d{1,3}):([0-5]\d)$/);
+        if (m) return parseInt(m[1], 10) * 3600 + parseInt(m[2], 10) * 60;
+        if (/^\d{3,4}$/.test(s)) {
+            const h = s.length === 3 ? parseInt(s[0], 10) : parseInt(s.slice(0, 2), 10);
+            const mm = s.length === 3 ? parseInt(s.slice(1), 10) : parseInt(s.slice(2), 10);
+            return mm < 60 ? h * 3600 + mm * 60 : 0;
+        }
+        if (/^\d{1,3}([.,]\d{1,2})?\s*h$/i.test(s)) {
+            return Math.round(parseFloat(s.replace(/[hH\s]/g, '').replace(',', '.')) * 3600) || 0;
+        }
+        if (/^\d{1,2}[.,]\d{1,2}$/.test(s)) {
+            return Math.round(parseFloat(s.replace(',', '.')) * 3600) || 0;
+        }
+        if (/^\d{1,3}$/.test(s)) return parseInt(s, 10) * 60;
+        return 0;
+    }
     function updateDuration() {
         if (!startDate || !startTime || !endDate || !endTime || !durationLabel) return;
         const sd = startDate.value;
@@ -260,10 +279,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const s = new Date(`${sd}T${st}`);
         const e = new Date(`${ed}T${et}`);
         let diff = Math.max(0, Math.floor((e - s) / 1000));
-        // Subtract break (HH:MM free-text input) like the server does
+        // Subtract break like the server does: HH:MM, compact HMM/HHMM
+        // ("0100" = 1h), decimal hours ("1h", "1.5"), or plain minutes ("45")
         if (breakTime && breakTime.value) {
-            const bp = breakTime.value.trim().match(/^(\d{1,2}):(\d{2})$/);
-            if (bp) diff = Math.max(0, diff - (parseInt(bp[1], 10) * 3600 + parseInt(bp[2], 10) * 60));
+            diff = Math.max(0, diff - parseBreakToSeconds(breakTime.value));
         }
         const h = Math.floor(diff / 3600);
         const m = Math.floor((diff % 3600) / 60);
@@ -454,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </label>
                         <input type="text" class="form-input" id="break_time" name="break_time" placeholder="HH:MM"
                                value="{% if timer.break_seconds %}{{ (timer.break_seconds // 3600) }}:{{ '%02d' | format((timer.break_seconds % 3600) // 60) }}{% endif %}">
-                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Break duration (HH:MM). Subtracted from total to get worked duration.') }}</p>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Break duration. Subtracted from total to get worked duration. Accepts 1:30, 0130, 1.5h or 90.') }}</p>
                     </div>
                 </div>
 

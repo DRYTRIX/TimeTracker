@@ -43,6 +43,44 @@ def _parse_optional_int(value):
         return None
 
 
+def _parse_duration_to_seconds(raw_value):
+    """Parse a duration string into seconds; return None if unparseable.
+
+    Accepts HH:MM ("1:30"), compact HMM/HHMM ("0100" = 1h, "130" = 1h30),
+    decimal hours with unit or separator ("1h", "1.5", "1,5"), and plain
+    minutes ("45").
+    """
+    s = (raw_value or "").strip()
+    if not s:
+        return None
+
+    import re
+
+    m = re.match(r"^(\d{1,3}):([0-5]\d)$", s)
+    if m:
+        return int(m.group(1)) * 3600 + int(m.group(2)) * 60
+
+    if re.match(r"^\d{3,4}$", s):
+        if len(s) == 3:
+            hours, minutes = int(s[0]), int(s[1:])
+        else:
+            hours, minutes = int(s[:2]), int(s[2:])
+        if minutes < 60:
+            return hours * 3600 + minutes * 60
+        return None
+
+    if re.match(r"^\d{1,3}([.,]\d{1,2})?\s*h$", s, re.IGNORECASE):
+        return int(round(float(s.rstrip("hH").replace(",", ".").strip()) * 3600))
+
+    if re.match(r"^\d{1,2}[.,]\d{1,2}$", s):
+        return int(round(float(s.replace(",", ".")) * 3600))
+
+    if re.match(r"^\d{1,3}$", s):
+        return int(s) * 60
+
+    return None
+
+
 def _parse_and_validate_start_override(raw_value, now_local):
     """Parse a datetime-local override string; return (datetime|None, error_message|None).
 
@@ -1204,12 +1242,10 @@ def edit_timer(timer_id):
             else:
                 update_params["end_time"] = None
 
-            # Parse break time (HH:MM) to seconds; empty clears break
-            import re
-
+            # Parse break time to seconds; empty clears break
             if break_time:
-                m = re.match(r"^(\d{1,3}):([0-5]\d)$", break_time.strip())
-                update_params["break_seconds"] = (int(m.group(1)) * 3600 + int(m.group(2)) * 60) if m else 0
+                break_secs = _parse_duration_to_seconds(break_time)
+                update_params["break_seconds"] = break_secs if break_secs is not None else 0
             else:
                 update_params["break_seconds"] = 0
 
@@ -1630,18 +1666,10 @@ def manual_entry():
         selected_user_id = target_user_id
 
         def _parse_worked_time_minutes(raw: str):
-            s = (raw or "").strip()
-            if not s:
+            secs = _parse_duration_to_seconds(raw)
+            if secs is None or secs <= 0:
                 return None
-            import re
-
-            m = re.match(r"^(\d{1,3}):([0-5]\d)$", s)
-            if not m:
-                return None
-            hours = int(m.group(1))
-            minutes = int(m.group(2))
-            total = hours * 60 + minutes
-            return total if total > 0 else None
+            return secs // 60
 
         worked_minutes = _parse_worked_time_minutes(worked_time)
         break_minutes = _parse_worked_time_minutes(break_time)
