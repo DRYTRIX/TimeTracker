@@ -559,6 +559,24 @@ if (resetStartBtn && startOverrideInput) {
         startOverrideInput.value = toDatetimeLocalValue(new Date());
     });
 }
+// The field is pre-filled at page load; if the user takes minutes to fill the
+// form, that stale pre-filled value would start the timer in the past. Unless
+// the user edited the field themselves, refresh it to the actual current time
+// when the form is submitted.
+if (startOverrideInput) {
+    let startOverrideTouched = false;
+    startOverrideInput.addEventListener('input', function() {
+        startOverrideTouched = true;
+    });
+    const timerStartFormEl = document.getElementById('timer-start-form');
+    if (timerStartFormEl) {
+        timerStartFormEl.addEventListener('submit', function() {
+            if (!startOverrideTouched) {
+                startOverrideInput.value = toDatetimeLocalValue(new Date());
+            }
+        });
+    }
+}
 
 }); // end DOMContentLoaded
 

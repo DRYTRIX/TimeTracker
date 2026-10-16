@@ -1711,6 +1711,7 @@
                         }
                     }
 
+                    ensureFreshStartOverride();
                     startTimerForm.submit();
                 }, true);
             }
@@ -1744,10 +1745,28 @@
             startOverrideInput.min = toDatetimeLocalValue(minDate);
         }
 
+        // The field is pre-filled at modal open; if the user takes minutes to
+        // fill the form, that stale pre-filled value would start the timer in
+        // the past. Unless the user edited the field themselves, refresh it to
+        // the actual current time right before submit.
+        let _startOverrideTouched = false;
+        const _startOverrideInput = document.getElementById('startTimerStartOverride');
+        if (_startOverrideInput) {
+            _startOverrideInput.addEventListener('input', function() {
+                _startOverrideTouched = true;
+            });
+        }
+        function ensureFreshStartOverride() {
+            if (!_startOverrideTouched) {
+                refreshStartTimerOverride();
+            }
+        }
+
         function openStartTimerModal(e) {
             if (e) e.preventDefault();
             if (!modal) return;
             _initStartTimerModal();
+            _startOverrideTouched = false;
             refreshStartTimerOverride();
             modal.classList.remove('hidden');
             modal.setAttribute('aria-hidden', 'false');
