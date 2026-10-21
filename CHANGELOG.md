@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Manual entry project picker with one client (#789)** — When the org has exactly one client, the client field stays pre-filled and readonly (#467 / #753), but the project picker no longer stays disabled. The #728 client→project unlock assumed a real `<select>`; a hidden auto-client now counts as already chosen.
+
 ## [5.18.2] - 2026-10-13
 
 ### Security

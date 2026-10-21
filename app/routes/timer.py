@@ -1603,6 +1603,10 @@ def manual_entry():
     project_id = request.args.get("project_id", type=int)
     client_id = request.args.get("client_id", type=int)
     client_id = enforce_locked_client_id(client_id)
+    # Issue #789: with a single active client the form locks client via hidden input;
+    # treat that client as selected so the project picker is not left disabled.
+    if not client_id and only_one_client and single_client is not None:
+        client_id = single_client.id
     task_id = request.args.get("task_id", type=int)
     template_id = request.args.get("template", type=int)
 
@@ -1632,6 +1636,8 @@ def manual_entry():
         project_id = request.form.get("project_id", type=int) or None
         client_id = request.form.get("client_id", type=int) or None
         client_id = enforce_locked_client_id(client_id)
+        if not client_id and only_one_client and single_client is not None:
+            client_id = single_client.id
         task_id = request.form.get("task_id", type=int) or None
         start_date = request.form.get("start_date")
         start_time = request.form.get("start_time")
