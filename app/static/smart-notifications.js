@@ -314,6 +314,7 @@ class SmartNotificationManager {
         try {
             setTimeout(() => this.pollServerSmartNotifications(), 12000);
             setInterval(() => this.pollServerSmartNotifications(), this._serverSmartPollMs);
+            document.addEventListener('tt:tab-resumed', () => this.pollServerSmartNotifications());
         } catch (e) {
             console.error('[SmartNotifications] server poll init:', e);
         }

@@ -54,6 +54,7 @@
                 this.lastFocusFetch = now;
                 this.fetchStatus();
             });
+            document.addEventListener('tt:tab-resumed', () => this.fetchStatus());
             document.addEventListener('click', (evt) => {
                 if (!this.switchPopover || this.switchPopover.classList.contains('hidden')) return;
                 if (this.switchPopover.contains(evt.target)) return;
@@ -177,6 +178,13 @@
                     return;
                 }
                 if (!res.ok) {
+                    // The fetch interceptor converts network errors (stale
+                    // keep-alive connection after tab resume) into synthetic
+                    // 503 responses, so retry those the same as real failures.
+                    if ([502, 503, 504].includes(res.status) && !this._statusRetried) {
+                        this.retryStatusFetchOnce();
+                        return;
+                    }
                     console.warn('FloatingTimerBar: fetch status failed', res.status);
                     return;
                 }
@@ -195,8 +203,22 @@
                 }
                 syncFabDesktopHide(this.timerData);
             } catch (e) {
+                if (!this._statusRetried) {
+                    this.retryStatusFetchOnce();
+                    return;
+                }
                 console.warn('FloatingTimerBar: fetch status failed', e);
             }
+        }
+
+        retryStatusFetchOnce() {
+            // Right after tab resume the first fetch can land on a dead
+            // keep-alive connection; one delayed retry recovers transparently.
+            this._statusRetried = true;
+            setTimeout(() => {
+                this._statusRetried = false;
+                this.fetchStatus();
+            }, 1500);
         }
 
         startElapsedUpdater() {

@@ -32,7 +32,7 @@ docker compose -f docker-compose.nas.yml up -d
 # open http://localhost:8080 — first login creates the admin
 ```
 
-**Latest release: v5.18.2** — see [CHANGELOG.md](CHANGELOG.md).
+**Latest release: v5.18.3** — see [CHANGELOG.md](CHANGELOG.md).
 
 More install paths (HTTPS production, NAS UI paste, cloud): [Install options](#install-options).
 
@@ -295,6 +295,7 @@ TimeTracker includes **130+ features** across 13 major categories. See the [Comp
 | **GitHub Release** | Compose files + desktop/mobile | [Releases](https://github.com/drytrix/TimeTracker/releases) |
 | **Cloud (Render)** | Managed hosting | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drytrix/TimeTracker) |
 | **Railyard** | Managed hosting | [![Deploy to Railyard](https://app.railyard.run/deploy/badge)](https://app.railyard.run/deploy?repo=https://github.com/DRYTRIX/TimeTracker) |
+| **Cloud (RepoCloud)** | Managed hosting | <a href="https://repocloud.io/details/TimeTracker/"><img src="https://d16t0pc4846x52.cloudfront.net/deploylobe.svg" alt="Deploy on RepoCloud" height="32"></a> |
 
 
 **Full list of install paths:** [Distribution Guide](docs/admin/deployment/DISTRIBUTION.md) (Portainer templates, Unraid, Railway, Fly.io, Coolify, [Docker Hub](https://hub.docker.com/r/drytrix/timetracker))
