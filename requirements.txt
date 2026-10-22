@@ -43,7 +43,7 @@ openpyxl==3.1.2
 # PDF Generation
 WeasyPrint==70.0
 pydyf==0.12.1
-Pillow==12.3.0
+Pillow==13.0.0
 reportlab==4.0.7
 pikepdf>=8.0.0
 
