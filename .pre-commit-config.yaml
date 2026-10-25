@@ -22,7 +22,7 @@ repos:
 
   # Python code formatting
   - repo: https://github.com/psf/black
-    rev: 24.8.0
+    rev: 26.10.1
     hooks:
       - id: black
         language_version: python3.11
