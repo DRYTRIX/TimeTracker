@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **Email configuration** — Added a Groundmail SMTP example to the common email providers in `docs/admin/configuration/EMAIL_CONFIGURATION.md`.
+
 ## [5.18.3] - 2026-10-22
 
 ### Fixed
