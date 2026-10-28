@@ -7,9 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.4] - 2026-10-28
+
+### Fixed
+
+- **CSP PDF preview (#797)** — Allow `blob:` iframes via `frame-src 'self' blob:` so PDF template previews are not blocked by Content-Security-Policy.
+- **Saved filter params** — Prevent prototype pollution when applying saved filter query parameters.
+
+### Changed
+
+- **Dependencies** — Bump black and OpenTelemetry; desktop Electron and related npm packages; Pillow; follow-redirects.
+
 ### Documentation
 
 - **Email configuration** — Added a Groundmail SMTP example to the common email providers in `docs/admin/configuration/EMAIL_CONFIGURATION.md`.
+- **Version** — Bumped `setup.py` to **5.18.4**; `VERSION` and desktop/browser-extension/mobile client versions aligned.
 
 ## [5.18.3] - 2026-10-22
 

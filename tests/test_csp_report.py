@@ -20,8 +20,17 @@ class TestCspHeaders:
 
         assert csp, "enforced CSP header missing"
         assert "default-src 'self'" in csp
+        # PDF template preview iframes use blob: URLs (issue #797).
+        assert "frame-src 'self' blob:" in csp
         for host in ("cdnjs", "jsdelivr", "uicdn", "bunny", "googleapis", "esm.sh"):
             assert host not in csp, f"CSP still allowlists {host}"
+
+    def test_report_only_policy_allows_blob_frames(self, client):
+        """Report-Only must stay aligned with enforced frame-src for PDF previews."""
+        response = client.get("/login")
+        report_only = response.headers.get("Content-Security-Policy-Report-Only", "")
+
+        assert "frame-src 'self' blob:" in report_only
 
     def test_report_only_policy_uses_a_nonce(self, client):
         response = client.get("/login")
