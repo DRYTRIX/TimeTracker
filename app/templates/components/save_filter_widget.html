@@ -101,16 +101,17 @@ function closeSaveFilterModal() {
 
 function getCurrentFilterParameters() {
     // Get all form inputs on the page and build filter payload
-    var params = {};
+    var params = Object.create(null);
     var urlParams = new URLSearchParams(window.location.search);
-    
+
     // Get all URL parameters
     for (let [key, value] of urlParams.entries()) {
-        if (value) {
-            params[key] = value;
-        }
+        if (!value) continue;
+        // Prevent prototype pollution from untrusted URL param names
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+        params[key] = value;
     }
-    
+
     return params;
 }
 

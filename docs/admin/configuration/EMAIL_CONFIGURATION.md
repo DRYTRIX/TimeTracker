@@ -149,6 +149,19 @@ MAIL_PASSWORD=your-mailgun-password
 MAIL_DEFAULT_SENDER=noreply@yourdomain.com
 ```
 
+### Groundmail
+
+```bash
+MAIL_SERVER=smtp.groundmail.dev
+MAIL_PORT=587
+MAIL_USE_TLS=true
+MAIL_USERNAME=groundmail
+MAIL_PASSWORD=your-groundmail-smtp-credential
+MAIL_DEFAULT_SENDER=noreply@yourdomain.com
+```
+
+Until you verify a sending domain and add a payment method, Groundmail only sends from `noreply@mail.groundmail.dev` to your own account email; other recipients are rejected. See [Groundmail SMTP](https://docs.groundmail.dev/smtp) (use port `2525` if 587 is blocked).
+
 ## Testing Email Configuration
 
 ### Using the Admin Panel (Database Configuration)
