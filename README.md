@@ -32,6 +32,7 @@ docker compose -f docker-compose.nas.yml up -d
 # open http://localhost:8080 — first login creates the admin
 ```
 
+**Latest release: v5.18.5** — see [CHANGELOG.md](CHANGELOG.md).
 ### First 5 minutes
 
 1. Open [http://localhost:8080](http://localhost:8080) and create the admin account.
@@ -894,3 +895,4 @@ If TimeTracker saves you money, **[a star on GitHub](https://github.com/drytrix/
 Built with care for the time-tracking community
 
 </div>
+

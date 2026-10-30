@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.18.5] - 2026-10-30
+
 ### Security
 
 - **Audit logs / 2FA secret (#801)** — Stop writing `two_factor_secret` (and other secret fields such as Settings API keys/client secrets and client portal credentials) into audit log `old_value`/`new_value`. Existing leaked values are scrubbed by migration `200_scrub_sensitive_audit_log_values`. TOTP remains reversible via optional Fernet encryption at rest, not hashing.
@@ -18,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Exchange rates** — When exchangerate.host returns no rate (it now requires an access key), try a keyless exchangerate.host-compatible ECB endpoint (AllRatesToday) for the same date before the latest-only fallback.
 - **Invoices** — Deleting a draft invoice (single or bulk) now makes its project costs and expenses billable again; before, they stayed marked as invoiced and never appeared on a later invoice.
+
+### Fixed
+
+- **Saved filter params / CodeQL** — Use a `Map` when applying saved filter query parameters so dynamic object writes cannot overwrite built-in properties (remote property injection).
+
+### Documentation
+
+- **Version** — Bumped `setup.py` to **5.18.5**; `VERSION` and desktop/browser-extension/mobile client versions aligned.
 
 ## [5.18.4] - 2026-10-28
 
