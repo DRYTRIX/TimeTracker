@@ -274,7 +274,7 @@ def test_bulk_assign_multiple_tasks(authenticated_client, app, tasks_for_bulk, a
         for task_id in task_ids:
             task = Task.query.get(int(task_id))
             assert task is not None
-            assert task.assigned_to == admin_user.id
+            assert task.is_assigned_to(admin_user.id)
 
 
 @pytest.mark.integration

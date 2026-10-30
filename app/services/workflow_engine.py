@@ -284,7 +284,7 @@ class WorkflowEngine:
         if not task:
             raise ValueError(f"Task not found: {task_id}")
 
-        task.assigned_to = int(user_id)
+        task.set_assignees([int(user_id)])
         if not safe_commit("workflow_assign_task", {"task_id": task_id, "user_id": user_id}):
             db.session.rollback()
             raise ValueError(f"Failed to assign task {task_id} to user {user_id}")

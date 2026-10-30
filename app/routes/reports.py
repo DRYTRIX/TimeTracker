@@ -7,7 +7,7 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 from flask_babel import _
 from flask_login import current_user, login_required
 from sqlalchemy import case, func, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app import db, log_event, track_event
 from app.models import (
@@ -711,7 +711,7 @@ def task_report():
     # Get distinct task IDs (PostgreSQL requires ORDER BY cols in SELECT when using DISTINCT)
     task_ids_subq = tasks_query.with_entities(Task.id).distinct()
     tasks = (
-        Task.query.options(joinedload(Task.project), joinedload(Task.assigned_user))
+        Task.query.options(joinedload(Task.project), selectinload(Task.assignee_links))
         .filter(Task.id.in_(task_ids_subq))
         .order_by(case((Task.status == "done", 0), else_=1), Task.name)
         .all()
@@ -1519,7 +1519,7 @@ def export_task_excel():
 
     task_ids_subq = tasks_query.with_entities(Task.id).distinct()
     tasks = (
-        Task.query.options(joinedload(Task.project), joinedload(Task.assigned_user))
+        Task.query.options(joinedload(Task.project), selectinload(Task.assignee_links))
         .filter(Task.id.in_(task_ids_subq))
         .order_by(case((Task.status == "done", 0), else_=1), Task.name)
         .all()

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from 'components/ui.html' import page_header %}
+{# Multi-assignee select on edit form #}
 
 {% block title %}{{ _('Edit Task') }} - {{ task.name }} - Time Tracker{% endblock %}
 
@@ -107,16 +108,15 @@
                             </div>
                         </div>
 
-                        <!-- Assignment -->
+                        <!-- Assignment (multi-user) -->
                         <div class="mb-4">
-                            <label for="assigned_to" class="form-label">{{ _('Assign To') }}</label>
-                            <select id="assigned_to" name="assigned_to" class="form-input">
-                                <option value="">{{ _('Unassigned') }}</option>
+                            <label for="assignee_ids" class="form-label">{{ _('Assign To') }}</label>
+                            <select id="assignee_ids" name="assignee_ids" class="form-input" multiple size="6">
                                 {% for user in users %}
-                                <option value="{{ user.id }}" {% if task.assigned_to == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                                <option value="{{ user.id }}" {% if task.is_assigned_to(user.id) %}selected{% endif %}>{{ user.display_name }}</option>
                                 {% endfor %}
                             </select>
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Assign this task to a team member') }}</p>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Hold Ctrl/Cmd to select multiple team members') }}</p>
                         </div>
                         {% if milestones %}
                         <div class="mb-4">
@@ -216,14 +216,14 @@
                         </div>
                     </div>
                     
-                    {% if task.assigned_user %}
+                    {% if task.assignees %}
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Currently Assigned To') }}</small>
                         <div class="flex items-center">
                             <div class="rounded-full flex items-center justify-center mr-2 bg-cyan-500/10" style="width: 24px; height:24px;">
                                 <i class="fas fa-user text-cyan-600 fa-xs"></i>
                             </div>
-                            <span>{{ task.assigned_user.display_name }}</span>
+                            <span>{{ task.assignees|map(attribute='display_name')|join(', ') }}</span>
                         </div>
                     </div>
                     {% endif %}

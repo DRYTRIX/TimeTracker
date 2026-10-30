@@ -224,11 +224,14 @@ class GamificationService:
                 scores[user_id] = (total_seconds or 0) / 3600  # Convert to hours
 
         elif leaderboard_type == "tasks_completed":
-            # Tasks completed
+            # Tasks completed (count per assignee; multi-assignee tasks count for each)
+            from app.models import TaskAssignee
+
             query = (
-                db.session.query(Task.assigned_to.label("user_id"), func.count(Task.id).label("count"))
+                db.session.query(TaskAssignee.user_id.label("user_id"), func.count(Task.id).label("count"))
+                .join(Task, Task.id == TaskAssignee.task_id)
                 .filter(Task.status == "completed", Task.updated_at >= start, Task.updated_at <= end)
-                .group_by(Task.assigned_to)
+                .group_by(TaskAssignee.user_id)
             )
 
             for user_id, count in query.all():

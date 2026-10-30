@@ -35,15 +35,22 @@ def team_schedule():
         users_query = users_query.filter(User.id == current_user.id)
     users = users_query.all()
 
+    from app.services.task_service import task_assigned_to_any_clause
+
     tasks = (
-        Task.query.filter(Task.assigned_to.in_([u.id for u in users]) if users else False, Task.due_date.between(start, end))
-        .all()
+        Task.query.filter(
+            task_assigned_to_any_clause([u.id for u in users]),
+            Task.due_date.between(start, end),
+        ).all()
         if users
         else []
     )
     tasks_by_user_day = {}
+    user_id_set = {u.id for u in users}
     for task in tasks:
-        tasks_by_user_day.setdefault((task.assigned_to, task.due_date), []).append(task)
+        for uid in task.assignee_ids:
+            if uid in user_id_set:
+                tasks_by_user_day.setdefault((uid, task.due_date), []).append(task)
 
     actuals = {}
     if users:

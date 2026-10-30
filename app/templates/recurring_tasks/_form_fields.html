@@ -82,15 +82,15 @@
                     </div>
 
                     <div>
-                        <label for="assigned_to" class="block text-sm font-medium mb-2">{{ _('Assign To') }}</label>
-                        <select id="assigned_to" name="assigned_to" class="form-input w-full">
-                            <option value="">{{ _('Unassigned') }}</option>
+                        <label for="assignee_ids" class="block text-sm font-medium mb-2">{{ _('Assign To') }}</label>
+                        <select id="assignee_ids" name="assignee_ids" class="form-input w-full" multiple size="5">
                             {% for user in users %}
-                            <option value="{{ user.id }}" {% if recurring_task and recurring_task.assigned_to == user.id %}selected{% endif %}>
+                            <option value="{{ user.id }}" {% if recurring_task and user.id in recurring_task.assignee_ids %}selected{% endif %}>
                                 {{ user.username }}
                             </option>
                             {% endfor %}
                         </select>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Hold Ctrl/Cmd to select multiple assignees') }}</p>
                     </div>
 
                     <div class="flex items-center pt-6">

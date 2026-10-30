@@ -11,6 +11,7 @@ from flask_login import current_user, login_required
 from app import db
 from app.models import Project, User
 from app.models.recurring_task import RecurringTask
+from app.services.task_service import normalize_assignee_ids
 from app.utils.db import safe_commit
 from app.utils.module_helpers import module_enabled
 
@@ -33,7 +34,15 @@ def _parse_recurring_task_form(data):
     """Parse recurring task fields from form or JSON payload."""
     end_date_raw = data.get("end_date")
     estimated_raw = data.get("estimated_hours")
-    assigned_raw = data.get("assigned_to")
+
+    # Support multi-select assignee_ids and legacy assigned_to
+    if hasattr(data, "getlist"):
+        raw_ids = data.getlist("assignee_ids") or data.getlist("assignee_ids[]")
+    else:
+        raw_ids = data.get("assignee_ids") or []
+        if not isinstance(raw_ids, list):
+            raw_ids = [raw_ids] if raw_ids else []
+    singular = data.get("assigned_to") or data.get("assignee_id")
 
     return {
         "name": (data.get("name") or "").strip(),
@@ -46,7 +55,7 @@ def _parse_recurring_task_form(data):
         "description": data.get("description"),
         "priority": data.get("priority", "medium"),
         "estimated_hours": float(estimated_raw) if estimated_raw else None,
-        "assigned_to": int(assigned_raw) if assigned_raw else None,
+        "assignee_ids": normalize_assignee_ids(assignee_ids=raw_ids, assigned_to=singular),
         "auto_assign": bool(data.get("auto_assign", False)),
     }
 
@@ -62,7 +71,7 @@ def _apply_recurring_task_fields(recurring_task, fields):
     recurring_task.description = fields["description"]
     recurring_task.priority = fields["priority"]
     recurring_task.estimated_hours = fields["estimated_hours"]
-    recurring_task.assigned_to = fields["assigned_to"]
+    recurring_task.set_assignees(fields["assignee_ids"])
     recurring_task.auto_assign = fields["auto_assign"]
 
 
@@ -120,11 +129,13 @@ def create_recurring_task():
             description=fields["description"],
             priority=fields["priority"],
             estimated_hours=fields["estimated_hours"],
-            assigned_to=fields["assigned_to"],
+            assignee_ids=fields["assignee_ids"],
             auto_assign=fields["auto_assign"],
         )
 
         db.session.add(recurring_task)
+        db.session.flush()
+        recurring_task.apply_pending_assignees()
         if not safe_commit("create_recurring_task"):
             if request.is_json:
                 return jsonify({"error": "Database error"}), 500

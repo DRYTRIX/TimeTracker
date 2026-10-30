@@ -99,6 +99,7 @@ from .supplier import Supplier
 from .supplier_stock_item import SupplierStockItem
 from .task import Task
 from .task_activity import TaskActivity
+from .task_assignee import RecurringTaskAssignee, TaskAssignee
 from .task_checklist_item import TaskChecklistItem
 from .task_dependency import TaskDependency
 from .milestone import Milestone
@@ -128,6 +129,8 @@ __all__ = [
     "Project",
     "TimeEntry",
     "Task",
+    "TaskAssignee",
+    "RecurringTaskAssignee",
     "TaskDependency",
     "Milestone",
     "Settings",

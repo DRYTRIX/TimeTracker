@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-assignee tasks** — Tasks (and recurring task templates) support multiple equal assignees via `task_assignees` / `recurring_task_assignees`. Create/edit/bulk-assign UI, filters, permissions, kanban, API (`assignee_ids`, legacy `assignee_id`), and workflows updated; existing `assigned_to` values are migrated.
+
 ## [5.18.4] - 2026-10-28
 
 ### Fixed

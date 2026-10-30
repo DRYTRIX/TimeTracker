@@ -51,7 +51,7 @@
             {% endif %}
             <div class="space-y-1 text-sm text-text-muted-light dark:text-text-muted-dark">
                 <div><i class="fas fa-project-diagram w-4 mr-2 text-primary/70"></i>{{ task.project.name }}</div>
-                <div><i class="fas fa-user w-4 mr-2 text-primary/70"></i>{% if task.assigned_user %}{{ task.assigned_user.display_name }}{% else %}{{ _('Unassigned') }}{% endif %}</div>
+                <div><i class="fas fa-user w-4 mr-2 text-primary/70"></i>{% if task.assignees %}{{ task.assignees|map(attribute='display_name')|join(', ') }}{% else %}{{ _('Unassigned') }}{% endif %}</div>
                 <div class="font-semibold text-red-600 dark:text-red-400"><i class="fas fa-calendar w-4 mr-2"></i>{{ _('Due:') }} {{ task.due_date|format_date }}</div>
                 {% if task.estimated_hours %}<div><i class="fas fa-clock w-4 mr-2 text-primary/70"></i>{{ _('Est:') }} {{ task.estimated_hours }}h</div>{% endif %}
                 {% if task.total_hours > 0 %}<div><i class="fas fa-stopwatch w-4 mr-2 text-primary/70"></i>{{ _('Actual:') }} {{ task.total_hours }}h</div>{% endif %}

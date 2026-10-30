@@ -396,7 +396,7 @@ class ProjectService:
             dict with 'project', 'time_entries_pagination', 'tasks', 'comments',
             'recent_costs', 'total_costs_count', 'user_totals', 'kanban_columns'
         """
-        from sqlalchemy.orm import joinedload
+        from sqlalchemy.orm import joinedload, selectinload
 
         from app.models import Comment, KanbanColumn, ProjectCost, Task
         from app.repositories import TimeEntryRepository
@@ -429,7 +429,7 @@ class ProjectService:
         # Get tasks with eager loading (already loaded but need to order)
         tasks = (
             Task.query.filter_by(project_id=project_id)
-            .options(joinedload(cast(Any, Task.assigned_user)))
+            .options(selectinload(cast(Any, Task.assignee_links)))
             .order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc())
             .all()
         )
