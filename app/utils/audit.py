@@ -72,14 +72,43 @@ IMMUTABLE_DELETE_MODELS = {
     "AttendanceBreak",
 }
 
-# Fields to exclude from audit logging (internal/system fields)
+# Fields to exclude from audit logging (internal/system/secret fields).
+# Keep in sync with Settings._SECRET_FIELDS and similar sensitive columns.
 EXCLUDED_FIELDS = {
     "id",
     "created_at",
     "updated_at",
-    "password_hash",  # Never log passwords
-    "password",  # Never log passwords
+    "password",
+    "password_hash",
+    # User 2FA / auth secrets (#801)
+    "two_factor_secret",
+    # Client portal credentials
+    "portal_password_hash",
+    "password_setup_token",
+    # Settings secrets (Settings._SECRET_FIELDS)
+    "mail_password",
+    "peppol_access_point_token",
+    "ai_api_key",
+    "jira_client_secret",
+    "slack_client_secret",
+    "github_client_secret",
+    "google_calendar_client_secret",
+    "outlook_calendar_client_secret",
+    "microsoft_teams_client_secret",
+    "asana_client_secret",
+    "trello_api_secret",
+    "gitlab_client_secret",
+    "quickbooks_client_secret",
+    "xero_client_secret",
 }
+
+# Name suffixes that indicate secret material (defense against new columns)
+_SENSITIVE_FIELD_SUFFIXES = (
+    "_secret",
+    "_password",
+    "_password_hash",
+    "_api_key",
+)
 
 
 def get_current_user_id():
@@ -128,8 +157,17 @@ def should_track_model(instance):
 
 
 def should_track_field(field_name):
-    """Check if a field should be tracked"""
-    return field_name not in EXCLUDED_FIELDS
+    """Check if a field should be tracked (excludes secrets and system fields)."""
+    if not field_name:
+        return False
+    if field_name in EXCLUDED_FIELDS:
+        return False
+    if field_name in ("secret", "password", "password_hash"):
+        return False
+    for suffix in _SENSITIVE_FIELD_SUFFIXES:
+        if field_name.endswith(suffix):
+            return False
+    return True
 
 
 def serialize_value(value):
