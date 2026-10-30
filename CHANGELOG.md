@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Exchange rates** — When exchangerate.host returns no rate (it now requires an access key), try a keyless exchangerate.host-compatible ECB endpoint (AllRatesToday) for the same date before the latest-only fallback.
+
 ## [5.18.4] - 2026-10-28
 
 ### Fixed
