@@ -76,8 +76,8 @@ See implementation commits and CHANGELOG Unreleased section for other Phase 1 it
 
 **Versions**
 
-- Source of truth: `setup.py` (`5.18.4`); mirror `VERSION` at repo root.
-- Clients aligned: `desktop/package.json`, `browser-extension/package.json` + `manifest.json`, `mobile/pubspec.yaml` (`5.18.4+1`).
+- Source of truth: `setup.py` (`5.18.5`); mirror `VERSION` at repo root.
+- Clients aligned: `desktop/package.json`, `browser-extension/package.json` + `manifest.json`, `mobile/pubspec.yaml` (`5.18.5+1`).
 - Desktop sidebar label via Vite `__APP_VERSION__` (`desktop/vite.config.mjs` reads `desktop/package.json`).
 
 **API login + 2FA**
