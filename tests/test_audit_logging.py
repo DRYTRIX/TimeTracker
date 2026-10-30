@@ -25,11 +25,22 @@ class TestAuditLoggingUtility:
         """Test field tracking exclusion"""
         assert should_track_field("name") == True
         assert should_track_field("description") == True
+        assert should_track_field("two_factor_enabled") == True  # Non-secret 2FA state
         assert should_track_field("id") == False  # Excluded
         assert should_track_field("created_at") == False  # Excluded
         assert should_track_field("updated_at") == False  # Excluded
         assert should_track_field("password") == False  # Excluded
         assert should_track_field("password_hash") == False  # Excluded
+        # Issue #801 — secrets must never be audited
+        assert should_track_field("two_factor_secret") == False
+        assert should_track_field("portal_password_hash") == False
+        assert should_track_field("password_setup_token") == False
+        assert should_track_field("mail_password") == False
+        assert should_track_field("ai_api_key") == False
+        assert should_track_field("jira_client_secret") == False
+        # Heuristic: future *_secret / *_api_key columns
+        assert should_track_field("new_integration_secret") == False
+        assert should_track_field("vendor_api_key") == False
 
     def test_serialize_value(self):
         """Test value serialization"""
@@ -113,3 +124,29 @@ class TestAuditLoggingIntegration:
             assert len(audit_logs) >= 1, "At least one audit log should be created for entity delete"
             assert audit_logs[0].action == "deleted"
             assert audit_logs[0].entity_type == "Project"
+
+    def test_two_factor_secret_not_logged(self, app, test_user):
+        """Issue #801: two_factor_secret must not appear in audit log values."""
+        with app.app_context():
+            user = db.session.get(User, test_user.id)
+            secret = "JBSWY3DPEHPK3PXP"
+            user.set_two_factor_secret(secret)
+            db.session.flush()
+
+            secret_logs = AuditLog.query.filter_by(
+                entity_type="User", entity_id=user.id, field_name="two_factor_secret"
+            ).all()
+            assert secret_logs == [], "two_factor_secret must not produce audit rows"
+
+            # Values must not appear in any audit row for this user update batch
+            for log in AuditLog.query.filter_by(entity_type="User", entity_id=user.id).all():
+                assert secret not in (log.old_value or "")
+                assert secret not in (log.new_value or "")
+
+            user.two_factor_enabled = True
+            db.session.flush()
+
+            enabled_logs = AuditLog.query.filter_by(
+                entity_type="User", entity_id=user.id, field_name="two_factor_enabled"
+            ).all()
+            assert len(enabled_logs) >= 1, "two_factor_enabled should still be audited"
