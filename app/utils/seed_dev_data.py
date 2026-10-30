@@ -343,6 +343,8 @@ def run_seed(
             counts["tasks"] += 1
             tasks_to_use.append(task)
     db.session.flush()
+    for task in tasks_to_use:
+        task.apply_pending_assignees()
     if not tasks_to_use:
         tasks_to_use = Task.query.limit(len(projects_to_use) * tasks_per_project).all()
 

@@ -239,8 +239,32 @@ Example: `2024-01-15T14:30:00Z`
                         "priority_class": {"type": "string", "description": "CSS class for priority styling"},
                         "estimated_hours": {"type": "number", "nullable": True},
                         "due_date": {"type": "string", "format": "date", "nullable": True},
-                        "assigned_to": {"type": "integer", "nullable": True, "description": "User ID of the assignee"},
-                        "assigned_user": {"type": "string", "nullable": True, "description": "Username of the assignee"},
+                        "assignee_ids": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "description": "User IDs of all assignees",
+                        },
+                        "assignees": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {"type": "integer"},
+                                    "username": {"type": "string"},
+                                    "display_name": {"type": "string"},
+                                },
+                            },
+                        },
+                        "assigned_to": {
+                            "type": "integer",
+                            "nullable": True,
+                            "description": "Deprecated: first assignee user ID",
+                        },
+                        "assigned_user": {
+                            "type": "string",
+                            "nullable": True,
+                            "description": "Deprecated: first assignee username",
+                        },
                         "created_by": {"type": "integer", "description": "User ID of the creator"},
                         "creator": {"type": "string", "nullable": True, "description": "Username of the creator"},
                         "created_at": {"type": "string", "format": "date-time", "nullable": True},
@@ -691,7 +715,15 @@ Example: `2024-01-15T14:30:00Z`
                                         "name": {"type": "string"},
                                         "project_id": {"type": "integer"},
                                         "description": {"type": "string"},
-                                        "assignee_id": {"type": "integer"},
+                                        "assignee_ids": {
+                                            "type": "array",
+                                            "items": {"type": "integer"},
+                                            "description": "User IDs to assign (replaces set)",
+                                        },
+                                        "assignee_id": {
+                                            "type": "integer",
+                                            "description": "Deprecated: single assignee (merged into assignee_ids)",
+                                        },
                                         "priority": {"type": "string", "enum": ["low", "medium", "high", "urgent"], "default": "medium"},
                                         "due_date": {"type": "string", "format": "date"},
                                         "estimated_hours": {"type": "number"},
@@ -738,7 +770,15 @@ Example: `2024-01-15T14:30:00Z`
                                         "description": {"type": "string"},
                                         "status": {"type": "string", "enum": ["todo", "in_progress", "review", "done", "cancelled"]},
                                         "priority": {"type": "string", "enum": ["low", "medium", "high", "urgent"]},
-                                        "assignee_id": {"type": "integer"},
+                                        "assignee_ids": {
+                                            "type": "array",
+                                            "items": {"type": "integer"},
+                                            "description": "User IDs to assign (replaces set)",
+                                        },
+                                        "assignee_id": {
+                                            "type": "integer",
+                                            "description": "Deprecated: single assignee (merged into assignee_ids)",
+                                        },
                                         "due_date": {"type": "string", "format": "date"},
                                         "estimated_hours": {"type": "number"},
                                         "tags": {"type": "string"},

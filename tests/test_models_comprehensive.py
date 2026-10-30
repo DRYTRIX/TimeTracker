@@ -667,7 +667,7 @@ def test_user_deletion_removes_from_favorite_projects(app, test_client):
 @pytest.mark.unit
 @pytest.mark.models
 def test_user_deletion_preserves_tasks_assigned_to_them(app, test_client):
-    """Test that deleting a user preserves tasks but nullifies assigned_to."""
+    """Test that deleting a user preserves tasks but removes them from assignees."""
     with app.app_context():
         # Create users and project
         creator = User(username="creator", role="user")
@@ -702,9 +702,10 @@ def test_user_deletion_preserves_tasks_assigned_to_them(app, test_client):
         deleted_user = User.query.get(assignee_id)
         assert deleted_user is None
 
-        # Verify task still exists but assigned_to is nullified
+        # Verify task still exists but assignee link was removed (CASCADE)
         remaining_task = Task.query.get(task_id)
         assert remaining_task is not None
+        assert remaining_task.assignee_ids == []
         assert remaining_task.assigned_to is None
 
 

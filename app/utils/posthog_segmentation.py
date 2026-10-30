@@ -147,9 +147,15 @@ def calculate_usage_patterns(user_id: Any) -> Dict[str, Any]:
 
     # Task statistics (if tasks exist)
     try:
-        assigned_tasks = Task.query.filter_by(assigned_to=user_id, status__ne="done").count()
+        from app.services.task_service import task_assigned_to_user_clause
 
-        completed_tasks = Task.query.filter_by(assigned_to=user_id, status="done").count()
+        assigned_tasks = Task.query.filter(
+            task_assigned_to_user_clause(user_id), Task.status != "done"
+        ).count()
+
+        completed_tasks = Task.query.filter(
+            task_assigned_to_user_clause(user_id), Task.status == "done"
+        ).count()
     except Exception:
         assigned_tasks = 0
         completed_tasks = 0

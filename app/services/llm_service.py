@@ -19,6 +19,7 @@ from app import db
 from app.models import Project, Settings, Task, TimeEntry, User
 from app.models.time_entry import local_now
 from app.services.ai_suggestion_service import AISuggestionService
+from app.services.task_service import task_assigned_to_user_clause
 from app.services.time_tracking_service import TimeTrackingService
 from app.utils.scope_filter import user_can_access_project
 
@@ -185,7 +186,7 @@ class LLMService:
 
         tasks = (
             Task.query.options(joinedload(Task.project))
-            .filter(Task.assigned_to == user.id, Task.status.in_(["todo", "in_progress", "review"]))
+            .filter(task_assigned_to_user_clause(user.id), Task.status.in_(["todo", "in_progress", "review"]))
             .order_by(Task.due_date.asc().nullslast(), Task.updated_at.desc())
             .limit(20)
             .all()

@@ -11,6 +11,7 @@ from sqlalchemy import desc, func
 
 from app import db
 from app.models import Project, Task, TimeEntry, User
+from app.services.task_service import task_assigned_to_user_clause
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +98,7 @@ class AISuggestionService:
 
         # Get active tasks assigned to user
         active_tasks = (
-            Task.query.filter(Task.assigned_to == user_id, Task.status.in_(["todo", "in_progress"]))
+            Task.query.filter(task_assigned_to_user_clause(user_id), Task.status.in_(["todo", "in_progress"]))
             .order_by(Task.priority.desc(), Task.created_at.desc())
             .limit(5)
             .all()
@@ -177,7 +178,7 @@ class AISuggestionService:
         upcoming_deadline = datetime.utcnow() + timedelta(days=7)
         urgent_tasks = (
             Task.query.filter(
-                Task.assigned_to == user_id,
+                task_assigned_to_user_clause(user_id),
                 Task.status.in_(["todo", "in_progress"]),
                 Task.due_date.isnot(None),
                 Task.due_date <= upcoming_deadline,

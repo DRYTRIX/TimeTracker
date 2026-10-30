@@ -22,6 +22,11 @@ from flask_login import current_user, login_required
 import app as app_module
 from app import db
 from app.models import Activity, KanbanColumn, Milestone, Project, Task, TaskActivity, TaskChecklistItem, TaskDependency, TimeEntry, User
+from app.services.task_service import (
+    normalize_assignee_ids,
+    task_assigned_to_any_clause,
+    task_assigned_to_user_clause,
+)
 from app.utils.db import safe_commit
 from app.utils.pagination import get_pagination_params
 from app.utils.error_handling import sanitize_log_value
@@ -31,6 +36,35 @@ from app.utils.timezone import convert_app_datetime_to_user, now_in_app_timezone
 tasks_bp = Blueprint("tasks", __name__)
 
 ALLOWED_NEXT_PREFIXES = ("/kanban", "/gantt", "/tasks", "/projects")
+
+
+def _user_can_access_task(task):
+    """Admin, any assignee, or creator may view/act on a task."""
+    return (
+        current_user.is_admin
+        or task.is_assigned_to(current_user.id)
+        or task.created_by == current_user.id
+    )
+
+
+def _parse_assignee_ids_from_form(form=None):
+    """Parse multi-select assignee_ids (and legacy assigned_to) from a form."""
+    form = form or request.form
+    raw_list = form.getlist("assignee_ids") or form.getlist("assignee_ids[]")
+    if not raw_list:
+        raw_list = form.getlist("assigned_to_ids") or form.getlist("assigned_to_ids[]")
+    # multi_select component posts a single comma-separated hidden field
+    expanded = []
+    for item in raw_list:
+        if item is None:
+            continue
+        text = str(item).strip()
+        if "," in text:
+            expanded.extend(part.strip() for part in text.split(",") if part.strip())
+        elif text:
+            expanded.append(text)
+    singular = form.get("assigned_to") or form.get("assignee_id") or form.get("user_id")
+    return normalize_assignee_ids(assignee_ids=expanded, assigned_to=singular)
 
 
 @tasks_bp.route("/tasks")
@@ -183,7 +217,7 @@ def create_task():
         priority = request.form.get("priority", "medium")
         estimated_hours_str = request.form.get("estimated_hours", "").strip()
         due_date_str = request.form.get("due_date", "").strip()
-        assigned_to = request.form.get("assigned_to", type=int)
+        assignee_ids = _parse_assignee_ids_from_form()
 
         # Validate and sanitize input
         from app.utils.validation import sanitize_input, validate_string
@@ -282,7 +316,7 @@ def create_task():
             name=name,
             project_id=project_id,
             description=description,
-            assignee_id=assigned_to,
+            assignee_ids=assignee_ids,
             priority=priority,
             due_date=due_date,
             estimated_hours=estimated_hours,
@@ -367,7 +401,7 @@ def view_task(task_id):
         return redirect(url_for("tasks.list_tasks"))
 
     # Check if user has access to this task
-    if not current_user.is_admin and task.assigned_to != current_user.id and task.created_by != current_user.id:
+    if not _user_can_access_task(task):
         flash(_("You do not have access to this task"), "error")
         return redirect(url_for("tasks.list_tasks"))
 
@@ -450,7 +484,7 @@ def edit_task(task_id):
         priority = request.form.get("priority", "medium")
         estimated_hours_str = request.form.get("estimated_hours", "").strip()
         due_date_str = request.form.get("due_date", "").strip()
-        assigned_to = request.form.get("assigned_to", type=int)
+        assignee_ids = _parse_assignee_ids_from_form()
 
         # Validate and sanitize input
         from app.utils.validation import sanitize_input, validate_string
@@ -563,7 +597,7 @@ def edit_task(task_id):
         task.priority = priority
         task.estimated_hours = estimated_hours
         task.due_date = due_date
-        task.assigned_to = assigned_to
+        task.set_assignees(assignee_ids)
         # Tags (comma-separated, max 500 chars)
         tags_val = request.form.get("tags", "").strip()[:500]
         task.tags = tags_val or None
@@ -747,7 +781,7 @@ def update_task_status(task_id):
     new_status = request.form.get("status", "").strip()
 
     # Check if user can update this task
-    if not current_user.is_admin and task.assigned_to != current_user.id and task.created_by != current_user.id:
+    if not _user_can_access_task(task):
         flash(_("You do not have permission to update this task"), "error")
         return redirect(url_for("tasks.view_task", task_id=task.id))
 
@@ -890,24 +924,26 @@ def update_task_priority(task_id):
 @tasks_bp.route("/tasks/<int:task_id>/assign", methods=["POST"])
 @login_required
 def assign_task(task_id):
-    """Assign task to a user"""
+    """Assign task to one or more users (replaces assignee set)."""
     task = Task.query.get_or_404(task_id)
-    user_id = request.form.get("user_id", type=int)
+    assignee_ids = _parse_assignee_ids_from_form()
 
     # Check if user can assign this task
     if not current_user.is_admin and task.created_by != current_user.id:
         flash(_("You can only assign tasks you created"), "error")
         return redirect(url_for("tasks.view_task", task_id=task.id))
 
-    if user_id:
-        user = User.query.get(user_id)
-        if not user:
+    for uid in assignee_ids:
+        if not User.query.get(uid):
             flash(_("Selected user does not exist"), "error")
             return redirect(url_for("tasks.view_task", task_id=task.id))
 
-    task.reassign(user_id)
-    if user_id:
-        flash(f"Task assigned to {user.username}", "success")
+    task.set_assignees(assignee_ids, commit=True)
+    if assignee_ids:
+        names = ", ".join(
+            (User.query.get(uid).username if User.query.get(uid) else str(uid)) for uid in assignee_ids
+        )
+        flash(f"Task assigned to {names}", "success")
     else:
         flash(_("Task unassigned"), "success")
 
@@ -1277,21 +1313,21 @@ def bulk_update_priority():
 @tasks_bp.route("/tasks/bulk-assign", methods=["POST"])
 @login_required
 def bulk_assign_tasks():
-    """Assign multiple tasks to a user"""
+    """Replace assignees on multiple tasks with the selected user set."""
     task_ids = request.form.getlist("task_ids[]")
-    assigned_to = request.form.get("assigned_to", type=int)
+    assignee_ids = _parse_assignee_ids_from_form()
 
     if not task_ids:
         flash(_("No tasks selected"), "warning")
         return redirect(url_for("tasks.list_tasks"))
 
-    if not assigned_to:
+    if not assignee_ids:
         flash(_("No user selected for assignment"), "error")
         return redirect(url_for("tasks.list_tasks"))
 
-    # Verify user exists
-    user = User.query.get(assigned_to)
-    if not user:
+    # Verify users exist
+    users = User.query.filter(User.id.in_(assignee_ids)).all()
+    if len(users) != len(assignee_ids):
         flash(_("Invalid user selected"), "error")
         return redirect(url_for("tasks.list_tasks"))
 
@@ -1311,19 +1347,20 @@ def bulk_assign_tasks():
                 skipped_count += 1
                 continue
 
-            task.assigned_to = assigned_to
+            task.set_assignees(assignee_ids)
             updated_count += 1
 
         except Exception:
             skipped_count += 1
 
     if updated_count > 0:
-        if not safe_commit("bulk_assign_tasks", {"count": updated_count, "assigned_to": assigned_to}):
+        if not safe_commit("bulk_assign_tasks", {"count": updated_count, "assignee_ids": assignee_ids}):
             flash(_("Could not assign tasks due to a database error"), "error")
             return redirect(url_for("tasks.list_tasks"))
 
+        names = ", ".join(u.display_name for u in users)
         flash(
-            f'Successfully assigned {updated_count} task{"s" if updated_count != 1 else ""} to {user.display_name}',
+            f'Successfully assigned {updated_count} task{"s" if updated_count != 1 else ""} to {names}',
             "success",
         )
 
@@ -1450,7 +1487,7 @@ def export_tasks():
         query = query.filter(Task.project_id.in_(project_ids))
 
     if assigned_to_ids:
-        query = query.filter(Task.assigned_to.in_(assigned_to_ids))
+        query = query.filter(task_assigned_to_any_clause(assigned_to_ids))
 
     if search:
         like = f"%{search}%"
@@ -1470,7 +1507,9 @@ def export_tasks():
     # Permission filter - users without view_all_tasks permission only see their tasks
     has_view_all_tasks = current_user.is_admin or current_user.has_permission("view_all_tasks")
     if not has_view_all_tasks:
-        query = query.filter(db.or_(Task.assigned_to == current_user.id, Task.created_by == current_user.id))
+        query = query.filter(
+            db.or_(task_assigned_to_user_clause(current_user.id), Task.created_by == current_user.id)
+        )
 
     tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
 
@@ -1523,7 +1562,7 @@ def export_tasks():
                 task.status,
                 task.priority,
                 task.tags or "",
-                task.assigned_user.display_name if task.assigned_user else "",
+                ", ".join(u.display_name for u in task.assignees) if task.assignees else "",
                 task.creator.display_name if task.creator else "",
                 task.due_date.strftime("%Y-%m-%d") if task.due_date else "",
                 task.estimated_hours or "",
@@ -1570,11 +1609,13 @@ def my_tasks():
 
     # Restrict to current user's tasks depending on task_type filter
     if task_type == "assigned":
-        query = query.filter(Task.assigned_to == current_user.id)
+        query = query.filter(task_assigned_to_user_clause(current_user.id))
     elif task_type == "created":
         query = query.filter(Task.created_by == current_user.id)
     else:
-        query = query.filter(db.or_(Task.assigned_to == current_user.id, Task.created_by == current_user.id))
+        query = query.filter(
+            db.or_(task_assigned_to_user_clause(current_user.id), Task.created_by == current_user.id)
+        )
 
     # Apply filters
     if status:
@@ -1661,7 +1702,7 @@ def api_task(task_id):
     task = Task.query.get_or_404(task_id)
 
     # Check if user has access to this task
-    if not current_user.is_admin and task.assigned_to != current_user.id and task.created_by != current_user.id:
+    if not _user_can_access_task(task):
         return jsonify({"error": "Access denied"}), 403
 
     return jsonify(task.to_dict())
@@ -1676,7 +1717,7 @@ def api_update_status(task_id):
     new_status = data.get("status", "").strip()
 
     # Check if user can update this task
-    if not current_user.is_admin and task.assigned_to != current_user.id and task.created_by != current_user.id:
+    if not _user_can_access_task(task):
         return jsonify({"error": "Access denied"}), 403
 
     # Validate status against configured kanban columns for this task's project
@@ -1733,7 +1774,7 @@ def api_update_status(task_id):
 
 def _can_edit_task(task):
     """Return True if the current user may modify the given task."""
-    return current_user.is_admin or task.assigned_to == current_user.id or task.created_by == current_user.id
+    return _user_can_access_task(task)
 
 
 def _checklist_state(task):
@@ -1847,7 +1888,7 @@ def reorder_checklist_items(task_id):
 
 
 def _can_edit_task_deps(task):
-    return current_user.is_admin or task.created_by == current_user.id or task.assigned_to == current_user.id
+    return _user_can_access_task(task)
 
 
 @tasks_bp.route("/tasks/<int:task_id>/dependencies", methods=["POST"])

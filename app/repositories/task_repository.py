@@ -4,11 +4,11 @@ Repository for task data access operations.
 
 from typing import List, Optional
 
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app import db
 from app.constants import TaskStatus
-from app.models import Task
+from app.models import Task, TaskAssignee
 from app.repositories.base_repository import BaseRepository
 
 
@@ -28,7 +28,11 @@ class TaskRepository(BaseRepository[Task]):
             query = query.filter_by(status=status)
 
         if include_relations:
-            query = query.options(joinedload(Task.project), joinedload(Task.assigned_user), joinedload(Task.creator))
+            query = query.options(
+                joinedload(Task.project),
+                selectinload(Task.assignee_links).joinedload(TaskAssignee.user),
+                joinedload(Task.creator),
+            )
 
         return query.order_by(Task.priority.desc(), Task.due_date.asc()).all()
 
@@ -36,13 +40,15 @@ class TaskRepository(BaseRepository[Task]):
         self, assignee_id: int, status: Optional[str] = None, include_relations: bool = False
     ) -> List[Task]:
         """Get tasks assigned to a user"""
-        query = self.model.query.filter_by(assignee_id=assignee_id)
+        query = self.model.query.filter(
+            Task.id.in_(db.session.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == assignee_id))
+        )
 
         if status:
             query = query.filter_by(status=status)
 
         if include_relations:
-            query = query.options(joinedload(Task.project))
+            query = query.options(joinedload(Task.project), selectinload(Task.assignee_links))
 
         return query.order_by(Task.priority.desc(), Task.due_date.asc()).all()
 

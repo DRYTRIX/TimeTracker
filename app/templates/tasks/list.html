@@ -127,7 +127,6 @@
 
 <form id="bulkAssignForm" method="POST" action="{{ url_for('tasks.bulk_assign_tasks') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <input type="hidden" name="assigned_to" id="bulkAssignValue">
 </form>
 
 <form id="bulkProjectForm" method="POST" action="{{ url_for('tasks.bulk_move_project') }}" class="hidden">
@@ -196,13 +195,13 @@
     <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark max-w-md w-full mx-4">
         <div class="p-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Assign Selected Tasks') }}</h3>
-            <label for="bulkAssignSelect" class="form-label">Select User</label>
-            <select id="bulkAssignSelect" class="form-input w-full mb-4">
-                <option value="">-- Select User --</option>
+            <label for="bulkAssignSelect" class="form-label">{{ _('Select Users') }}</label>
+            <select id="bulkAssignSelect" class="form-input w-full mb-4" multiple size="6">
                 {% for user in users %}
                 <option value="{{ user.id }}">{{ user.display_name }}</option>
                 {% endfor %}
             </select>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Hold Ctrl/Cmd to select multiple. Replaces current assignees.') }}</p>
             <div class="flex justify-end gap-2">
                 <button type="button" onclick="closeBulkAssignDialog()" class="btn btn-secondary">Cancel</button>
                 <button type="button" onclick="submitBulkAssign()" class="btn btn-primary">{{ _('Assign Tasks') }}</button>
@@ -354,17 +353,23 @@ function closeBulkAssignDialog() {
 }
 
 function submitBulkAssign() {
-    const assignedTo = document.getElementById('bulkAssignSelect').value;
-    if (!assignedTo) {
-        alert('Please select a user');
+    const select = document.getElementById('bulkAssignSelect');
+    const selected = Array.from(select.selectedOptions).map(o => o.value);
+    if (!selected.length) {
+        alert('Please select at least one user');
         return;
     }
     
     const form = document.getElementById('bulkAssignForm');
-    document.getElementById('bulkAssignValue').value = assignedTo;
-    
-    // Clear existing hidden inputs
-    form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
+    form.querySelectorAll('input[name="task_ids[]"], input[name="assignee_ids"]').forEach(input => input.remove());
+
+    selected.forEach(uid => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'assignee_ids';
+        input.value = uid;
+        form.appendChild(input);
+    });
     
     // Add selected task IDs to form
     const checkboxes = document.querySelectorAll('.task-checkbox:checked');

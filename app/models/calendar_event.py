@@ -181,8 +181,10 @@ class CalendarEvent(db.Model):
         if include_tasks:
             print(f"MODEL - Querying tasks for user {user_id}")
             logger.info("Querying tasks for user %s", sanitize_log_value(user_id))
+            from app.services.task_service import task_assigned_to_user_clause
+
             tasks = Task.query.filter(
-                Task.assigned_to == user_id,
+                task_assigned_to_user_clause(user_id),
                 Task.due_date.isnot(None),
                 Task.due_date >= start_date.date() if hasattr(start_date, "date") else start_date,
                 Task.due_date <= end_date.date() if hasattr(end_date, "date") else end_date,

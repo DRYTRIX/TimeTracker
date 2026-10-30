@@ -14,7 +14,8 @@ class TaskSchema(Schema):
     name = fields.Str(required=True, validate=validate.Length(max=200))
     description = fields.Str(allow_none=True)
     project_id = fields.Int(required=True)
-    assignee_id = fields.Int(allow_none=True)
+    assignee_ids = fields.List(fields.Int(), allow_none=True)
+    assignee_id = fields.Int(allow_none=True)  # Deprecated singular
     status = fields.Str(validate=validate.OneOf([s.value for s in TaskStatus]))
     priority = fields.Str(validate=validate.OneOf(["low", "medium", "high", "urgent"]))
     due_date = fields.Date(allow_none=True)
@@ -25,7 +26,8 @@ class TaskSchema(Schema):
 
     # Nested fields
     project = fields.Nested("ProjectSchema", dump_only=True, allow_none=True)
-    assignee = fields.Nested("UserSchema", dump_only=True, allow_none=True)
+    assignees = fields.List(fields.Nested("UserSchema"), dump_only=True)
+    assignee = fields.Nested("UserSchema", dump_only=True, allow_none=True)  # Deprecated first assignee
 
 
 class TaskCreateSchema(Schema):
@@ -34,7 +36,8 @@ class TaskCreateSchema(Schema):
     name = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     description = fields.Str(allow_none=True)
     project_id = fields.Int(required=True)
-    assignee_id = fields.Int(allow_none=True)
+    assignee_ids = fields.List(fields.Int(), missing=list)
+    assignee_id = fields.Int(allow_none=True)  # Deprecated singular
     priority = fields.Str(missing="medium", validate=validate.OneOf(["low", "medium", "high", "urgent"]))
     due_date = fields.Date(allow_none=True)
     tags = fields.Str(allow_none=True)
@@ -45,7 +48,8 @@ class TaskUpdateSchema(Schema):
 
     name = fields.Str(allow_none=True, validate=validate.Length(min=1, max=200))
     description = fields.Str(allow_none=True)
-    assignee_id = fields.Int(allow_none=True)
+    assignee_ids = fields.List(fields.Int(), allow_none=True)
+    assignee_id = fields.Int(allow_none=True)  # Deprecated singular
     status = fields.Str(allow_none=True, validate=validate.OneOf([s.value for s in TaskStatus]))
     priority = fields.Str(allow_none=True, validate=validate.OneOf(["low", "medium", "high", "urgent"]))
     due_date = fields.Date(allow_none=True)

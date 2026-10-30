@@ -82,7 +82,11 @@ def run_global_search(
                 and not getattr(user, "is_scope_restricted", False)
                 and not getattr(user, "is_client_portal_user", False)
             ):
-                tasks_query = tasks_query.filter(db.or_(Task.assigned_to == user.id, Task.created_by == user.id))
+                from app.services.task_service import task_assigned_to_user_clause
+
+                tasks_query = tasks_query.filter(
+                    db.or_(task_assigned_to_user_clause(user.id), Task.created_by == user.id)
+                )
             tasks = tasks_query.limit(limit).all()
 
             for task in tasks:
