@@ -304,7 +304,9 @@ def _export_user_projects(user):
 
 def _export_user_tasks(user):
     """Export tasks assigned to user"""
-    tasks = Task.query.filter_by(assigned_to=user.id).all()
+    from app.services.task_service import task_assigned_to_user_clause
+
+    tasks = Task.query.filter(task_assigned_to_user_clause(user.id)).all()
     return [_task_to_dict(t) for t in tasks]
 
 
@@ -441,6 +443,7 @@ def _task_to_dict(task):
         "description": task.description,
         "project_id": task.project_id,
         "project": task.project.name if task.project else None,
+        "assignee_ids": task.assignee_ids,
         "assigned_to": task.assigned_to,
         "status": task.status,
         "priority": task.priority,

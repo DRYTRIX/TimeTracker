@@ -611,7 +611,9 @@ def upcoming_deadlines():
     )
 
     if not current_user.is_admin:
-        query = query.filter(or_(Task.assigned_to == current_user.id, Task.created_by == current_user.id))
+        from app.services.task_service import task_assigned_to_user_clause
+
+        query = query.filter(or_(task_assigned_to_user_clause(current_user.id), Task.created_by == current_user.id))
 
     tasks = query.order_by(Task.due_date.asc(), Task.priority.desc(), Task.name.asc()).limit(20).all()
 

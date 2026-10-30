@@ -30,7 +30,6 @@ class RecurringTask(db.Model):
     description = db.Column(db.Text, nullable=True)
     priority = db.Column(db.String(20), default="medium", nullable=False)  # 'low', 'medium', 'high'
     estimated_hours = db.Column(db.Numeric(10, 2), nullable=True)
-    assigned_to = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
 
     # Auto-creation settings
     is_active = db.Column(db.Boolean, nullable=False, default=True)
@@ -48,7 +47,13 @@ class RecurringTask(db.Model):
     creator = db.relationship(
         "User", foreign_keys=[created_by], backref=db.backref("created_recurring_tasks", lazy="dynamic")
     )
-    assignee = db.relationship("User", foreign_keys=[assigned_to])
+    assignee_links = db.relationship(
+        "RecurringTaskAssignee",
+        back_populates="recurring_task",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        passive_deletes=True,
+    )
 
     def __init__(self, name, project_id, frequency, next_run_date, created_by, **kwargs):
         self.name = name
@@ -64,12 +69,77 @@ class RecurringTask(db.Model):
         self.description = kwargs.get("description")
         self.priority = kwargs.get("priority", "medium")
         self.estimated_hours = kwargs.get("estimated_hours")
-        self.assigned_to = kwargs.get("assigned_to")
         self.is_active = kwargs.get("is_active", True)
         self.auto_assign = kwargs.get("auto_assign", False)
 
+        ids = list(kwargs.get("assignee_ids") or [])
+        if not ids and kwargs.get("assigned_to") is not None:
+            ids = [kwargs.get("assigned_to")]
+        self._pending_assignee_ids = ids
+
     def __repr__(self):
         return f"<RecurringTask {self.name} ({self.frequency})>"
+
+    @property
+    def assignee_ids(self):
+        return [link.user_id for link in self.assignee_links]
+
+    @property
+    def assignees(self):
+        return [link.user for link in self.assignee_links if link.user is not None]
+
+    @property
+    def assigned_to(self):
+        """Deprecated: first assignee id for compatibility."""
+        ids = self.assignee_ids
+        return ids[0] if ids else None
+
+    @property
+    def assignee(self):
+        """Deprecated: first assignee user for template compatibility."""
+        users = self.assignees
+        return users[0] if users else None
+
+    def set_assignees(self, user_ids, *, commit=False):
+        from app.models.task_assignee import RecurringTaskAssignee
+
+        normalized = []
+        seen = set()
+        for uid in user_ids or []:
+            if uid is None:
+                continue
+            uid = int(uid)
+            if uid in seen:
+                continue
+            seen.add(uid)
+            normalized.append(uid)
+
+        current = {link.user_id: link for link in list(self.assignee_links)}
+        desired = set(normalized)
+
+        for uid, link in list(current.items()):
+            if uid not in desired:
+                self.assignee_links.remove(link)
+                db.session.delete(link)
+
+        for uid in normalized:
+            if uid not in current:
+                self.assignee_links.append(
+                    RecurringTaskAssignee(
+                        user_id=uid,
+                        recurring_task_id=self.id if self.id is not None else None,
+                    )
+                )
+
+        self.updated_at = datetime.utcnow()
+        if commit:
+            db.session.commit()
+
+    def apply_pending_assignees(self):
+        pending = getattr(self, "_pending_assignee_ids", None)
+        if pending is not None:
+            self.set_assignees(pending)
+            self._pending_assignee_ids = None
 
     def calculate_next_run_date(self, from_date=None):
         """Calculate the next run date based on frequency and interval"""
@@ -97,16 +167,24 @@ class RecurringTask(db.Model):
         task_name = task_name.replace("{{week}}", f"Week {self.next_run_date.isocalendar()[1]}")
         task_name = task_name.replace("{{month}}", self.next_run_date.strftime("%B"))
 
+        if self.auto_assign:
+            assignee_ids = [self.created_by]
+        else:
+            assignee_ids = list(self.assignee_ids)
+
         task = Task(
             project_id=self.project_id,
             name=task_name,
             description=self.description,
             priority=self.priority,
             estimated_hours=float(self.estimated_hours) if self.estimated_hours else None,
-            assigned_to=self.assigned_to if not self.auto_assign else self.created_by,
+            assignee_ids=assignee_ids,
+            created_by=self.created_by,
             status="todo",
         )
         db.session.add(task)
+        db.session.flush()
+        task.apply_pending_assignees()
 
         # Update template
         self.last_created_at = datetime.utcnow()
@@ -135,6 +213,7 @@ class RecurringTask(db.Model):
             "description": self.description,
             "priority": self.priority,
             "estimated_hours": float(self.estimated_hours) if self.estimated_hours else None,
+            "assignee_ids": self.assignee_ids,
             "assigned_to": self.assigned_to,
             "is_active": self.is_active,
             "auto_assign": self.auto_assign,

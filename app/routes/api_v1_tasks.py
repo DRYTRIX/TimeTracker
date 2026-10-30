@@ -98,8 +98,16 @@ def get_task(task_id):
 
     from app.models import Task
 
+    from sqlalchemy.orm import selectinload
+
+    from app.models import TaskAssignee
+
     task = (
-        Task.query.options(joinedload(Task.project), joinedload(Task.assigned_user), joinedload(Task.creator))
+        Task.query.options(
+            joinedload(Task.project),
+            selectinload(Task.assignee_links).joinedload(TaskAssignee.user),
+            joinedload(Task.creator),
+        )
         .filter_by(id=task_id)
         .first_or_404()
     )
@@ -128,6 +136,7 @@ def create_task():
         created_by=g.api_user.id,
         description=data.get("description"),
         assignee_id=data.get("assignee_id"),
+        assignee_ids=data.get("assignee_ids"),
         priority=data.get("priority", "medium"),
         due_date=data.get("due_date"),
         estimated_hours=data.get("estimated_hours"),
@@ -155,7 +164,9 @@ def update_task(task_id):
         update_kwargs["status"] = data["status"]
     if "priority" in data:
         update_kwargs["priority"] = data["priority"]
-    if "assignee_id" in data:
+    if "assignee_ids" in data:
+        update_kwargs["assignee_ids"] = data["assignee_ids"]
+    elif "assignee_id" in data:
         update_kwargs["assignee_id"] = data["assignee_id"]
     if "due_date" in data:
         update_kwargs["due_date"] = data["due_date"]

@@ -124,10 +124,10 @@
           <!-- Card Footer -->
           <div class="kanban-card-footer">
             <div class="kanban-card-meta">
-                {% if task.assigned_user %}
-              <div class="kanban-meta-item kanban-meta-assignee" title="{{ task.assigned_user.display_name }}">
+                {% if task.assignees %}
+              <div class="kanban-meta-item kanban-meta-assignee" title="{{ task.assignees|map(attribute='display_name')|join(', ') }}">
                 <i class="fas fa-user"></i>
-                <span>{{ task.assigned_user.display_name }}</span>
+                <span>{{ task.assignees|map(attribute='display_name')|join(', ') }}</span>
               </div>
               {% endif %}
               {% if task.due_date %}
@@ -1112,16 +1112,22 @@ window.openTaskModal = async function(taskId) {
       descSection.style.display = 'none';
     }
     
-    // Assigned user
+    // Assigned users
     const assignedSection = document.getElementById('taskModalAssignedSection');
-    if (task.assigned_user) {
+    const assigneeNames = (task.assignees || [])
+      .map(u => u.display_name || u.username)
+      .filter(Boolean);
+    if (!assigneeNames.length && task.assigned_user) {
+      assigneeNames.push(task.assigned_user.display_name || task.assigned_user.username);
+    }
+    if (assigneeNames.length) {
       assignedSection.style.display = 'block';
       const assignedHtml = `
         <div class="d-flex align-items-center gap-2">
           <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
             <i class="fas fa-user text-primary" style="font-size: 12px;"></i>
           </div>
-          <span>${task.assigned_user.display_name || task.assigned_user.username}</span>
+          <span>${assigneeNames.join(', ')}</span>
         </div>
       `;
       document.getElementById('taskModalAssigned').innerHTML = assignedHtml;

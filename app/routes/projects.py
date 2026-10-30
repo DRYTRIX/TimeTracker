@@ -784,8 +784,13 @@ def project_dashboard(project_id):
             entry_count = entry_count.count()
 
             # Count tasks assigned to this user
-            task_count = project.tasks.filter_by(assigned_to=user.id).count()
+            from app.models import TaskAssignee
 
+            task_count = (
+                project.tasks.join(TaskAssignee, TaskAssignee.task_id == Task.id)
+                .filter(TaskAssignee.user_id == user.id)
+                .count()
+            )
             team_contributions.append(
                 {
                     "username": username,

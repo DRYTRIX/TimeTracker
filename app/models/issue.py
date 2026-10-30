@@ -195,6 +195,7 @@ class Issue(db.Model):
         )
         db.session.add(task)
         db.session.flush()  # Get task ID
+        task.apply_pending_assignees()
 
         # Link issue to task
         self.task_id = task.id

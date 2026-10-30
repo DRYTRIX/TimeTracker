@@ -56,7 +56,7 @@
         </div>
         {% endif %}
 
-        {% set can_edit_checklist = current_user.is_admin or task.assigned_to == current_user.id or task.created_by == current_user.id %}
+        {% set can_edit_checklist = current_user.is_admin or task.is_assigned_to(current_user.id) or task.created_by == current_user.id %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm"
              id="checklistCard" data-task-id="{{ task.id }}" data-can-edit="{{ '1' if can_edit_checklist else '0' }}">
             <div class="flex items-center justify-between mb-4">
@@ -110,7 +110,7 @@
                     <span class="inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium {% if link.depends_on.status in ['done', 'cancelled'] %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% else %}bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200{% endif %}">
                         <a href="{{ url_for('tasks.view_task', task_id=link.depends_on_id) }}" class="hover:underline">{{ link.depends_on.name }}</a>
                         <span class="opacity-70">{{ link.depends_on.status_display }}</span>
-                        {% if current_user.is_admin or task.created_by == current_user.id or task.assigned_to == current_user.id %}
+                        {% if current_user.is_admin or task.created_by == current_user.id or task.is_assigned_to(current_user.id) %}
                         <form method="POST" action="{{ url_for('tasks.delete_task_dependency', task_id=task.id, dep_id=link.id) }}" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="text-red-600 hover:text-red-800" title="{{ _('Remove') }}" aria-label="{{ _('Remove dependency') }}"><i class="fas fa-times"></i></button>
@@ -132,7 +132,7 @@
                     {% endfor %}
                 </div>
             </div>
-            {% if (current_user.is_admin or task.created_by == current_user.id or task.assigned_to == current_user.id) and sibling_tasks %}
+            {% if (current_user.is_admin or task.created_by == current_user.id or task.is_assigned_to(current_user.id)) and sibling_tasks %}
             <form method="POST" action="{{ url_for('tasks.add_task_dependency', task_id=task.id) }}" class="flex flex-wrap items-end gap-2 mt-4">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="flex-1 min-w-[12rem]">
@@ -231,10 +231,10 @@
                         {% endif %}
                     </p>
                 </div>
-                {% if task.assigned_user %}
+                {% if task.assignees %}
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Assigned To</h3>
-                    <p>{{ task.assigned_user.display_name }}</p>
+                    <p>{{ task.assignees|map(attribute='display_name')|join(', ') }}</p>
                 </div>
                 {% endif %}
                 {% if task.tags %}

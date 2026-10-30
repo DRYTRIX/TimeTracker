@@ -2,14 +2,55 @@
 Service for task business logic.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 from app import db
 from app.constants import TaskStatus, WebhookEvent
-from app.models import Task
+from app.models import Task, TaskAssignee
 from app.repositories import ProjectRepository, TaskRepository
 from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
+
+
+def normalize_assignee_ids(
+    assignee_ids: Optional[Sequence[Any]] = None,
+    assignee_id: Optional[int] = None,
+    assigned_to: Optional[int] = None,
+) -> List[int]:
+    """Build a deduplicated list of assignee user IDs from plural and legacy singular inputs."""
+    ids: List[int] = []
+    seen = set()
+    for raw in list(assignee_ids or []):
+        if raw is None or raw == "":
+            continue
+        try:
+            uid = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if uid not in seen:
+            seen.add(uid)
+            ids.append(uid)
+    for singular in (assignee_id, assigned_to):
+        if singular is None or singular == "":
+            continue
+        try:
+            uid = int(singular)
+        except (TypeError, ValueError):
+            continue
+        if uid not in seen:
+            seen.add(uid)
+            ids.append(uid)
+    return ids
+
+
+def task_assigned_to_user_clause(user_id: int):
+    """SQL filter: task is assigned to the given user."""
+    return Task.id.in_(db.session.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == user_id))
+
+
+def task_assigned_to_any_clause(user_ids: Sequence[int]):
+    """SQL filter: task is assigned to any of the given users."""
+    return Task.id.in_(db.session.query(TaskAssignee.task_id).filter(TaskAssignee.user_id.in_(list(user_ids))))
 
 
 class TaskService:
@@ -55,6 +96,7 @@ class TaskService:
         created_by: int,
         description: Optional[str] = None,
         assignee_id: Optional[int] = None,
+        assignee_ids: Optional[Sequence[Any]] = None,
         priority: str = "medium",
         due_date: Optional[Any] = None,
         estimated_hours: Optional[float] = None,
@@ -69,7 +111,8 @@ class TaskService:
             name: Task name
             project_id: Project ID
             description: Task description
-            assignee_id: User ID of assignee
+            assignee_id: Legacy single assignee user ID
+            assignee_ids: List of assignee user IDs
             priority: Task priority (low, medium, high)
             due_date: Due date
             estimated_hours: Estimated hours
@@ -96,12 +139,14 @@ class TaskService:
             allowed = set(self.VALID_STATUSES)
         task_status = status if status and status in allowed else TaskStatus.TODO.value
 
+        ids = normalize_assignee_ids(assignee_ids=assignee_ids, assignee_id=assignee_id)
+
         # Create task
         task = self.task_repo.create(
             name=name,
             project_id=project_id,
             description=description,
-            assigned_to=assignee_id,
+            assignee_ids=ids,
             priority=priority,
             due_date=due_date,
             estimated_hours=estimated_hours,
@@ -111,6 +156,9 @@ class TaskService:
         )
         if color:
             task.color = color
+
+        db.session.flush()
+        task.apply_pending_assignees()
 
         if not safe_commit("create_task", {"project_id": project_id, "created_by": created_by}):
             return {
@@ -145,14 +193,18 @@ class TaskService:
         Returns:
             Task with eagerly loaded relations, or None if not found
         """
-        from sqlalchemy.orm import joinedload
+        from sqlalchemy.orm import joinedload, selectinload
 
         from app.models import Comment, TaskActivity, TimeEntry
 
         query = self.task_repo.query().filter_by(id=task_id)
 
-        # Eagerly load project and assignee
-        query = query.options(joinedload(Task.project), joinedload(Task.assigned_user), joinedload(Task.creator))
+        # Eagerly load project and assignees
+        query = query.options(
+            joinedload(Task.project),
+            selectinload(Task.assignee_links).joinedload(TaskAssignee.user),
+            joinedload(Task.creator),
+        )
 
         # Conditionally load relations
         # Note: time_entries is a dynamic relationship (lazy='dynamic') and cannot be eager loaded
@@ -178,8 +230,25 @@ class TaskService:
         if not task:
             return {"success": False, "message": "Task not found", "error": "not_found"}
 
-        # Update fields
+        # Extract assignee fields before generic update (not model columns)
+        assignee_ids = kwargs.pop("assignee_ids", None)
+        assignee_id = kwargs.pop("assignee_id", None)
+        assigned_to = kwargs.pop("assigned_to", None)
+        update_assignees = (
+            assignee_ids is not None or assignee_id is not None or assigned_to is not None
+        )
+
+        # Update scalar fields
         self.task_repo.update(task, **kwargs)
+
+        if update_assignees:
+            task.set_assignees(
+                normalize_assignee_ids(
+                    assignee_ids=assignee_ids if assignee_ids is not None else [],
+                    assignee_id=assignee_id,
+                    assigned_to=assigned_to,
+                )
+            )
 
         if not safe_commit("update_task", {"task_id": task_id, "user_id": user_id}):
             return {
@@ -243,7 +312,11 @@ class TaskService:
         # Use selectinload for better performance with many tasks (avoids cartesian product)
         from sqlalchemy.orm import selectinload
 
-        query = query.options(selectinload(Task.project), selectinload(Task.assigned_user), selectinload(Task.creator))
+        query = query.options(
+            selectinload(Task.project),
+            selectinload(Task.assignee_links).joinedload(TaskAssignee.user),
+            selectinload(Task.creator),
+        )
         logger.debug(
             f"[TaskService.list_tasks] Step 2: Eager loading setup took {(time.time() - step_start) * 1000:.2f}ms"
         )
@@ -267,9 +340,9 @@ class TaskService:
             query = query.filter(Task.project_id == project_id)
 
         if assigned_to_ids:
-            query = query.filter(Task.assigned_to.in_(assigned_to_ids))
+            query = query.filter(task_assigned_to_any_clause(assigned_to_ids))
         elif assigned_to:
-            query = query.filter(Task.assigned_to == assigned_to)
+            query = query.filter(task_assigned_to_user_clause(assigned_to))
 
         if milestone_id:
             query = query.filter(Task.milestone_id == milestone_id)
@@ -292,7 +365,7 @@ class TaskService:
 
         # Permission filter - users without view_all_tasks permission only see their tasks
         if not has_view_all_tasks and user_id:
-            query = query.filter(db.or_(Task.assigned_to == user_id, Task.created_by == user_id))
+            query = query.filter(db.or_(task_assigned_to_user_clause(user_id), Task.created_by == user_id))
         logger.debug(
             f"[TaskService.list_tasks] Step 3: Applying filters took {(time.time() - step_start) * 1000:.2f}ms"
         )
@@ -331,9 +404,9 @@ class TaskService:
             elif project_id:
                 count_query = count_query.filter(Task.project_id == project_id)
             if assigned_to_ids:
-                count_query = count_query.filter(Task.assigned_to.in_(assigned_to_ids))
+                count_query = count_query.filter(task_assigned_to_any_clause(assigned_to_ids))
             elif assigned_to:
-                count_query = count_query.filter(Task.assigned_to == assigned_to)
+                count_query = count_query.filter(task_assigned_to_user_clause(assigned_to))
             if search:
                 like = f"%{search}%"
                 count_query = count_query.filter(db.or_(Task.name.ilike(like), Task.description.ilike(like)))
@@ -348,7 +421,9 @@ class TaskService:
                     Task.due_date < today_local, Task.status.in_(["todo", "in_progress", "review"])
                 )
             if not has_view_all_tasks and user_id:
-                count_query = count_query.filter(db.or_(Task.assigned_to == user_id, Task.created_by == user_id))
+                count_query = count_query.filter(
+                    db.or_(task_assigned_to_user_clause(user_id), Task.created_by == user_id)
+                )
             total = count_query.count()
             logger.debug(f"[TaskService.list_tasks] Count query took {(time.time() - count_start) * 1000:.2f}ms")
         else:

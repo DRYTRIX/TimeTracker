@@ -838,7 +838,9 @@ def task_completion():
     )
 
     if not current_user.is_admin:
-        completed_query = completed_query.filter(Task.assigned_to == current_user.id)
+        from app.services.task_service import task_assigned_to_user_clause
+
+        completed_query = completed_query.filter(task_assigned_to_user_clause(current_user.id))
 
     completed_count = completed_query.scalar() or 0
 
@@ -848,7 +850,9 @@ def task_completion():
     )
 
     if not current_user.is_admin:
-        status_query = status_query.filter(Task.assigned_to == current_user.id)
+        from app.services.task_service import task_assigned_to_user_clause
+
+        status_query = status_query.filter(task_assigned_to_user_clause(current_user.id))
 
     status_results = status_query.group_by(Task.status).all()
 
@@ -870,7 +874,9 @@ def task_completion():
     )
 
     if not current_user.is_admin:
-        project_query = project_query.filter(Task.assigned_to == current_user.id)
+        from app.services.task_service import task_assigned_to_user_clause
+
+        project_query = project_query.filter(task_assigned_to_user_clause(current_user.id))
 
     project_results = project_query.group_by(Project.name).order_by(func.count(Task.id).desc()).limit(10).all()
 

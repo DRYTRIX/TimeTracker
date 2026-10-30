@@ -227,7 +227,7 @@ function bulkUpdatePriority(priority) {
 
 function bulkAssign(userId) {
     const msg = `Assign ${selectedTaskIds.size} task(s) to selected user?`;
-    if (window.showConfirm){ window.showConfirm(msg, { title: 'Assign Tasks', confirmText: 'Assign' }).then(function(ok){ if (ok) submitBulkAction('{{ url_for("tasks.bulk_assign_tasks") }}', { assigned_to: userId }); }); }
+    if (window.showConfirm){ window.showConfirm(msg, { title: 'Assign Tasks', confirmText: 'Assign' }).then(function(ok){ if (ok) submitBulkAction('{{ url_for("tasks.bulk_assign_tasks") }}', { assignee_ids: userId }); }); }
 }
 
 function bulkDelete() {

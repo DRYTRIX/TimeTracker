@@ -249,12 +249,12 @@
 
                     <!-- Task Meta -->
                     <div class="task-meta mb-3">
-                        {% if task.assigned_user %}
+                        {% if task.assignees %}
                         <div class="d-flex align-items-center mb-2">
                             <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px;">
                                 <i class="fas fa-user text-info fa-xs"></i>
                             </div>
-                            <span class="text-muted small">{{ task.assigned_user.display_name }}</span>
+                            <span class="text-muted small">{{ task.assignees|map(attribute='display_name')|join(', ') }}</span>
                         </div>
                         {% endif %}
                         
@@ -291,10 +291,10 @@
                         <!-- Task Type Indicator -->
                         <div class="d-flex align-items-center mb-2">
                             <div class="bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px;">
-                                <i class="fas fa-{% if task.assigned_to == current_user.id %}user-check{% else %}user-plus{% endif %} text-secondary fa-xs"></i>
+                                <i class="fas fa-{% if task.is_assigned_to(current_user.id) %}user-check{% else %}user-plus{% endif %} text-secondary fa-xs"></i>
                             </div>
                             <span class="text-muted small">
-                                {% if task.assigned_to == current_user.id %}
+                                {% if task.is_assigned_to(current_user.id) %}
                                     Assigned to me
                                 {% else %}
                                     {{ _('Created by me') }}

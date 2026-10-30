@@ -1,5 +1,8 @@
 from datetime import datetime
 
+from sqlalchemy import event
+from sqlalchemy.orm import Session
+
 from app import db
 from app.utils.timezone import now_in_app_timezone
 
@@ -19,7 +22,6 @@ class Task(db.Model):
     priority = db.Column(db.String(20), default="medium", nullable=False)  # 'low', 'medium', 'high', 'urgent'
     estimated_hours = db.Column(db.Float, nullable=True)
     due_date = db.Column(db.Date, nullable=True, index=True)
-    assigned_to = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=now_in_app_timezone, nullable=False)
     updated_at = db.Column(db.DateTime, default=now_in_app_timezone, onupdate=now_in_app_timezone, nullable=False)
@@ -39,7 +41,13 @@ class Task(db.Model):
 
     # Relationships
     # project relationship is defined via backref in Project model
-    assigned_user = db.relationship("User", foreign_keys=[assigned_to], backref="assigned_tasks")
+    assignee_links = db.relationship(
+        "TaskAssignee",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        passive_deletes=True,
+    )
     creator = db.relationship("User", foreign_keys=[created_by], backref="created_tasks")
     time_entries = db.relationship("TimeEntry", backref="task", lazy="dynamic")
     # comments relationship is defined via backref in Comment model
@@ -53,6 +61,7 @@ class Task(db.Model):
         estimated_hours=None,
         due_date=None,
         assigned_to=None,
+        assignee_ids=None,
         created_by=None,
         status="todo",
         tags=None,
@@ -63,13 +72,87 @@ class Task(db.Model):
         self.priority = priority
         self.estimated_hours = estimated_hours
         self.due_date = due_date
-        self.assigned_to = assigned_to
         self.created_by = created_by
         self.status = status
         self.tags = (tags.strip() or None) if tags else None
+        # Defer assignee links until after flush when possible; callers may also
+        # call set_assignees after add. Support legacy assigned_to for create paths.
+        ids = list(assignee_ids) if assignee_ids is not None else []
+        if not ids and assigned_to is not None:
+            ids = [assigned_to]
+        self._pending_assignee_ids = ids
 
     def __repr__(self):
         return f"<Task {self.name} ({self.status})>"
+
+    @property
+    def assignee_ids(self):
+        """List of assigned user IDs."""
+        return [link.user_id for link in self.assignee_links]
+
+    @property
+    def assignees(self):
+        """List of assigned User objects."""
+        return [link.user for link in self.assignee_links if link.user is not None]
+
+    @property
+    def assigned_to(self):
+        """Deprecated: first assignee id for API compatibility."""
+        ids = self.assignee_ids
+        return ids[0] if ids else None
+
+    @property
+    def assigned_user(self):
+        """Deprecated: first assignee user for template/API compatibility."""
+        users = self.assignees
+        return users[0] if users else None
+
+    def is_assigned_to(self, user_id):
+        """Return True if user_id is among assignees."""
+        if user_id is None:
+            return False
+        return any(link.user_id == user_id for link in self.assignee_links)
+
+    def set_assignees(self, user_ids, *, commit=False):
+        """Replace the assignee set. Deduplicates and ignores None/empty."""
+        from app.models.task_assignee import TaskAssignee
+
+        normalized = []
+        seen = set()
+        for uid in user_ids or []:
+            if uid is None:
+                continue
+            uid = int(uid)
+            if uid in seen:
+                continue
+            seen.add(uid)
+            normalized.append(uid)
+
+        # Diff the current collection so cascade delete-orphan stays consistent
+        current = {link.user_id: link for link in list(self.assignee_links)}
+        desired = set(normalized)
+
+        for uid, link in list(current.items()):
+            if uid not in desired:
+                self.assignee_links.remove(link)
+                db.session.delete(link)
+
+        for uid in normalized:
+            if uid not in current:
+                self.assignee_links.append(
+                    TaskAssignee(user_id=uid, task_id=self.id if self.id is not None else None)
+                )
+
+        self.updated_at = now_in_app_timezone()
+        if commit:
+            db.session.commit()
+
+    def apply_pending_assignees(self):
+        """Apply assignee IDs stored during __init__ (call after add/flush)."""
+        pending = getattr(self, "_pending_assignee_ids", None)
+        if pending is not None:
+            self.set_assignees(pending)
+            self._pending_assignee_ids = None
 
     @property
     def is_active(self):
@@ -266,10 +349,8 @@ class Task(db.Model):
         db.session.commit()
 
     def reassign(self, user_id):
-        """Reassign task to different user"""
-        self.assigned_to = user_id
-        self.updated_at = now_in_app_timezone()
-        db.session.commit()
+        """Reassign task to a single user (replaces the assignee set)."""
+        self.set_assignees([user_id] if user_id is not None else [], commit=True)
 
     def update_priority(self, priority):
         """Update task priority"""
@@ -289,6 +370,11 @@ class Task(db.Model):
 
     def to_dict(self):
         """Convert task to dictionary for API responses"""
+        assignee_list = [
+            {"id": u.id, "username": u.username, "display_name": getattr(u, "display_name", u.username)}
+            for u in self.assignees
+        ]
+        first = assignee_list[0] if assignee_list else None
         return {
             "id": self.id,
             "project_id": self.project_id,
@@ -301,8 +387,11 @@ class Task(db.Model):
             "priority_class": self.priority_class,
             "estimated_hours": self.estimated_hours,
             "due_date": self.due_date.isoformat() if self.due_date else None,
-            "assigned_to": self.assigned_to,
-            "assigned_user": self.assigned_user.username if self.assigned_user else None,
+            "assignee_ids": self.assignee_ids,
+            "assignees": assignee_list,
+            # Deprecated single-assignee fields for API compatibility
+            "assigned_to": first["id"] if first else None,
+            "assigned_user": first["username"] if first else None,
             "created_by": self.created_by,
             "creator": self.creator.username if self.creator else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -323,6 +412,16 @@ class Task(db.Model):
         }
 
     @classmethod
+    def assigned_user_exists(cls, user_id):
+        """SQLAlchemy exists() clause: task is assigned to user_id."""
+        from app.models.task_assignee import TaskAssignee
+
+        return db.exists().where(
+            TaskAssignee.task_id == cls.id,
+            TaskAssignee.user_id == user_id,
+        )
+
+    @classmethod
     def get_tasks_by_project(cls, project_id, status=None, priority=None):
         """Get tasks for a specific project with optional filters"""
         query = cls.query.filter_by(project_id=project_id)
@@ -341,12 +440,21 @@ class Task(db.Model):
         if not include_assigned and not include_created:
             return []
 
+        from app.models.task_assignee import TaskAssignee
+
         query = cls.query
 
         if include_assigned and include_created:
-            query = query.filter(db.or_(cls.assigned_to == user_id, cls.created_by == user_id))
+            query = query.filter(
+                db.or_(
+                    cls.id.in_(db.session.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == user_id)),
+                    cls.created_by == user_id,
+                )
+            )
         elif include_assigned:
-            query = query.filter_by(assigned_to=user_id)
+            query = query.filter(
+                cls.id.in_(db.session.query(TaskAssignee.task_id).filter(TaskAssignee.user_id == user_id))
+            )
         elif include_created:
             query = query.filter_by(created_by=user_id)
 
@@ -367,3 +475,12 @@ class Task(db.Model):
             .order_by(cls.priority.desc(), cls.due_date.asc())
             .all()
         )
+
+
+@event.listens_for(Session, "before_flush")
+def _apply_pending_task_assignees(session, flush_context, instances):
+    """Ensure Task/RecurringTask pending assignee IDs become association rows on flush."""
+    for obj in list(session.new) + list(session.dirty):
+        apply = getattr(obj, "apply_pending_assignees", None)
+        if callable(apply) and getattr(obj, "_pending_assignee_ids", None) is not None:
+            apply()

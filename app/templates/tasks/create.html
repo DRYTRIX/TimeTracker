@@ -105,16 +105,15 @@
                             </div>
                         </div>
 
-                        <!-- Assignment -->
+                        <!-- Assignment (multi-user) -->
                         <div class="mb-4">
-                            <label for="assigned_to" class="form-label">{{ _('Assign To') }}</label>
-                            <select id="assigned_to" name="assigned_to" class="form-input">
-                                <option value="">{{ _('Unassigned') }}</option>
+                            <label for="assignee_ids" class="form-label">{{ _('Assign To') }}</label>
+                            <select id="assignee_ids" name="assignee_ids" class="form-input" multiple size="6">
                                 {% for user in users %}
-                                <option value="{{ user.id }}" {% if request.form.get('assigned_to')|int == user.id %}selected{% endif %}>{{ user.display_name }}</option>
+                                <option value="{{ user.id }}" {% if user.id|string in request.form.getlist('assignee_ids') %}selected{% endif %}>{{ user.display_name }}</option>
                                 {% endfor %}
                             </select>
-                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Assign this task to a team member') }}</p>
+                            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Hold Ctrl/Cmd to select multiple team members') }}</p>
                         </div>
 
                         <!-- Tags -->

@@ -296,8 +296,7 @@ def check_task_deadline_approaching():
             Task.status.notin_(["done", "cancelled"]),
         ).all()
         for task in tasks:
-            user_id = task.assigned_to or task.created_by
-            if user_id:
+            for user_id in task.assignee_ids or ([task.created_by] if task.created_by else []):
                 fire_deadline_approaching_workflow(task, user_id)
         return len(tasks)
     except Exception as e:
