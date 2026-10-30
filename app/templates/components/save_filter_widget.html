@@ -101,18 +101,19 @@ function closeSaveFilterModal() {
 
 function getCurrentFilterParameters() {
     // Get all form inputs on the page and build filter payload
-    var params = Object.create(null);
+    // Use Map to avoid remote property injection from untrusted URL param names
+    var params = new Map();
     var urlParams = new URLSearchParams(window.location.search);
 
     // Get all URL parameters
     for (let [key, value] of urlParams.entries()) {
         if (!value) continue;
-        // Prevent prototype pollution from untrusted URL param names
+        // Prevent prototype pollution when converting Map to a plain object
         if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
-        params[key] = value;
+        params.set(key, value);
     }
 
-    return params;
+    return Object.fromEntries(params);
 }
 
 function saveFilter(event) {
