@@ -2057,8 +2057,8 @@ def bulk_entry():
             # Check for overlapping entries
             overlapping = TimeEntry.query.filter(
                 TimeEntry.user_id == target_user_id,
-                TimeEntry.start_time <= end_datetime,
-                TimeEntry.end_time >= start_datetime,
+                TimeEntry.start_time < end_datetime,
+                TimeEntry.end_time > start_datetime,
                 TimeEntry.end_time.isnot(None),
             ).first()
 
