@@ -22,7 +22,7 @@ class ProjectCost(db.Model):
     # Billing
     billable = db.Column(db.Boolean, default=True, nullable=False)
     invoiced = db.Column(db.Boolean, default=False, nullable=False)
-    invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id"), nullable=True, index=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # Date and metadata
     cost_date = db.Column(db.Date, nullable=False, index=True)

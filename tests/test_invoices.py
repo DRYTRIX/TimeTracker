@@ -1681,6 +1681,87 @@ def test_delete_invoice_route_success(app, client, user, project):
     assert "deleted successfully" in html
 
 
+def _draft_invoice_with_cost_and_expense(user, project):
+    from app.models import Expense, ProjectCost
+
+    inv = InvoiceFactory(
+        project_id=project.id,
+        client_name="Client",
+        client_id=project.client_id,
+        due_date=date.today() + timedelta(days=30),
+        created_by=user.id,
+        status="draft",
+    )
+    cost = ProjectCost(
+        project_id=project.id,
+        user_id=user.id,
+        description="Hosting",
+        category="services",
+        amount=Decimal("40.00"),
+        cost_date=date.today(),
+        billable=True,
+    )
+    expense = Expense(
+        user_id=user.id,
+        project_id=project.id,
+        title="Train ticket",
+        category="travel",
+        amount=Decimal("25.00"),
+        expense_date=date.today(),
+        billable=True,
+        status="approved",
+    )
+    db.session.add_all([cost, expense])
+    db.session.commit()
+    cost.mark_as_invoiced(inv.id)
+    expense.mark_as_invoiced(inv.id)
+    db.session.commit()
+    return inv.id, cost.id, expense.id
+
+
+def _assert_billable_again(project, cost_id, expense_id):
+    from app.models import Expense, ProjectCost
+
+    db.session.expire_all()
+    cost_offered = cost_id in [c.id for c in ProjectCost.get_uninvoiced_costs(project.id)]
+    expense_offered = expense_id in [e.id for e in Expense.get_uninvoiced_expenses(project_id=project.id)]
+    assert (cost_offered, expense_offered) == (True, True)
+
+
+@pytest.mark.routes
+@pytest.mark.invoices
+def test_delete_invoice_route_makes_costs_and_expenses_billable_again(app, client, user, project):
+    """A deleted draft must not keep its project costs and expenses marked as invoiced."""
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    invoice_id, cost_id, expense_id = _draft_invoice_with_cost_and_expense(user, project)
+
+    resp = client.post(f"/invoices/{invoice_id}/delete", follow_redirects=True)
+
+    assert resp.status_code == 200
+    assert Invoice.query.get(invoice_id) is None
+    _assert_billable_again(project, cost_id, expense_id)
+
+
+@pytest.mark.routes
+@pytest.mark.invoices
+def test_bulk_delete_invoices_makes_costs_and_expenses_billable_again(app, client, user, project):
+    """Bulk delete releases project costs and expenses the same way."""
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    invoice_id, cost_id, expense_id = _draft_invoice_with_cost_and_expense(user, project)
+
+    resp = client.post("/invoices/bulk-delete", data={"invoice_ids[]": [str(invoice_id)]}, follow_redirects=True)
+
+    assert resp.status_code == 200
+    assert Invoice.query.get(invoice_id) is None
+    _assert_billable_again(project, cost_id, expense_id)
+
+
 @pytest.mark.routes
 @pytest.mark.invoices
 def test_delete_invoice_route_permission_denied(app, client, user, project):

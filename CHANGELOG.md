@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Exchange rates** — When exchangerate.host returns no rate (it now requires an access key), try a keyless exchangerate.host-compatible ECB endpoint (AllRatesToday) for the same date before the latest-only fallback.
+- **Invoices** — Deleting a draft invoice (single or bulk) now makes its project costs and expenses billable again; before, they stayed marked as invoiced and never appeared on a later invoice.
 
 ## [5.18.4] - 2026-10-28
 
