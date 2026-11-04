@@ -847,6 +847,7 @@ def delete_invoice(invoice_id):
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 
     invoice_number = invoice.invoice_number
+    invoice.release_invoiced_costs_and_expenses()
     db.session.delete(invoice)
     if not safe_commit("delete_invoice", {"invoice_id": invoice.id}):
         flash(_("Could not delete invoice due to a database error. Please check server logs."), "error")
@@ -890,6 +891,7 @@ def bulk_delete_invoices():
                 continue
 
             invoice_number = invoice.invoice_number
+            invoice.release_invoiced_costs_and_expenses()
             db.session.delete(invoice)
             deleted_count += 1
 

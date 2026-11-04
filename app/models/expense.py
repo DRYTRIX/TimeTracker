@@ -47,7 +47,7 @@ class Expense(db.Model):
     billable = db.Column(db.Boolean, default=False, nullable=False)
     reimbursable = db.Column(db.Boolean, default=True, nullable=False)
     invoiced = db.Column(db.Boolean, default=False, nullable=False)
-    invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id"), nullable=True, index=True)
+    invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True, index=True)
     reimbursed = db.Column(db.Boolean, default=False, nullable=False)
     reimbursed_at = db.Column(db.DateTime, nullable=True)
 

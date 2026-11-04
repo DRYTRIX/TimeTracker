@@ -527,6 +527,7 @@ class InvoiceService:
                 "error": "invalid_status",
             }
 
+        invoice.release_invoiced_costs_and_expenses()
         db.session.delete(invoice)
 
         if not safe_commit("delete_invoice", {"invoice_id": invoice_id, "user_id": user_id}):
