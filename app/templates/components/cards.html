@@ -1,14 +1,18 @@
+{# Thin re-exports / legacy aliases — prefer ui.html for new pages.
+   info_card / this stat_card signature differ from ui.html, so 9 importers
+   keep using this file until call sites are migrated. #}
+
 {% macro stat_card(title, value, change, change_color) %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
-    <h3 class="text-text-muted-light dark:text-text-muted-dark">{{ title }}</h3>
-    <p class="text-2xl font-bold">{{ value }} <span class="text-sm text-{{ change_color }}">{{ change }}</span></p>
+<div class="bg-card-light dark:bg-card-dark p-5 rounded-tt border border-border-light dark:border-border-dark">
+    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ title }}</h3>
+    <p class="text-2xl font-semibold text-text-light dark:text-text-dark mt-1">{{ value }}{% if change %} <span class="text-sm font-medium text-{{ change_color }}">{{ change }}</span>{% endif %}</p>
 </div>
 {% endmacro %}
 
 {% macro info_card(title, value, subtext) %}
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
-    <h3 class="text-text-muted-light dark:text-text-muted-dark">{{ title }}</h3>
-    <p class="text-3xl font-bold">{{ value }}</p>
-    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ subtext }}</p>
+<div class="bg-card-light dark:bg-card-dark p-5 rounded-tt border border-border-light dark:border-border-dark">
+    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ title }}</h3>
+    <p class="text-2xl font-semibold text-text-light dark:text-text-dark mt-1">{{ value }}</p>
+    {% if subtext %}<p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ subtext }}</p>{% endif %}
 </div>
 {% endmacro %}

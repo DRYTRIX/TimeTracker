@@ -14,128 +14,75 @@
     actions_html=None
 ) }}
 
-<!-- Enhanced Stat Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-    <!-- Total Users -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-blue-400"></div>
-        <div class="flex items-start justify-between">
-            <div class="flex-1">
-                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Users') }}</p>
-                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.total_users }}</h3>
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('All time') }}</p>
-            </div>
-            <div class="w-12 h-12 bg-blue-500/10 dark:bg-blue-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-                <i class="fas fa-users text-blue-500 text-xl"></i>
-            </div>
-        </div>
+{% if attention_items %}
+<div class="mb-6 rounded-tt border border-amber-300 dark:border-amber-700 bg-amber-50/60 dark:bg-amber-900/15 p-4" role="region" aria-label="{{ _('Needs attention') }}">
+    <h2 class="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-3 flex items-center gap-2">
+        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+        {{ _('Needs attention') }}
+    </h2>
+    <ul class="space-y-2">
+        {% for item in attention_items %}
+        <li>
+            <a href="{{ item.url }}" class="flex items-center justify-between gap-3 rounded-tt border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-3 hover:border-primary/40 transition-colors">
+                <span class="flex items-center gap-3 min-w-0">
+                    <i class="{{ item.icon }} {% if item.tone == 'red' %}text-red-600 dark:text-red-400{% else %}text-amber-600 dark:text-amber-400{% endif %}" aria-hidden="true"></i>
+                    <span class="font-medium text-text-light dark:text-text-dark truncate">{{ item.label }}</span>
+                </span>
+                <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-sm font-semibold {% if item.tone == 'red' %}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200{% else %}bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200{% endif %}">{{ item.count }}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<!-- Primary stats (4) + quieter secondary row -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    <div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark p-5">
+        <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Users') }}</p>
+        <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{{ stats.total_users }}</h3>
+        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('All time') }}</p>
     </div>
-    
-    <!-- Active Users -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-400"></div>
-        <div class="flex items-start justify-between">
-            <div class="flex-1">
-                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Active Users') }}</p>
-                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.active_users }}</h3>
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Currently active') }}</p>
-            </div>
-            <div class="w-12 h-12 bg-green-500/10 dark:bg-green-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-                <i class="fas fa-user-check text-green-500 text-xl"></i>
-            </div>
-        </div>
+    <div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark p-5">
+        <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Active Users') }}</p>
+        <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{{ stats.active_users }}</h3>
+        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Currently active') }}</p>
     </div>
-    
-    <!-- Total Projects -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-indigo-400"></div>
-        <div class="flex items-start justify-between">
-            <div class="flex-1">
-                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Projects') }}</p>
-                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.total_projects }}</h3>
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('All time') }}</p>
-            </div>
-            <div class="w-12 h-12 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-                <i class="fas fa-folder text-indigo-500 text-xl"></i>
-            </div>
-        </div>
+    <div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark p-5">
+        <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Active Projects') }}</p>
+        <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{{ stats.active_projects }}</h3>
+        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('of %(total)s total', total=stats.total_projects) }}</p>
     </div>
-    
-    <!-- Active Projects -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-purple-400"></div>
-        <div class="flex items-start justify-between">
-            <div class="flex-1">
-                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Active Projects') }}</p>
-                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.active_projects }}</h3>
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Currently active') }}</p>
-            </div>
-            <div class="w-12 h-12 bg-purple-500/10 dark:bg-purple-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-                <i class="fas fa-folder-open text-purple-500 text-xl"></i>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Total Entries -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-500 to-teal-400"></div>
-        <div class="flex items-start justify-between">
-            <div class="flex-1">
-                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Entries') }}</p>
-                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.total_entries }}</h3>
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Time entries logged') }}</p>
-            </div>
-            <div class="w-12 h-12 bg-teal-500/10 dark:bg-teal-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-                <i class="fas fa-clock text-teal-500 text-xl"></i>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Active Timers -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-orange-400"></div>
-        <div class="flex items-start justify-between">
-            <div class="flex-1">
-                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Active Timers') }}</p>
-                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ stats.active_timers }}</h3>
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Currently running') }}</p>
-            </div>
-            <div class="w-12 h-12 bg-orange-500/10 dark:bg-orange-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-                <i class="fas fa-play-circle text-orange-500 text-xl"></i>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Total Hours -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-cyan-400"></div>
-        <div class="flex items-start justify-between">
-            <div class="flex-1">
-                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Hours') }}</p>
-                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ "%.1f"|format(stats.total_hours / 3600 if stats.total_hours else 0) }}</h3>
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('All time tracked') }}</p>
-            </div>
-            <div class="w-12 h-12 bg-cyan-500/10 dark:bg-cyan-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-                <i class="fas fa-hourglass-half text-cyan-500 text-xl"></i>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Billable Hours -->
-    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-all duration-200 relative overflow-hidden group">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-amber-400"></div>
-        <div class="flex items-start justify-between">
-            <div class="flex-1">
-                <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Billable Hours') }}</p>
-                <h3 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">{{ "%.1f"|format(stats.billable_hours / 3600 if stats.billable_hours else 0) }}</h3>
-                <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Billable time') }}</p>
-            </div>
-            <div class="w-12 h-12 bg-amber-500/10 dark:bg-amber-500/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-                <i class="fas fa-dollar-sign text-amber-500 text-xl"></i>
-            </div>
-        </div>
+    <div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark p-5">
+        <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Active Timers') }}</p>
+        <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark">{{ stats.active_timers }}</h3>
+        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Currently running') }}</p>
     </div>
 </div>
+<details class="mb-6 group">
+    <summary class="cursor-pointer text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:text-primary list-none flex items-center gap-2">
+        <i class="fas fa-chevron-right text-xs transition-transform group-open:rotate-90" aria-hidden="true"></i>
+        {{ _('More stats') }}
+    </summary>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-3">
+        <div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark p-4">
+            <p class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Total Projects') }}</p>
+            <p class="text-xl font-semibold mt-1">{{ stats.total_projects }}</p>
+        </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark p-4">
+            <p class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Total Entries') }}</p>
+            <p class="text-xl font-semibold mt-1">{{ stats.total_entries }}</p>
+        </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark p-4">
+            <p class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Total Hours') }}</p>
+            <p class="text-xl font-semibold mt-1">{{ "%.1f"|format(stats.total_hours / 3600 if stats.total_hours else 0) }}</p>
+        </div>
+        <div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark p-4">
+            <p class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Billable Hours') }}</p>
+            <p class="text-xl font-semibold mt-1">{{ "%.1f"|format(stats.billable_hours / 3600 if stats.billable_hours else 0) }}</p>
+        </div>
+    </div>
+</details>
 
 <!-- Charts Section -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -219,106 +166,31 @@
     </div>
 </div>
 
-<!-- Admin Sections -->
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
-    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-        <i class="fas fa-cogs text-primary"></i>
-        {{ _('Admin Sections') }}
-    </h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- User Management -->
-        <a href="{{ url_for('admin.list_users') }}" class="group bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg text-center hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-users text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Manage Users</div>
-        </a>
-        
-        <!-- Roles & Permissions -->
-        <a href="{{ url_for('permissions.list_roles') }}" class="group bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg text-center hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-shield-alt text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Roles & Permissions</div>
-        </a>
-        
-        <!-- API Tokens -->
-        <a href="{{ url_for('admin.api_tokens') }}" class="group bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg text-center hover:from-green-600 hover:to-green-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-key text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">API Tokens</div>
-            <div class="text-xs mt-1 opacity-90 relative z-10">REST API Access</div>
-        </a>
-        
-        <!-- Webhooks -->
-        <a href="{{ url_for('webhooks.list_webhooks') }}" class="group bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-5 rounded-lg text-center hover:from-indigo-600 hover:to-indigo-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-plug text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Webhooks</div>
-            <div class="text-xs mt-1 opacity-90 relative z-10">Outgoing Events</div>
-        </a>
-        
-        <!-- Integrations -->
-        <a href="{{ url_for('integrations.list_integrations') }}" class="group bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg text-center hover:from-purple-600 hover:to-purple-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-plug text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Integrations</div>
-            <div class="text-xs mt-1 opacity-90 relative z-10">OAuth Setup</div>
-        </a>
-        
-        <!-- Email Configuration -->
-        <a href="{{ url_for('admin.email_support') }}" class="group bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg text-center hover:from-purple-600 hover:to-purple-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-envelope text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Email Configuration</div>
-            <div class="text-xs mt-1 opacity-90 relative z-10">Test & Configure</div>
-        </a>
-        
-        <!-- Email Templates -->
-        <a href="{{ url_for('admin.list_email_templates') }}" class="group bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg text-center hover:from-purple-600 hover:to-purple-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-file-alt text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Email Templates</div>
-            <div class="text-xs mt-1 opacity-90 relative z-10">Invoice Email Templates</div>
-        </a>
-        
-        <!-- Settings -->
-        <a href="{{ url_for('admin.settings') }}" class="group bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg text-center hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-cog text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Settings</div>
-        </a>
-        
-        <!-- System Info -->
-        <a href="{{ url_for('admin.system_info') }}" class="group bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg text-center hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-info-circle text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">System Info</div>
-        </a>
-        
-        <!-- Custom Fields -->
-        <a href="{{ url_for('custom_field_definitions.list_custom_field_definitions') }}" class="group bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-lg text-center hover:from-orange-600 hover:to-orange-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-tags text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Custom Fields</div>
-            <div class="text-xs mt-1 opacity-90 relative z-10">Global Field Definitions</div>
-        </a>
-        
-        <!-- Link Templates -->
-        <a href="{{ url_for('link_templates.list_link_templates') }}" class="group bg-gradient-to-br from-teal-500 to-teal-600 text-white p-5 rounded-lg text-center hover:from-teal-600 hover:to-teal-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-link text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Link Templates</div>
-            <div class="text-xs mt-1 opacity-90 relative z-10">URL Templates for Fields</div>
-        </a>
-        
-        <!-- Salesman Email Mappings -->
-        <a href="{{ url_for('salesman_reports.list_email_mappings') }}" class="group bg-gradient-to-br from-amber-500 to-amber-600 text-white p-5 rounded-lg text-center hover:from-amber-600 hover:to-amber-700 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
-            <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <i class="fas fa-envelope text-2xl mb-2 relative z-10"></i>
-            <div class="font-semibold relative z-10">Salesman Email Mappings</div>
-            <div class="text-xs mt-1 opacity-90 relative z-10">Report Distribution</div>
-        </a>
-    </div>
-</div>
+<!-- Admin Sections (compact link list) -->
+<details class="mb-6 group bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark">
+    <summary class="cursor-pointer list-none flex items-center justify-between gap-3 p-4 text-sm font-semibold text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark rounded-tt">
+        <span class="flex items-center gap-2">
+            <i class="fas fa-chevron-right text-xs text-text-muted-light dark:text-text-muted-dark transition-transform group-open:rotate-90" aria-hidden="true"></i>
+            <i class="fas fa-cogs text-primary" aria-hidden="true"></i>
+            {{ _('Admin Sections') }}
+        </span>
+        <span class="text-xs font-normal text-text-muted-light dark:text-text-muted-dark">{{ _('Users, settings, integrations, and more') }}</span>
+    </summary>
+    <ul class="px-4 pb-4 border-t border-border-light dark:border-border-dark pt-2 divide-y divide-border-light dark:divide-border-dark">
+        <li><a href="{{ url_for('admin.list_users') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-users w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Manage Users') }}</a></li>
+        <li><a href="{{ url_for('permissions.list_roles') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-shield-alt w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Roles & Permissions') }}</a></li>
+        <li><a href="{{ url_for('admin.api_tokens') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-key w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('API Tokens') }} <span class="text-xs text-text-muted-light dark:text-text-muted-dark ml-auto">{{ _('REST API') }}</span></a></li>
+        <li><a href="{{ url_for('webhooks.list_webhooks') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-plug w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Webhooks') }}</a></li>
+        <li><a href="{{ url_for('integrations.list_integrations') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-puzzle-piece w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Integrations') }}</a></li>
+        <li><a href="{{ url_for('admin.email_support') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-envelope w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Email Configuration') }}</a></li>
+        <li><a href="{{ url_for('admin.list_email_templates') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-file-alt w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Email Templates') }}</a></li>
+        <li><a href="{{ url_for('admin.settings') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-cog w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Settings') }}</a></li>
+        <li><a href="{{ url_for('admin.system_info') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-info-circle w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('System Info') }}</a></li>
+        <li><a href="{{ url_for('custom_field_definitions.list_custom_field_definitions') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-tags w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Custom Fields') }}</a></li>
+        <li><a href="{{ url_for('link_templates.list_link_templates') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-link w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Link Templates') }}</a></li>
+        <li><a href="{{ url_for('salesman_reports.list_email_mappings') }}" class="flex items-center gap-3 py-2.5 text-sm text-text-light dark:text-text-dark hover:text-primary"><i class="fas fa-paper-plane w-5 text-text-muted-light dark:text-text-muted-dark"></i>{{ _('Salesman Email Mappings') }}</a></li>
+    </ul>
+</details>
 
 <!-- Recent Activity -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">

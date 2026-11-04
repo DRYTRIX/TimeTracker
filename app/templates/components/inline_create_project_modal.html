@@ -3,11 +3,11 @@
    Target select: data-project-select-id on the open button, or defaults to #project_id / [data-inline-project-select].
    Optional: pass clients list; falls back to empty select requiring a client id from the page.
 #}
-<div id="createProjectModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+<div id="createProjectModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="createProjectModalTitle">
     <div class="absolute inset-0 bg-black/50" data-close-create-project></div>
     <div class="relative max-w-lg mx-auto mt-10 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl">
         <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
-            <h3 class="text-lg font-semibold">{{ _('Create Project') }}</h3>
+            <h3 id="createProjectModalTitle" class="text-lg font-semibold">{{ _('Create Project') }}</h3>
             <button type="button" id="closeCreateProjectModal" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded" aria-label="{{ _('Close') }}">{{ _('Close') }}</button>
         </div>
         <div class="p-4">

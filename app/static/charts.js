@@ -7,7 +7,7 @@ class ChartManager {
     constructor() {
         this.charts = new Map();
         this.defaultColors = [
-            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#4F46E5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
             '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
         ];
     }
@@ -233,7 +233,7 @@ class ChartManager {
                 datasets: [{
                     data: [percentage, remaining],
                     backgroundColor: [
-                        options.color || '#3b82f6',
+                        options.color || '#4F46E5',
                         'rgba(0, 0, 0, 0.05)'
                     ],
                     borderWidth: 0
@@ -263,7 +263,7 @@ class ChartManager {
                     
                     ctx.save();
                     ctx.font = 'bold 24px sans-serif';
-                    ctx.fillStyle = options.color || '#3b82f6';
+                    ctx.fillStyle = options.color || '#4F46E5';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(`${percentage.toFixed(1)}%`, centerX, centerY - 20);
@@ -295,7 +295,7 @@ class ChartManager {
                 labels: data.map((_, i) => i),
                 datasets: [{
                     data: data,
-                    borderColor: options.color || '#3b82f6',
+                    borderColor: options.color || '#4F46E5',
                     borderWidth: 2,
                     fill: false,
                     tension: 0.4,

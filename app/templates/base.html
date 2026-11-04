@@ -59,58 +59,7 @@
                 {% endwith %}
             </div>
 
-            {% if current_user.is_authenticated and current_user.ui_show_donate and not is_license_activated %}
-            <!-- Dismissible Support Banner -->
-            <div id="supportBanner" class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-3 opacity-0 invisible max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
-                <div class="w-full flex items-center justify-between gap-4">
-                    <div class="flex items-center gap-3 flex-1">
-                        <i class="fas fa-mug-saucer text-amber-600 dark:text-amber-400 text-lg"></i>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-amber-900 dark:text-amber-100" id="bannerTitle">
-                                {{ _('Enjoying TimeTracker?') }}
-                            </p>
-                            <p class="text-xs text-amber-700 dark:text-amber-300" id="bannerMessage">
-                                {{ _('Become a Supporter or buy a coffee — every contribution helps keep TimeTracker free for everyone.') }}
-                            </p>
-                            <p class="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5" id="bannerSubtitle">
-                                {{ _('One-time key — pay once, never see this again.') }}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <a href="{{ support_purchase_url }}"
-                           target="_blank"
-                           rel="noopener noreferrer"
-                           onclick="trackDonationClick('banner_key')"
-                           class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
-                            {{ _('Remove prompts forever (€25)') }}
-                        </a>
-                        <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=banner&utm_campaign=support" 
-                           target="_blank" 
-                           rel="noopener noreferrer"
-                           onclick="trackDonationClick('banner_bmc')"
-                           class="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-600 text-sm font-semibold rounded-lg transition-colors border-2 border-amber-600 shadow-sm">
-                            <i class="fas fa-mug-saucer mr-1"></i>{{ _('Buy me a coffee') }}
-                        </a>
-                        <a href="https://www.paypal.com/donate/?hosted_button_id=KZB27X5LNGU3J" 
-                           target="_blank" 
-                           rel="noopener noreferrer"
-                           onclick="trackDonationClick('banner_paypal')"
-                           class="px-3 py-1.5 text-white text-sm font-medium rounded-lg transition-colors border border-blue-600 hover:opacity-90" style="background: linear-gradient(to right, #0070ba, #003087);">
-                            <i class="fab fa-paypal mr-1"></i>{{ _('PayPal') }}
-                        </a>
-                        <button type="button" class="text-xs text-amber-700 dark:text-amber-300 hover:underline self-center js-open-support-modal">
-                            {{ _('Support options') }}
-                        </button>
-                        <button onclick="dismissSupportBanner()" 
-                                class="p-1.5 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded transition-colors"
-                                aria-label="{{ _('Dismiss') }}">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+            {# Support monetization: single channel via user menu → support modal (banner removed). #}
 
             <!-- Main page content: full width of column; inner pages may use their own max-w-* -->
             <div class="flex-1 flex flex-col min-w-0 w-full">
@@ -158,7 +107,7 @@
         {% endif %}
 
         {% if current_user.is_authenticated %}
-        {# Floating hub: Actions, Chat, AI. Admin: whole dock lifted to clear #adminVersionUpdateRoot. #}
+        {# Actions FAB on mobile only (CSS). Desktop: topbar timer + Ctrl+K. Chat/AI via tools overflow. #}
         <div id="fabDock"
              class="{% if is_admin_user %}fab-dock--admin{% endif %}"
              aria-label="{{ _('Quick actions dock') }}"

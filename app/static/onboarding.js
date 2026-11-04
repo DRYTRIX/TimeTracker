@@ -28,11 +28,10 @@ class OnboardingManager {
         }
         this.active = true;
 
-        // Disable tour on mobile devices (width < 768px)
+        // Mobile: show compact checklist sheet instead of desktop spotlight tour
         const isMobile = window.innerWidth <= 768;
         if (isMobile) {
-            // Mark as completed to prevent future attempts
-            localStorage.setItem(this.storageKey, 'true');
+            this.showMobileChecklist();
             return;
         }
 
@@ -42,15 +41,54 @@ class OnboardingManager {
         
         // Add resize handler to handle window resizing during tour
         this.resizeHandler = () => {
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                // If window is resized to mobile size, cancel the tour
-                this.complete();
+            if (window.innerWidth <= 768) {
+                this.complete(true);
+                this.showMobileChecklist();
             }
         };
         window.addEventListener('resize', this.resizeHandler);
         
         this.showStep(0);
+    }
+
+    /**
+     * Compact first-run checklist for mobile (does not auto-complete).
+     */
+    showMobileChecklist() {
+        if (document.getElementById('tt-onboarding-sheet')) return;
+        const sheet = document.createElement('div');
+        sheet.id = 'tt-onboarding-sheet';
+        sheet.setAttribute('role', 'dialog');
+        sheet.setAttribute('aria-modal', 'true');
+        sheet.setAttribute('aria-labelledby', 'tt-onboarding-sheet-title');
+        sheet.innerHTML = `
+            <div class="fixed inset-0 z-[9998] bg-black/40" data-dismiss></div>
+            <div class="fixed inset-x-0 bottom-0 z-[9999] rounded-t-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4 pb-safe shadow-2xl">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                        <h2 id="tt-onboarding-sheet-title" class="text-base font-semibold text-text-light dark:text-text-dark">Get started</h2>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-0.5">Three steps to your first tracked hour.</p>
+                    </div>
+                    <button type="button" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark" data-dismiss aria-label="Dismiss">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <ol class="space-y-2 text-sm">
+                    <li><a class="flex items-center gap-3 min-h-[44px] px-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark" href="/clients/create"><span class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">1</span><span>Create a client</span></a></li>
+                    <li><a class="flex items-center gap-3 min-h-[44px] px-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark" href="/projects/create"><span class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">2</span><span>Create a project</span></a></li>
+                    <li><a class="flex items-center gap-3 min-h-[44px] px-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark" href="/"><span class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">3</span><span>Start the timer</span></a></li>
+                </ol>
+                <button type="button" class="mt-3 w-full btn btn-secondary" data-complete>Got it</button>
+            </div>`;
+        document.body.appendChild(sheet);
+        const dismiss = (complete) => {
+            sheet.remove();
+            this.active = false;
+            if (complete) localStorage.setItem(this.storageKey, 'true');
+        };
+        sheet.querySelectorAll('[data-dismiss]').forEach((el) => el.addEventListener('click', () => dismiss(false)));
+        sheet.querySelector('[data-complete]')?.addEventListener('click', () => dismiss(true));
+        sheet.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => dismiss(false)));
     }
 
     /**
@@ -77,7 +115,7 @@ class OnboardingManager {
                 
                 .onboarding-highlight {
                     position: fixed;
-                    border: 4px solid #3b82f6;
+                    border: 4px solid #4F46E5;
                     border-radius: 8px;
                     /* No !important: skip() must be able to lower these layers
                        below the skip-confirmation dialog via inline styles. */
@@ -312,7 +350,7 @@ class OnboardingManager {
                 }
                 
                 .onboarding-btn-primary {
-                    background: #3b82f6;
+                    background: #4F46E5;
                     color: white;
                 }
                 
@@ -804,8 +842,9 @@ class OnboardingManager {
 
     /**
      * Complete the tour
+     * @param {boolean} [silent=false] Skip toast when switching to mobile checklist
      */
-    complete() {
+    complete(silent = false) {
         // Remove elements
         if (this.overlay) this.overlay.remove();
         if (this.tooltip) this.tooltip.remove();
@@ -823,7 +862,7 @@ class OnboardingManager {
         localStorage.setItem(this.storageKey, 'true');
 
         // Show success message
-        if (window.toastManager) {
+        if (!silent && window.toastManager) {
             window.toastManager.success('Tour completed! You\'re all set to start tracking time.');
         }
 
@@ -848,90 +887,24 @@ class OnboardingManager {
     }
 }
 
-// Default tour steps for TimeTracker
+// Short first-run checklist (3 steps). Module-gated selectors are skipped if missing.
 const defaultTourSteps = [
     {
-        target: '#sidebar',
-        title: 'Welcome to TimeTracker! 👋',
-        content: 'Let\'s take a quick tour to help you get started. This is your main navigation where you can access all features. <strong>Tip:</strong> Click the arrow icon to collapse or expand the sidebar and maximize your workspace. You can also press <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>B</kbd> to toggle it.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="dashboard"]',
-        title: 'Dashboard',
-        content: 'Your command center! View today\'s hours, active timers, recent entries, top projects, and activity timeline. <strong>Pro tip:</strong> Customize widgets to see what matters most to you. You can also see your time tracking at a glance without navigating away.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="timer"]',
-        title: 'Time Tracking',
-        content: 'Start timers or manually log your time. <strong>Key features:</strong><br>• Timers run server-side (even if browser closes!)<br>• Press <kbd>T</kbd> to quickly toggle timer<br>• Use bulk entry for multiple days<br>• Save time entry templates for recurring work<br>• Idle detection auto-pauses after inactivity',
+        target: 'a[href*="clients"]',
+        title: '1. Create a client',
+        content: 'Start with a client so projects and invoices have somewhere to bill. Open <strong>Clients</strong> and add your first one.',
         position: 'right'
     },
     {
         target: 'a[href*="projects"]',
-        title: 'Projects',
-        content: 'Organize your work with projects. <strong>What you can do:</strong><br>• Link projects to clients for billing<br>• Set hourly rates per project<br>• Track billable vs non-billable hours<br>• Monitor project budgets and costs<br>• Add project descriptions with Markdown<br>• Archive completed projects',
+        title: '2. Create a project',
+        content: 'Projects hold the work you track. Open <strong>Projects</strong>, create one, and link it to your client.',
         position: 'right'
     },
     {
-        target: 'a[href*="clients"]',
-        title: 'Clients',
-        content: 'Manage your clients and their information. Store contact details, billing rates, and company information. Clients are automatically linked to projects for streamlined invoicing and reporting.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="tasks"]',
-        title: 'Tasks',
-        content: 'Break down projects into manageable tasks. <strong>Features:</strong><br>• Track time against specific tasks<br>• Set priorities and due dates<br>• Assign tasks to team members<br>• Monitor progress with status tracking<br>• Use estimates vs actuals for planning<br>• Add comments for collaboration',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="kanban"]',
-        title: 'Kanban Board',
-        content: 'Visual task management with drag-and-drop! Move tasks between columns (To Do, In Progress, Review, Done) to track progress. Perfect for agile workflows and visual project management. <strong>Power feature:</strong> Customize columns to match your workflow.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="calendar"]',
-        title: 'Calendar View',
-        content: 'Visualize your time entries on a calendar. See your schedule at a glance, spot gaps, and plan your time more effectively. Drag and drop entries to reschedule them quickly.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="reports"]',
-        title: 'Reports & Analytics',
-        content: 'Gain insights into your time usage. <strong>Available reports:</strong><br>• Time breakdown by project, user, or date<br>• Billable vs non-billable analysis<br>• Export to PDF or CSV<br>• Custom date ranges<br>• Save filters for quick access<br>• Visual charts and graphs',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="invoices"]',
-        title: 'Invoicing',
-        content: 'Generate professional invoices from your tracked time. <strong>Features:</strong><br>• Auto-generate from time entries<br>• Add custom line items and expenses<br>• Tax calculations<br>• PDF export with branding<br>• Track payment status<br>• Send invoices to clients',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="analytics"]',
-        title: 'Analytics Dashboard',
-        content: 'Deep insights into your productivity and time patterns. View trends, project analytics, and performance metrics. Identify your most productive times and optimize your workflow.',
-        position: 'right'
-    },
-    {
-        target: '#header-search',
-        title: 'Global Search',
-        content: 'Quickly find anything! Search across projects, tasks, clients, and time entries. <strong>Keyboard shortcut:</strong> Press <kbd>Ctrl+/</kbd> (or <kbd>Cmd+/</kbd> on Mac) to focus the search bar instantly.',
-        position: 'bottom'
-    },
-    {
-        target: 'button[onclick*="openCommandPalette"]',
-        title: 'Command Palette',
-        content: 'Power user feature! Press <kbd>Ctrl+K</kbd> (or <kbd>Cmd+K</kbd> on Mac) to open the command palette. Navigate to any feature, execute actions, and access shortcuts without using your mouse. <strong>Try it:</strong> Press <kbd>Ctrl+K</kbd> now!',
-        position: 'bottom'
-    },
-    {
-        target: '#theme-toggle',
-        title: 'Theme Toggle',
-        content: 'Switch between light and dark mode. Your preference is saved automatically. <strong>Keyboard shortcut:</strong> Press <kbd>Ctrl+Shift+L</kbd> to toggle themes quickly.',
+        target: '#floatingTimerBar, a[href="/"], a[href*="dashboard"]',
+        title: '3. Start the timer',
+        content: 'Use the timer in the top bar or the <strong>Track</strong> item under Time. Live timers run on the server even if you close the browser.',
         position: 'bottom'
     }
 ];
@@ -941,16 +914,10 @@ window.onboardingManager = new OnboardingManager();
 
 // Auto-start onboarding for new users
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if user is on dashboard and hasn't completed onboarding
     if (window.location.pathname === '/main/dashboard' || window.location.pathname === '/') {
         setTimeout(() => {
-            // Skip on mobile devices (width < 768px)
-            const isMobile = window.innerWidth <= 768;
-            if (!isMobile && !window.onboardingManager.isCompleted()) {
+            if (!window.onboardingManager.isCompleted()) {
                 window.onboardingManager.init(defaultTourSteps);
-            } else if (isMobile) {
-                // Mark as completed on mobile to prevent future attempts
-                localStorage.setItem('onboarding_completed', 'true');
             }
         }, 1000);
     }

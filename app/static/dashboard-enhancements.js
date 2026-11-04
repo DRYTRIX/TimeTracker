@@ -43,7 +43,7 @@
         
         sparklineContainers.forEach(container => {
             const data = JSON.parse(container.getAttribute('data-sparkline'));
-            const color = container.getAttribute('data-color') || '#3b82f6';
+            const color = container.getAttribute('data-color') || '#4F46E5';
             const id = container.id || 'sparkline-' + Math.random().toString(36).substr(2, 9);
             
             if (!container.id) {
@@ -57,7 +57,7 @@
     /**
      * Create a sparkline chart
      */
-    function createSparkline(containerId, data, color = '#3b82f6') {
+    function createSparkline(containerId, data, color = '#4F46E5') {
         const container = document.getElementById(containerId);
         if (!container) return;
 
@@ -439,7 +439,7 @@
                 const container = document.querySelector(`[data-sparkline-id="${key}"]`);
                 const series = data[key];
                 if (container && Array.isArray(series) && series.length > 0) {
-                    const color = container.getAttribute('data-color') || '#3b82f6';
+                    const color = container.getAttribute('data-color') || '#4F46E5';
                     createSparkline(container.id || `sparkline-${key}`, series, color);
                 }
             });

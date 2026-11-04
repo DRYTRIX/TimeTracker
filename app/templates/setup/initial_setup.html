@@ -14,14 +14,20 @@
        loads last wins. #}
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}?v={{ app_version }}-toastfix1">
     <script nonce="{{ csp_nonce() }}">
-        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark')
-        }
+        // Avoid FOUC: apply .dark from localStorage or system preference
+        (function () {
+            var stored = localStorage.getItem('color-theme');
+            var effective = stored || 'system';
+            if (effective === 'system' || !effective) {
+                effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (effective === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
     </script>
 </head>
 <body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
@@ -30,7 +36,8 @@
             <!-- Left side - Branding -->
             <div class="hidden md:flex flex-col items-center justify-center p-10 bg-background-light dark:bg-background-dark border-r border-border-light dark:border-border-dark">
                 <div class="text-center">
-                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="logo" class="w-24 h-24 mx-auto">
+                    <img src="{{ url_for('static', filename='images/timetracker-logo-light.svg') }}" alt="logo" class="w-24 h-24 mx-auto dark:hidden">
+                    <img src="{{ url_for('static', filename='images/timetracker-logo-dark.svg') }}" alt="logo" class="w-24 h-24 mx-auto hidden dark:block">
                     <h1 class="text-3xl font-bold mt-4 text-primary">TimeTracker</h1>
                     <p class="mt-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Track time. Stay organized.') }}</p>
                     <!-- Privacy Principles -->
@@ -67,7 +74,8 @@
             <!-- Right side - Wizard -->
             <div class="p-4 sm:p-8 overflow-y-auto max-h-[90vh]">
                 <div class="flex items-center gap-3 mb-4 md:hidden">
-                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-10 h-10">
+                    <img src="{{ url_for('static', filename='images/timetracker-logo-light.svg') }}" alt="TimeTracker Logo" class="w-10 h-10 dark:hidden">
+                    <img src="{{ url_for('static', filename='images/timetracker-logo-dark.svg') }}" alt="TimeTracker Logo" class="w-10 h-10 hidden dark:block">
                     <span class="text-xl font-bold text-primary">TimeTracker</span>
                 </div>
                 <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-4" id="wizard-progress-label">{{ _('Step 1 of 7') }}</p>

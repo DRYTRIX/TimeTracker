@@ -188,31 +188,38 @@
                 </div>
             </section>
 
-            {# Section: Details #}
-            <section>
-                <h2 class="text-sm font-semibold text-text-light dark:text-text-dark uppercase tracking-wide flex items-center gap-2 mb-4">
-                    <i class="fas fa-align-left text-primary"></i>{{ _('Details') }}
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="md:col-span-2">
-                        <label for="notes" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">{% if getattr(settings, 'time_entry_require_description', false) %}{{ _('Notes') }} *{% else %}{{ _('Notes') }}{% endif %}</label>
-                        <div class="markdown-editor-wrapper">
-                            <textarea name="notes" id="notes" class="hidden" data-ai-autocomplete="notes">{{ prefill_notes or '' }}</textarea>
-                            <div id="notes_editor"></div>
+            {# Progressive disclosure: notes / tags / billable #}
+            {% set _require_notes = getattr(settings, 'time_entry_require_description', false) %}
+            {% set _has_more_prefill = (prefill_notes or '')|trim or (prefill_tags or '')|trim %}
+            <details class="group rounded-xl border border-border-light dark:border-border-dark"{% if _require_notes or _has_more_prefill %} open{% endif %}>
+                <summary class="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 select-none">
+                    <span class="text-sm font-semibold text-text-light dark:text-text-dark uppercase tracking-wide flex items-center gap-2">
+                        <i class="fas fa-align-left text-primary"></i>{{ _('More details') }}
+                    </span>
+                    <i class="fas fa-chevron-down text-text-muted-light dark:text-text-muted-dark text-xs transition-transform group-open:rotate-180" aria-hidden="true"></i>
+                </summary>
+                <div class="px-4 pb-4 pt-1 border-t border-border-light dark:border-border-dark">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="md:col-span-2">
+                            <label for="notes" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">{% if _require_notes %}{{ _('Notes') }} *{% else %}{{ _('Notes') }}{% endif %}</label>
+                            <div class="markdown-editor-wrapper">
+                                <textarea name="notes" id="notes" class="hidden" data-ai-autocomplete="notes">{{ prefill_notes or '' }}</textarea>
+                                <div id="notes_editor"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="tags" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Tags') }}</label>
-                            <input type="text" name="tags" id="tags" class="form-input" placeholder="{{ _('tag1, tag2') }}" value="{{ prefill_tags or '' }}">
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" id="billable" name="billable" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" {% if prefill_billable is not defined or prefill_billable %}checked{% endif %}>
-                            <label for="billable" class="text-sm font-medium text-text-light dark:text-text-dark">{{ _('Billable') }}</label>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="tags" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Tags') }}</label>
+                                <input type="text" name="tags" id="tags" class="form-input" placeholder="{{ _('tag1, tag2') }}" value="{{ prefill_tags or '' }}">
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" id="billable" name="billable" class="h-5 w-5 rounded border-gray-300 text-primary focus:ring-0" {% if prefill_billable is not defined or prefill_billable %}checked{% endif %}>
+                                <label for="billable" class="text-sm font-medium text-text-light dark:text-text-dark">{{ _('Billable') }}</label>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </section>
+            </details>
         </div>
 
         <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex flex-col sm:flex-row justify-end gap-3">

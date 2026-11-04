@@ -492,7 +492,7 @@ class AnalyticsDashboard {
         const chartData = {
             labels: allLabels,
             datasets: [
-                { label: (i18n_analytics.hours_label || 'Hours') + ' (' + (raw.avg_daily_hours || 0) + 'h avg)', data: histData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.4, fill: true },
+                { label: (i18n_analytics.hours_label || 'Hours') + ' (' + (raw.avg_daily_hours || 0) + 'h avg)', data: histData, borderColor: '#4F46E5', backgroundColor: 'rgba(79, 70, 229, 0.1)', tension: 0.4, fill: true },
                 { label: '{{ _("Forecast") }}', data: foreData, borderColor: '#f59e0b', borderDash: [5, 5], backgroundColor: 'transparent', tension: 0.4, fill: false }
             ]
         };
@@ -624,7 +624,7 @@ class AnalyticsDashboard {
         const chartData = {
             labels: daily.map(d => d.date),
             datasets: [
-                { label: (i18n_analytics.regular_hours || 'Regular'), data: daily.map(d => d.regular_hours), backgroundColor: 'rgba(59, 130, 246, 0.8)', borderColor: '#3b82f6', borderWidth: 1 },
+                { label: (i18n_analytics.regular_hours || 'Regular'), data: daily.map(d => d.regular_hours), backgroundColor: 'rgba(79, 70, 229, 0.8)', borderColor: '#4F46E5', borderWidth: 1 },
                 { label: (i18n_analytics.overtime_hours || 'Overtime'), data: daily.map(d => d.overtime_hours), backgroundColor: 'rgba(245, 158, 11, 0.8)', borderColor: '#f59e0b', borderWidth: 1 }
             ]
         };

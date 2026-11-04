@@ -55,11 +55,11 @@
                   </button>
                 </form>
                 {% else %}
-                <form method="POST" action="{{ url_for('timer.start_timer') }}" class="d-inline">
+                <form method="POST" action="{{ url_for('timer.start_timer') }}" class="d-inline" onsubmit="return confirm({{ _('Start timer for this task?')|tojson }});">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="project_id" value="{{ task.project_id }}">
                   <input type="hidden" name="task_id" value="{{ task.id }}">
-                <button type="submit" class="kanban-action-btn kanban-action-play" title="{{ _('Start Timer') }}">
+                <button type="submit" class="kanban-action-btn kanban-action-play min-h-[44px] min-w-[44px]" title="{{ _('Start Timer') }}">
                   <i class="fas fa-play"></i>
                   </button>
                 </form>
@@ -677,71 +677,71 @@
 }
 
 /* Dark Mode Support */
-[data-theme="dark"] .kanban-toolbar-title,
-[data-theme="dark"] .kanban-column-title {
+.dark .kanban-toolbar-title,
+.dark .kanban-column-title {
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .kanban-column {
+.dark .kanban-column {
   background: #0f172a;
   border-color: #1e293b;
 }
 
-[data-theme="dark"] .kanban-column-header {
+.dark .kanban-column-header {
   background: linear-gradient(to bottom, #0f172a 0%, #0a0f1e 100%);
   border-bottom-color: #1e293b;
 }
 
-[data-theme="dark"] .kanban-column-body {
+.dark .kanban-column-body {
   background: #0a0f1e;
 }
 
-[data-theme="dark"] .kanban-card {
+.dark .kanban-card {
   background: #1e293b;
   border-color: #334155;
 }
 
-[data-theme="dark"] .kanban-card:hover {
+.dark .kanban-card:hover {
   border-color: #475569;
 }
 
-[data-theme="dark"] .kanban-card-header {
+.dark .kanban-card-header {
   background: linear-gradient(to bottom, #1e293b 0%, #1e293b 100%);
   border-bottom-color: #334155;
 }
 
-[data-theme="dark"] .kanban-card-id {
+.dark .kanban-card-id {
   color: #64748b;
 }
 
-[data-theme="dark"] .kanban-card-title {
+.dark .kanban-card-title {
   color: #f1f5f9;
 }
 
-[data-theme="dark"] .kanban-card-description {
+.dark .kanban-card-description {
   color: #94a3b8;
 }
 
-[data-theme="dark"] .kanban-action-btn {
+.dark .kanban-action-btn {
   background: #334155;
   color: #94a3b8;
 }
 
-[data-theme="dark"] .kanban-action-edit:hover {
+.dark .kanban-action-edit:hover {
   background: #475569;
   color: #e2e8f0;
 }
 
-[data-theme="dark"] .kanban-meta-item {
+.dark .kanban-meta-item {
   background: #0f172a;
   color: #94a3b8;
 }
 
-[data-theme="dark"] .kanban-progress-bar {
+.dark .kanban-progress-bar {
   background: #334155;
 }
 
-[data-theme="dark"] .kanban-count {
+.dark .kanban-count {
   background: #1e293b;
   color: #94a3b8;
 }
@@ -773,20 +773,20 @@
 .bg-success-subtle { background-color: rgba(34, 197, 94, 0.1); }
 
 /* Dark Mode Support */
-[data-theme="dark"] .task-modal-content { background: #0f172a; }
-[data-theme="dark"] .task-modal-title { color: var(--text-secondary); }
-[data-theme="dark"] .task-modal-field { background: #1e293b; }
-[data-theme="dark"] .task-modal-field:hover { background: #334155; }
-[data-theme="dark"] .task-modal-description { background: #1e293b; color: var(--text-secondary); }
-[data-theme="dark"] .task-modal-project-card { background: #1e293b; }
-[data-theme="dark"] .task-modal-project-card:hover { background: #334155; }
-[data-theme="dark"] .task-modal-progress { background: #1e293b; }
-[data-theme="dark"] .task-modal-stat { background: #1e293b; }
-[data-theme="dark"] .task-modal-stat:hover { background: #334155; }
-[data-theme="dark"] .task-modal-value { color: var(--text-secondary); }
-[data-theme="dark"] .modal-header { background: #0f172a; border-color: #1e293b; }
-[data-theme="dark"] .modal-body { background: #0f172a; }
-[data-theme="dark"] .modal-footer { background: #0f172a; border-color: #1e293b; }
+.dark .task-modal-content { background: #0f172a; }
+.dark .task-modal-title { color: var(--text-secondary); }
+.dark .task-modal-field { background: #1e293b; }
+.dark .task-modal-field:hover { background: #334155; }
+.dark .task-modal-description { background: #1e293b; color: var(--text-secondary); }
+.dark .task-modal-project-card { background: #1e293b; }
+.dark .task-modal-project-card:hover { background: #334155; }
+.dark .task-modal-progress { background: #1e293b; }
+.dark .task-modal-stat { background: #1e293b; }
+.dark .task-modal-stat:hover { background: #334155; }
+.dark .task-modal-value { color: var(--text-secondary); }
+.dark .modal-header { background: #0f172a; border-color: #1e293b; }
+.dark .modal-body { background: #0f172a; }
+.dark .modal-footer { background: #0f172a; border-color: #1e293b; }
 
 /* Responsive */
 @media (max-width: 576px) {
@@ -1093,52 +1093,55 @@ function safeToken(value, fallback) {
   return /^[a-zA-Z0-9_-]+$/.test(v) ? v : fallback;
 }
 
-// Global function to open task modal
+window.closeTaskModal = function() {
+  const modalEl = document.getElementById('taskQuickViewModal');
+  if (!modalEl) return;
+  modalEl.classList.add('hidden');
+  modalEl.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('overflow-hidden');
+};
+
 window.openTaskModal = async function(taskId) {
   const modalEl = document.getElementById('taskQuickViewModal');
-  
-  // Ensure modal is attached to body to avoid stacking/pointer issues
-  if (modalEl && modalEl.parentElement !== document.body) {
+  if (!modalEl) return;
+
+  if (modalEl.parentElement !== document.body) {
     document.body.appendChild(modalEl);
   }
-  
-  const modal = new bootstrap.Modal(modalEl);
-  
-  // Show loading state
-  document.querySelector('.task-modal-loading').style.display = 'block';
-  document.querySelector('.task-modal-content-wrapper').style.display = 'none';
-  
-  modal.show();
-  
+
+  const loadingEl = modalEl.querySelector('.task-modal-loading');
+  const contentEl = modalEl.querySelector('.task-modal-content-wrapper');
+  if (loadingEl) loadingEl.style.display = 'block';
+  if (contentEl) contentEl.style.display = 'none';
+
+  modalEl.classList.remove('hidden');
+  modalEl.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('overflow-hidden');
+
   try {
-    // Fetch task details from API
     const response = await fetch(`/api/tasks/${taskId}`);
     if (!response.ok) throw new Error('Failed to load task');
-    
+
     const task = await response.json();
-    
-    // Populate modal with task data
+
     document.getElementById('taskModalName').textContent = task.name;
     document.getElementById('taskModalId').textContent = `#${task.id}`;
-    
-    // Status badge
+
     const statusToken = safeToken(task.status, 'todo');
     const statusBadge = `<span class="status-badge status-${escapeHtml(statusToken)}">${escapeHtml(task.status_display || task.status || '')}</span>`;
     document.getElementById('taskModalStatus').innerHTML = statusBadge;
-    
-    // Priority badge
+
     const priorityToken = safeToken(task.priority, 'medium');
     const priorityBadge = `<span class="priority-badge priority-${escapeHtml(priorityToken)}">${escapeHtml(task.priority_display || task.priority || '')}</span>`;
     document.getElementById('taskModalPriority').innerHTML = priorityBadge;
-    
-    // Project info
+
     const projectHtml = `
       <div class="task-modal-project-icon">
         <i class="fas fa-project-diagram"></i>
       </div>
       <div>
-        <div class="fw-semibold" style="color: var(--text-primary);">${escapeHtml(task.project?.name || 'N/A')}</div>
-        <small class="text-muted">${escapeHtml(task.project?.client || '')}</small>
+        <div class="font-semibold" style="color: var(--text-primary);">${escapeHtml(task.project?.name || 'N/A')}</div>
+        <small class="text-text-muted-light dark:text-text-muted-dark">${escapeHtml(task.project?.client || '')}</small>
       </div>
     `;
     document.getElementById('taskModalProject').innerHTML = projectHtml;
@@ -1249,142 +1252,117 @@ window.openTaskModal = async function(taskId) {
     document.getElementById('taskModalViewFullBtn').href = `/tasks/${taskId}`;
     document.getElementById('taskModalEditBtn').href = `/tasks/${taskId}/edit`;
     
-    // Hide loading, show content
-    document.querySelector('.task-modal-loading').style.display = 'none';
-    document.querySelector('.task-modal-content-wrapper').style.display = 'block';
-    
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (contentEl) contentEl.style.display = 'block';
+
   } catch (error) {
     console.error('Error loading task:', error);
-    document.querySelector('.task-modal-loading').innerHTML = `
-      <div class="text-danger">
-        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-        <p>Failed to load task details</p>
-        <button class="btn btn-sm btn-secondary" onclick="bootstrap.Modal.getInstance(document.getElementById('taskQuickViewModal')).hide();">Close</button>
-      </div>
-    `;
+    if (loadingEl) {
+      loadingEl.innerHTML = `
+        <div class="text-red-600 dark:text-red-400">
+          <i class="fas fa-exclamation-triangle text-2xl mb-3"></i>
+          <p>{{ _('Failed to load task details') }}</p>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="closeTaskModal()">{{ _('Close') }}</button>
+        </div>
+      `;
+    }
   }
 };
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeTaskModal();
+});
 </script>
 
-<!-- Professional Task Modal -->
-<div class="modal fade" id="taskQuickViewModal" tabindex="-1" aria-labelledby="taskModalTitle" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-    <div class="modal-content task-modal-content">
-      <!-- Modal Header -->
-      <div class="modal-header border-bottom-0 pb-2">
-        <div class="d-flex align-items-center gap-2 flex-grow-1">
-          <div class="task-modal-icon">
+<!-- Tailwind Task Quick-View Modal (no Bootstrap JS) -->
+<div id="taskQuickViewModal" class="fixed inset-0 z-50 hidden overflow-y-auto" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle" aria-hidden="true">
+  <div class="flex items-center justify-center min-h-screen px-4 py-8">
+    <div class="fixed inset-0 bg-black/50 dark:bg-gray-900/75" onclick="closeTaskModal()" aria-hidden="true"></div>
+    <div class="relative bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto task-modal-content">
+      <div class="flex items-start justify-between gap-3 p-4 border-b border-border-light dark:border-border-dark">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="task-modal-icon shrink-0">
             <i class="fas fa-tasks"></i>
           </div>
-          <div class="flex-grow-1">
-            <h5 class="modal-title task-modal-title" id="taskModalTitle">
-              <span id="taskModalName">Loading...</span>
+          <div class="min-w-0">
+            <h5 class="task-modal-title text-lg font-semibold text-text-light dark:text-text-dark truncate" id="taskModalTitle">
+              <span id="taskModalName">{{ _('Loading...') }}</span>
             </h5>
-            <small class="text-muted" id="taskModalId"></small>
+            <small class="text-text-muted-light dark:text-text-muted-dark" id="taskModalId"></small>
           </div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark text-text-muted-light dark:text-text-muted-dark" onclick="closeTaskModal()" aria-label="{{ _('Close') }}">
+          <i class="fas fa-times text-xl"></i>
+        </button>
       </div>
-      
-      <!-- Modal Body -->
-      <div class="modal-body pt-2" id="taskModalBody">
-        <div class="task-modal-loading text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="text-muted mt-3">{{ _('Loading task details...') }}</p>
+
+      <div class="p-4" id="taskModalBody">
+        <div class="task-modal-loading text-center py-10">
+          <div class="inline-block w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" role="status" aria-label="{{ _('Loading...') }}"></div>
+          <p class="text-text-muted-light dark:text-text-muted-dark mt-3">{{ _('Loading task details...') }}</p>
         </div>
-        
+
         <div class="task-modal-content-wrapper" style="display: none;">
-          <!-- Status & Priority Row -->
-          <div class="row g-3 mb-4">
-            <div class="col-sm-6">
-              <div class="task-modal-field">
-                <label class="task-modal-label">
-                  <i class="fas fa-flag me-2"></i>{{ _('Status') }}
-                </label>
-                <div id="taskModalStatus"></div>
-              </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div class="task-modal-field">
+              <label class="task-modal-label"><i class="fas fa-flag mr-2"></i>{{ _('Status') }}</label>
+              <div id="taskModalStatus"></div>
             </div>
-            <div class="col-sm-6">
-              <div class="task-modal-field">
-                <label class="task-modal-label">
-                  <i class="fas fa-exclamation-circle me-2"></i>{{ _('Priority') }}
-                </label>
-                <div id="taskModalPriority"></div>
-              </div>
+            <div class="task-modal-field">
+              <label class="task-modal-label"><i class="fas fa-exclamation-circle mr-2"></i>{{ _('Priority') }}</label>
+              <div id="taskModalPriority"></div>
             </div>
           </div>
 
-          <!-- Project Info -->
           <div class="task-modal-section mb-4">
-            <label class="task-modal-label">
-              <i class="fas fa-project-diagram me-2"></i>{{ _('Project') }}
-            </label>
+            <label class="task-modal-label"><i class="fas fa-project-diagram mr-2"></i>{{ _('Project') }}</label>
             <div class="task-modal-project-card" id="taskModalProject"></div>
           </div>
 
-          <!-- Description -->
           <div class="task-modal-section mb-4" id="taskModalDescriptionSection" style="display: none;">
-            <label class="task-modal-label">
-              <i class="fas fa-align-left me-2"></i>{{ _('Description') }}
-            </label>
+            <label class="task-modal-label"><i class="fas fa-align-left mr-2"></i>{{ _('Description') }}</label>
             <div class="task-modal-description" id="taskModalDescription"></div>
           </div>
 
-          <!-- Details Grid -->
-          <div class="row g-3 mb-4">
-            <div class="col-sm-6" id="taskModalAssignedSection" style="display: none;">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div id="taskModalAssignedSection" style="display: none;">
               <div class="task-modal-field">
-                <label class="task-modal-label">
-                  <i class="fas fa-user me-2"></i>{{ _('Assigned To') }}
-                </label>
+                <label class="task-modal-label"><i class="fas fa-user mr-2"></i>{{ _('Assigned To') }}</label>
                 <div id="taskModalAssigned" class="task-modal-value"></div>
               </div>
             </div>
-            <div class="col-sm-6" id="taskModalDueDateSection" style="display: none;">
+            <div id="taskModalDueDateSection" style="display: none;">
               <div class="task-modal-field">
-                <label class="task-modal-label">
-                  <i class="fas fa-calendar me-2"></i>{{ _('Due Date') }}
-                </label>
+                <label class="task-modal-label"><i class="fas fa-calendar mr-2"></i>{{ _('Due Date') }}</label>
                 <div id="taskModalDueDate" class="task-modal-value"></div>
               </div>
             </div>
           </div>
 
-          <!-- Progress Bar (if estimated hours exist) -->
           <div class="task-modal-section mb-4" id="taskModalProgressSection" style="display: none;">
-            <label class="task-modal-label">
-              <i class="fas fa-chart-line me-2"></i>{{ _('Progress') }}
-            </label>
-            <div class="d-flex align-items-center gap-3">
-              <div class="flex-grow-1">
+            <label class="task-modal-label"><i class="fas fa-chart-line mr-2"></i>{{ _('Progress') }}</label>
+            <div class="flex items-center gap-3">
+              <div class="flex-grow">
                 <div class="progress task-modal-progress">
                   <div class="progress-bar" role="progressbar" id="taskModalProgressBar" style="width: 0%"></div>
                 </div>
               </div>
               <span class="task-modal-progress-text" id="taskModalProgressText">0%</span>
             </div>
-            <div class="d-flex justify-content-between mt-2 small text-muted">
+            <div class="flex justify-between mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">
               <span id="taskModalHoursInfo"></span>
             </div>
           </div>
 
-          <!-- Tags -->
           <div class="task-modal-section mb-4" id="taskModalTagsSection" style="display: none;">
-            <label class="task-modal-label">
-              <i class="fas fa-tags me-2"></i>{{ _('Tags') }}
-            </label>
-            <div id="taskModalTags" class="d-flex flex-wrap gap-2"></div>
+            <label class="task-modal-label"><i class="fas fa-tags mr-2"></i>{{ _('Tags') }}</label>
+            <div id="taskModalTags" class="flex flex-wrap gap-2"></div>
           </div>
 
-          <!-- Quick Stats -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
             <div>
               <div class="task-modal-stat">
-                <div class="task-modal-stat-icon bg-primary-subtle">
-                  <i class="fas fa-clock text-primary"></i>
-                </div>
+                <div class="task-modal-stat-icon bg-primary-subtle"><i class="fas fa-clock text-primary"></i></div>
                 <div class="task-modal-stat-content">
                   <div class="task-modal-stat-value" id="taskModalTotalHours">0h</div>
                   <div class="task-modal-stat-label">{{ _('Tracked') }}</div>
@@ -1393,9 +1371,7 @@ window.openTaskModal = async function(taskId) {
             </div>
             <div id="taskModalEstimatedSection2">
               <div class="task-modal-stat">
-                <div class="task-modal-stat-icon bg-info-subtle">
-                  <i class="fas fa-hourglass-half text-info"></i>
-                </div>
+                <div class="task-modal-stat-icon bg-info-subtle"><i class="fas fa-hourglass-half text-info"></i></div>
                 <div class="task-modal-stat-content">
                   <div class="task-modal-stat-value" id="taskModalEstimated">0h</div>
                   <div class="task-modal-stat-label">{{ _('Estimated') }}</div>
@@ -1404,9 +1380,7 @@ window.openTaskModal = async function(taskId) {
             </div>
             <div>
               <div class="task-modal-stat">
-                <div class="task-modal-stat-icon bg-success-subtle">
-                  <i class="fas fa-calendar-plus text-success"></i>
-                </div>
+                <div class="task-modal-stat-icon bg-success-subtle"><i class="fas fa-calendar-plus text-success"></i></div>
                 <div class="task-modal-stat-content">
                   <div class="task-modal-stat-value" id="taskModalCreated">-</div>
                   <div class="task-modal-stat-label">{{ _('Created') }}</div>
@@ -1415,9 +1389,7 @@ window.openTaskModal = async function(taskId) {
             </div>
             <div id="taskModalCompletedSection" style="display: none;">
               <div class="task-modal-stat">
-                <div class="task-modal-stat-icon bg-success-subtle">
-                  <i class="fas fa-check-circle text-success"></i>
-                </div>
+                <div class="task-modal-stat-icon bg-success-subtle"><i class="fas fa-check-circle text-success"></i></div>
                 <div class="task-modal-stat-content">
                   <div class="task-modal-stat-value" id="taskModalCompleted">-</div>
                   <div class="task-modal-stat-label">{{ _('Completed') }}</div>
@@ -1427,17 +1399,16 @@ window.openTaskModal = async function(taskId) {
           </div>
         </div>
       </div>
-      
-      <!-- Modal Footer -->
-      <div class="modal-footer border-top-0 pt-2 flex-wrap gap-2">
-        <a href="#" id="taskModalViewFullBtn" class="btn btn-outline-secondary btn-sm" target="_blank">
-          <i class="fas fa-external-link-alt me-2"></i>{{ _('View Full Details') }}
+
+      <div class="p-4 border-t border-border-light dark:border-border-dark flex flex-wrap justify-end gap-2">
+        <a href="#" id="taskModalViewFullBtn" class="btn btn-secondary btn-sm" target="_blank">
+          <i class="fas fa-external-link-alt mr-2"></i>{{ _('View Full Details') }}
         </a>
         <a href="#" id="taskModalEditBtn" class="btn btn-primary btn-sm">
-          <i class="fas fa-edit me-2"></i>{{ _('Edit Task') }}
+          <i class="fas fa-edit mr-2"></i>{{ _('Edit Task') }}
         </a>
-        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
-          <i class="fas fa-times me-2"></i>{{ _('Close') }}
+        <button type="button" class="btn btn-ghost btn-sm" onclick="closeTaskModal()">
+          <i class="fas fa-times mr-2"></i>{{ _('Close') }}
         </button>
       </div>
     </div>

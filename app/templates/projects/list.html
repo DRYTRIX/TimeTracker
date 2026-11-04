@@ -14,14 +14,28 @@
     actions_html='<a href="' + url_for("projects.create_project") + '" class="btn btn-primary"><i class="fas fa-plus"></i>Create Project</a>' if (current_user.is_admin or has_permission('create_projects')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold">{{ _('Filter Projects') }}</h2>
-        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}" aria-label="{{ _('Toggle Filters') }}">
-            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+{% set _proj_search = (search or request.args.get('search', ''))|trim %}
+{% set _proj_status = status or request.args.get('status', 'all') %}
+{% set _proj_client = request.args.get('client', '') %}
+{% set _proj_fav = favorites_only|default(false) or request.args.get('favorites') == 'true' %}
+{% set _has_active_filters = (_proj_search|length > 0) or (_proj_status and _proj_status != 'all') or (_proj_client|length > 0) or _proj_fav %}
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-tt border border-border-light dark:border-border-dark mb-6">
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="text-sm font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('Filter Projects') }}</h2>
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}" aria-label="{{ _('Toggle Filters') }}" aria-expanded="{{ 'true' if _has_active_filters else 'false' }}">
+            <i class="fas {% if _has_active_filters %}fa-chevron-up{% else %}fa-chevron-down{% endif %}" id="filterToggleIcon"></i>
         </button>
     </div>
-    <div id="filterBody">
+    {% if _has_active_filters %}
+    <div class="flex flex-wrap gap-2 mb-3" id="activeFilterChips">
+        {% if _proj_search %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Search') }}: {{ _proj_search }}</span>{% endif %}
+        {% if _proj_status and _proj_status != 'all' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Status') }}: {{ _proj_status }}</span>{% endif %}
+        {% if _proj_client %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Client') }}: {{ _proj_client }}</span>{% endif %}
+        {% if _proj_fav %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Favorites') }}</span>{% endif %}
+        <a href="{{ url_for('projects.list_projects') }}" class="text-xs text-primary hover:underline self-center">{{ _('Clear filters') }}</a>
+    </div>
+    {% endif %}
+    <div id="filterBody" class="{% if not _has_active_filters %}filter-collapsed{% endif %}">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="projectsFilterForm" data-filter-form>
         <div>
             <label for="projects-filter-search" class="form-label">{{ _('Search') }}</label>
@@ -119,7 +133,7 @@
     
     <!-- List View -->
     <div id="listView" class="view-container">
-    <table class="table table-zebra w-full text-left responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+    <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
                 {% if current_user.is_admin %}
@@ -481,19 +495,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
+    const hasActiveFilters = {{ 'true' if _has_active_filters else 'false' }};
     const filtersVisible = localStorage.getItem('projectListFiltersVisible');
-    if (filtersVisible === 'false') {
+    // Expand when filters are active; otherwise collapse unless user explicitly expanded
+    const shouldExpand = hasActiveFilters || filtersVisible === 'true';
+    if (!shouldExpand) {
         filterBody.classList.add('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-up');
         toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'false');
     } else {
-        // Explicitly set the icon to chevron-up when filter is visible
         filterBody.classList.remove('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-down');
         toggleIcon.classList.add('fa-chevron-up');
         toggleButton.title = '{{ _('Hide Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'true');
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
 });

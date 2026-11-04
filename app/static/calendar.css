@@ -90,7 +90,7 @@
 }
 
 .dark .event-card {
-    background-color: var(--card-dark-bg, #1e293b);
+    background-color: var(--card-dark-bg, var(--color-card-dark));
 }
 
 .dark .event-card.event {
@@ -614,18 +614,19 @@
     }
 }
 
-/* Dark mode adjustments */
+/* Dark mode adjustments — map local tokens onto design-system vars */
 .dark {
-    --border-color: #374151;
-    --header-bg: #1e293b;
-    --header-dark-bg: #0f172a;
-    --card-bg: #1e293b;
-    --card-dark-bg: #0f172a;
-    --hover-bg: #334155;
-    --hover-dark-bg: #1e293b;
-    --text-muted: #9ca3af;
-    --text-color: #f9fafb;
-    --text-dark-color: #e5e7eb;
+    --border-color: var(--color-border-dark);
+    --header-bg: var(--color-card-dark);
+    --header-dark-bg: var(--color-bg-dark);
+    --card-bg: var(--color-card-dark);
+    --card-dark-bg: var(--color-bg-dark);
+    --hover-bg: var(--color-border-dark);
+    --hover-dark-bg: var(--color-card-dark);
+    --text-muted: var(--color-text-dark-muted);
+    --text-color: var(--color-text-dark);
+    --text-dark-color: var(--color-text-dark);
+    --input-dark-bg: var(--color-bg-dark);
 }
 
 /* Loading state */
@@ -676,8 +677,8 @@
 }
 
 .dark .form-control {
-    background-color: var(--input-dark-bg, #0f172a);
-    color: var(--text-dark-color, #f9fafb);
+    background-color: var(--input-dark-bg, var(--color-bg-dark));
+    color: var(--text-dark-color, var(--color-text-dark));
 }
 
 .form-checkbox {

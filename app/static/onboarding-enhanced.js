@@ -73,7 +73,7 @@ class EnhancedOnboardingManager {
             
             .tooltip-trigger {
                 cursor: help;
-                color: #3b82f6;
+                color: #4F46E5;
                 margin-left: 4px;
                 font-size: 0.875rem;
             }
@@ -133,7 +133,7 @@ class EnhancedOnboardingManager {
                 width: 24px;
                 height: 24px;
                 border-radius: 50%;
-                background: #3b82f6;
+                background: #4F46E5;
                 color: white;
                 border: none;
                 cursor: pointer;

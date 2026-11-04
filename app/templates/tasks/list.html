@@ -28,14 +28,31 @@
     {{ stat_card('Completed', done_count, 'fas fa-check-circle', 'green-500') }}
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold">{{ _('Filter Tasks') }}</h2>
-        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
-            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+{% set _task_search = (search or '')|trim %}
+{% set _task_tags = (tags or '')|trim %}
+{% set _task_status = status or '' %}
+{% set _task_priority = priority or '' %}
+{% set _task_overdue = overdue|default(false) %}
+{% set _task_milestone = milestone_id|default(none) %}
+{% set _has_active_filters = (_task_search|length > 0) or (_task_tags|length > 0) or (_task_status|length > 0) or (_task_priority|length > 0) or _task_overdue or (_task_milestone is not none) or (project_ids|default([])|length > 0) or (assigned_to_ids|default([])|length > 0) %}
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-tt border border-border-light dark:border-border-dark mb-6">
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="text-sm font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('Filter Tasks') }}</h2>
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}" aria-expanded="{{ 'true' if _has_active_filters else 'false' }}">
+            <i class="fas {% if _has_active_filters %}fa-chevron-up{% else %}fa-chevron-down{% endif %}" id="filterToggleIcon"></i>
         </button>
     </div>
-    <div id="filterBody">
+    {% if _has_active_filters %}
+    <div class="flex flex-wrap gap-2 mb-3" id="activeFilterChips">
+        {% if _task_search %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Search') }}: {{ _task_search }}</span>{% endif %}
+        {% if _task_status %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Status') }}: {{ _task_status }}</span>{% endif %}
+        {% if _task_priority %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Priority') }}: {{ _task_priority }}</span>{% endif %}
+        {% if _task_tags %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Tags') }}: {{ _task_tags }}</span>{% endif %}
+        {% if _task_overdue %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Overdue') }}</span>{% endif %}
+        <a href="{{ url_for('tasks.list_tasks') }}" class="text-xs text-primary hover:underline self-center">{{ _('Clear filters') }}</a>
+    </div>
+    {% endif %}
+    <div id="filterBody" class="{% if not _has_active_filters %}filter-collapsed{% endif %}">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tasksFilterForm" data-filter-form>
         <div class="lg:col-span-1">
             <label for="tasks-filter-search" class="form-label">Search</label>
@@ -486,19 +503,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
+    const hasActiveFilters = {{ 'true' if _has_active_filters else 'false' }};
     const filtersVisible = localStorage.getItem('taskListFiltersVisible');
-    if (filtersVisible === 'false') {
+    const shouldExpand = hasActiveFilters || filtersVisible === 'true';
+    if (!shouldExpand) {
         filterBody.classList.add('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-up');
         toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'false');
     } else {
-        // Explicitly set the icon to chevron-up when filter is visible
         filterBody.classList.remove('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-down');
         toggleIcon.classList.add('fa-chevron-up');
         toggleButton.title = '{{ _('Hide Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'true');
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
 });

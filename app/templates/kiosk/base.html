@@ -6,7 +6,7 @@
     <title>{% block title %}{{ _('Kiosk Mode') }} - {{ app_name }}{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Kiosk Mode - Inventory and Time Tracking">
-    <meta name="theme-color" content="#3b82f6">
+    <meta name="theme-color" content="#4F46E5">
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
@@ -16,14 +16,20 @@
        loads last wins. #}
     <link href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}?v={{ app_version }}-toastfix1">
     <script nonce="{{ csp_nonce() }}">
-        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark')
-        }
+        // Avoid FOUC: apply .dark from localStorage or system preference
+        (function () {
+            var stored = localStorage.getItem('color-theme');
+            var effective = stored || 'system';
+            if (effective === 'system' || !effective) {
+                effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (effective === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
     </script>
     <style>
         /* Kiosk-specific overrides */

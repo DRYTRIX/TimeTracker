@@ -17,7 +17,7 @@ The Open Graph image should include:
 2. **Tagline** - "Professional Time Tracking" or similar
 3. **Key Visual Elements** - Clock icon, gradient background matching brand
 4. **Readable Text** - Ensure text is readable at small sizes
-5. **Brand Colors** - Use primary blue (#4A90E2) to secondary cyan (#50E3C2) gradient
+5. **Brand Colors** - Use primary blue (#4F46E5) to secondary cyan (#50E3C2) gradient
 
 ## Creation Tools
 

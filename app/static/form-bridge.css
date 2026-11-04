@@ -1,7 +1,25 @@
-/* Bridge styles to make legacy .form-control inputs match the new UI
-   Applies generous padding, border, and focus states. */
+/* Legacy Bootstrap-ish class aliases → brand tokens from input.css / :root.
+   Prefer .form-input / .btn-* in new markup. */
 
-/* Base inputs */
+:root {
+  --color-primary: #4F46E5;
+  --color-primary-600: #4338ca;
+  --color-bg: #f8fafc;
+  --color-card: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --radius-md: 0.75rem;
+  --shadow-md: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.dark {
+  --color-bg: #0b1220;
+  --color-card: #0f172a;
+  --color-border: #334155;
+  --color-text: #e2e8f0;
+}
+
+/* Base inputs — mirror .form-input */
 .form-control,
 input.form-control,
 select.form-control,
@@ -9,121 +27,100 @@ textarea.form-control,
 .form-select {
   display: block;
   width: 100%;
-  min-height: 2.5rem; /* consistent tap target */
-  padding: 0.625rem 0.875rem; /* py-2.5 px-3.5 */
-  border: 1px solid #E2E8F0; /* border-light */
-  border-radius: 0.5rem;      /* rounded-lg */
-  background: #FFFFFF;        /* card-light */
-  color: #2D3748;             /* text-light */
+  min-height: 2.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-card);
+  color: var(--color-text);
   line-height: 1.5;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .form-control:focus,
 .form-select:focus {
   outline: none;
-  border-color: #4A90E2; /* primary */
-  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.35); /* focus ring */
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
 }
 
-/* Placeholder colors */
-.form-control::placeholder { color: #A0AEC0; }
-.dark .form-control::placeholder { color: #718096; }
+.form-control::placeholder { color: #94a3b8; }
+.dark .form-control::placeholder { color: #64748b; }
 
-/* Textarea */
 textarea.form-control { min-height: 6rem; resize: vertical; }
 
-/* Sizes */
 .form-control.form-control-sm { min-height: 2.25rem; padding: 0.5rem 0.75rem; }
 .form-control.form-control-lg { min-height: 2.875rem; padding: 0.75rem 1rem; }
 
-/* Dark mode */
 .dark .form-control,
 .dark .form-select,
 .dark input.form-control,
 .dark select.form-control,
 .dark textarea.form-control {
-  background: #2D3748; /* card-dark */
-  color: #E2E8F0;      /* text-dark */
-  border-color: #4A5568; /* border-dark */
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #334155;
 }
 
 .dark .form-control:focus,
 .dark .form-select:focus {
-  border-color: #4A90E2;
-  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.45);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.4);
 }
 
-/* Input groups often remove radii; keep padding generous */
 .input-group .form-control { padding-top: 0.625rem; padding-bottom: 0.625rem; }
 
-/* =============================
-   Minimal tokens (fallbacks)
-   ============================= */
-:root {
-  --color-primary: #3B82F6;
-  --color-primary-600: #2563EB;
-  --color-bg: #F7F9FB;
-  --color-card: #FFFFFF;
-  --color-border: #E2E8F0;
-  --color-text: #1F2937;
-  --radius-md: 0.5rem;
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+/* Buttons — thin fallbacks when Tailwind .btn layer is unavailable */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  cursor: pointer;
 }
-.dark {
-  --color-bg: #0F172A;
-  --color-card: #1F2937;
-  --color-border: #4A5568;
-  --color-text: #E2E8F0;
-}
-
-/* =============================
-   Buttons
-   ============================= */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 0.875rem; border-radius: var(--radius-md); border: 1px solid transparent; font-weight: 600; line-height: 1.25; cursor: pointer; }
-.btn:focus { outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.35); }
+.btn:focus { outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35); }
 .btn-primary { color: #fff; background-color: var(--color-primary); border-color: var(--color-primary); }
 .btn-primary:hover { background-color: var(--color-primary-600); border-color: var(--color-primary-600); }
 .btn-secondary { color: var(--color-text); background-color: var(--color-card); border-color: var(--color-border); }
-.btn-secondary:hover { background-color: #F3F4F6; }
+.btn-secondary:hover { background-color: var(--color-bg); }
 .btn-ghost { color: var(--color-text); background-color: transparent; border-color: transparent; }
-.btn-ghost:hover { background-color: rgba(148,163,184,0.15); }
-.btn-sm { padding: 0.375rem 0.625rem; font-size: 0.875rem; }
-.btn-lg { padding: 0.625rem 1rem; font-size: 1rem; }
-.btn[disabled], .btn.disabled { opacity: .6; cursor: not-allowed; }
+.btn-ghost:hover { background-color: rgba(148, 163, 184, 0.15); }
+.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
+.btn-lg { padding: 0.75rem 1.5rem; font-size: 1rem; }
+.btn[disabled], .btn.disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* =============================
-   Focus ring utility
-   ============================= */
-.focus-ring { outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.35); }
+.focus-ring { outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35); }
 
-/* =============================
-   Table enhancements
-   ============================= */
+/* Tables */
 .table { width: 100%; border-collapse: separate; border-spacing: 0; }
 .table thead th { position: sticky; top: 0; background: var(--color-card); z-index: 1; }
 .table thead th, .table tbody td { padding: 1rem; border-bottom: 1px solid var(--color-border); }
-.table-zebra tbody tr:nth-child(odd) { background-color: rgba(148,163,184,0.07); }
-.dark .table-zebra tbody tr:nth-child(odd) { background-color: rgba(148,163,184,0.12); }
+.table-zebra tbody tr:nth-child(odd) { background-color: rgba(148, 163, 184, 0.07); }
+.dark .table-zebra tbody tr:nth-child(odd) { background-color: rgba(148, 163, 184, 0.12); }
 .table-compact thead th, .table-compact tbody td { padding: 0.625rem 0.75rem; }
 .table-number { text-align: right; }
 
-/* =============================
-   Badge chips
-   ============================= */
+/* Badge chips */
 .chip { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; line-height: 1; border: 1px solid transparent; white-space: nowrap; }
 .chip-neutral { background: #F1F5F9; color: #334155; }
 .dark .chip-neutral { background: #1F2937; color: #E5E7EB; border-color: #374151; }
 .chip-success { background: #DCFCE7; color: #166534; }
-.dark .chip-success { background: rgba(16,185,129,0.15); color: #34D399; }
+.dark .chip-success { background: rgba(16, 185, 129, 0.15); color: #34D399; }
 .chip-warning { background: #FEF3C7; color: #92400E; }
-.dark .chip-warning { background: rgba(245,158,11,0.15); color: #F59E0B; }
+.dark .chip-warning { background: rgba(245, 158, 11, 0.15); color: #F59E0B; }
 .chip-danger { background: #FEE2E2; color: #991B1B; }
-.dark .chip-danger { background: rgba(239,68,68,0.15); color: #F87171; }
+.dark .chip-danger { background: rgba(239, 68, 68, 0.15); color: #F87171; }
 
-/* =============================
-   Cards & helpers
-   ============================= */
-.card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
 .page-bg { background: var(--color-bg); }
-
-

@@ -1,11 +1,10 @@
 /* TimeTracker service worker — cache static assets; do not touch /api/v1/* (token auth). */
-const CACHE_NAME = 'timetracker-v1';
+const CACHE_NAME = 'timetracker-v1-ui1';
 
 const PRECACHE_URLS = [
   '/offline',
   '/static/manifest.json',
   '/static/dist/output.css',
-  '/static/enhanced-ui.css',
   '/static/enhanced-ui.js',
   '/static/charts.js',
   '/static/interactions.js',

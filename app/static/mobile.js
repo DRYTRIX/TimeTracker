@@ -52,6 +52,14 @@ class MobileSidebar {
         if (this.overlay) this.overlay.classList.toggle('hidden');
     }
 
+    open() {
+        this.sidebar.classList.remove('-translate-x-full');
+        if (this.overlay) this.overlay.classList.remove('hidden');
+        // Mobile sidebar may use translate or display toggles depending on CSS
+        this.sidebar.classList.remove('hidden');
+        this.sidebar.classList.add('flex');
+    }
+
     close() {
         this.sidebar.classList.add('-translate-x-full');
         if (this.overlay) this.overlay.classList.remove('hidden');
@@ -310,6 +318,17 @@ class BottomNavMoreDrawer {
         this.panel.querySelectorAll('a.bottom-nav-more-link').forEach((a) => {
             a.addEventListener('click', () => this.close());
         });
+        const browseAll = document.getElementById('bottomNavBrowseAll');
+        if (browseAll) {
+            browseAll.addEventListener('click', () => {
+                this.close();
+                if (window.mobileSidebar && typeof window.mobileSidebar.open === 'function') {
+                    window.mobileSidebar.open();
+                } else {
+                    document.getElementById('mobileSidebarBtn')?.click();
+                }
+            });
+        }
     }
 }
 
@@ -343,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window._mobileInitDone) return;
     window._mobileInitDone = true;
 
-    new MobileSidebar();
+    window.mobileSidebar = new MobileSidebar();
     new MobileForms();
     new MobileViewport();
     new MobilePerformance();
