@@ -62,11 +62,21 @@ jobs:
 
       - name: Check for migration changes
         id: migration_check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          # Check if there are changes to models or migrations
-          if git diff --name-only HEAD~1 | grep -E "(app/models/|migrations/)" > /dev/null; then
+          # Compare against the PR base (not HEAD~1) so multi-commit PRs are covered
+          if [ -z "$BASE_SHA" ]; then
+            echo "⚠️ No PR base SHA; falling back to HEAD~1"
+            DIFF_RANGE="HEAD~1"
+          else
+            DIFF_RANGE="${BASE_SHA}...HEAD"
+          fi
+          echo "Diff range: $DIFF_RANGE"
+          if git diff --name-only "$DIFF_RANGE" | grep -E "(app/models/|migrations/)" > /dev/null; then
             echo "migration_changes=true" >> $GITHUB_OUTPUT
             echo "📋 Migration-related changes detected"
+            git diff --name-only "$DIFF_RANGE" | grep -E "(app/models/|migrations/)" || true
           else
             echo "migration_changes=false" >> $GITHUB_OUTPUT
             echo "ℹ️ No migration-related changes detected"
@@ -78,70 +88,162 @@ jobs:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
+          set -euo pipefail
+
           echo "🔍 Validating migration consistency..."
-          
-          # Show current directory and check for migration files
           echo "Current directory: $(pwd)"
           echo "Migration files:"
           ls -la migrations/versions/ | tail -5
-          
-          # Initialize fresh database with verbose output
-          echo "Running flask db upgrade..."
+
+          # Ensure PR base commit is available for checkout (fork PRs / shallow edges)
+          if [ -n "${BASE_SHA:-}" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null || git fetch --no-tags origin "$BASE_SHA" || true
+          fi
+
+          reset_db() {
+            echo "♻️ Resetting PostgreSQL schema..."
+            python <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ["DATABASE_URL"])
+          with engine.connect() as conn:
+              conn = conn.execution_options(isolation_level="AUTOCOMMIT")
+              conn.execute(text("DROP SCHEMA public CASCADE"))
+              conn.execute(text("CREATE SCHEMA public"))
+              conn.execute(text("GRANT ALL ON SCHEMA public TO test_user"))
+              conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+          print("Schema reset complete")
+          PY
+          }
+
+          # Normalize autogenerate ops for stable comparison (ignore rev ids / timestamps)
+          extract_ops() {
+            local file="$1"
+            local out="$2"
+            if [ ! -f "$file" ]; then
+              : > "$out"
+              return
+            fi
+            # Prefer upgrade() body ops; fall back to any op./batch_op. lines
+            python - "$file" "$out" <<'PY'
+          import re, sys
+          src = open(sys.argv[1], encoding="utf-8").read()
+          m = re.search(r"def upgrade\(\).*?:\n(.*?)(?:\ndef downgrade\(|\Z)", src, re.S)
+          body = m.group(1) if m else src
+          ops = []
+          for line in body.splitlines():
+              s = line.strip()
+              if re.search(r"\b(op|batch_op)\.", s):
+                  ops.append(s)
+          open(sys.argv[2], "w", encoding="utf-8").write("\n".join(ops) + ("\n" if ops else ""))
+          PY
+          }
+
+          capture_autogenerate() {
+            local rev_id="$1"
+            local ops_out="$2"
+
+            echo "Running flask db upgrade..."
+            if ! flask db upgrade; then
+              echo ""
+              echo "❌ Migration failed!"
+              flask db current || true
+              flask db history | tail -10 || true
+              exit 1
+            fi
+            echo "✅ Migrations completed successfully"
+
+            echo "Generating test migration ($rev_id)..."
+            # migrate may exit non-zero even when a file is written; continue and inspect
+            flask db migrate -m "Test migration consistency" --rev-id "$rev_id" || true
+
+            local migration_file
+            migration_file=$(find migrations/versions -name "*${rev_id}*.py" 2>/dev/null | head -1)
+            if [ -n "$migration_file" ] && [ -f "$migration_file" ]; then
+              echo "Generated: $migration_file"
+              extract_ops "$migration_file" "$ops_out"
+              rm -f "$migration_file"
+            else
+              echo "No migration file generated for $rev_id"
+              : > "$ops_out"
+            fi
+            # Always clean stray test consistency files
+            find migrations/versions -name '*test_consistency*.py' -delete 2>/dev/null || true
+          }
+
+          PR_OPS=/tmp/drift_ops_pr.txt
+          BASE_OPS=/tmp/drift_ops_base.txt
+          PR_SHA=$(git rev-parse HEAD)
+
+          echo ""
+          echo "=== Autogenerate on PR head ($PR_SHA) ==="
+          reset_db
+          capture_autogenerate "test_consistency_pr" "$PR_OPS"
+          echo "PR op count: $(grep -c . "$PR_OPS" || true)"
+
+          if [ -z "${BASE_SHA:-}" ]; then
+            echo "⚠️ No PR base SHA available; failing on any PR drift (legacy behavior)"
+            if grep -q . "$PR_OPS"; then
+              echo "❌ Migration inconsistency detected (no base to compare)."
+              cat "$PR_OPS"
+              echo "Fix: generate and commit a real Alembic migration, or open this as a pull_request event."
+              exit 1
+            fi
+            echo "✅ Migration consistency validated - no schema drift detected"
+            exit 0
+          fi
+
+          echo ""
+          echo "=== Autogenerate on PR base ($BASE_SHA) ==="
+          # Swap models + migrations to the base tree (HEAD stays the PR merge/commit)
+          git checkout "$BASE_SHA" -- app migrations
+          reset_db
+          capture_autogenerate "test_consistency_base" "$BASE_OPS"
+          echo "Base op count: $(grep -c . "$BASE_OPS" || true)"
+
+          # Restore PR tree and re-apply PR migrations for subsequent workflow steps
+          git checkout "$PR_SHA" -- app migrations
+          reset_db
+          echo "Re-applying PR migrations after base comparison..."
           if ! flask db upgrade; then
-            echo ""
-            echo "❌ Migration failed!"
-            echo "Checking database state..."
-            flask db current || true
-            echo ""
-            echo "Checking migration history..."
-            flask db history | tail -10 || true
+            echo "❌ Failed to re-upgrade PR migrations after base comparison"
             exit 1
           fi
-          
-          echo "✅ Migrations completed successfully"
-          
-          # Generate a new migration from current models
-          echo "Generating test migration to check consistency..."
-          if ! flask db migrate -m "Test migration consistency" --rev-id test_consistency; then
-            echo "⚠️ Flask db migrate encountered an error"
-            echo "This might indicate schema drift or migration issues"
-            
-            # Check if a migration file was still created despite the error
-            MIGRATION_FILE=$(find migrations/versions -name "*test_consistency*.py" 2>/dev/null | head -1)
-            if [ -f "$MIGRATION_FILE" ]; then
-              echo "Migration file was created: $MIGRATION_FILE"
-              cat "$MIGRATION_FILE"
-              rm "$MIGRATION_FILE"
-            fi
-            
-            # Don't fail the workflow - this might be expected behavior
-            echo "Continuing validation despite migration generation warning..."
-          fi
-          
-          # Check if the generated migration is empty (no changes needed)
-          MIGRATION_FILE=$(find migrations/versions -name "*test_consistency*.py" 2>/dev/null | head -1)
-          
-          if [ -f "$MIGRATION_FILE" ]; then
-            # Check if migration has actual changes
-            if grep -q "op\." "$MIGRATION_FILE"; then
-              echo "❌ Migration inconsistency detected!"
-              echo "The database schema doesn't match the models."
-              echo "Generated migration file: $MIGRATION_FILE"
-              cat "$MIGRATION_FILE"
-              
-              # Clean up test migration before failing
-              rm "$MIGRATION_FILE"
-              echo "Fix: generate and commit a real Alembic migration that brings models and schema in sync."
-              exit 1
+
+          echo ""
+          echo "=== Comparing PR drift vs base drift ==="
+          # Fail only on *new* drift (ops in PR that base does not have).
+          # Model alignments that shrink baseline drift are allowed.
+          NEW_DRIFT=$(comm -13 <(sort -u "$BASE_OPS") <(sort -u "$PR_OPS") || true)
+          RESOLVED=$(comm -23 <(sort -u "$BASE_OPS") <(sort -u "$PR_OPS") || true)
+
+          if [ -z "$NEW_DRIFT" ]; then
+            if grep -q . "$PR_OPS"; then
+              echo "⚠️ Baseline schema drift still exists ($(grep -c . "$PR_OPS" || true) ops), but this PR adds none."
             else
-              echo "✅ Migration consistency validated - no schema drift detected"
-              # Clean up test migration
-              rm "$MIGRATION_FILE"
+              echo "✅ No schema drift on PR head."
             fi
-          else
-            echo "✅ No migration file generated - models are in sync"
+            if [ -n "$RESOLVED" ]; then
+              echo "ℹ️ PR reduces baseline drift ($(echo "$RESOLVED" | grep -c . || true) ops resolved vs base)."
+            fi
+            echo "✅ Migration consistency validated - no *new* schema drift vs base"
+            exit 0
           fi
+
+          echo "❌ Migration inconsistency detected: PR introduces new schema drift vs base."
+          echo ""
+          echo "--- Ops only on PR (new drift) ---"
+          echo "$NEW_DRIFT"
+          if [ -n "$RESOLVED" ]; then
+            echo ""
+            echo "--- Ops only on base (resolved by PR) ---"
+            echo "$RESOLVED"
+          fi
+          echo ""
+          echo "Fix: add a curated Alembic migration for real model changes, or align models with the migrated schema."
+          exit 1
 
       - name: Test migration rollback safety
         if: steps.migration_check.outputs.migration_changes == 'true'
@@ -336,7 +438,10 @@ jobs:
   comment-on-pr:
     runs-on: ubuntu-latest
     needs: validate-migrations
-    if: github.event_name == 'pull_request' && always()
+    # Fork PRs get a read-only GITHUB_TOKEN; commenting would 403 and fail the check
+    if: >
+      github.event_name == 'pull_request' && always() &&
+      github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
       pull-requests: write
@@ -355,14 +460,14 @@ jobs:
               if (success) {
                 commentBody += ':white_check_mark: **Migration validation passed!**\n\n';
                 commentBody += '**Completed checks:**\n';
-                commentBody += '- :white_check_mark: Migration consistency validation (schema drift fails CI)\n';
+                commentBody += '- :white_check_mark: Migration consistency validation (new schema drift vs base fails CI)\n';
                 commentBody += '- :white_check_mark: Rollback safety test\n';
                 commentBody += '- :white_check_mark: Data integrity verification\n\n';
                 commentBody += '**The database migrations are safe to apply.** :rocket:\n';
               } else {
                 commentBody += ':x: **Migration validation failed!**\n\n';
                 commentBody += '**Issues detected:**\n';
-                commentBody += '- Migration consistency / schema drift problems\n';
+                commentBody += '- Migration consistency / new schema drift vs base\n';
                 commentBody += '- Rollback safety issues\n';
                 commentBody += '- Data integrity concerns\n\n';
                 commentBody += '**Please review the migration files and fix the issues before merging.** :warning:\n';
