@@ -1,22 +1,22 @@
 """Tests for utility modules in app/utils."""
 
-import pytest
 import datetime
 import os
 import tempfile
 from unittest.mock import patch
+
+import pytest
 from flask import g
-from werkzeug.exceptions import Forbidden, BadRequest, InternalServerError
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.exceptions import BadRequest, Forbidden, InternalServerError
 
 from app import db
 from app.models import Settings
-from app.utils.template_filters import register_template_filters
 from app.utils.context_processors import register_context_processors
+from app.utils.db import safe_commit
 from app.utils.error_handlers import register_error_handlers
 from app.utils.i18n import _needs_compile, compile_po_to_mo, ensure_translations_compiled
-from app.utils.db import safe_commit
-
+from app.utils.template_filters import register_template_filters
 
 # ============================================================================
 # Template Filter Tests

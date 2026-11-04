@@ -12,9 +12,9 @@ from app import db, log_event
 from app.models import Project, Settings, StockItem, StockMovement, Task, TimeEntry, User, Warehouse, WarehouseStock
 from app.services.time_tracking_service import TimeTrackingService
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 kiosk_bp = Blueprint("kiosk", __name__)
 

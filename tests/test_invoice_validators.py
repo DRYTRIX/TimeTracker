@@ -1,15 +1,16 @@
 """Tests for invoice validators (UBL, CII, veraPDF)."""
+
 import pytest
 
 from app.utils.invoice_validators import (
-    validate_ubl_wellformed,
-    validate_ubl_peppol_bis3,
-    validate_cii_wellformed,
     validate_cii_en16931,
+    validate_cii_wellformed,
+    validate_ubl_peppol_bis3,
+    validate_ubl_wellformed,
 )
 
-
 # ---- UBL well-formedness ----
+
 
 @pytest.mark.unit
 def test_validate_ubl_wellformed_accepts_valid_invoice():
@@ -35,6 +36,7 @@ def test_validate_ubl_wellformed_rejects_non_invoice_root():
 
 
 # ---- UBL Peppol BIS 3.0 structural validation ----
+
 
 def _minimal_peppol_ubl() -> str:
     return """<?xml version="1.0" encoding="UTF-8"?>
@@ -85,9 +87,7 @@ def test_validate_ubl_peppol_bis3_accepts_valid():
 
 @pytest.mark.unit
 def test_validate_ubl_peppol_bis3_detects_missing_buyer_reference():
-    ubl = _minimal_peppol_ubl().replace(
-        "<cbc:BuyerReference>PO-12345</cbc:BuyerReference>", ""
-    )
+    ubl = _minimal_peppol_ubl().replace("<cbc:BuyerReference>PO-12345</cbc:BuyerReference>", "")
     passed, issues = validate_ubl_peppol_bis3(ubl)
     assert passed is False
     assert any("BuyerReference" in i for i in issues)
@@ -127,6 +127,7 @@ def test_validate_ubl_peppol_bis3_detects_missing_unitcode():
 
 # ---- CII well-formedness ----
 
+
 @pytest.mark.unit
 def test_validate_cii_wellformed_accepts_valid():
     cii = '<?xml version="1.0"?><rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"><x/></rsm:CrossIndustryInvoice>'
@@ -149,6 +150,7 @@ def test_validate_cii_wellformed_rejects_invalid_xml():
 
 
 # ---- CII EN 16931 structural validation ----
+
 
 def _minimal_cii_en16931() -> str:
     return """<?xml version="1.0" encoding="UTF-8"?>
@@ -268,9 +270,7 @@ def test_validate_cii_en16931_detects_missing_document_id():
 def test_validate_cii_en16931_detects_missing_line_items():
     cii = _minimal_cii_en16931()
     start = cii.index("<ram:IncludedSupplyChainTradeLineItem>")
-    end = cii.index("</ram:IncludedSupplyChainTradeLineItem>") + len(
-        "</ram:IncludedSupplyChainTradeLineItem>"
-    )
+    end = cii.index("</ram:IncludedSupplyChainTradeLineItem>") + len("</ram:IncludedSupplyChainTradeLineItem>")
     cii = cii[:start] + cii[end:]
     passed, issues = validate_cii_en16931(cii)
     assert passed is False
@@ -279,9 +279,7 @@ def test_validate_cii_en16931_detects_missing_line_items():
 
 @pytest.mark.unit
 def test_validate_cii_en16931_detects_missing_grand_total():
-    cii = _minimal_cii_en16931().replace(
-        "<ram:GrandTotalAmount>100.00</ram:GrandTotalAmount>", ""
-    )
+    cii = _minimal_cii_en16931().replace("<ram:GrandTotalAmount>100.00</ram:GrandTotalAmount>", "")
     passed, issues = validate_cii_en16931(cii)
     assert passed is False
     assert any("GrandTotal" in i for i in issues)

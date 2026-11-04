@@ -71,7 +71,7 @@ from app.utils.api_responses import (
     success_response,
     validation_error_response,
 )
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_log
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response, safe_log
 from app.utils.quote_access import quote_list_scope_user_id
 from app.utils.scope_filter import apply_client_scope, apply_project_scope
 from app.utils.timezone import get_app_timezone, parse_local_datetime, utc_to_local
@@ -2051,7 +2051,10 @@ def create_recurring_project_cost(project_id):
     )
     db.session.add(recurring)
     db.session.commit()
-    return jsonify({"message": "Recurring project cost created successfully", "recurring_cost": recurring.to_dict()}), 201
+    return (
+        jsonify({"message": "Recurring project cost created successfully", "recurring_cost": recurring.to_dict()}),
+        201,
+    )
 
 
 @api_v1_bp.route("/projects/<int:project_id>/recurring-costs/<int:rid>", methods=["GET"])
@@ -2150,13 +2153,16 @@ def create_shared_report_link(view_id):
     )
     db.session.commit()
     url = service.get_public_url(link)
-    return jsonify(
-        {
-            "message": "Share link created successfully",
-            "link": link.to_dict(include_url=True),
-            "url": url,
-        }
-    ), 201
+    return (
+        jsonify(
+            {
+                "message": "Share link created successfully",
+                "link": link.to_dict(include_url=True),
+                "url": url,
+            }
+        ),
+        201,
+    )
 
 
 @api_v1_bp.route("/reports/saved/<int:view_id>/share/<token>", methods=["DELETE"])

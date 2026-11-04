@@ -2,11 +2,13 @@
 Comprehensive tests for PaymentService including update and delete methods.
 """
 
-import pytest
 from datetime import date
 from decimal import Decimal
+
+import pytest
+
+from app.models import Invoice, Payment
 from app.services import PaymentService
-from app.models import Payment, Invoice
 
 
 class TestPaymentServiceComplete:

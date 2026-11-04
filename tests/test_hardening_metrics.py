@@ -7,11 +7,7 @@ import requests
 
 
 def test_observe_scheduler_job_records_success_and_duration():
-    from app.utils.hardening_metrics import (
-        SCHEDULER_JOB_DURATION,
-        SCHEDULER_JOB_SUCCESS,
-        observe_scheduler_job,
-    )
+    from app.utils.hardening_metrics import SCHEDULER_JOB_DURATION, SCHEDULER_JOB_SUCCESS, observe_scheduler_job
 
     before = SCHEDULER_JOB_SUCCESS.labels(job_id="unit_test_job")._value.get()
     observe_scheduler_job("unit_test_job", True, 0.12)

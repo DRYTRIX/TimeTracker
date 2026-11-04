@@ -5,8 +5,8 @@ from flask_login import current_user, login_required
 from app import db, log_event, track_event
 from app.models import Client, ClientNote, Settings
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_registry import ModuleRegistry
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 client_notes_bp = Blueprint("client_notes", __name__)
 

@@ -130,16 +130,19 @@ def create_template():
                 import logging
 
                 from app.utils.error_handling import sanitize_log_value
-                logging.getLogger(__name__).warning("Tasks JSON is not a list: %s", sanitize_log_value(type(parsed_tasks).__name__))
+
+                logging.getLogger(__name__).warning(
+                    "Tasks JSON is not a list: %s", sanitize_log_value(type(parsed_tasks).__name__)
+                )
         except json.JSONDecodeError as e:
             import logging
+
             from app.utils.error_handling import sanitize_log_value
 
-            logging.getLogger(__name__).warning(
-                "Failed to parse tasks JSON: %s", sanitize_log_value(type(e).__name__)
-            )
+            logging.getLogger(__name__).warning("Failed to parse tasks JSON: %s", sanitize_log_value(type(e).__name__))
         except Exception as e:
             import logging
+
             from app.utils.error_handling import sanitize_log_value
 
             logging.getLogger(__name__).warning(
@@ -244,16 +247,19 @@ def edit_template(template_id):
                 import logging
 
                 from app.utils.error_handling import sanitize_log_value
-                logging.getLogger(__name__).warning("Tasks JSON is not a list: %s", sanitize_log_value(type(parsed_tasks).__name__))
+
+                logging.getLogger(__name__).warning(
+                    "Tasks JSON is not a list: %s", sanitize_log_value(type(parsed_tasks).__name__)
+                )
         except json.JSONDecodeError as e:
             import logging
+
             from app.utils.error_handling import sanitize_log_value
 
-            logging.getLogger(__name__).warning(
-                "Failed to parse tasks JSON: %s", sanitize_log_value(type(e).__name__)
-            )
+            logging.getLogger(__name__).warning("Failed to parse tasks JSON: %s", sanitize_log_value(type(e).__name__))
         except Exception as e:
             import logging
+
             from app.utils.error_handling import sanitize_log_value
 
             logging.getLogger(__name__).warning(

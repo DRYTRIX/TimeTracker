@@ -35,8 +35,7 @@ from app.models import (
 )
 from app.services import ProjectService
 from app.utils.db import safe_commit
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_log
-from app.utils.safe_redirect import safe_redirect, safe_redirect_target
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response, safe_log
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
@@ -45,6 +44,7 @@ from app.utils.posthog_funnels import (
     track_project_setup_completed,
     track_project_setup_started,
 )
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.timezone import convert_app_datetime_to_user
 
 _project_service = ProjectService()
@@ -678,7 +678,9 @@ def view_project(project_id):
         link_templates_by_field=link_templates_by_field,
         attachments=attachments,
         budget_status=budget_status,
-        milestones=Milestone.query.filter_by(project_id=project.id).order_by(Milestone.due_date.asc().nullslast(), Milestone.name).all(),
+        milestones=Milestone.query.filter_by(project_id=project.id)
+        .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
+        .all(),
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"

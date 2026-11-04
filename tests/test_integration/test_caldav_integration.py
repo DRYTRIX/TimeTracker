@@ -8,8 +8,10 @@ pytestmark = [pytest.mark.integration]
 
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
+
 from flask import url_for
 
+from app.integrations.caldav_calendar import CalDAVCalendar, CalDAVCalendarConnector, CalDAVClient
 from app.models import (
     CalendarEvent,
     Integration,
@@ -18,11 +20,6 @@ from app.models import (
     Project,
     TimeEntry,
     User,
-)
-from app.integrations.caldav_calendar import (
-    CalDAVCalendarConnector,
-    CalDAVClient,
-    CalDAVCalendar,
 )
 
 
@@ -98,9 +95,7 @@ class TestCalDAVClient:
 
     def test_client_initialization(self):
         """Test CalDAV client can be initialized"""
-        client = CalDAVClient(
-            username="user@example.com", password="pass", verify_ssl=True
-        )
+        client = CalDAVClient(username="user@example.com", password="pass", verify_ssl=True)
         assert client.username == "user@example.com"
         assert client.password == "pass"
         assert client.verify_ssl is True
@@ -171,17 +166,13 @@ class TestCalDAVConnector:
 
     def test_provider_name(self, caldav_integration):
         """Test provider name"""
-        credentials = IntegrationCredential.query.filter_by(
-            integration_id=caldav_integration.id
-        ).first()
+        credentials = IntegrationCredential.query.filter_by(integration_id=caldav_integration.id).first()
         connector = CalDAVCalendarConnector(caldav_integration, credentials)
         assert connector.provider_name == "caldav_calendar"
 
     def test_get_basic_creds(self, caldav_integration):
         """Test getting basic credentials"""
-        credentials = IntegrationCredential.query.filter_by(
-            integration_id=caldav_integration.id
-        ).first()
+        credentials = IntegrationCredential.query.filter_by(integration_id=caldav_integration.id).first()
         connector = CalDAVCalendarConnector(caldav_integration, credentials)
         username, password = connector._get_basic_creds()
         assert username == "user@example.com"
@@ -198,16 +189,12 @@ class TestCalDAVConnector:
         """Test connection testing"""
         mock_client = Mock()
         mock_client.discover_calendars.return_value = [
-            CalDAVCalendar(
-                href="https://mail.example.com/dav/Calendar/", name="My Calendar"
-            )
+            CalDAVCalendar(href="https://mail.example.com/dav/Calendar/", name="My Calendar")
         ]
         mock_client.fetch_events.return_value = []
         mock_client_class.return_value = mock_client
 
-        credentials = IntegrationCredential.query.filter_by(
-            integration_id=caldav_integration.id
-        ).first()
+        credentials = IntegrationCredential.query.filter_by(integration_id=caldav_integration.id).first()
         connector = CalDAVCalendarConnector(caldav_integration, credentials)
         result = connector.test_connection()
 
@@ -216,9 +203,7 @@ class TestCalDAVConnector:
         assert len(result["calendars"]) == 1
 
     @patch("app.integrations.caldav_calendar.CalDAVClient")
-    def test_sync_data_imports_events(
-        self, mock_client_class, db_session, caldav_integration, test_project
-    ):
+    def test_sync_data_imports_events(self, mock_client_class, db_session, caldav_integration, test_project):
         """Test syncing imports calendar events as time entries"""
         # Mock calendar event
         now_utc = datetime.now(timezone.utc)
@@ -235,9 +220,7 @@ class TestCalDAVConnector:
         mock_client.fetch_events.return_value = [event_data]
         mock_client_class.return_value = mock_client
 
-        credentials = IntegrationCredential.query.filter_by(
-            integration_id=caldav_integration.id
-        ).first()
+        credentials = IntegrationCredential.query.filter_by(integration_id=caldav_integration.id).first()
         connector = CalDAVCalendarConnector(caldav_integration, credentials)
         result = connector.sync_data()
 
@@ -248,17 +231,13 @@ class TestCalDAVConnector:
         # The connector was changed to write CalendarEvent records (not
         # TimeEntry) and to track imports via a [CalDAV: <uid>] marker in
         # the description, not an IntegrationExternalEventLink row.
-        calendar_event = CalendarEvent.query.filter_by(
-            user_id=caldav_integration.user_id
-        ).first()
+        calendar_event = CalendarEvent.query.filter_by(user_id=caldav_integration.user_id).first()
         assert calendar_event is not None
         assert "Meeting with Test Project" in calendar_event.title
         assert "[CalDAV: test-event-123]" in (calendar_event.description or "")
 
     @patch("app.integrations.caldav_calendar.CalDAVClient")
-    def test_sync_data_skips_duplicates(
-        self, mock_client_class, db_session, caldav_integration, test_project
-    ):
+    def test_sync_data_skips_duplicates(self, mock_client_class, db_session, caldav_integration, test_project):
         """Test sync skips already imported events"""
         # Create existing link
         time_entry = TimeEntry(
@@ -294,9 +273,7 @@ class TestCalDAVConnector:
         mock_client.fetch_events.return_value = [event_data]
         mock_client_class.return_value = mock_client
 
-        credentials = IntegrationCredential.query.filter_by(
-            integration_id=caldav_integration.id
-        ).first()
+        credentials = IntegrationCredential.query.filter_by(integration_id=caldav_integration.id).first()
         connector = CalDAVCalendarConnector(caldav_integration, credentials)
         result = connector.sync_data()
 
@@ -339,17 +316,13 @@ class TestCalDAVRoutes:
         assert response.status_code in (200, 302)
 
         # Verify integration was created
-        integration = Integration.query.filter_by(
-            provider="caldav_calendar", user_id=test_user.id
-        ).first()
+        integration = Integration.query.filter_by(provider="caldav_calendar", user_id=test_user.id).first()
         assert integration is not None
         assert integration.config["server_url"] == "https://mail.example.com/dav"
         assert integration.config["default_project_id"] == test_project.id
 
         # Verify credentials were saved
-        credentials = IntegrationCredential.query.filter_by(
-            integration_id=integration.id
-        ).first()
+        credentials = IntegrationCredential.query.filter_by(integration_id=integration.id).first()
         assert credentials is not None
         assert credentials.access_token == "testpass"
         assert credentials.extra_data["username"] == "user@example.com"

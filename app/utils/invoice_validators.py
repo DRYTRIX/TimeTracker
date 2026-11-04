@@ -324,10 +324,9 @@ def validate_facturx_prerequisites(invoice: Any, settings: Any) -> Tuple[bool, L
 
     issues: List[str] = []
 
-    seller_country = (
-        (getattr(settings, "company_country", None) or "").strip()
-        or (getattr(settings, "peppol_sender_country", None) or "").strip()
-    )
+    seller_country = (getattr(settings, "company_country", None) or "").strip() or (
+        getattr(settings, "peppol_sender_country", None) or ""
+    ).strip()
     if not seller_country:
         issues.append(
             "Seller country is missing. Set Company Country in Admin → Settings → Company Branding "
@@ -352,15 +351,11 @@ def validate_facturx_prerequisites(invoice: Any, settings: Any) -> Tuple[bool, L
             ).strip() or None
 
     if not buyer_country:
-        issues.append(
-            "Buyer country is missing. Set the client's Country (ISO alpha-2) for Factur-X compliance."
-        )
+        issues.append("Buyer country is missing. Set the client's Country (ISO alpha-2) for Factur-X compliance.")
 
     category, _, _, _ = resolve_vat_category(invoice, settings)
     if category == "AE" and not buyer_vat:
-        issues.append(
-            "VAT category AE (reverse charge) requires the buyer's VAT ID on the client."
-        )
+        issues.append("VAT category AE (reverse charge) requires the buyer's VAT ID on the client.")
 
     if not (getattr(settings, "company_name", None) or "").strip():
         issues.append("Company name is missing in Admin → Settings.")

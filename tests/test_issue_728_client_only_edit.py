@@ -1,15 +1,14 @@
 """Issue #728 follow-up: searchable hierarchy, scripts served, template block guard."""
 
+import re
 from datetime import datetime
 from pathlib import Path
-import re
 
 import pytest
 
 from app import db
 from app.models import Client, Permission, Role, TimeEntry, User
 from app.services.time_tracking_service import TimeTrackingService
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -152,9 +151,7 @@ def test_manual_entry_and_dashboard_emit_data_client_id(app, authenticated_clien
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_project_entry_stores_client_id_null_even_when_client_posted(
-    app, authenticated_client, user, project
-):
+def test_project_entry_stores_client_id_null_even_when_client_posted(app, authenticated_client, user, project):
     """UI hierarchy may post both fields; storage must keep client_id NULL for project entries."""
     with app.app_context():
         _ensure_edit_own_permission(user.id)
@@ -299,6 +296,4 @@ def test_manual_entry_project_gated_on_client_and_modal_rate(app, authenticated_
     assert 'id="inline_project_client_id_locked"' in html
 
     # Client options carry their default rate for the prefill
-    assert re.search(r'<option value="\d+" data-default-rate="', html), (
-        "client options must expose data-default-rate"
-    )
+    assert re.search(r'<option value="\d+" data-default-rate="', html), "client options must expose data-default-rate"

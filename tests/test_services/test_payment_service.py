@@ -2,12 +2,14 @@
 Tests for PaymentService.
 """
 
-import pytest
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
+import pytest
+
+from app.models import Invoice, Payment
+from app.repositories import InvoiceRepository, PaymentRepository
 from app.services import PaymentService
-from app.repositories import PaymentRepository, InvoiceRepository
-from app.models import Payment, Invoice
 
 
 class TestPaymentService:

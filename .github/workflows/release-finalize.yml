@@ -1,0 +1,141 @@
+name: Finalize Release
+
+# When an rc/v* PR is merged into main:
+# 1. Tag vX.Y.Z (triggers cd-release.yml)
+# 2. Back-merge main into develop
+# 3. Delete the rc branch
+#
+# Also supports a one-shot cleanup of stale remote rc/* branches.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      cleanup_stale_rc:
+        description: Delete merged/stale remote rc/* branches
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  finalize:
+    name: Tag, back-merge, delete rc
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'rc/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve token
+        id: token
+        env:
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$RELEASE_PAT" ]; then
+            echo "token=$RELEASE_PAT" >> "$GITHUB_OUTPUT"
+          else
+            echo "token=$GITHUB_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "::warning::Using GITHUB_TOKEN — cd-release may not trigger. Prefer RELEASE_PAT."
+          fi
+
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ steps.token.outputs.token }}
+
+      - name: Determine version from branch
+        id: ver
+        run: |
+          REF="${{ github.event.pull_request.head.ref }}"
+          # rc/v5.18.6 → 5.18.6
+          VERSION="${REF#rc/v}"
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "branch=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Verify setup.py matches
+        run: |
+          SETUP=$(python -c "import re; print(re.search(r\"version=['\\\"]([^'\\\"]+)\", open('setup.py').read()).group(1))")
+          if [ "$SETUP" != "${{ steps.ver.outputs.version }}" ]; then
+            echo "❌ setup.py ($SETUP) != branch version (${{ steps.ver.outputs.version }})"
+            exit 1
+          fi
+
+      - name: Create annotated tag
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.ver.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Back-merge main into develop
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          set -euo pipefail
+          git fetch origin develop
+          git checkout -B develop origin/develop
+          if git merge --no-ff origin/main -m "chore: back-merge ${{ steps.ver.outputs.tag }} into develop"; then
+            git push origin develop
+          else
+            echo "::warning::Back-merge conflict — opening a PR instead"
+            git merge --abort || true
+            git checkout -B "chore/back-merge-${{ steps.ver.outputs.tag }}" origin/develop
+            git merge --no-ff origin/main -m "chore: back-merge ${{ steps.ver.outputs.tag }} into develop" || true
+            git push origin "HEAD:chore/back-merge-${{ steps.ver.outputs.tag }}" --force
+            gh pr create \
+              --base develop \
+              --head "chore/back-merge-${{ steps.ver.outputs.tag }}" \
+              --title "chore: back-merge ${{ steps.ver.outputs.tag }} into develop" \
+              --body "Automated back-merge after releasing ${{ steps.ver.outputs.tag }}. Resolve conflicts and merge." \
+              || true
+          fi
+
+      - name: Delete rc branch
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          git push origin --delete "${{ steps.ver.outputs.branch }}" || \
+            gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/${{ steps.ver.outputs.branch }}" || true
+
+  cleanup-stale-rc:
+    name: Cleanup stale rc branches
+    if: github.event_name == 'workflow_dispatch' && inputs.cleanup_stale_rc == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Delete merged rc branches
+        env:
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$RELEASE_PAT" ]; then export GH_TOKEN="$RELEASE_PAT"; else export GH_TOKEN="$GITHUB_TOKEN"; fi
+          set -euo pipefail
+          git fetch origin --prune
+          # Keep nothing: delete every remote rc/* that is an ancestor of origin/main
+          for ref in $(git branch -r | sed 's|^[[:space:]]*||' | grep '^origin/rc/' || true); do
+            branch="${ref#origin/}"
+            if git merge-base --is-ancestor "$ref" origin/main 2>/dev/null; then
+              echo "Deleting merged $branch"
+              git push origin --delete "$branch" || true
+            else
+              echo "Keeping unmerged $branch"
+            fi
+          done

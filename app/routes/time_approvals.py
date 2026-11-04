@@ -32,9 +32,7 @@ def list_approvals():
     )
 
     attendance_service = AttendanceComplianceService()
-    pending_attendance_corrections = (
-        attendance_service.list_pending_corrections() if current_user.is_admin else []
-    )
+    pending_attendance_corrections = attendance_service.list_pending_corrections() if current_user.is_admin else []
     my_attendance_corrections = [
         c
         for c in attendance_service.list_user_corrections(current_user.id)

@@ -72,5 +72,5 @@ flutter_launcher_icons:
   # because the iOS project files (Runner.xcodeproj) may not exist on Windows.
   ios: false
   image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#4A90E2"
+  adaptive_icon_background: "#4F46E5"
   adaptive_icon_foreground: "assets/icon/app_icon.png"

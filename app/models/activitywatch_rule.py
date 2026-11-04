@@ -61,11 +61,7 @@ class ActivityWatchRule(db.Model):
 
     @classmethod
     def match_event(cls, user_id: int, app: str, title: str, url: str) -> Optional["ActivityWatchRule"]:
-        rules = (
-            cls.query.filter_by(user_id=user_id, is_active=True)
-            .order_by(cls.priority.asc(), cls.id.asc())
-            .all()
-        )
+        rules = cls.query.filter_by(user_id=user_id, is_active=True).order_by(cls.priority.asc(), cls.id.asc()).all()
         for rule in rules:
             if rule.matches(app=app, title=title, url=url):
                 return rule

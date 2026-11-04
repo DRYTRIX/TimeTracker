@@ -376,9 +376,7 @@ class WorkflowEngine:
 
         resolved_payload = {k: WorkflowEngine._resolve_template(v, context) for k, v in payload.items()}
 
-        response = requests.request(
-            method=method, url=url, json=resolved_payload, timeout=10, allow_redirects=False
-        )
+        response = requests.request(method=method, url=url, json=resolved_payload, timeout=10, allow_redirects=False)
 
         return {"sent": True, "status_code": response.status_code}
 
@@ -430,6 +428,8 @@ class WorkflowEngine:
                 results.append({"rule_id": rule.id, "rule_name": rule.name, **result})
             except Exception:
                 logger.exception("Error executing rule %s", rule.id)
-                results.append({"rule_id": rule.id, "rule_name": rule.name, "success": False, "error": "Workflow execution failed"})
+                results.append(
+                    {"rule_id": rule.id, "rule_name": rule.name, "success": False, "error": "Workflow execution failed"}
+                )
 
         return results

@@ -277,8 +277,7 @@ class LLMService:
             hours = round((entry.duration_seconds or 0) / 3600, 2)
             note = (entry.notes or "").strip()
             compact_lines.append(
-                f"- {entry.start_time.date().isoformat()}: {label}, {hours}h"
-                + (f" — {note[:120]}" if note else "")
+                f"- {entry.start_time.date().isoformat()}: {label}, {hours}h" + (f" — {note[:120]}" if note else "")
             )
 
         entries_text = "\n".join(compact_lines) if compact_lines else "(no completed entries in range)"

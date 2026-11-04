@@ -1,0 +1,156 @@
+name: Prepare Release
+
+# Creates rc/vX.Y.Z from develop (or main for hotfixes), bumps versions + CHANGELOG,
+# and opens a PR into main. Merge that PR to trigger release-finalize (tag + publish).
+#
+# Requires a token that can trigger further workflows (GITHUB_TOKEN will not):
+#   - Secret RELEASE_PAT (fine-grained PAT with contents + pull requests), or
+#   - Secrets APP_ID + APP_PRIVATE_KEY for a GitHub App installation token.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semver bump (ignored when version is set)
+        required: true
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: Explicit version X.Y.Z (optional; overrides bump)
+        required: false
+        type: string
+      base:
+        description: Branch to cut the rc from
+        required: true
+        type: choice
+        options: [develop, main]
+        default: develop
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    name: Create rc branch and PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Resolve token
+        id: token
+        env:
+          APP_ID: ${{ secrets.APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$RELEASE_PAT" ]; then
+            echo "token=$RELEASE_PAT" >> "$GITHUB_OUTPUT"
+            echo "Using RELEASE_PAT"
+          elif [ -n "$APP_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "use_app=true" >> "$GITHUB_OUTPUT"
+            echo "GitHub App credentials present"
+          else
+            echo "token=$GITHUB_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "::warning::Using GITHUB_TOKEN — set RELEASE_PAT or APP_ID/APP_PRIVATE_KEY so finalize can trigger CD."
+          fi
+
+      - name: Create GitHub App token
+        id: app-token
+        if: steps.token.outputs.use_app == 'true'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Final token
+        id: auth
+        run: |
+          if [ -n "${{ steps.app-token.outputs.token }}" ]; then
+            echo "token=${{ steps.app-token.outputs.token }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "token=${{ steps.token.outputs.token }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+          fetch-depth: 0
+          token: ${{ steps.auth.outputs.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compute version
+        id: ver
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION=$(python scripts/bump_version.py --print-next ${{ inputs.bump }})
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "branch=rc/v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "📦 Releasing $VERSION"
+
+      - name: Create branch and bump
+        run: |
+          set -euo pipefail
+          BRANCH="${{ steps.ver.outputs.branch }}"
+          VERSION="${{ steps.ver.outputs.version }}"
+
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "❌ Branch $BRANCH already exists on origin"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "v${VERSION}" >/dev/null 2>&1; then
+            echo "❌ Tag v${VERSION} already exists"
+            exit 1
+          fi
+
+          git checkout -b "$BRANCH"
+          python scripts/bump_version.py "$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(release): bump version to ${VERSION}"
+          git push origin "$BRANCH"
+
+      - name: Open PR into main
+        env:
+          GH_TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.ver.outputs.version }}"
+          BRANCH="${{ steps.ver.outputs.branch }}"
+          NOTES=$(python scripts/bump_version.py --extract-notes "$VERSION")
+          BODY=$(cat <<EOF
+          ## Release ${VERSION}
+
+          Automated release candidate cut from \`${{ inputs.base }}\`.
+
+          ### Checklist
+          - [ ] CI is green (\`ci-pass\`)
+          - [ ] CHANGELOG looks correct
+          - [ ] Migrations reviewed (if any)
+
+          ### Notes
+
+          ${NOTES}
+
+          ---
+          Merging this PR will tag \`v${VERSION}\`, publish via **CD - Release Build**,
+          back-merge into \`develop\`, and delete \`${BRANCH}\`.
+          EOF
+          )
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Release v${VERSION}" \
+            --body "$BODY"

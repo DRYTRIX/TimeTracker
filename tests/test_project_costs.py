@@ -9,12 +9,14 @@ This module tests:
 - Data integrity and constraints
 """
 
-import pytest
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from app import create_app, db
-from app.models import User, Project, Client, Invoice, ProjectCost
+
+import pytest
 from factories import InvoiceFactory
+
+from app import create_app, db
+from app.models import Client, Invoice, Project, ProjectCost, User
 
 pytestmark = [pytest.mark.unit, pytest.mark.models]
 
@@ -300,8 +302,8 @@ class TestProjectCostMethods:
 
     def test_mark_as_invoiced(self, app, test_project, test_user, test_invoice):
         """Test marking a cost as invoiced."""
-        from unittest.mock import patch
         from datetime import datetime as dt
+        from unittest.mock import patch
 
         # Note: patching app.models.project_cost.datetime does NOT affect the
         # column-default factory (it captured datetime.utcnow at class

@@ -1,9 +1,11 @@
 """Tests for AuditLog model"""
 
-import pytest
 from datetime import datetime
-from app.models import AuditLog, User, Project
+
+import pytest
+
 from app import db
+from app.models import AuditLog, Project, User
 
 
 class TestAuditLogModel:

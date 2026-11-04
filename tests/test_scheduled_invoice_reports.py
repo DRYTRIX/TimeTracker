@@ -3,11 +3,11 @@
 import json
 
 import pytest
+from factories import UserFactory
 
 from app import db
 from app.models.reporting import SavedReportView
 from app.services.scheduled_report_service import ScheduledReportService
-from factories import UserFactory
 
 
 @pytest.fixture

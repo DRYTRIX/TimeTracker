@@ -105,7 +105,7 @@ class GanttService:
             if project_end > end_dt:
                 project_end = end_dt
 
-            proj_color = (project.color or "#3b82f6").lstrip("#")
+            proj_color = (project.color or "#4F46E5").lstrip("#")
             if len(proj_color) != 6 or not all(c in "0123456789aAbBcCdDeEfF" for c in proj_color):
                 proj_color = "3b82f6"
             gantt_data.append(

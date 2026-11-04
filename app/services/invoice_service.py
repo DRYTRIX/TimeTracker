@@ -270,9 +270,7 @@ class InvoiceService:
             try:
                 db.session.rollback()
             except Exception:
-                logging.getLogger(__name__).debug(
-                    "Rollback after invoice create failure also failed", exc_info=True
-                )
+                logging.getLogger(__name__).debug("Rollback after invoice create failure also failed", exc_info=True)
             return {
                 "success": False,
                 "message": "Could not create invoice due to a database error",

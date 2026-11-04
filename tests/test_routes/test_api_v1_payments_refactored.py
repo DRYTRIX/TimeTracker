@@ -8,7 +8,8 @@ pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import date
 from decimal import Decimal
-from app.models import Payment, Invoice, ApiToken
+
+from app.models import ApiToken, Invoice, Payment
 
 
 class TestAPIPaymentsRefactored:

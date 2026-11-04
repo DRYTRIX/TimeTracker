@@ -8,9 +8,10 @@ and grayed out across manual time logging, project creation, and similar forms.
 import re
 
 import pytest
+from flask import url_for
+
 from app import db
 from app.models import Client
-from flask import url_for
 
 
 def _project_select_attrs(html: str) -> str:
@@ -32,9 +33,7 @@ def _project_select_attrs(html: str) -> str:
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_manual_entry_shows_single_client_prefilled(
-    authenticated_client, app, user, test_client, project
-):
+def test_manual_entry_shows_single_client_prefilled(authenticated_client, app, user, test_client, project):
     """When only one client exists, manual entry form shows pre-filled grayed-out client."""
     with app.app_context():
         # Ensure exactly one active client (test_client from fixture)
@@ -56,9 +55,7 @@ def test_manual_entry_shows_single_client_prefilled(
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_manual_entry_single_client_project_not_disabled(
-    authenticated_client, app, user, test_client, project
-):
+def test_manual_entry_single_client_project_not_disabled(authenticated_client, app, user, test_client, project):
     """Issue #789: with one client locked, the project picker must still be usable."""
     with app.app_context():
         active_count = Client.query.filter_by(status="active").count()
@@ -73,16 +70,14 @@ def test_manual_entry_single_client_project_not_disabled(
         assert f'value="{test_client.id}"' in html
 
         project_tag = _project_select_attrs(html)
-        assert "disabled" not in project_tag, (
-            "Project select must not be disabled when the sole client is auto-selected (#789)"
-        )
+        assert (
+            "disabled" not in project_tag
+        ), "Project select must not be disabled when the sole client is auto-selected (#789)"
 
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_manual_entry_shows_select_when_multiple_clients(
-    authenticated_client, app, user, test_client
-):
+def test_manual_entry_shows_select_when_multiple_clients(authenticated_client, app, user, test_client):
     """When multiple clients exist, manual entry form shows normal client select."""
     with app.app_context():
         # Add a second client the test user can see (own-clients scope uses created_by)

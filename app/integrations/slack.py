@@ -183,7 +183,8 @@ class SlackConnector(BaseConnector):
 
             # Get users
             users_response = requests.get(
-                "https://slack.com/api/users.list", headers={"Authorization": f"Bearer {token}"},
+                "https://slack.com/api/users.list",
+                headers={"Authorization": f"Bearer {token}"},
                 timeout=(5, 30),
             )
 

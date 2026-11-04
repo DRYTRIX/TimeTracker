@@ -2,12 +2,14 @@
 Tests for ExportService.
 """
 
-import pytest
-from io import BytesIO
 import csv
 from datetime import datetime
+from io import BytesIO
+
+import pytest
+
+from app.repositories import ProjectRepository, TimeEntryRepository
 from app.services import ExportService
-from app.repositories import TimeEntryRepository, ProjectRepository
 
 
 class TestExportService:

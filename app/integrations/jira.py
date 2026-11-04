@@ -149,7 +149,9 @@ class JiraConnector(BaseConnector):
         api_url = f"{base_url}/rest/api/3/myself"
 
         try:
-            response = requests.get(api_url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, timeout=(5, 30))
+            response = requests.get(
+                api_url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, timeout=(5, 30)
+            )
 
             if response.status_code == 200:
                 user_data = response.json()

@@ -3,13 +3,15 @@ Test suite for invoice currency fix
 Tests that invoices use the currency from Settings instead of hard-coded EUR
 """
 
-import pytest
 import os
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+import pytest
+from factories import ClientFactory, InvoiceFactory, InvoiceItemFactory, ProjectFactory, UserFactory
+
 from app import create_app, db
-from app.models import User, Project, Client, Invoice, InvoiceItem, Settings
-from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory
+from app.models import Client, Invoice, InvoiceItem, Project, Settings, User
 
 
 @pytest.fixture

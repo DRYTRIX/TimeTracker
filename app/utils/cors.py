@@ -88,16 +88,8 @@ def cors_origin_allowed(origin: Optional[str], app=None, environ=None) -> bool:
         if environ.get("wsgi.url_scheme") and environ.get("HTTP_HOST"):
             hosts.append(f"{environ['wsgi.url_scheme']}://{environ['HTTP_HOST']}")
         if environ.get("HTTP_X_FORWARDED_PROTO") or environ.get("HTTP_X_FORWARDED_HOST"):
-            scheme = (
-                environ.get("HTTP_X_FORWARDED_PROTO", environ.get("wsgi.url_scheme", "http"))
-                .split(",")[0]
-                .strip()
-            )
-            host = (
-                environ.get("HTTP_X_FORWARDED_HOST", environ.get("HTTP_HOST", ""))
-                .split(",")[0]
-                .strip()
-            )
+            scheme = environ.get("HTTP_X_FORWARDED_PROTO", environ.get("wsgi.url_scheme", "http")).split(",")[0].strip()
+            host = environ.get("HTTP_X_FORWARDED_HOST", environ.get("HTTP_HOST", "")).split(",")[0].strip()
             if scheme and host:
                 hosts.append(f"{scheme}://{host}")
         if candidate.lower() in {h.rstrip("/").lower() for h in hosts}:

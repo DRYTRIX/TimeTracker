@@ -1,362 +1,85 @@
-# TimeTracker Release Process Guide
+# TimeTracker Release Process
 
-This document outlines the comprehensive release process for TimeTracker, including automated workflows, manual steps, and best practices.
+## Quick release (recommended)
 
-## 🚀 Quick Release Guide
+1. Ensure `develop` is green (`ci-pass` on the latest commit).
+2. In GitHub Actions, run **Prepare Release**:
+   - `bump`: `patch` | `minor` | `major` (or set an explicit `version`)
+   - `base`: `develop` (or `main` for a hotfix)
+3. Review the opened PR (`Release vX.Y.Z` from `rc/vX.Y.Z` → `main`).
+4. Wait for **`ci-pass`**, then merge.
+5. **Finalize Release** (automatic on merge):
+   - Tags `vX.Y.Z` (triggers **CD - Release Build**)
+   - Back-merges `main` → `develop`
+   - Deletes the `rc` branch
+6. Watch **CD - Release Build** publish Docker images (GHCR + Docker Hub), desktop/mobile/extension artifacts, and GitHub Release notes from `CHANGELOG.md`.
 
-### Automated Release (Recommended)
+### Secrets for automation
 
-```bash
-# 1. Create a complete release with changelog and GitHub release
-./scripts/version-manager.sh release --version v1.2.3 --changelog --github-release
+| Secret | Purpose |
+|--------|---------|
+| `RELEASE_PAT` | Fine-grained PAT with `contents` + `pull_requests` so tag/PR events trigger other workflows |
+| `APP_ID` + `APP_PRIVATE_KEY` | Alternative to `RELEASE_PAT` (GitHub App installation token) |
 
-# 2. For pre-releases
-./scripts/version-manager.sh release --version v1.2.3-rc.1 --pre-release --changelog --github-release
-```
+`GITHUB_TOKEN` alone will create the tag/PR but **will not** trigger `cd-release.yml`. Prefer `RELEASE_PAT` or the App.
 
-### Manual Release Steps
+## Version bumps
 
-1. **Prepare Release**
-2. **Create Tag**
-3. **Generate Changelog**
-4. **Create GitHub Release**
-5. **Verify Deployment**
-
-## 📋 Detailed Release Process
-
-### 1. Pre-Release Checklist
-
-Before starting any release, ensure:
-
-- [ ] **All tests pass** in CI/CD
-- [ ] **Database migrations tested** and documented
-- [ ] **Docker images build** successfully
-- [ ] **Documentation updated** with new features
-- [ ] **Breaking changes documented** (if any)
-- [ ] **Security vulnerabilities addressed**
-- [ ] **Performance regressions checked**
-
-### 2. Release Preparation
-
-#### Check Current Status
-```bash
-# Check current version and status
-./scripts/version-manager.sh status
-
-# Check for uncommitted changes
-git status
-
-# Ensure you're on main branch
-git checkout main
-git pull origin main
-```
-
-#### Version Selection
-Follow [Semantic Versioning](https://semver.org/):
-
-- **Major** (v2.0.0): Breaking changes, major new features
-- **Minor** (v1.1.0): New features, backward compatible
-- **Patch** (v1.0.1): Bug fixes, backward compatible
-- **Pre-release** (v1.0.0-rc.1): Release candidates, beta versions
-
-#### Suggested Version
-```bash
-# Get version suggestion
-./scripts/version-manager.sh suggest
-```
-
-### 3. Release Types
-
-#### 3.1 Standard Release
+All version locations are updated by one script:
 
 ```bash
-# Create standard release
-./scripts/version-manager.sh release \
-  --version v1.2.3 \
-  --message "Release 1.2.3 with new features and bug fixes" \
-  --changelog \
-  --github-release
+python scripts/bump_version.py 5.19.0          # apply + promote CHANGELOG Unreleased
+python scripts/bump_version.py --bump patch
+python scripts/bump_version.py --check         # CI lint job also runs this
+python scripts/bump_version.py --extract-notes 5.19.0
 ```
 
-**What this does:**
-1. Creates and pushes git tag
-2. Generates changelog from commits
-3. Creates GitHub release with changelog
-4. Triggers Docker image build via GitHub Actions
+Updated files: `setup.py`, `VERSION`, `README.md`, `browser-extension/{package,manifest}.json`, `desktop/package.json` (+ lock), `mobile/pubspec.yaml` (build number++), `docs/GAP_ROADMAP.md`, `CHANGELOG.md`.
 
-#### 3.2 Pre-Release
+Do **not** commit `mobile/android/local.properties` (gitignored).
+
+## Branch model
+
+```
+feature → develop  (CI required)
+             │
+    Prepare Release button
+             ▼
+         rc/vX.Y.Z → main  (CI required)
+             │ merge
+             ▼
+      tag vX.Y.Z + CD release + back-merge to develop
+```
+
+Hotfixes: run Prepare Release with `base: main`.
+
+## Manual / emergency tag
 
 ```bash
-# Create pre-release (RC, beta, alpha)
-./scripts/version-manager.sh release \
-  --version v1.2.3-rc.1 \
-  --message "Release candidate for 1.2.3" \
-  --pre-release \
-  --changelog \
-  --github-release
+git checkout main && git pull
+python scripts/bump_version.py --check
+git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
-#### 3.3 Hotfix Release
+`cd-release` refuses to publish if a `ci-pass` check-run on that commit concluded with failure. Missing `ci-pass` warns but continues (first-rollout / docs edge cases).
 
-```bash
-# Create hotfix from main branch
-git checkout main
-git pull origin main
+## Cleanup stale rc branches
 
-# Apply hotfix
-git cherry-pick <hotfix-commit>
+Actions → **Finalize Release** → `workflow_dispatch` with `cleanup_stale_rc=true` deletes remote `rc/*` branches already merged into `main`.
 
-# Create hotfix release
-./scripts/version-manager.sh release \
-  --version v1.2.4 \
-  --message "Hotfix: Critical security update" \
-  --changelog \
-  --github-release
-```
+## Obsolete tooling
 
-### 4. Manual Release Steps
+`scripts/version-manager.sh` is superseded by `scripts/bump_version.py` + the Prepare/Finalize workflows. Prefer the Actions button flow above.
 
-If you prefer manual control over the release process:
+## Checklist before merging an rc PR
 
-#### Step 1: Create Tag
-```bash
-# Create annotated tag
-git tag -a v1.2.3 -m "Release 1.2.3"
-git push origin v1.2.3
-```
+- [ ] `ci-pass` green
+- [ ] CHANGELOG section for the version is accurate
+- [ ] Migrations reviewed (if the migrations job ran)
+- [ ] Breaking changes called out for operators
 
-#### Step 2: Generate Changelog
-```bash
-# Generate changelog
-python scripts/generate-changelog.py v1.2.3 --output CHANGELOG.md
+## Related
 
-# Review and edit changelog if needed
-nano CHANGELOG.md
-```
-
-#### Step 3: Create GitHub Release
-```bash
-# Using GitHub CLI
-gh release create v1.2.3 \
-  --title "TimeTracker v1.2.3" \
-  --notes-file CHANGELOG.md
-
-# Or via GitHub web interface
-# Go to: https://github.com/your-repo/releases/new
-```
-
-### 5. Post-Release Verification
-
-#### 5.1 Verify GitHub Actions
-- Check that Docker build workflow completed successfully
-- Verify Docker images are published to GHCR
-- Confirm all CI/CD checks passed
-
-#### 5.2 Test Docker Images
-```bash
-# Test the released image
-docker run -d --name test-release -p 8080:8080 \
-  ghcr.io/drytrix/timetracker:v1.2.3
-
-# Verify health
-curl -f http://localhost:8080/_health
-
-# Clean up
-docker stop test-release && docker rm test-release
-```
-
-#### 5.3 Update Documentation
-- [ ] Update README.md version references
-- [ ] Update deployment documentation
-- [ ] Update Docker Compose examples
-- [ ] Notify users of new release
-
-### 6. Release Workflow Automation
-
-The release process triggers several automated workflows:
-
-#### 6.1 Release Workflow (`release.yml`)
-**Triggered by:** GitHub release creation or manual dispatch
-
-**Steps:**
-1. **Validate Release** - Ensures version format is correct
-2. **Run Tests** - Full test suite with database migrations
-3. **Build & Push Docker** - Multi-architecture Docker images
-4. **Generate Changelog** - Automated changelog generation
-5. **Update Documentation** - Version references in docs
-6. **Notify Deployment** - Summary and deployment instructions
-
-#### 6.2 CI Workflow (`ci.yml`)
-**Triggered by:** Push to main/develop, pull requests
-
-**Steps:**
-1. **Lint & Format** - Code quality checks
-2. **Test Database Migrations** - PostgreSQL & SQLite testing
-3. **Test Docker Build** - Container build and startup verification
-4. **Security Scan** - Dependency and code security scanning
-5. **Version Management Validation** - Version manager script testing
-
-#### 6.3 Migration Check Workflow (`migration-check.yml`)
-**Triggered by:** Changes to models or migrations
-
-**Steps:**
-1. **Validate Migrations** - Schema consistency and rollback safety
-2. **Test with Sample Data** - Data integrity verification
-3. **Generate Migration Report** - Detailed migration analysis
-
-### 7. Emergency Procedures
-
-#### 7.1 Rollback Release
-```bash
-# Delete tag locally and remotely
-git tag -d v1.2.3
-git push origin --delete v1.2.3
-
-# Delete GitHub release
-gh release delete v1.2.3
-
-# Revert commits if needed
-git revert <commit-hash>
-```
-
-#### 7.2 Fix Broken Release
-```bash
-# Create hotfix
-git checkout v1.2.3
-git cherry-pick <fix-commit>
-
-# Create new patch release
-./scripts/version-manager.sh release \
-  --version v1.2.4 \
-  --message "Hotfix for v1.2.3 issues" \
-  --changelog \
-  --github-release
-```
-
-### 8. Release Schedule
-
-#### Recommended Schedule
-- **Major releases**: Every 6-12 months
-- **Minor releases**: Every 1-2 months
-- **Patch releases**: As needed for critical fixes
-- **Pre-releases**: 1-2 weeks before major/minor releases
-
-#### Release Windows
-- **Regular releases**: Tuesday-Thursday (better for issue resolution)
-- **Hotfixes**: Any day (emergency only)
-- **Pre-releases**: Friday (allows weekend testing)
-
-### 9. Communication
-
-#### Internal Team
-- [ ] Notify team before release
-- [ ] Share release notes
-- [ ] Coordinate deployment timing
-- [ ] Plan post-release monitoring
-
-#### External Users
-- [ ] Update release notes on GitHub
-- [ ] Update documentation website
-- [ ] Notify via social media/newsletters
-- [ ] Verify Docker Hub description was auto-updated by the release workflow ([`docker/hub-README.md`](../../../docker/hub-README.md) → [hub.docker.com/r/drytrix/timetracker](https://hub.docker.com/r/drytrix/timetracker))
-- [ ] Verify GitHub Release includes `docker-compose.nas.yml` and `docker-compose.production.yml` artifacts
-- [ ] Confirm [Distribution guide](DISTRIBUTION.md) links are current (Portainer template URL, Unraid XML paths)
-
-### 10. Quality Gates
-
-Every release must pass:
-
-- [ ] **All automated tests** (unit, integration, E2E)
-- [ ] **Database migration tests** (up and down)
-- [ ] **Docker build verification** (multi-architecture)
-- [ ] **Security scans** (dependencies and code)
-- [ ] **Performance benchmarks** (no significant regression)
-- [ ] **Documentation review** (accuracy and completeness)
-
-### 11. Troubleshooting
-
-#### Common Issues
-
-**Issue**: Docker build fails
-```bash
-# Check Docker build locally
-docker build -t test-build .
-
-# Check workflow logs in GitHub Actions
-```
-
-**Issue**: Migration validation fails
-```bash
-# Test migrations locally
-flask db upgrade
-flask db downgrade
-flask db upgrade
-```
-
-**Issue**: Version tag already exists
-```bash
-# Check existing tags
-git tag -l
-
-# Delete if needed
-git tag -d v1.2.3
-git push origin --delete v1.2.3
-```
-
-### 12. Tools and Dependencies
-
-#### Required Tools
-- **Git** - Version control
-- **GitHub CLI** (`gh`) - GitHub release management
-- **Docker** - Container testing
-- **Python 3.11+** - Script execution
-- **Flask** - Database migration testing
-
-#### Installation
-```bash
-# Install GitHub CLI
-# macOS: brew install gh
-# Ubuntu: sudo apt install gh
-# Windows: winget install GitHub.CLI
-
-# Authenticate
-gh auth login
-
-# Install Python dependencies
-pip install -r requirements.txt
-```
-
-### 13. Metrics and Monitoring
-
-Track release metrics:
-- **Release frequency** - How often releases are made
-- **Lead time** - Time from commit to release
-- **Failure rate** - Percentage of failed releases
-- **Recovery time** - Time to fix broken releases
-- **User adoption** - Docker pull statistics
-
-### 14. Continuous Improvement
-
-Regular review of:
-- [ ] Release process efficiency
-- [ ] Automation opportunities
-- [ ] Quality gate effectiveness
-- [ ] User feedback incorporation
-- [ ] Tool and workflow updates
-
----
-
-## 🔗 Related Documentation
-
-- [Version Management System](VERSION_MANAGEMENT.md)
-- [Database Migrations](../migrations/README.md)
-- [Docker Setup](DOCKER_PUBLIC_SETUP.md)
-- [Contributing Guidelines](CONTRIBUTING.md)
-
-## 🆘 Support
-
-For release process issues:
-1. Check this documentation
-2. Review GitHub Actions logs
-3. Test locally with provided commands
-4. Create issue with detailed error information
+- [Testing workflow strategy](../../cicd/TESTING_WORKFLOW_STRATEGY.md)
+- [Version management](VERSION_MANAGEMENT.md)
+- [Official builds](OFFICIAL_BUILDS.md)

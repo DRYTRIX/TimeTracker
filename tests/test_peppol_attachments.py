@@ -4,16 +4,13 @@ The invoice PDF is embedded in the UBL itself, so these assertions guard the rul
 access point validates asynchronously — a wrong element order or a missing mandatory
 attribute is accepted at POST time and only fails later, out of band.
 """
+
 import base64
 import xml.etree.ElementTree as ET
 from datetime import date
 from decimal import Decimal
 
-from app.integrations.peppol import (
-    PeppolAttachment,
-    PeppolParty,
-    build_peppol_ubl_invoice_xml,
-)
+from app.integrations.peppol import PeppolAttachment, PeppolParty, build_peppol_ubl_invoice_xml
 
 CBC = "{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}"
 CAC = "{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}"
@@ -57,17 +54,27 @@ class _Invoice:
 
 
 SUPPLIER = PeppolParty(
-    endpoint_id="0000000000", endpoint_scheme_id="0208", name="Seller BV",
-    tax_id="BE0000000000", address_line="Street 1", country_code="BE",
+    endpoint_id="0000000000",
+    endpoint_scheme_id="0208",
+    name="Seller BV",
+    tax_id="BE0000000000",
+    address_line="Street 1",
+    country_code="BE",
 )
 CUSTOMER = PeppolParty(
-    endpoint_id="1111111111", endpoint_scheme_id="0208", name="Buyer BV",
-    tax_id="BE1111111111", address_line="Street 2", country_code="BE",
+    endpoint_id="1111111111",
+    endpoint_scheme_id="0208",
+    name="Buyer BV",
+    tax_id="BE1111111111",
+    address_line="Street 2",
+    country_code="BE",
 )
 
 PDF = PeppolAttachment(
-    document_id="INV-2026-0001", filename="INV-2026-0001.pdf",
-    mime_code="application/pdf", content=FAKE_PDF,
+    document_id="INV-2026-0001",
+    filename="INV-2026-0001.pdf",
+    mime_code="application/pdf",
+    content=FAKE_PDF,
     description="Commercial invoice (PDF)",
 )
 
@@ -91,9 +98,7 @@ def test_attachment_precedes_the_supplier_party():
     """UBL 2.1 is a sequence: AdditionalDocumentReference comes before the parties."""
     tags = [c.tag for c in _build([PDF])]
     assert CAC + "AdditionalDocumentReference" in tags
-    assert tags.index(CAC + "AdditionalDocumentReference") < tags.index(
-        CAC + "AccountingSupplierParty"
-    )
+    assert tags.index(CAC + "AdditionalDocumentReference") < tags.index(CAC + "AccountingSupplierParty")
 
 
 def test_pdf_round_trips():
@@ -123,7 +128,9 @@ def test_no_document_type_code_emitted():
 def test_duplicate_filenames_are_not_emitted_twice():
     """DE-R-022: attachment filenames are unique, case-insensitively."""
     dupe = PeppolAttachment(
-        document_id="X", filename="inv-2026-0001.PDF", mime_code="application/pdf",
+        document_id="X",
+        filename="inv-2026-0001.PDF",
+        mime_code="application/pdf",
         content=FAKE_PDF,
     )
     names = [_binary(a).get("filename", "").lower() for a in _adrs(_build([PDF, dupe]))]
@@ -136,9 +143,7 @@ def test_no_attachments_emits_no_element():
 
 
 def test_empty_or_unnamed_attachments_are_skipped():
-    empty = PeppolAttachment(document_id="X", filename="a.pdf",
-                             mime_code="application/pdf", content=b"")
-    unnamed = PeppolAttachment(document_id="X", filename="  ",
-                               mime_code="application/pdf", content=FAKE_PDF)
+    empty = PeppolAttachment(document_id="X", filename="a.pdf", mime_code="application/pdf", content=b"")
+    unnamed = PeppolAttachment(document_id="X", filename="  ", mime_code="application/pdf", content=FAKE_PDF)
     assert not _adrs(_build([empty]))
     assert not _adrs(_build([unnamed]))

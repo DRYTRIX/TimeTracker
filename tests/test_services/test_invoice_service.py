@@ -2,9 +2,10 @@
 Tests for InvoiceService.
 """
 
-import pytest
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+import pytest
 
 from app import db
 from app.models import Client, Invoice, Project, TimeEntry
@@ -113,10 +114,11 @@ def test_get_invoice_with_details(app, test_project, test_user):
 @pytest.mark.unit
 def test_create_invoice_from_time_entries_with_tax(app, test_project, test_user):
     """Test creating invoice from time entries with tax calculation"""
-    from decimal import Decimal
     from datetime import datetime, timedelta
+    from decimal import Decimal
+
     service = InvoiceService()
-    
+
     # Create time entries
     entry1 = TimeEntry(
         user_id=test_user.id,
@@ -124,7 +126,7 @@ def test_create_invoice_from_time_entries_with_tax(app, test_project, test_user)
         start_time=datetime.utcnow() - timedelta(hours=2),
         end_time=datetime.utcnow(),
         duration_seconds=7200,  # 2 hours
-        billable=True
+        billable=True,
     )
     entry2 = TimeEntry(
         user_id=test_user.id,
@@ -132,21 +134,19 @@ def test_create_invoice_from_time_entries_with_tax(app, test_project, test_user)
         start_time=datetime.utcnow() - timedelta(hours=3),
         end_time=datetime.utcnow() - timedelta(hours=1),
         duration_seconds=7200,  # 2 hours
-        billable=True
+        billable=True,
     )
     db.session.add_all([entry1, entry2])
     db.session.commit()
-    
+
     # Set project hourly rate
     test_project.hourly_rate = Decimal("50.00")
     db.session.commit()
-    
+
     result = service.create_invoice_from_time_entries(
-        project_id=test_project.id,
-        time_entry_ids=[entry1.id, entry2.id],
-        created_by=test_user.id
+        project_id=test_project.id, time_entry_ids=[entry1.id, entry2.id], created_by=test_user.id
     )
-    
+
     assert result["success"] is True
     assert result["invoice"] is not None
     # 4 hours * 50 = 200
@@ -157,8 +157,9 @@ def test_create_invoice_from_time_entries_with_tax(app, test_project, test_user)
 def test_create_invoice_from_time_entries_no_billable(app, test_project, test_user):
     """Test creating invoice from time entries with no billable entries"""
     from datetime import datetime, timedelta
+
     service = InvoiceService()
-    
+
     # Create non-billable time entry
     entry = TimeEntry(
         user_id=test_user.id,
@@ -166,17 +167,15 @@ def test_create_invoice_from_time_entries_no_billable(app, test_project, test_us
         start_time=datetime.utcnow() - timedelta(hours=2),
         end_time=datetime.utcnow(),
         duration_seconds=7200,
-        billable=False  # Not billable
+        billable=False,  # Not billable
     )
     db.session.add(entry)
     db.session.commit()
-    
+
     result = service.create_invoice_from_time_entries(
-        project_id=test_project.id,
-        time_entry_ids=[entry.id],
-        created_by=test_user.id
+        project_id=test_project.id, time_entry_ids=[entry.id], created_by=test_user.id
     )
-    
+
     assert result["success"] is False
     assert result["error"] == "no_entries"
 
@@ -185,13 +184,11 @@ def test_create_invoice_from_time_entries_no_billable(app, test_project, test_us
 def test_create_invoice_from_time_entries_invalid_project(app, test_user):
     """Test creating invoice with invalid project"""
     service = InvoiceService()
-    
+
     result = service.create_invoice_from_time_entries(
-        project_id=99999,  # Non-existent project
-        time_entry_ids=[],
-        created_by=test_user.id
+        project_id=99999, time_entry_ids=[], created_by=test_user.id  # Non-existent project
     )
-    
+
     assert result["success"] is False
     assert result["error"] == "invalid_project"
 
@@ -199,10 +196,11 @@ def test_create_invoice_from_time_entries_invalid_project(app, test_user):
 @pytest.mark.unit
 def test_mark_invoice_as_sent_updates_time_entries(app, test_project, test_user):
     """Test that marking invoice as sent updates time entries as paid"""
-    from decimal import Decimal
     from datetime import datetime, timedelta
+    from decimal import Decimal
+
     service = InvoiceService()
-    
+
     # Create time entry
     entry = TimeEntry(
         user_id=test_user.id,
@@ -210,28 +208,26 @@ def test_mark_invoice_as_sent_updates_time_entries(app, test_project, test_user)
         start_time=datetime.utcnow() - timedelta(hours=2),
         end_time=datetime.utcnow(),
         duration_seconds=7200,
-        billable=True
+        billable=True,
     )
     db.session.add(entry)
     db.session.commit()
-    
+
     # Create invoice from time entry
     test_project.hourly_rate = Decimal("50.00")
     db.session.commit()
-    
+
     result = service.create_invoice_from_time_entries(
-        project_id=test_project.id,
-        time_entry_ids=[entry.id],
-        created_by=test_user.id
+        project_id=test_project.id, time_entry_ids=[entry.id], created_by=test_user.id
     )
-    
+
     assert result["success"] is True
     invoice = result["invoice"]
-    
+
     # Mark as sent
     result = service.mark_as_sent(invoice.id)
     assert result["success"] is True
-    
+
     # Refresh entry and check if paid
     db.session.refresh(entry)
     assert entry.paid is True
@@ -241,8 +237,9 @@ def test_mark_invoice_as_sent_updates_time_entries(app, test_project, test_user)
 def test_update_invoice_status(app, test_project, test_user):
     """Test updating invoice status"""
     from datetime import date
+
     service = InvoiceService()
-    
+
     # Create invoice
     invoice = Invoice(
         invoice_number="INV-001",
@@ -253,11 +250,11 @@ def test_update_invoice_status(app, test_project, test_user):
         due_date=date.today(),
         total_amount=1000.00,
         created_by=test_user.id,
-        status="draft"
+        status="draft",
     )
     db.session.add(invoice)
     db.session.commit()
-    
+
     # Status changes require an explicit allow flag (not mass-assignable)
     result = service.update_invoice(
         invoice_id=invoice.id,

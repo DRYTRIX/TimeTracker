@@ -1,8 +1,9 @@
 """Tests for the advanced permission system"""
 
 import pytest
+
 from app import db
-from app.models import User, Permission, Role
+from app.models import Permission, Role, User
 
 
 @pytest.mark.unit

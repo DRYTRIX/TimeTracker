@@ -1,7 +1,9 @@
 """Model tests for project archiving functionality"""
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
 from app.models import Project
 
 
@@ -144,9 +146,10 @@ class TestProjectArchiveMethod:
 
     def test_archive_updates_updated_at(self, app, project):
         """Test that archive() updates the updated_at timestamp"""
-        from unittest.mock import patch
-        from app import db
         from datetime import datetime as dt
+        from unittest.mock import patch
+
+        from app import db
 
         original_updated_at = project.updated_at
         t1 = dt(2030, 1, 1, 10, 0, 1)  # Future so clearly > original_updated_at
@@ -159,9 +162,10 @@ class TestProjectArchiveMethod:
 
     def test_archive_can_be_called_multiple_times(self, app, project, admin_user):
         """Test that archive() can be called multiple times (re-archiving)"""
-        from unittest.mock import patch
-        from app import db
         from datetime import datetime as dt
+        from unittest.mock import patch
+
+        from app import db
 
         with patch("app.models.project.datetime") as mock_dt:
             mock_dt.utcnow.return_value = dt(2024, 1, 1, 10, 0, 0)
@@ -236,9 +240,10 @@ class TestProjectUnarchiveMethod:
 
     def test_unarchive_updates_updated_at(self, app, project, admin_user):
         """Test that unarchive() updates the updated_at timestamp"""
-        from unittest.mock import patch
-        from app import db
         from datetime import datetime as dt
+        from unittest.mock import patch
+
+        from app import db
 
         project.archive(user_id=admin_user.id, reason="Test")
         db.session.commit()

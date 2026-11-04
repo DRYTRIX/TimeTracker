@@ -710,9 +710,7 @@ class TestTimer:
 
         # continue: clears the flag, keeps running
         timer = make_timer()
-        response = client.post(
-            "/api/v1/timer/review", headers=headers, data=_json.dumps({"action": "continue"})
-        )
+        response = client.post("/api/v1/timer/review", headers=headers, data=_json.dumps({"action": "continue"}))
         assert response.status_code == 200
         data = response.get_json()
         assert data["stopped"] is False
@@ -722,9 +720,7 @@ class TestTimer:
 
         # trim: stops credited to last activity + idle timeout
         timer = make_timer()
-        response = client.post(
-            "/api/v1/timer/review", headers=headers, data=_json.dumps({"action": "trim"})
-        )
+        response = client.post("/api/v1/timer/review", headers=headers, data=_json.dumps({"action": "trim"}))
         assert response.status_code == 200
         data = response.get_json()
         assert data["stopped"] is True
@@ -734,9 +730,7 @@ class TestTimer:
 
         # keep: stops at now
         timer = make_timer()
-        response = client.post(
-            "/api/v1/timer/review", headers=headers, data=_json.dumps({"action": "keep"})
-        )
+        response = client.post("/api/v1/timer/review", headers=headers, data=_json.dumps({"action": "keep"}))
         assert response.status_code == 200
         kept = db.session.get(TimeEntry, timer.id)
         assert kept.end_time is not None

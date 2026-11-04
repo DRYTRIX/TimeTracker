@@ -1,13 +1,13 @@
 """Tests for workflow engine, bridge, and templates."""
 
 import pytest
+from factories import UserFactory
 
 from app import db
 from app.models.workflow import WorkflowExecution, WorkflowRule, WorkflowTemplate
 from app.services.workflow_engine import WorkflowEngine
 from app.services.workflow_template_service import WorkflowTemplateService
 from app.utils.workflow_bridge import WEBHOOK_TO_WORKFLOW, trigger_workflow_event
-from factories import UserFactory
 
 
 @pytest.fixture

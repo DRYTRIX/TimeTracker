@@ -5,17 +5,13 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
+from factories import ClientFactory, ProjectFactory, UserFactory
 
 from app import db
 from app.models import Invoice, InvoiceItem, Settings
-from app.utils.pdf_watermark import (
-    make_page_callback,
-    should_draw_watermark,
-)
+from app.utils.pdf_watermark import make_page_callback, should_draw_watermark
 from app.utils.summary_report_pdf import build_summary_report_pdf
 from app.utils.time_entries_pdf import build_time_entries_pdf
-from factories import ClientFactory, ProjectFactory, UserFactory
-
 
 # ReportLab compresses page content streams; the clickable link URL is stored
 # uncompressed and is a reliable presence marker for the watermark.

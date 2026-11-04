@@ -1,18 +1,20 @@
 """Unit tests for budget forecasting utilities"""
 
-import pytest
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+import pytest
+from factories import ClientFactory, ProjectFactory, TimeEntryFactory, UserFactory
+
 from app import db
-from app.models import Project, TimeEntry, User, ProjectCost, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, TimeEntryFactory
+from app.models import Client, Project, ProjectCost, TimeEntry, User
 from app.utils.budget_forecasting import (
-    calculate_burn_rate,
-    estimate_completion_date,
-    analyze_resource_allocation,
     analyze_cost_trends,
-    get_budget_status,
+    analyze_resource_allocation,
+    calculate_burn_rate,
     check_budget_alerts,
+    estimate_completion_date,
+    get_budget_status,
 )
 
 # Skip all tests in this module due to pre-existing model initialization issues

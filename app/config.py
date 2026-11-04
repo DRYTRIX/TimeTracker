@@ -304,9 +304,7 @@ class Config:
     # Comma-separated browser origins allowed for /api/v1 CORS and Socket.IO.
     # Empty = derive from APP_BASE_URL / SERVER_NAME only (no wildcard reflection).
     CORS_ALLOWED_ORIGINS = [
-        o.strip().rstrip("/")
-        for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
-        if o.strip()
+        o.strip().rstrip("/") for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
     ]
 
     # Redis configuration

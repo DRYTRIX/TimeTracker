@@ -2,7 +2,6 @@ from .activity import Activity
 from .activitywatch_rule import ActivityWatchRule, PendingActivity
 from .api_idempotency_key import ApiIdempotencyKey
 from .api_token import ApiToken
-from .oauth_app import OAuthApplication, OAuthAuthorizationCode
 from .attendance_compliance import (
     AttendanceBreak,
     AttendanceBreakType,
@@ -18,13 +17,13 @@ from .calendar_event import CalendarEvent
 from .calendar_integration import CalendarIntegration, CalendarSyncEvent
 from .client import Client
 from .client_attachment import ClientAttachment
+from .client_message import ClientMessage
 from .client_note import ClientNote
 from .client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
 from .client_portal_customization import ClientPortalCustomization
 from .client_portal_dashboard_preference import DEFAULT_WIDGET_ORDER, VALID_WIDGET_IDS, ClientPortalDashboardPreference
 from .client_prepaid_consumption import ClientPrepaidConsumption
 from .client_survey import ClientSurvey
-from .client_message import ClientMessage
 from .client_time_approval import ClientApprovalPolicy, ClientApprovalStatus, ClientTimeApproval
 from .comment import Comment
 from .comment_attachment import CommentAttachment
@@ -43,8 +42,8 @@ from .expense_category import ExpenseCategory
 from .expense_gps import MileageTrack
 from .extra_good import ExtraGood
 from .focus_session import FocusSession
-from .geofence import Geofence, GeofencePolicy
 from .gamification import Badge, Leaderboard, LeaderboardEntry, UserBadge
+from .geofence import Geofence, GeofencePolicy
 from .import_export import DataExport, DataImport
 from .integration import Integration, IntegrationCredential, IntegrationEvent
 from .integration_external_event_link import IntegrationExternalEventLink
@@ -63,6 +62,8 @@ from .lead import Lead
 from .lead_activity import LeadActivity
 from .link_template import LinkTemplate
 from .mileage import Mileage
+from .milestone import Milestone
+from .oauth_app import OAuthApplication, OAuthAuthorizationCode
 from .payment_gateway import PaymentGateway, PaymentTransaction
 from .payments import CreditNote, InvoiceReminderSchedule, Payment
 from .payroll_export_template import PayrollExportTemplate
@@ -87,10 +88,10 @@ from .recurring_invoice import RecurringInvoice
 from .recurring_project_cost import RecurringProjectCost
 from .recurring_task import RecurringTask
 from .reporting import ReportEmailSchedule, SavedReportView
-from .shared_report_link import SharedReportLink
 from .salesman_email_mapping import SalesmanEmailMapping
 from .saved_filter import SavedFilter
 from .settings import Settings
+from .shared_report_link import SharedReportLink
 from .stock_item import StockItem
 from .stock_lot import StockLot, StockLotAllocation
 from .stock_movement import StockMovement
@@ -102,7 +103,6 @@ from .task_activity import TaskActivity
 from .task_assignee import RecurringTaskAssignee, TaskAssignee
 from .task_checklist_item import TaskChecklistItem
 from .task_dependency import TaskDependency
-from .milestone import Milestone
 from .tax_rule import TaxRule
 from .team_chat import ChatChannel, ChatChannelMember, ChatMessage, ChatReadReceipt
 from .time_entry import TimeEntry

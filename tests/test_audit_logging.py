@@ -1,10 +1,12 @@
 """Tests for audit logging utility"""
 
-import pytest
 from datetime import datetime
-from app.models import AuditLog, Project, User
+
+import pytest
+
 from app import db
-from app.utils.audit import should_track_model, should_track_field, serialize_value, get_entity_name, get_entity_type
+from app.models import AuditLog, Project, User
+from app.utils.audit import get_entity_name, get_entity_type, serialize_value, should_track_field, should_track_model
 
 
 class TestAuditLoggingUtility:
@@ -105,9 +107,7 @@ class TestAuditLoggingIntegration:
             merged.name = "Updated Project Name"
             db.session.flush()
 
-            audit_logs = AuditLog.query.filter_by(
-                entity_type="Project", entity_id=project_id, action="updated"
-            ).all()
+            audit_logs = AuditLog.query.filter_by(entity_type="Project", entity_id=project_id, action="updated").all()
             assert len(audit_logs) >= 1, "At least one audit log should be created for entity update"
             assert audit_logs[0].action == "updated"
             assert audit_logs[0].entity_type == "Project"

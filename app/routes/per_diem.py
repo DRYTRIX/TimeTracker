@@ -11,9 +11,9 @@ from app import db, log_event, track_event
 from app.constants import SUPPORTED_CURRENCIES
 from app.models import Client, PerDiem, PerDiemRate, Project, Settings
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 per_diem_bp = Blueprint("per_diem", __name__)
 

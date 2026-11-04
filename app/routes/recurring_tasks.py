@@ -231,7 +231,7 @@ def delete_recurring_task(task_id):
         flash(_("Could not delete recurring task due to a database error."), "error")
         return redirect(url_for("recurring_tasks.list_recurring_tasks"))
 
-    flash(_("Recurring task \"%(name)s\" deleted successfully", name=name), "success")
+    flash(_('Recurring task "%(name)s" deleted successfully', name=name), "success")
     return redirect(url_for("recurring_tasks.list_recurring_tasks"))
 
 
@@ -274,7 +274,9 @@ def run_recurring_task_now(task_id):
             {
                 "success": True,
                 "task": task.to_dict() if hasattr(task, "to_dict") else {"id": task.id, "name": task.name},
-                "last_created_at": recurring_task.last_created_at.isoformat() if recurring_task.last_created_at else None,
+                "last_created_at": (
+                    recurring_task.last_created_at.isoformat() if recurring_task.last_created_at else None
+                ),
                 "next_run_date": recurring_task.next_run_date.isoformat() if recurring_task.next_run_date else None,
             }
         )

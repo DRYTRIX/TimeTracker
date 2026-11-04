@@ -196,7 +196,9 @@ run-dev:
 
 # CI/CD simulation
 ci-local:
-	@echo "Simulating CI pipeline locally..."
+	@echo "Simulating CI pipeline locally (see .github/workflows/ci.yml)..."
+	@echo "0. Version consistency..."
+	python scripts/bump_version.py --check
 	@echo "1. Running smoke tests..."
 	make test-smoke
 	@echo "2. Running unit tests..."

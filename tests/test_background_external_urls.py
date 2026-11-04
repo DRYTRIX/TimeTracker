@@ -15,12 +15,7 @@ from app import db
 from app.models import User
 from app.models.working_time_violation import WorkingTimeViolation
 from app.utils.email import send_working_time_limit_exceeded_email
-from app.utils.urls import (
-    external_url_context,
-    get_app_base_url,
-    remember_request_base_url,
-    safe_external_url_for,
-)
+from app.utils.urls import external_url_context, get_app_base_url, remember_request_base_url, safe_external_url_for
 
 
 @pytest.fixture
@@ -233,9 +228,7 @@ class TestIssue730WorkingTimeLimitEmail:
             return_value=0,
         ), patch(
             "app.services.working_time_limit_service.WorkingTimeLimitService.check_user_limits",
-            side_effect=lambda u: (
-                [db.session.get(WorkingTimeViolation, violation_id)] if u.id == user_id else []
-            ),
+            side_effect=lambda u: ([db.session.get(WorkingTimeViolation, violation_id)] if u.id == user_id else []),
         ), patch(
             "app.utils.email.send_working_time_limit_exceeded_email",
             side_effect=_fake_send,

@@ -3,11 +3,13 @@ Smoke tests for overtime feature
 Quick tests to verify basic overtime functionality is working
 """
 
+from datetime import date, datetime, timedelta
+
 import pytest
-from datetime import datetime, timedelta, date
+from factories import ClientFactory, ProjectFactory, TimeEntryFactory, UserFactory
+
 from app import db
-from app.models import User, TimeEntry, Project, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, TimeEntryFactory
+from app.models import Client, Project, TimeEntry, User
 from app.utils.overtime import calculate_daily_overtime, calculate_period_overtime
 
 

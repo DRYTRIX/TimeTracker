@@ -3,8 +3,16 @@ name: CodeQL
 on:
   push:
     branches: [develop, main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'CHANGELOG.md'
   pull_request:
     branches: [develop, main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'CHANGELOG.md'
   schedule:
     # Weekly re-scan (Mondays 06:00 UTC)
     - cron: "0 6 * * 1"
@@ -44,5 +52,4 @@ jobs:
         with:
           category: "/language:${{ matrix.language }}"
         env:
-          # Load local models-as-data pack for Python only (safe_redirect, safe_path_under, …)
           CODEQL_ACTION_EXTRA_OPTIONS: ${{ matrix.language == 'python' && format('{{"database":{{"run-queries":["--additional-packs={0}/.github/codeql","--extension-packs=drytrix/timetracker-python-models"]}}}}', github.workspace) || '' }}

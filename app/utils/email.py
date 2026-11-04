@@ -1000,11 +1000,9 @@ def send_invoice_email(invoice, recipient_email, sender_user=None, custom_messag
                 from app.models import Invoice
 
                 sent_statuses = ("sent", "paid", "overdue", "issued")
-                sent_count = (
-                    Invoice.query.filter(
-                        Invoice.created_by == sender_id, Invoice.status.in_(sent_statuses)
-                    ).count()
-                )
+                sent_count = Invoice.query.filter(
+                    Invoice.created_by == sender_id, Invoice.status.in_(sent_statuses)
+                ).count()
                 from app.utils.support_invoice_sent import queue_first_invoice_support_prompt
 
                 queue_first_invoice_support_prompt(sender_id, first_send=sent_count == 1)

@@ -201,8 +201,9 @@ desktop/*.p12
 desktop/*.spc
 desktop/*.pvk
 
-# Android release signing (never commit)
+# Android release signing / local SDK path (never commit)
 mobile/android/key.properties
+mobile/android/local.properties
 mobile/android/*.jks
 mobile/android/*.keystore
 

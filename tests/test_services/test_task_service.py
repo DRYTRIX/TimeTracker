@@ -2,11 +2,13 @@
 Tests for TaskService.
 """
 
-import pytest
 from datetime import date
-from app.services import TaskService
-from app.models import Task, Project, User
+
+import pytest
+
 from app import db
+from app.models import Project, Task, User
+from app.services import TaskService
 
 
 @pytest.mark.unit

@@ -2,9 +2,11 @@
 Tests for comprehensive event tracking across all routes
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from app.models import User, Project, Client, Task, Comment
+
+from app.models import Client, Comment, Project, Task, User
 
 
 @pytest.fixture

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Deterministic palette indexed by project_id % 10 (matches template legend).
 _PROJECT_PALETTE = [
-    "#3b82f6",
+    "#4F46E5",
     "#10b981",
     "#f59e0b",
     "#ef4444",
@@ -402,9 +402,7 @@ class ProductivityService:
                 day_key = cur.isoformat()
                 dates.append(day_key)
                 day_map = by_day_project.get(day_key, {})
-                hours_by_day_project[day_key] = {
-                    pid: round(h, 2) for pid, h in day_map.items() if h > 0
-                }
+                hours_by_day_project[day_key] = {pid: round(h, 2) for pid, h in day_map.items() if h > 0}
                 cur += timedelta(days=1)
 
             # Top projects by total hours in window (limit legend/chart clutter)
@@ -412,9 +410,7 @@ class ProductivityService:
             for day_map in hours_by_day_project.values():
                 for pid, h in day_map.items():
                     totals[pid] += h
-            top_pids = [
-                pid for pid, _ in sorted(totals.items(), key=lambda item: item[1], reverse=True)[:8]
-            ]
+            top_pids = [pid for pid, _ in sorted(totals.items(), key=lambda item: item[1], reverse=True)[:8]]
             projects = [project_meta[pid] for pid in top_pids if pid in project_meta]
 
             return {

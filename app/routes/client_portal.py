@@ -25,7 +25,6 @@ from flask_babel import gettext as _
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
-from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.models import (
     DEFAULT_WIDGET_ORDER,
     VALID_WIDGET_IDS,
@@ -48,6 +47,7 @@ from app.services.client_notification_service import ClientNotificationService
 from app.services.payment_gateway_service import PaymentGatewayService
 from app.utils.backup import is_database_restore_in_progress
 from app.utils.db import safe_commit
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 
 client_portal_bp = Blueprint("client_portal", __name__)
 
@@ -444,10 +444,10 @@ def login():
     # Redirect to intended page or dashboard
     next_page = request.form.get("next") or request.args.get("next")
     return safe_redirect(
-            next_page,
-            allowed_prefixes=("/client-portal",),
-            fallback=url_for("client_portal.dashboard"),
-        )
+        next_page,
+        allowed_prefixes=("/client-portal",),
+        fallback=url_for("client_portal.dashboard"),
+    )
 
 
 @client_portal_bp.route("/client-portal/logout")
@@ -1568,9 +1568,7 @@ def download_attachment(attachment_id):
                 flash(_("Attachment not found or access denied."), "error")
                 return redirect(url_for("client_portal.documents"))
             if os.path.isfile(file_path):
-                return send_file(
-                    file_path, as_attachment=True, download_name=attachment.original_filename
-                )
+                return send_file(file_path, as_attachment=True, download_name=attachment.original_filename)
     else:
         attachment = ProjectAttachment.query.get(attachment_id)
         if attachment:
@@ -1582,9 +1580,7 @@ def download_attachment(attachment_id):
                     flash(_("Attachment not found or access denied."), "error")
                     return redirect(url_for("client_portal.documents"))
                 if os.path.isfile(file_path):
-                    return send_file(
-                        file_path, as_attachment=True, download_name=attachment.original_filename
-                    )
+                    return send_file(file_path, as_attachment=True, download_name=attachment.original_filename)
 
     flash(_("Attachment not found or access denied."), "error")
     return redirect(url_for("client_portal.documents"))
@@ -1721,7 +1717,6 @@ def survey_response(token):
     return render_template("client_portal/survey.html", survey=survey, client=client or Client(name="Client"))
 
 
-
 @client_portal_bp.route("/client-portal/messages")
 def portal_messages():
     """Client portal communication hub."""
@@ -1796,7 +1791,7 @@ def portal_messages_stream():
     def generate():
         service = ClientMessageService()
         last_id = request.args.get("after_id", type=int) or 0
-        for _ in range(60):
+        for _tick in range(60):
             messages = service.list_messages(client.id, after_id=last_id, limit=50)
             if messages:
                 last_id = messages[-1].id

@@ -317,7 +317,9 @@ class ActivityWatchConnector(BaseConnector):
             prev_end = prev["start_dt"] + timedelta(seconds=prev["dur_sec"])
             gap = (ev["start_dt"] - prev_end).total_seconds()
             if prev["merge_key"] and prev["merge_key"] == ev["merge_key"] and 0 <= gap <= merge_gap_seconds:
-                prev["dur_sec"] = int((ev["start_dt"] + timedelta(seconds=ev["dur_sec"]) - prev["start_dt"]).total_seconds())
+                prev["dur_sec"] = int(
+                    (ev["start_dt"] + timedelta(seconds=ev["dur_sec"]) - prev["start_dt"]).total_seconds()
+                )
                 prev["external_uid"] = f"{prev['external_uid']}+{ev['external_uid']}"[:255]
             else:
                 merged.append(ev)
@@ -338,9 +340,7 @@ class ActivityWatchConnector(BaseConnector):
                     skipped += 1
                     continue
 
-                rule = ActivityWatchRule.match_event(
-                    self.integration.user_id, ev["app"], ev["title"], ev["url"]
-                )
+                rule = ActivityWatchRule.match_event(self.integration.user_id, ev["app"], ev["title"], ev["url"])
                 project_id = rule.project_id if rule else default_project_id
                 task_id = rule.task_id if rule else None
                 billable = rule.billable if rule else default_billable

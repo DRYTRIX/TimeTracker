@@ -22,8 +22,7 @@ logger = logging.getLogger(__name__)
 _LDAP_ATTR_RE = re.compile(r"^[A-Za-z][A-Za-z0-9;-]*$")
 # Conservative DN shape: one or more RDN components attr=value
 _LDAP_DN_RE = re.compile(
-    r"^(?:[A-Za-z][A-Za-z0-9;-]*=(?:\\.|[^,\\+<>;#\"=])+)"
-    r"(?:,(?:[A-Za-z][A-Za-z0-9;-]*=(?:\\.|[^,\\+<>;#\"=])+))*$"
+    r"^(?:[A-Za-z][A-Za-z0-9;-]*=(?:\\.|[^,\\+<>;#\"=])+)" r"(?:,(?:[A-Za-z][A-Za-z0-9;-]*=(?:\\.|[^,\\+<>;#\"=])+))*$"
 )
 
 try:

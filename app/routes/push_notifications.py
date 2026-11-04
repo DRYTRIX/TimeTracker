@@ -9,8 +9,8 @@ from app import db
 from app.models import PushSubscription
 from app.utils.api_auth import require_api_token
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.timezone import now_in_app_timezone
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 push_bp = Blueprint("push", __name__)
 

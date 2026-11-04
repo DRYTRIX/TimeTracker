@@ -2,11 +2,13 @@
 Tests for ProjectService.
 """
 
-import pytest
 from datetime import datetime
-from app.services import ProjectService
-from app.models import Project, Client, User
+
+import pytest
+
 from app import db
+from app.models import Client, Project, User
+from app.services import ProjectService
 
 
 @pytest.mark.unit

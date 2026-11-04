@@ -4,10 +4,11 @@ Tests settings page rendering, form validation, preference updates, and API endp
 """
 
 import pytest
-from flask import url_for
-from app.models import User
-from app import db
 import pytz
+from flask import url_for
+
+from app import db
+from app.models import User
 
 
 class TestUserSettingsPage:

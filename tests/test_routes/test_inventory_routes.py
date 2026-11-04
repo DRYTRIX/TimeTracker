@@ -5,9 +5,11 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.routes]
 
 from decimal import Decimal
+
 from flask import url_for
+
 from app import db
-from app.models import Warehouse, StockItem, WarehouseStock, StockMovement, StockLot, User
+from app.models import StockItem, StockLot, StockMovement, User, Warehouse, WarehouseStock
 
 
 @pytest.fixture
@@ -233,15 +235,11 @@ class TestStockMovementsRoutes:
         assert response.status_code == 200
         assert b"devaluation" in response.data.lower() or b"success" in response.data.lower()
 
-        stock = WarehouseStock.query.filter_by(
-            warehouse_id=test_warehouse.id, stock_item_id=test_stock_item.id
-        ).first()
+        stock = WarehouseStock.query.filter_by(warehouse_id=test_warehouse.id, stock_item_id=test_stock_item.id).first()
         assert stock is not None
         assert stock.quantity_on_hand == Decimal("5.00")
 
-        lots = StockLot.query.filter_by(
-            stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id
-        ).all()
+        lots = StockLot.query.filter_by(stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id).all()
         assert len(lots) >= 1
         devalued = [l for l in lots if l.lot_type == "devalued"]
         assert len(devalued) >= 1
@@ -283,14 +281,10 @@ class TestStockMovementsRoutes:
         assert response.status_code == 200
         assert b"devaluation" in response.data.lower() or b"success" in response.data.lower()
 
-        stock = WarehouseStock.query.filter_by(
-            warehouse_id=test_warehouse.id, stock_item_id=test_stock_item.id
-        ).first()
+        stock = WarehouseStock.query.filter_by(warehouse_id=test_warehouse.id, stock_item_id=test_stock_item.id).first()
         assert stock is not None
         assert stock.quantity_on_hand == Decimal("6.00")
 
-        lots = StockLot.query.filter_by(
-            stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id
-        ).all()
+        lots = StockLot.query.filter_by(stock_item_id=test_stock_item.id, warehouse_id=test_warehouse.id).all()
         devalued = [l for l in lots if l.lot_type == "devalued"]
         assert any(Decimal(str(l.quantity_on_hand)) == Decimal("0.00") for l in devalued)

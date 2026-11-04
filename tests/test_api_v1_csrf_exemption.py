@@ -4,9 +4,8 @@ Mobile/desktop clients call POST /api/v1/timer/start with Bearer tokens and no
 CSRF header. CSRF must stay enabled for browser session routes under /api/kiosk.
 """
 
-from sqlalchemy.pool import NullPool
-
 import pytest
+from sqlalchemy.pool import NullPool
 
 pytestmark = [pytest.mark.integration]
 

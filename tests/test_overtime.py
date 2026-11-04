@@ -2,20 +2,22 @@
 Tests for overtime calculation functionality
 """
 
+from datetime import date, datetime, timedelta
+
 import pytest
-from datetime import datetime, timedelta, date
+from factories import ClientFactory, ProjectFactory, TimeEntryFactory, UserFactory
+
 from app import db
-from app.models import User, TimeEntry, Project, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, TimeEntryFactory
+from app.models import Client, Project, TimeEntry, User
 from app.utils.overtime import (
     calculate_daily_overtime,
     calculate_period_overtime,
     get_daily_breakdown,
-    get_week_start_for_date,
-    get_weekly_overtime_summary,
+    get_overtime_last_12_months,
     get_overtime_statistics,
     get_overtime_ytd,
-    get_overtime_last_12_months,
+    get_week_start_for_date,
+    get_weekly_overtime_summary,
 )
 
 
@@ -564,4 +566,3 @@ class TestOvertimeYTD:
         assert isinstance(result, dict)
         assert "overtime_hours" in result
         assert "total_hours" in result
-

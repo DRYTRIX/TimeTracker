@@ -15,7 +15,7 @@ from app.services.scheduled_report_service import ScheduledReportService
 from app.services.unpaid_hours_service import UnpaidHoursService
 from app.utils.db import safe_commit
 from app.utils.email import send_email
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 
 salesman_reports_bp = Blueprint("salesman_reports", __name__)
 

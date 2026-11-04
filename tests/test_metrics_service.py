@@ -14,7 +14,6 @@ from app import db
 from app.models import TimeEntry
 from app.services.metrics_service import MetricsService
 
-
 # ---------------------------------------------------------------------------
 # linear_forecast_with_bands (pure function)
 # ---------------------------------------------------------------------------

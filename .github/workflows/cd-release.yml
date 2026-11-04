@@ -1,19 +1,9 @@
 name: CD - Release Build
 
-# This workflow builds and publishes official releases
-# 
-# Testing Strategy:
-# - Full test suite runs on PRs via ci-comprehensive.yml
-# - This workflow focuses on building and publishing
-# - Security audit still runs to catch any last-minute issues
-# - Tests can optionally be run via workflow_dispatch for manual releases
-#
-# Workflow is triggered by:
-# - Git version tags on main (v*.*.*)
-# - Manual workflow_dispatch
-#
-# Ordinary merges to main do NOT publish a release. Tag a commit on main
-# (e.g. git tag v5.19.0 && git push origin v5.19.0) to build and publish.
+# Builds and publishes official releases.
+# Triggered by version tags on main (v*.*.*) — usually created by release-finalize.yml —
+# or by workflow_dispatch. Release notes come from CHANGELOG.md (not git log).
+# Publishing requires the tagged commit to have a successful `ci-pass` check.
 
 on:
   push:
@@ -40,6 +30,12 @@ env:
   DOCKERHUB_IMAGE: drytrix/timetracker
   PYTHON_VERSION: '3.11'
   NODE_VERSION: '24'
+
+permissions:
+  contents: write
+  packages: write
+  attestations: write
+  id-token: write
 
 jobs:
   # ============================================================================
@@ -185,10 +181,12 @@ jobs:
   # Security Audit (always runs for releases)
   # ============================================================================
   security-audit:
-    name: Security Audit
+    name: Security Audit (advisory)
     runs-on: ubuntu-latest
+    # Advisory only — CVE gate lives in CI when requirements change + nightly audit.
+    if: github.event_name == 'workflow_dispatch'
     timeout-minutes: 10
-    
+    continue-on-error: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -230,7 +228,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       is_prerelease: ${{ steps.version.outputs.is_prerelease }}
-    
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -317,13 +316,29 @@ jobs:
           echo "📦 Version: $VERSION"
           echo "🏷️ Prerelease: $IS_PRERELEASE"
 
+          # Require successful ci-pass on the commit being released (best-effort on first rollout).
+          SHA="$GITHUB_SHA"
+          echo "🔍 Checking ci-pass for $SHA ..."
+          # Look for a successful check-run named ci-pass (from the CI workflow)
+          STATUS=$(gh api "repos/${{ github.repository }}/commits/${SHA}/check-runs?per_page=100" \
+            --jq '[.check_runs[] | select(.name=="ci-pass" and .status=="completed")] | sort_by(.completed_at) | reverse | .[0].conclusion // empty' \
+            || true)
+          if [ -z "$STATUS" ]; then
+            echo "::warning::No ci-pass check-run found for $SHA (docs-only tag or first rollout). Continuing."
+          elif [ "$STATUS" != "success" ]; then
+            echo "❌ ci-pass conclusion is '$STATUS' — refusing to publish."
+            exit 1
+          else
+            echo "✅ ci-pass succeeded on $SHA"
+          fi
+
   # ============================================================================
   # Build and Push Release Image
   # ============================================================================
   build-and-push:
     name: Build and Push Release Image
     runs-on: ubuntu-latest
-    needs: [security-audit, determine-version]
+    needs: [determine-version]
     # Note: full-test-suite is optional, so we don't depend on it
     # Tests already ran on PR before merge
     permissions:
@@ -557,301 +572,25 @@ jobs:
       - name: Generate deployment manifests
         run: |
           VERSION="${{ needs.determine-version.outputs.version }}"
-          # Remove 'v' prefix for image tag
           VERSION_NO_V="${VERSION#v}"
-          # Convert repository name to lowercase for image name
           IMAGE_NAME_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           PRODUCTION_IMAGE="${IMAGE_NAME_LOWER}:${VERSION_NO_V}"
-          
-          # Docker Compose deployment - includes all services from docker-compose.yml
-          cat > docker-compose.production.yml << EOF
-          # TimeTracker Production Deployment
-          # Generated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
-          # Version: ${VERSION}
-          # Image: ${PRODUCTION_IMAGE}
-          
-          services:
-            # Certificate generator - runs once to create self-signed certs with SANs
-            certgen:
-              image: alpine:latest
-              container_name: timetracker-certgen
-              volumes:
-                - ./nginx/ssl:/certs
-                - ./scripts:/scripts:ro
-              command: sh /scripts/generate-certs.sh
-              restart: "no"
-          
-            # HTTPS reverse proxy (TLS terminates here)
-            nginx:
-              image: nginx:alpine
-              container_name: timetracker-nginx
-              ports:
-                - "80:80"
-                - "443:443"
-              volumes:
-                - ./nginx/conf.d:/etc/nginx/conf.d:ro
-                - ./nginx/ssl:/etc/nginx/ssl:ro
-              depends_on:
-                certgen:
-                  condition: service_completed_successfully
-                app:
-                  condition: service_started
-              restart: unless-stopped
-          
-            app:
-              image: ${PRODUCTION_IMAGE}
-              container_name: timetracker-app
-              environment:
-                - TZ=\${TZ:-Europe/Brussels}
-                - CURRENCY=\${CURRENCY:-EUR}
-                - ROUNDING_MINUTES=\${ROUNDING_MINUTES:-1}
-                - SINGLE_ACTIVE_TIMER=\${SINGLE_ACTIVE_TIMER:-true}
-                - ALLOW_SELF_REGISTER=\${ALLOW_SELF_REGISTER:-true}
-                - IDLE_TIMEOUT_MINUTES=\${IDLE_TIMEOUT_MINUTES:-30}
-                - ADMIN_USERNAMES=\${ADMIN_USERNAMES:-admin}
-                # IMPORTANT: Change SECRET_KEY in production! Used for sessions and CSRF tokens.
-                # Generate a secure key: python -c "import secrets; print(secrets.token_hex(32))"
-                # 
-                # CSRF CONFIGURATION:
-                # - WTF_CSRF_SSL_STRICT: Set to 'false' for HTTP access (localhost or IP address)
-                #   Set to 'true' only when using HTTPS in production
-                # - If accessing via IP address (e.g., 192.168.1.100), also set:
-                #   SESSION_COOKIE_SECURE=false and CSRF_COOKIE_SECURE=false
-                # 
-                # TROUBLESHOOTING: If forms fail with "CSRF token missing or invalid":
-                # 1. Verify SECRET_KEY is set and doesn't change between restarts
-                # 2. Check CSRF is enabled: WTF_CSRF_ENABLED=true
-                # 3. Ensure cookies are enabled in your browser
-                # 4. If behind a reverse proxy, ensure it forwards cookies correctly
-                # 5. Check the token hasn't expired (increase WTF_CSRF_TIME_LIMIT if needed)
-                # 6. If accessing via IP (not localhost): WTF_CSRF_SSL_STRICT=false
-                # For details: docs/CSRF_CONFIGURATION.md and docs/CSRF_IP_ACCESS_GUIDE.md
-                - SECRET_KEY=\${SECRET_KEY:-your-secret-key-change-this}
-                # Disable strict Referer check by default to avoid privacy/port issues
-                - WTF_CSRF_SSL_STRICT=\${WTF_CSRF_SSL_STRICT:-true}
-                - WTF_CSRF_ENABLED=\${WTF_CSRF_ENABLED:-true}
-                - WTF_CSRF_TIME_LIMIT=\${WTF_CSRF_TIME_LIMIT:-3600}
-                - SESSION_COOKIE_SECURE=\${SESSION_COOKIE_SECURE:-true}
-                - SESSION_COOKIE_SAMESITE=\${SESSION_COOKIE_SAMESITE:-Lax}
-                - REMEMBER_COOKIE_SECURE=\${REMEMBER_COOKIE_SECURE:-true}
-                - CSRF_COOKIE_SECURE=\${CSRF_COOKIE_SECURE:-true}
-                - CSRF_COOKIE_HTTPONLY=\${CSRF_COOKIE_HTTPONLY:-false}
-                - CSRF_COOKIE_SAMESITE=\${CSRF_COOKIE_SAMESITE:-Lax}
-                - CSRF_COOKIE_NAME=\${CSRF_COOKIE_NAME:-XSRF-TOKEN}
-                - PREFERRED_URL_SCHEME=\${PREFERRED_URL_SCHEME:-https}
-                - WTF_CSRF_TRUSTED_ORIGINS=\${WTF_CSRF_TRUSTED_ORIGINS:-https://localhost}
-                - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
-                - REDIS_URL=redis://:\${REDIS_PASSWORD:-timetracker}@redis:6379/0
-                - REDIS_ENABLED=\${REDIS_ENABLED:-true}
-                - LOG_FILE=/app/logs/timetracker.log
-                # Analytics & Monitoring (optional)
-                # See docs/analytics.md for configuration details
-                - SENTRY_DSN=\${SENTRY_DSN:-}
-                - SENTRY_TRACES_RATE=\${SENTRY_TRACES_RATE:-0.0}
-                - OTEL_EXPORTER_OTLP_ENDPOINT=\${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-                - OTEL_EXPORTER_OTLP_TOKEN=\${OTEL_EXPORTER_OTLP_TOKEN:-}
-                - ENABLE_TELEMETRY=\${ENABLE_TELEMETRY:-false}
-                - TELE_SALT=\${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
-          
-              # Expose only internally; nginx publishes ports
-              ports: []
-              volumes:
-                - app_data:/data
-                - app_logs:/app/logs
-                - app_uploads:/app/app/static/uploads
-              depends_on:
-                db:
-                  condition: service_healthy
-                redis:
-                  condition: service_healthy
-              restart: unless-stopped
-              healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost:8080/_health"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
-                start_period: 40s
-          
-            db:
-              image: postgres:16-alpine
-              container_name: timetracker-db
-              environment:
-                - POSTGRES_DB=\${POSTGRES_DB:-timetracker}
-                - POSTGRES_USER=\${POSTGRES_USER:-timetracker}
-                - POSTGRES_PASSWORD=\${POSTGRES_PASSWORD:-timetracker}
-                - TZ=\${TZ:-Europe/Brussels}
-              volumes:
-                - db_data:/var/lib/postgresql/data
-              healthcheck:
-                test: ["CMD-SHELL", "pg_isready -U \$\$POSTGRES_USER -d \$\$POSTGRES_DB"]
-                interval: 10s
-                timeout: 5s
-                retries: 5
-                start_period: 30s
-              restart: unless-stopped
-          
-            # Redis - Caching and session storage
-            redis:
-              image: redis:7-alpine
-              container_name: timetracker-redis
-              command: redis-server --appendonly yes --requirepass \${REDIS_PASSWORD:-timetracker}
-              volumes:
-                - redis_data:/data
-              ports:
-                - "6379:6379"
-              healthcheck:
-                test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-                interval: 10s
-                timeout: 3s
-                retries: 5
-              restart: unless-stopped
-          
-            # Analytics & Monitoring Services
-            # All services start by default for complete monitoring
-            # See docs/analytics.md and ANALYTICS_QUICK_START.md for details
-          
-            # Prometheus - Metrics collection and storage
-            prometheus:
-              image: prom/prometheus:latest
-              container_name: timetracker-prometheus
-              volumes:
-                - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-                - prometheus_data:/prometheus
-              command:
-                - '--config.file=/etc/prometheus/prometheus.yml'
-                - '--storage.tsdb.path=/prometheus'
-                - '--storage.tsdb.retention.time=30d'
-              ports:
-                - "9090:9090"
-              restart: unless-stopped
-          
-            # Grafana - Metrics visualization and dashboards
-            grafana:
-              image: grafana/grafana:latest
-              container_name: timetracker-grafana
-              environment:
-                - GF_SECURITY_ADMIN_PASSWORD=\${GRAFANA_ADMIN_PASSWORD:-admin}
-                - GF_USERS_ALLOW_SIGN_UP=false
-                - GF_SERVER_ROOT_URL=\${GF_SERVER_ROOT_URL:-http://localhost:3000}
-              volumes:
-                - grafana_data:/var/lib/grafana
-                - ./grafana/provisioning:/etc/grafana/provisioning
-              ports:
-                - "3000:3000"
-              depends_on:
-                - prometheus
-              restart: unless-stopped
-          
-            # Loki - Log aggregation
-            loki:
-              image: grafana/loki:latest
-              container_name: timetracker-loki
-              volumes:
-                - ./loki/loki-config.yml:/etc/loki/local-config.yaml
-                - loki_data:/loki
-              ports:
-                - "3100:3100"
-              command: -config.file=/etc/loki/local-config.yaml
-              restart: unless-stopped
-          
-            # Promtail - Log shipping to Loki
-            promtail:
-              image: grafana/promtail:latest
-              container_name: timetracker-promtail
-              volumes:
-                - ./logs:/var/log/timetracker:ro
-                - ./promtail/promtail-config.yml:/etc/promtail/config.yml
-              command: -config.file=/etc/promtail/config.yml
-              depends_on:
-                - loki
-              restart: unless-stopped
-          
-          volumes:
-            app_data:
-              driver: local
-            app_logs:
-              driver: local
-            app_uploads:
-              driver: local
-            db_data:
-              driver: local
-            prometheus_data:
-              driver: local
-            grafana_data:
-              driver: local
-            loki_data:
-              driver: local
-            redis_data:
-              driver: local
-          EOF
-          
-          # Kubernetes deployment (basic example)
-          cat > k8s-deployment.yml << EOF
-          # Kubernetes Deployment for TimeTracker ${VERSION}
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: timetracker
-            labels:
-              app: timetracker
-              version: ${VERSION}
-          spec:
-            replicas: 2
-            selector:
-              matchLabels:
-                app: timetracker
-            template:
-              metadata:
-                labels:
-                  app: timetracker
-                  version: ${VERSION}
-              spec:
-                containers:
-                - name: timetracker
-                  image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}
-                  ports:
-                  - containerPort: 8080
-                    name: http
-                  env:
-                  - name: DATABASE_URL
-                    valueFrom:
-                      secretKeyRef:
-                        name: timetracker-secrets
-                        key: database-url
-                  - name: SECRET_KEY
-                    valueFrom:
-                      secretKeyRef:
-                        name: timetracker-secrets
-                        key: secret-key
-                  livenessProbe:
-                    httpGet:
-                      path: /_health
-                      port: 8080
-                    initialDelaySeconds: 30
-                    periodSeconds: 10
-                  readinessProbe:
-                    httpGet:
-                      path: /_ready
-                      port: 8080
-                    initialDelaySeconds: 5
-                    periodSeconds: 5
-          ---
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: timetracker
-          spec:
-            selector:
-              app: timetracker
-            ports:
-            - protocol: TCP
-              port: 80
-              targetPort: 8080
-            type: LoadBalancer
-          EOF
-          
-          echo "📄 Deployment manifests created"
-      
+          GENERATED_AT=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          render() {
+            local src="$1" dst="$2"
+            sed -e "s|__VERSION__|${VERSION}|g" \
+                -e "s|__PRODUCTION_IMAGE__|${PRODUCTION_IMAGE}|g" \
+                -e "s|__GENERATED_AT__|${GENERATED_AT}|g" \
+                "$src" > "$dst"
+          }
+          render docker/release-templates/docker-compose.production.yml.tmpl docker-compose.production.yml
+          render docker/release-templates/k8s-deployment.yml.tmpl k8s-deployment.yml
+          # Keep NAS compose if present in repo
+          if [ -f docker-compose.nas.yml ]; then
+            cp docker-compose.nas.yml .
+          fi
+          echo "📄 Deployment manifests created from templates"
+
       - name: Upload deployment manifests
         uses: actions/upload-artifact@v4
         with:
@@ -1192,6 +931,8 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [build-and-push, determine-version, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios, build-browser-extension]
+    # Publish even if an optional client build failed; Docker image is the critical artifact.
+    if: always() && needs.build-and-push.result == 'success' && needs.determine-version.result == 'success'
     permissions:
       contents: write
     
@@ -1304,68 +1045,40 @@ jobs:
           echo "Total files to attach: $FILE_COUNT"
           echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
       
-      - name: Generate changelog
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Generate release notes from CHANGELOG
         id: changelog
         run: |
           VERSION="${{ needs.determine-version.outputs.version }}"
-          
-          # Try to get previous tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
-          if [ -n "$PREVIOUS_TAG" ]; then
-            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%an)" --no-merges)
-          else
-            CHANGELOG="Initial release"
-          fi
-          
-          # Write changelog to file first
-          echo "$CHANGELOG" > CHANGELOG.md
-          
-          # Add build status to changelog
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "## 📦 Build Status" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          
-          # Desktop builds
-          echo "### Desktop Applications" >> CHANGELOG.md
-          if [ "${{ needs.build-desktop-windows.result }}" == "success" ]; then
-            echo "✅ Windows build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ Windows build: Failed or skipped" >> CHANGELOG.md
-          fi
-          if [ "${{ needs.build-desktop-linux.result }}" == "success" ]; then
-            echo "✅ Linux build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ Linux build: Failed or skipped" >> CHANGELOG.md
-          fi
-          if [ "${{ needs.build-desktop-macos.result }}" == "success" ]; then
-            echo "✅ macOS build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ macOS build: Failed or skipped" >> CHANGELOG.md
-          fi
-          
-          # Mobile builds
-          echo "" >> CHANGELOG.md
-          echo "### Mobile Applications" >> CHANGELOG.md
-          if [ "${{ needs.build-mobile-android.result }}" == "success" ]; then
-            echo "✅ Android build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ Android build: Failed or skipped" >> CHANGELOG.md
-          fi
-          if [ "${{ needs.build-mobile-ios.result }}" == "success" ]; then
-            echo "✅ iOS build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ iOS build: Failed or skipped" >> CHANGELOG.md
-          fi
-      
-      - name: Create Release
+          VERSION_NO_V="${VERSION#v}"
+          python scripts/bump_version.py --extract-notes "$VERSION_NO_V" > RELEASE_NOTES.md
+          {
+            echo ""
+            echo "## Build status"
+            echo ""
+            echo "### Desktop"
+            echo "- Windows: ${{ needs.build-desktop-windows.result }}"
+            echo "- Linux: ${{ needs.build-desktop-linux.result }}"
+            echo "- macOS: ${{ needs.build-desktop-macos.result }}"
+            echo ""
+            echo "### Mobile"
+            echo "- Android: ${{ needs.build-mobile-android.result }}"
+            echo "- iOS: ${{ needs.build-mobile-ios.result }}"
+          } >> RELEASE_NOTES.md
+          echo "----- RELEASE NOTES -----"
+          cat RELEASE_NOTES.md
+
+      - name: Create draft GitHub Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844  # v1
         with:
           tag_name: ${{ needs.determine-version.outputs.version }}
           name: Release ${{ needs.determine-version.outputs.version }}
-          body_path: CHANGELOG.md
-          draft: false
+          body_path: RELEASE_NOTES.md
+          draft: true
           prerelease: ${{ needs.determine-version.outputs.is_prerelease }}
           files: |
             release-files/docker-compose.production.yml
@@ -1376,7 +1089,15 @@ jobs:
             release-files/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: false
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ needs.determine-version.outputs.version }}"
+          # softprops may create the release; flip draft → published
+          gh release edit "$TAG" --draft=false || gh release view "$TAG"
+
 
   # ============================================================================
   # Trigger Demo Site Deploy (Render)
@@ -1413,7 +1134,7 @@ jobs:
   release-summary:
     name: Release Summary
     runs-on: ubuntu-latest
-    needs: [security-audit, build-and-push, determine-version, create-release, trigger-demo-deploy, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios, build-browser-extension]
+    needs: [build-and-push, determine-version, create-release, trigger-demo-deploy, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios, build-browser-extension]
     if: always()
     
     steps:
@@ -1422,10 +1143,9 @@ jobs:
           echo "## 🚀 Release ${{ needs.determine-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Core Build Status" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Security: ${{ needs.security-audit.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Docker Build: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Release: ${{ needs.create-release.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Demo Deploy: ${{ needs.trigger-demo-deploy.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker Build: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Release: ${{ needs.create-release.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Demo Deploy: ${{ needs.trigger-demo-deploy.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Desktop Applications" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.build-desktop-windows.result }}" == "success" ]; then

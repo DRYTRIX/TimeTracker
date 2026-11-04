@@ -3,14 +3,14 @@ Comprehensive model testing suite.
 Tests all models, relationships, properties, and business logic.
 """
 
-import pytest
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from app.models import User, Project, TimeEntry, Client, Settings, Invoice, InvoiceItem, Task
+import pytest
 from factories import InvoiceFactory
-from app import db
 
+from app import db
+from app.models import Client, Invoice, InvoiceItem, Project, Settings, Task, TimeEntry, User
 
 # ============================================================================
 # User Model Tests
@@ -251,7 +251,7 @@ def test_stop_timer(app, active_timer):
 @pytest.mark.models
 def test_time_entry_tag_list(app, test_client):
     """Test time entry tag_list property."""
-    from app.models import User, Project
+    from app.models import Project, User
 
     user = User.query.first() or User(username="test", role="user")
     project = Project.query.first() or Project(name="Test", client_id=test_client.id, billable=True)
@@ -504,6 +504,7 @@ def test_time_entry_requires_start_time(app, user, project):
     # TimeEntry requires start_time at database level (nullable=False)
     # This test verifies the database enforces this requirement
     from sqlalchemy.exc import IntegrityError
+
     from app import db
 
     with pytest.raises(IntegrityError):
@@ -542,8 +543,9 @@ def test_user_deletion_without_relationships(app):
 @pytest.mark.models
 def test_user_deletion_cascades_project_costs(app, test_client):
     """Test that deleting a user cascades to project costs."""
-    from app.models import ProjectCost
     from datetime import date
+
+    from app.models import ProjectCost
 
     with app.app_context():
         # Create user and project

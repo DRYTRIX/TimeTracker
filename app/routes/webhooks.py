@@ -8,10 +8,10 @@ from sqlalchemy.exc import IntegrityError
 from app import db
 from app.models import Webhook, WebhookDelivery
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 from app.utils.permissions import admin_or_permission_required
 from app.utils.webhook_service import WebhookService
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 webhooks_bp = Blueprint("webhooks", __name__)
 

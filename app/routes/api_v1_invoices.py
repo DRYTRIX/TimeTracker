@@ -121,7 +121,15 @@ def update_invoice(invoice_id):
     data = request.get_json() or {}
     update_kwargs = {}
     # status / amount_paid are not mass-assignable via generic update (use cancel/payment flows).
-    for field in ("client_name", "client_email", "client_address", "notes", "terms", "currency_code", "buyer_reference"):
+    for field in (
+        "client_name",
+        "client_email",
+        "client_address",
+        "notes",
+        "terms",
+        "currency_code",
+        "buyer_reference",
+    ):
         if field in data:
             update_kwargs[field] = data[field]
     if "issue_date" in data:
@@ -424,9 +432,7 @@ def send_invoice_peppol_api(invoice_id):
         return error_response("Invoice not found", status_code=404)
     try:
         service = PeppolService()
-        success, tx, message = service.send_invoice(
-            invoice=invoice, triggered_by_user_id=g.api_user.id
-        )
+        success, tx, message = service.send_invoice(invoice=invoice, triggered_by_user_id=g.api_user.id)
     except Exception as e:
         current_app.logger.error(f"API Peppol send failed: {type(e).__name__}: {e}")
         return error_response("Failed to send via Peppol", status_code=502)

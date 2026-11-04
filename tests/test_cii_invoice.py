@@ -1,12 +1,13 @@
 """Tests for CII (Cross-Industry Invoice) generator for Factur-X / ZUGFeRD."""
+
 from datetime import date, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
 
-from app.utils.cii_invoice import CIIParty, build_cii_invoice_xml, FACTURX_GUIDELINE_EN16931
-from app.utils.invoice_validators import validate_cii_wellformed, validate_cii_en16931
+from app.utils.cii_invoice import FACTURX_GUIDELINE_EN16931, CIIParty, build_cii_invoice_xml
+from app.utils.invoice_validators import validate_cii_en16931, validate_cii_wellformed
 
 
 def _make_invoice(**overrides):
@@ -32,7 +33,12 @@ def _make_invoice(**overrides):
         client_email=None,
         client_address=None,
         items=[
-            SimpleNamespace(description="Consulting", quantity=Decimal("2"), unit_price=Decimal("100.00"), total_amount=Decimal("200.00")),
+            SimpleNamespace(
+                description="Consulting",
+                quantity=Decimal("2"),
+                unit_price=Decimal("100.00"),
+                total_amount=Decimal("200.00"),
+            ),
         ],
         expenses=[],
         extra_goods=[],
@@ -163,8 +169,12 @@ def test_cii_contains_monetary_totals():
 @pytest.mark.unit
 def test_cii_contains_line_items():
     items = [
-        SimpleNamespace(description="Design", quantity=Decimal("5"), unit_price=Decimal("80.00"), total_amount=Decimal("400.00")),
-        SimpleNamespace(description="Dev", quantity=Decimal("10"), unit_price=Decimal("100.00"), total_amount=Decimal("1000.00")),
+        SimpleNamespace(
+            description="Design", quantity=Decimal("5"), unit_price=Decimal("80.00"), total_amount=Decimal("400.00")
+        ),
+        SimpleNamespace(
+            description="Dev", quantity=Decimal("10"), unit_price=Decimal("100.00"), total_amount=Decimal("1000.00")
+        ),
     ]
     invoice = _make_invoice(items=items)
     xml, _ = build_cii_invoice_xml(invoice, _make_seller(), _make_buyer())

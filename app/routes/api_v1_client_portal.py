@@ -6,14 +6,7 @@ portal scopes and an optional client_id binding.
 
 from flask import Blueprint, g, jsonify, request
 
-from app.models import (
-    Client,
-    ClientAttachment,
-    Invoice,
-    Project,
-    ProjectAttachment,
-    TimeEntry,
-)
+from app.models import Client, ClientAttachment, Invoice, Project, ProjectAttachment, TimeEntry
 from app.models.client_time_approval import ClientTimeApproval
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, forbidden_response, validation_error_response
@@ -73,9 +66,7 @@ def portal_list_invoices():
     if err:
         return err
     invoices = (
-        Invoice.query.filter(
-            (Invoice.client_id == client.id) | (Invoice.client_name == client.name)
-        )
+        Invoice.query.filter((Invoice.client_id == client.id) | (Invoice.client_name == client.name))
         .order_by(Invoice.created_at.desc())
         .limit(100)
         .all()

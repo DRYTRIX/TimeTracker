@@ -3,11 +3,12 @@ Test suite for client notes routes and endpoints.
 Tests all client note CRUD operations and API endpoints.
 """
 
-import pytest
 import json
-from app.models import ClientNote
-from app import db
 
+import pytest
+
+from app import db
+from app.models import ClientNote
 
 # ============================================================================
 # Client Notes Routes Tests

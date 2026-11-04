@@ -146,11 +146,7 @@ def test_http_metrics_not_recorded_when_opted_out(otel_app, monkeypatch):
 
 
 def test_http_metrics_recorded_when_opted_in(otel_app_metrics_opted_in):
-    from app.telemetry.otel_setup import (
-        _HTTP_DURATION_BOUNDARIES,
-        get_test_metric_reader,
-        record_http_server_metrics,
-    )
+    from app.telemetry.otel_setup import _HTTP_DURATION_BOUNDARIES, get_test_metric_reader, record_http_server_metrics
 
     reader = get_test_metric_reader()
     assert reader is not None

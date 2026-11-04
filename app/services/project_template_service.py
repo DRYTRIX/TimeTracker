@@ -136,6 +136,7 @@ class ProjectTemplateService:
 
                 logger = logging.getLogger(__name__)
                 from app.utils.error_handling import sanitize_log_value
+
                 logger.info(
                     "Creating %s tasks from template %s for project %s",
                     sanitize_log_value(len(tasks_to_create)),
@@ -206,6 +207,7 @@ class ProjectTemplateService:
 
                 logger = logging.getLogger(__name__)
                 from app.utils.error_handling import sanitize_log_value
+
                 logger.info("No tasks to create from template %s", sanitize_log_value(template_id))
 
             # Update template usage
@@ -287,7 +289,10 @@ class ProjectTemplateService:
                     import logging
 
                     from app.utils.error_handling import sanitize_log_value
-                    logging.getLogger(__name__).warning("Tasks is not a list: %s", sanitize_log_value(type(tasks).__name__))
+
+                    logging.getLogger(__name__).warning(
+                        "Tasks is not a list: %s", sanitize_log_value(type(tasks).__name__)
+                    )
                     tasks = []
                 template.tasks = tasks
             if "category" in kwargs:

@@ -157,7 +157,9 @@ class SageConnector(BaseConnector):
                             }
                             for item in (inv.items or [])
                         ]
-                        or [{"description": "Invoice total", "quantity": 1, "unit_price": float(inv.total_amount or 0)}],
+                        or [
+                            {"description": "Invoice total", "quantity": 1, "unit_price": float(inv.total_amount or 0)}
+                        ],
                     }
                 }
                 r = requests.post(f"{self.API_BASE}/sales_invoices", headers=headers, json=payload, timeout=30)

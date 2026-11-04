@@ -6,10 +6,10 @@ from app import db, socketio
 from app.models import KanbanBoardTemplate, KanbanColumn, Task
 from app.services.task_service import task_assigned_to_any_clause, task_assigned_to_user_clause
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import admin_or_permission_required
 from app.utils.scope_filter import get_active_projects_for_user
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 kanban_bp = Blueprint("kanban", __name__)
 
@@ -43,9 +43,7 @@ def board():
     query = Task.query
     has_view_all_tasks = current_user.is_admin or current_user.has_permission("view_all_tasks")
     if not has_view_all_tasks:
-        query = query.filter(
-            db.or_(task_assigned_to_user_clause(current_user.id), Task.created_by == current_user.id)
-        )
+        query = query.filter(db.or_(task_assigned_to_user_clause(current_user.id), Task.created_by == current_user.id))
     if project_ids:
         query = query.filter(Task.project_id.in_(project_ids))
     if user_ids:

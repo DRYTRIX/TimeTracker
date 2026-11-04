@@ -5,23 +5,24 @@ Requires factory_boy and Faker (declared in requirements-test.txt).
 
 import datetime as _dt
 from decimal import Decimal
+
 import factory
 from factory.alchemy import SQLAlchemyModelFactory
 
 from app import db
 from app.models import (
-    User,
+    ApiToken,
     Client,
-    Project,
-    TimeEntry,
+    Expense,
+    ExpenseCategory,
     Invoice,
     InvoiceItem,
-    Expense,
-    Task,
     Payment,
-    ExpenseCategory,
-    ApiToken,
+    Project,
     RecurringInvoice,
+    Task,
+    TimeEntry,
+    User,
 )
 
 

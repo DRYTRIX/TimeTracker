@@ -5,8 +5,9 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.models]
 
 from decimal import Decimal
+
 from app import db
-from app.models import Supplier, SupplierStockItem, StockItem, User
+from app.models import StockItem, Supplier, SupplierStockItem, User
 
 
 @pytest.fixture

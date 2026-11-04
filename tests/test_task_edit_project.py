@@ -1,9 +1,10 @@
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+from factories import TimeEntryFactory
 
 from app import db
 from app.models import Project, Task, TimeEntry
-from factories import TimeEntryFactory
 
 
 @pytest.mark.smoke

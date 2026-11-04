@@ -1,0 +1,75 @@
+name: Nightly dependency audit
+
+# Blocks only via an issue when new CVEs appear; PR CI runs pip-audit only when
+# requirements*.txt change (see ci.yml security job).
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    name: pip-audit + Safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-env
+        with:
+          install-dev: 'true'
+      - name: Run pip-audit
+        id: audit
+        continue-on-error: true
+        run: bash scripts/ci/pip-audit.sh
+      - name: Run Safety
+        id: safety
+        continue-on-error: true
+        run: |
+          mkdir -p .test_installation_config
+          REPORT=.test_installation_config/safety-report.json
+          python -m safety check --file requirements.txt --save-json "$REPORT" || true
+          if [ -f "$REPORT" ]; then
+            python scripts/ci/sanitize_safety_report.py "$REPORT" "${{ github.workspace }}"
+          fi
+      - name: Open or update issue on failure
+        if: steps.audit.outcome == 'failure' || steps.safety.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Nightly dependency audit failed";
+            const body = [
+              "Automated nightly `pip-audit` / Safety reported vulnerabilities.",
+              "",
+              `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              "",
+              "Update dependencies or add ignores in `scripts/ci/pip-audit-ignore.txt` after review.",
+            ].join("\n");
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "security,dependencies",
+              per_page: 50,
+            });
+            const existing = issues.data.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: `Still failing: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["security", "dependencies"],
+              });
+            }

@@ -10,8 +10,9 @@ import pytest
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 import json
+
 from app import db
-from app.models import User, Project, Client, ApiToken
+from app.models import ApiToken, Client, Project, User
 
 
 @pytest.fixture
@@ -30,9 +31,7 @@ def contract_user_id(app):
 def api_token_read_only(app, contract_user_id):
     """Token with read:projects only (no write)."""
     with app.app_context():
-        token, plain = ApiToken.create_token(
-            user_id=contract_user_id, name="Read only", scopes="read:projects"
-        )
+        token, plain = ApiToken.create_token(user_id=contract_user_id, name="Read only", scopes="read:projects")
         db.session.add(token)
         db.session.commit()
         return plain

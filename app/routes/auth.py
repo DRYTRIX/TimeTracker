@@ -30,7 +30,7 @@ from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
 from app.utils.deleted_usernames import is_username_reserved
 from app.utils.posthog_funnels import track_onboarding_started
-from app.utils.safe_redirect import safe_redirect, is_safe_next_url, safe_redirect_target
+from app.utils.safe_redirect import is_safe_next_url, safe_redirect, safe_redirect_target
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -162,10 +162,10 @@ def _try_client_portal_login(username: str, password: str):
 
     next_page = request.form.get("next") or request.args.get("next")
     return safe_redirect(
-            next_page,
-            allowed_prefixes=("/client-portal",),
-            fallback=url_for("client_portal.dashboard"),
-        )
+        next_page,
+        allowed_prefixes=("/client-portal",),
+        fallback=url_for("client_portal.dashboard"),
+    )
 
 
 def _finalize_login_after_verification(user: User, *, log_auth_method: str):
@@ -1516,9 +1516,7 @@ def oidc_callback():
                     settings = Settings.get_settings()
                     user.standard_hours_per_day = float(getattr(settings, "default_daily_working_hours", 8.0) or 8.0)
                 except Exception:
-                    current_app.logger.debug(
-                        "Could not apply default daily working hours for OIDC user", exc_info=True
-                    )
+                    current_app.logger.debug("Could not apply default daily working hours for OIDC user", exc_info=True)
 
                 # Assign role from the new Role system
                 from app.models import Role
@@ -1716,9 +1714,7 @@ def oidc_callback():
         # which has caching logic and will handle this efficiently.
 
         # Redirect to intended page or dashboard
-        next_page = _resolve_post_login_url(
-            user, session.pop("oidc_next", None) or request.args.get("next")
-        )
+        next_page = _resolve_post_login_url(user, session.pop("oidc_next", None) or request.args.get("next"))
         flash(_("Welcome back, %(username)s!", username=user.username), "success")
         # next_page produced by safe_redirect_target
         # codeql[py/url-redirection]

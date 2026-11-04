@@ -7,14 +7,12 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.utils]
 
 from datetime import datetime, timedelta
+
 from flask import Flask, g
-from app.models import ApiToken, User
-from app.utils.api_auth import (
-    authenticate_token,
-    require_api_token,
-    extract_token_from_request,
-)
+
 from app import db
+from app.models import ApiToken, User
+from app.utils.api_auth import authenticate_token, extract_token_from_request, require_api_token
 
 
 @pytest.fixture
@@ -49,9 +47,7 @@ class TestExtractToken:
 
         app = Flask(__name__)
 
-        with app.test_request_context(
-            headers={"Authorization": "Bearer tt_testtoken123"}
-        ):
+        with app.test_request_context(headers={"Authorization": "Bearer tt_testtoken123"}):
             token = extract_token_from_request()
             assert token == "tt_testtoken123"
 
@@ -60,9 +56,7 @@ class TestExtractToken:
 
         app = Flask(__name__)
 
-        with app.test_request_context(
-            headers={"Authorization": "Token tt_testtoken123"}
-        ):
+        with app.test_request_context(headers={"Authorization": "Token tt_testtoken123"}):
             token = extract_token_from_request()
             assert token == "tt_testtoken123"
 
@@ -166,9 +160,7 @@ class TestAuthenticateToken:
 
     def test_authenticate_with_cidr_block(self, app, sample_user):
         """Test authentication with CIDR block in whitelist"""
-        token, plain_token = ApiToken.create_token(
-            user_id=sample_user.id, name="CIDR Token", scopes="read:projects"
-        )
+        token, plain_token = ApiToken.create_token(user_id=sample_user.id, name="CIDR Token", scopes="read:projects")
         token.ip_whitelist = "192.168.1.0/24"
         db.session.add(token)
         db.session.commit()
@@ -233,16 +225,12 @@ class TestRequireApiToken:
 
         return app
 
-    def test_protected_route_with_valid_token(
-        self, app_with_routes, sample_user, sample_token
-    ):
+    def test_protected_route_with_valid_token(self, app_with_routes, sample_user, sample_token):
         """Test accessing protected route with valid token"""
         token, plain_token = sample_token
 
         with app_with_routes.test_client() as client:
-            response = client.get(
-                "/test/protected", headers={"Authorization": f"Bearer {plain_token}"}
-            )
+            response = client.get("/test/protected", headers={"Authorization": f"Bearer {plain_token}"})
 
             assert response.status_code == 200
             data = response.get_json()
@@ -259,9 +247,7 @@ class TestRequireApiToken:
             assert "error" in data
             assert "Authentication required" in data["error"]
 
-    def test_protected_route_with_insufficient_scope(
-        self, app_with_routes, sample_user
-    ):
+    def test_protected_route_with_insufficient_scope(self, app_with_routes, sample_user):
         """Test accessing protected route with insufficient scope"""
         token, plain_token = ApiToken.create_token(
             user_id=sample_user.id,
@@ -272,9 +258,7 @@ class TestRequireApiToken:
         db.session.commit()
 
         with app_with_routes.test_client() as client:
-            response = client.get(
-                "/test/protected", headers={"Authorization": f"Bearer {plain_token}"}
-            )
+            response = client.get("/test/protected", headers={"Authorization": f"Bearer {plain_token}"})
 
             assert response.status_code == 403
             data = response.get_json()
@@ -292,9 +276,7 @@ class TestRequireApiToken:
         db.session.commit()
 
         with app_with_routes.test_client() as client:
-            response = client.get(
-                "/test/protected", headers={"Authorization": f"Bearer {plain_token}"}
-            )
+            response = client.get("/test/protected", headers={"Authorization": f"Bearer {plain_token}"})
 
             assert response.status_code == 200
             data = response.get_json()

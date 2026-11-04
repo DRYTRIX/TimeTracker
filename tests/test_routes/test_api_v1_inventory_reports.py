@@ -7,13 +7,7 @@ pytestmark = [pytest.mark.api, pytest.mark.integration]
 from decimal import Decimal
 
 from app import db
-from app.models import (
-    ApiToken,
-    Warehouse,
-    StockItem,
-    WarehouseStock,
-    StockMovement,
-)
+from app.models import ApiToken, StockItem, StockMovement, Warehouse, WarehouseStock
 
 
 @pytest.fixture
@@ -66,9 +60,7 @@ class TestInventoryScopes:
 
     def test_read_inventory_only_can_access_inventory(self, client, db_session, test_user):
         """Token with only read:inventory can GET inventory endpoints."""
-        token, plain = ApiToken.create_token(
-            user_id=test_user.id, name="Inv Only", scopes="read:inventory"
-        )
+        token, plain = ApiToken.create_token(user_id=test_user.id, name="Inv Only", scopes="read:inventory")
         db.session.add(token)
         db.session.commit()
         response = client.get("/api/v1/inventory/reports/valuation", headers=_auth_headers(plain))
@@ -76,9 +68,7 @@ class TestInventoryScopes:
 
     def test_read_inventory_only_cannot_access_projects(self, client, db_session, test_user):
         """Token with only read:inventory cannot GET non-inventory project endpoints."""
-        token, plain = ApiToken.create_token(
-            user_id=test_user.id, name="Inv Only", scopes="read:inventory"
-        )
+        token, plain = ApiToken.create_token(user_id=test_user.id, name="Inv Only", scopes="read:inventory")
         db.session.add(token)
         db.session.commit()
         response = client.get("/api/v1/projects", headers=_auth_headers(plain))
@@ -104,9 +94,7 @@ class TestValuationReportAPI:
         assert "by_warehouse" in data
         assert "by_category" in data
 
-    def test_valuation_report_with_stock(
-        self, client, api_token, stock_item_with_cost, warehouse, test_user
-    ):
+    def test_valuation_report_with_stock(self, client, api_token, stock_item_with_cost, warehouse, test_user):
         """Valuation with stock returns total_value and item_details."""
         StockMovement.record_movement(
             movement_type="purchase",
@@ -129,9 +117,7 @@ class TestValuationReportAPI:
         assert detail["quantity"] == 10.0
         assert detail["value"] == 80.0
 
-    def test_valuation_report_filter_warehouse(
-        self, client, api_token, stock_item_with_cost, warehouse, test_user
-    ):
+    def test_valuation_report_filter_warehouse(self, client, api_token, stock_item_with_cost, warehouse, test_user):
         """Valuation with warehouse_id filter returns only that warehouse."""
         StockMovement.record_movement(
             movement_type="purchase",
@@ -185,9 +171,7 @@ class TestMovementHistoryReportAPI:
         assert data["movements"] == []
         assert data["total_movements"] == 0
 
-    def test_movement_history_with_data(
-        self, client, api_token, stock_item_with_cost, warehouse, test_user
-    ):
+    def test_movement_history_with_data(self, client, api_token, stock_item_with_cost, warehouse, test_user):
         """Movement history returns movements after recording one."""
         StockMovement.record_movement(
             movement_type="adjustment",
@@ -300,9 +284,7 @@ class TestLowStockReportAPI:
         assert "items" in data
         assert isinstance(data["items"], list)
 
-    def test_low_stock_report_with_reorder(
-        self, client, api_token, stock_item_with_cost, warehouse, test_user
-    ):
+    def test_low_stock_report_with_reorder(self, client, api_token, stock_item_with_cost, warehouse, test_user):
         """Item with reorder_point and stock below it appears in low-stock."""
         stock_item_with_cost.reorder_point = Decimal("20")
         stock_item_with_cost.reorder_quantity = Decimal("50")
@@ -328,9 +310,7 @@ class TestLowStockReportAPI:
         assert low[0]["reorder_point"] == 20.0
         assert low[0]["shortfall"] == 15.0
 
-    def test_low_stock_filter_warehouse(
-        self, client, api_token, stock_item_with_cost, warehouse, test_user
-    ):
+    def test_low_stock_filter_warehouse(self, client, api_token, stock_item_with_cost, warehouse, test_user):
         """Low-stock with warehouse_id filters by warehouse."""
         stock_item_with_cost.reorder_point = Decimal("10")
         db.session.commit()

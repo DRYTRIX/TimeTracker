@@ -1,15 +1,18 @@
 """Tests for purchase order routes"""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.routes]
 
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
+
 from flask import url_for
+
 from app import db
-from app.models import PurchaseOrder, PurchaseOrderItem, Supplier, StockItem, Warehouse, User
+from app.models import PurchaseOrder, PurchaseOrderItem, StockItem, Supplier, User, Warehouse
 
 
 @pytest.fixture
@@ -112,7 +115,9 @@ class TestPurchaseOrderRoutes:
         assert response.status_code == 200
         assert b"PO-TEST-001" in response.data
 
-    def test_view_purchase_order_with_line_items(self, client, test_user, test_purchase_order, test_stock_item, test_warehouse):
+    def test_view_purchase_order_with_line_items(
+        self, client, test_user, test_purchase_order, test_stock_item, test_warehouse
+    ):
         """View page must render when PO has line items (regression for #576)."""
         item = PurchaseOrderItem(
             purchase_order_id=test_purchase_order.id,

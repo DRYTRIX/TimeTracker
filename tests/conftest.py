@@ -3,10 +3,11 @@ Pytest configuration and shared fixtures for TimeTracker tests.
 This file contains common fixtures and test configuration used across all test modules.
 """
 
-import pytest
 import os
 import tempfile
 import uuid
+
+import pytest
 
 # Set before app is imported so InstallationConfig uses a writable dir in tests (avoids /data on CI)
 if "INSTALLATION_CONFIG_DIR" not in os.environ:
@@ -14,6 +15,7 @@ if "INSTALLATION_CONFIG_DIR" not in os.environ:
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
@@ -45,9 +47,7 @@ def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):  # pragma:
 # leads, projects, quotes), so SQLAlchemy can't order DROPs cleanly and any
 # drop_all() call would otherwise fail with "FOREIGN KEY constraint failed".
 @event.listens_for(Engine, "before_cursor_execute")
-def _disable_fk_for_drop(  # pragma: no cover - infra hook
-    conn, cursor, statement, parameters, context, executemany
-):
+def _disable_fk_for_drop(conn, cursor, statement, parameters, context, executemany):  # pragma: no cover - infra hook
     try:
         if not statement:
             return
@@ -61,69 +61,70 @@ def _disable_fk_for_drop(  # pragma: no cover - infra hook
         # Never let this hook break statement execution.
         pass
 
+
 # Import all models to ensure their tables are created by db.create_all()
 from app.models import (
-    User,
-    Project,
-    TimeEntry,
+    Activity,
+    ApiToken,
+    AuditLog,
+    BudgetAlert,
+    CalendarEvent,
     Client,
-    Settings,
-    Invoice,
-    InvoiceItem,
-    Task,
-    TaskActivity,
+    ClientNote,
+    ClientPrepaidConsumption,
     Comment,
+    CreditNote,
+    Currency,
+    DataExport,
+    DataImport,
+    ExchangeRate,
+    Expense,
     ExpenseCategory,
-    Mileage,
-    PerDiem,
-    PerDiemRate,
     ExtraGood,
     FocusSession,
-    RecurringBlock,
-    RateOverride,
-    SavedFilter,
-    ProjectCost,
-    KanbanColumn,
-    TimeEntryTemplate,
-    Activity,
-    UserFavoriteProject,
-    UserSmartNotificationDismissal,
-    UserClient,
-    ClientNote,
-    WeeklyTimeGoal,
-    Expense,
-    Permission,
-    Role,
-    ApiToken,
-    CalendarEvent,
-    BudgetAlert,
-    DataImport,
-    DataExport,
-    InvoicePDFTemplate,
-    ClientPrepaidConsumption,
-    AuditLog,
-    RecurringInvoice,
+    Invoice,
     InvoiceEmail,
+    InvoiceItem,
+    InvoicePDFTemplate,
     InvoicePeppolTransmission,
-    Webhook,
-    WebhookDelivery,
-    InvoiceTemplate,
-    Currency,
-    ExchangeRate,
-    TaxRule,
-    Payment,
-    CreditNote,
     InvoiceReminderSchedule,
-    SavedReportView,
-    ReportEmailSchedule,
-    Warehouse,
-    StockItem,
-    WarehouseStock,
-    StockMovement,
-    StockReservation,
+    InvoiceTemplate,
+    KanbanColumn,
+    Mileage,
+    Payment,
+    PerDiem,
+    PerDiemRate,
+    Permission,
+    Project,
+    ProjectCost,
     ProjectStockAllocation,
     Quote,
     QuoteItem,
+    RateOverride,
+    RecurringBlock,
+    RecurringInvoice,
+    ReportEmailSchedule,
+    Role,
+    SavedFilter,
+    SavedReportView,
+    Settings,
+    StockItem,
+    StockMovement,
+    StockReservation,
+    Task,
+    TaskActivity,
+    TaxRule,
+    TimeEntry,
+    TimeEntryTemplate,
+    User,
+    UserClient,
+    UserFavoriteProject,
+    UserSmartNotificationDismissal,
+    Warehouse,
+    WarehouseStock,
+    Webhook,
+    WebhookDelivery,
+    WeeklyTimeGoal,
 )
 
 
@@ -211,58 +212,58 @@ def app(app_config):
         # This ensures they're registered with SQLAlchemy's metadata
         # Import all models explicitly to ensure their tables are created
         from app.models import (
-            User,
-            Project,
-            TimeEntry,
+            Activity,
+            ApiToken,
+            AuditLog,
+            BudgetAlert,
+            CalendarEvent,
             Client,
-            Settings,
-            Invoice,
-            InvoiceItem,
-            Task,
-            TaskActivity,
+            ClientNote,
+            ClientPrepaidConsumption,
             Comment,
+            CreditNote,
+            Currency,
+            DataExport,
+            DataImport,
+            ExchangeRate,
+            Expense,
             ExpenseCategory,
-            Mileage,
-            PerDiem,
-            PerDiemRate,
             ExtraGood,
             FocusSession,
-            RecurringBlock,
-            RateOverride,
-            SavedFilter,
-            ProjectCost,
-            KanbanColumn,
-            TimeEntryTemplate,
-            Activity,
-            UserFavoriteProject,
-            UserClient,
-            ClientNote,
-            WeeklyTimeGoal,
-            Expense,
-            Permission,
-            Role,
-            ApiToken,
-            CalendarEvent,
-            BudgetAlert,
-            DataImport,
-            DataExport,
-            InvoicePDFTemplate,
-            ClientPrepaidConsumption,
-            AuditLog,
-            RecurringInvoice,
+            Invoice,
             InvoiceEmail,
+            InvoiceItem,
+            InvoicePDFTemplate,
             InvoicePeppolTransmission,
+            InvoiceReminderSchedule,
+            InvoiceTemplate,
+            KanbanColumn,
+            Mileage,
+            Payment,
+            PerDiem,
+            PerDiemRate,
+            Permission,
+            Project,
+            ProjectCost,
+            RateOverride,
+            RecurringBlock,
+            RecurringInvoice,
+            ReportEmailSchedule,
+            Role,
+            SavedFilter,
+            SavedReportView,
+            Settings,
+            Task,
+            TaskActivity,
+            TaxRule,
+            TimeEntry,
+            TimeEntryTemplate,
+            User,
+            UserClient,
+            UserFavoriteProject,
             Webhook,
             WebhookDelivery,
-            InvoiceTemplate,
-            Currency,
-            ExchangeRate,
-            TaxRule,
-            Payment,
-            CreditNote,
-            InvoiceReminderSchedule,
-            SavedReportView,
-            ReportEmailSchedule,
+            WeeklyTimeGoal,
         )
 
         # Ensure any lingering connections are closed to avoid SQLite file locks (Windows)
@@ -771,6 +772,7 @@ def task(app, project, user):
 def invoice(app, user, project, test_client):
     """Create a test invoice."""
     from datetime import date
+
     from factories import InvoiceFactory
 
     invoice = InvoiceFactory(

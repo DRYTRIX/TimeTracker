@@ -1,8 +1,9 @@
 """Tests for Factur-X / ZUGFeRD: embedding CII XML in invoice PDFs."""
-from datetime import date, timedelta
-from decimal import Decimal
+
 import io
 import os
+from datetime import date, timedelta
+from decimal import Decimal
 
 import pytest
 
@@ -287,9 +288,10 @@ def test_verapdf_smoke_skipped_without_path():
     if not path or not os.path.isfile(path):
         pytest.skip("INVOICE_VERAPDF_PATH not set")
 
+    from reportlab.pdfgen import canvas
+
     from app.utils.invoice_validators import validate_pdfa_verapdf
     from app.utils.pdf_fonts import ensure_pdf_fonts_registered, resolve_font
-    from reportlab.pdfgen import canvas
 
     ensure_pdf_fonts_registered()
     buf = io.BytesIO()

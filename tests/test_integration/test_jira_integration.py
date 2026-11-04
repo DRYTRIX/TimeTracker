@@ -11,7 +11,7 @@ import pytest
 
 pytestmark = [pytest.mark.integration]
 
-from app.integrations.jira import JiraConnector, JIRA_ISSUE_KEY_PATTERN
+from app.integrations.jira import JIRA_ISSUE_KEY_PATTERN, JiraConnector
 from app.models import Integration, User
 
 
@@ -109,9 +109,7 @@ class TestJiraIssueKeyPattern:
 class TestJiraHandleWebhook:
     """Test webhook handling and sync triggering."""
 
-    def test_handle_webhook_valid_issue_updated_triggers_sync(
-        self, jira_integration
-    ):
+    def test_handle_webhook_valid_issue_updated_triggers_sync(self, jira_integration):
         """Valid issue_updated webhook with auto_sync triggers sync_issue."""
         connector = JiraConnector(jira_integration, None)
         payload = {
@@ -128,9 +126,7 @@ class TestJiraHandleWebhook:
         assert result.get("event_type") == "jira:issue_updated"
         mock_sync.assert_called_once_with("PROJ-1")
 
-    def test_handle_webhook_valid_issue_created_triggers_sync(
-        self, jira_integration
-    ):
+    def test_handle_webhook_valid_issue_created_triggers_sync(self, jira_integration):
         """Valid issue_created webhook with auto_sync triggers sync_issue."""
         connector = JiraConnector(jira_integration, None)
         payload = {
@@ -153,9 +149,7 @@ class TestJiraHandleWebhook:
         assert "Invalid webhook payload" in result["message"]
         mock_sync.assert_not_called()
 
-    def test_handle_webhook_malformed_payload_issue_not_dict(
-        self, jira_integration
-    ):
+    def test_handle_webhook_malformed_payload_issue_not_dict(self, jira_integration):
         """Payload with issue not a dict returns safe error."""
         connector = JiraConnector(jira_integration, None)
         payload = {"webhookEvent": "jira:issue_updated", "issue": "string"}
@@ -166,15 +160,11 @@ class TestJiraHandleWebhook:
         assert "issue" in result["message"].lower()
         mock_sync.assert_not_called()
 
-    def test_handle_webhook_malformed_payload_missing_issue_key(
-        self, jira_integration
-    ):
+    def test_handle_webhook_malformed_payload_missing_issue_key(self, jira_integration):
         """Payload with missing or empty issue key returns error."""
         connector = JiraConnector(jira_integration, None)
         with patch.object(connector, "sync_issue") as mock_sync:
-            result1 = connector.handle_webhook(
-                {"webhookEvent": "jira:issue_updated", "issue": {}}, {}
-            )
+            result1 = connector.handle_webhook({"webhookEvent": "jira:issue_updated", "issue": {}}, {})
             result2 = connector.handle_webhook(
                 {
                     "webhookEvent": "jira:issue_updated",
@@ -187,9 +177,7 @@ class TestJiraHandleWebhook:
         assert result2["success"] is False
         mock_sync.assert_not_called()
 
-    def test_handle_webhook_malformed_payload_invalid_key_format(
-        self, jira_integration
-    ):
+    def test_handle_webhook_malformed_payload_invalid_key_format(self, jira_integration):
         """Payload with invalid issue key format returns error."""
         connector = JiraConnector(jira_integration, None)
         payload = {
@@ -235,9 +223,7 @@ class TestJiraHandleWebhook:
         assert result.get("issue_key") == "PROJ-1"
         assert "not found" in result["message"].lower() or "Issue" in result["message"]
 
-    def test_handle_webhook_auto_sync_disabled_ack_only(
-        self, jira_integration_no_auto_sync
-    ):
+    def test_handle_webhook_auto_sync_disabled_ack_only(self, jira_integration_no_auto_sync):
         """When auto_sync is disabled, webhook is acknowledged but sync_issue not called."""
         connector = JiraConnector(jira_integration_no_auto_sync, None)
         payload = {
@@ -271,9 +257,7 @@ class TestJiraHandleWebhook:
 class TestJiraWebhookVerification:
     """Test Jira webhook signature verification when webhook_secret is configured."""
 
-    def test_handle_webhook_with_secret_and_valid_signature_accepted(
-        self, jira_integration_with_webhook_secret
-    ):
+    def test_handle_webhook_with_secret_and_valid_signature_accepted(self, jira_integration_with_webhook_secret):
         """When webhook_secret is set and signature is valid, webhook is accepted."""
         connector = JiraConnector(jira_integration_with_webhook_secret, None)
         payload = {
@@ -291,9 +275,7 @@ class TestJiraWebhookVerification:
         assert result.get("issue_key") == "PROJ-1"
         mock_sync.assert_called_once_with("PROJ-1")
 
-    def test_handle_webhook_with_secret_and_missing_signature_rejected(
-        self, jira_integration_with_webhook_secret
-    ):
+    def test_handle_webhook_with_secret_and_missing_signature_rejected(self, jira_integration_with_webhook_secret):
         """When webhook_secret is set but no signature provided, webhook is rejected."""
         connector = JiraConnector(jira_integration_with_webhook_secret, None)
         payload = {
@@ -307,9 +289,7 @@ class TestJiraWebhookVerification:
         assert "signature" in result["message"].lower()
         mock_sync.assert_not_called()
 
-    def test_handle_webhook_with_secret_and_wrong_signature_rejected(
-        self, jira_integration_with_webhook_secret
-    ):
+    def test_handle_webhook_with_secret_and_wrong_signature_rejected(self, jira_integration_with_webhook_secret):
         """When webhook_secret is set but signature is invalid, webhook is rejected."""
         connector = JiraConnector(jira_integration_with_webhook_secret, None)
         payload = {
@@ -318,9 +298,7 @@ class TestJiraWebhookVerification:
         }
         headers = {"X-Hub-Signature-256": "sha256=invalidwrongsignature"}
         with patch.object(connector, "sync_issue") as mock_sync:
-            result = connector.handle_webhook(
-                payload, headers, raw_body=json.dumps(payload).encode("utf-8")
-            )
+            result = connector.handle_webhook(payload, headers, raw_body=json.dumps(payload).encode("utf-8"))
 
         assert result["success"] is False
         assert "verification" in result["message"].lower() or "signature" in result["message"].lower()
@@ -428,9 +406,7 @@ class TestJiraWebhookRoute:
         data = response.get_json()
         assert data is not None and "error" in data
 
-    def test_post_jira_webhook_malformed_body_returns_500(
-        self, app, client, jira_integration
-    ):
+    def test_post_jira_webhook_malformed_body_returns_500(self, app, client, jira_integration):
         """POST to jira webhook with malformed or empty body returns 500 when no integration succeeds."""
         response = client.post(
             "/integrations/jira/webhook",
@@ -444,9 +420,7 @@ class TestJiraWebhookRoute:
             assert data is not None
             assert "results" in data or "success" in data
 
-    def test_post_jira_webhook_valid_payload_returns_200(
-        self, app, client, jira_integration
-    ):
+    def test_post_jira_webhook_valid_payload_returns_200(self, app, client, jira_integration):
         """POST to jira webhook with valid payload returns 200 when connector handles it."""
         with patch(
             "app.integrations.jira.JiraConnector.handle_webhook",

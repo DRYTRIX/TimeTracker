@@ -3,6 +3,7 @@ Tests for onboarding system
 """
 
 import pytest
+
 from app import db
 from app.models import User
 

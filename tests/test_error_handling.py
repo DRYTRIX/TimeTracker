@@ -8,6 +8,7 @@ import pytest
 pytestmark = pytest.mark.skip(reason="get_user_friendly_message function no longer exists in error_handlers module")
 
 from flask import jsonify
+
 from app import db
 from app.models import User
 from app.utils.error_handlers import register_error_handlers
@@ -121,8 +122,12 @@ def test_offline_queue_functionality():
             assert "queueForOffline" in content, "Offline queue should be implemented"
             assert "processOfflineQueue" in content, "Offline queue processing should exist"
             # Replay-safe: store method/body so POST/PUT replay correctly after JSON round-trip
-            assert "item.method" in content or "item.body" in content, "Offline queue should store method and body for replay"
-            assert "fetchOptions" in content and ("fetchOptions.body" in content or "body: item.body" in content), "Replay should use stored body"
+            assert (
+                "item.method" in content or "item.body" in content
+            ), "Offline queue should store method and body for replay"
+            assert "fetchOptions" in content and (
+                "fetchOptions.body" in content or "body: item.body" in content
+            ), "Replay should use stored body"
 
 
 @pytest.mark.unit
@@ -209,9 +214,7 @@ def test_error_handling_skips_toast_for_health_probe():
     """Health/status probes must not trigger the global error toast interceptor."""
     import os
 
-    error_file = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "app", "static", "error-handling-enhanced.js"
-    )
+    error_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "app", "static", "error-handling-enhanced.js")
     assert os.path.exists(error_file)
     with open(error_file, "r", encoding="utf-8") as f:
         content = f.read()

@@ -139,9 +139,7 @@ class Task(db.Model):
 
         for uid in normalized:
             if uid not in current:
-                self.assignee_links.append(
-                    TaskAssignee(user_id=uid, task_id=self.id if self.id is not None else None)
-                )
+                self.assignee_links.append(TaskAssignee(user_id=uid, task_id=self.id if self.id is not None else None))
 
         self.updated_at = now_in_app_timezone()
         if commit:

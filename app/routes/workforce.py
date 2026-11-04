@@ -93,7 +93,9 @@ def dashboard():
     except Exception:
         pass
     payroll_templates = PayrollExportTemplate.query.order_by(PayrollExportTemplate.name.asc()).all()
-    default_payroll_template = next((t for t in payroll_templates if t.is_default), payroll_templates[0] if payroll_templates else None)
+    default_payroll_template = next(
+        (t for t in payroll_templates if t.is_default), payroll_templates[0] if payroll_templates else None
+    )
 
     payroll_sync_logs = []
     if current_user.is_admin:
@@ -151,7 +153,9 @@ def payroll_sync_push():
 
     integration = Integration.query.filter_by(provider=provider, is_active=True).first()
     if not integration:
-        flash(_("No active %(provider)s integration found. Configure it under Integrations.", provider=provider), "error")
+        flash(
+            _("No active %(provider)s integration found. Configure it under Integrations.", provider=provider), "error"
+        )
         return redirect(url_for("integrations.list_integrations"))
 
     try:

@@ -97,7 +97,8 @@ class GitLabConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{base_url}/api/v4/user", headers={"Authorization": f"Bearer {data['access_token']}"},
+                    f"{base_url}/api/v4/user",
+                    headers={"Authorization": f"Bearer {data['access_token']}"},
                     timeout=(5, 30),
                 )
                 if user_response.status_code == 200:

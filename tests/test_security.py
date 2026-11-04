@@ -5,9 +5,9 @@ Tests authentication, authorization, and security vulnerabilities.
 
 import pytest
 from flask import session
-from app import db
-from app.models import User, Project, TimeEntry
 
+from app import db
+from app.models import Project, TimeEntry, User
 
 # ============================================================================
 # Authentication Tests
@@ -357,8 +357,8 @@ def test_oversized_input_rejection(authenticated_client, project):
 def test_invalid_email_format(app):
     """Test email validation."""
     with app.app_context():
-        from app.models import Client
         from app import db
+        from app.models import Client
 
         # Try to create client with invalid email
         client = Client(name="Test", email="not-an-email")
@@ -415,7 +415,6 @@ def test_cannot_create_invoice_with_negative_amount(app, authenticated_client, p
         # Note: There's no /api/invoices endpoint - invoices are created via form submission at /invoices/create
         # This test verifies the application doesn't crash with negative values
         # The actual validation happens in the form/route handler
-
         # Try to create invoice via the form endpoint
         response = authenticated_client.post(
             "/invoices/create",

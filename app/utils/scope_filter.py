@@ -102,9 +102,7 @@ def get_active_projects_for_user(user, *, status="active"):
     """Return projects visible to user (respects scope)."""
     from app.models import Project
 
-    query = Project.query.filter_by(status=status).order_by(
-        Project.last_used_at.desc().nullslast(), Project.name
-    )
+    query = Project.query.filter_by(status=status).order_by(Project.last_used_at.desc().nullslast(), Project.name)
     scope = apply_project_scope_to_model(Project, user)
     if scope is not None:
         query = query.filter(scope)

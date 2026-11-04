@@ -2,8 +2,10 @@
 Tests for version reading from setup.py
 """
 
-import pytest
 import re
+
+import pytest
+
 from app.config.analytics_defaults import _get_version_from_setup, get_analytics_config
 
 

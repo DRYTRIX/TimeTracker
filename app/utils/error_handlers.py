@@ -160,10 +160,10 @@ def register_error_handlers(app):
             from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 
             return safe_redirect(
-                    request.referrer,
-                    allow_absolute_same_host=True,
-                    fallback=url_for("main.dashboard"),
-                )
+                request.referrer,
+                allow_absolute_same_host=True,
+                fallback=url_for("main.dashboard"),
+            )
         except Exception:
             return (
                 render_template(

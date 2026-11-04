@@ -33,9 +33,7 @@ def postprocess_invoice_pdf_bytes(
     from app.utils.zugferd import embed_zugferd_xml_in_pdf
 
     want_pdfa3 = bool(getattr(settings, "invoices_pdfa3_compliant", False))
-    out_pdf, embed_err = embed_zugferd_xml_in_pdf(
-        pdf_bytes, invoice, settings, pdfa3=want_pdfa3
-    )
+    out_pdf, embed_err = embed_zugferd_xml_in_pdf(pdf_bytes, invoice, settings, pdfa3=want_pdfa3)
     if embed_err:
         # When pdfa3 was requested, distinguish OutputIntent-style failures if message says so
         if want_pdfa3 and "PDF/A" in (embed_err or ""):

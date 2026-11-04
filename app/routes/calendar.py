@@ -9,10 +9,10 @@ from app import db
 from app.models import CalendarEvent, CalendarIntegration, Client, Project, Task, TimeEntry
 from app.services.calendar_integration_service import CalendarIntegrationService
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_helpers import module_enabled
 from app.utils.permissions import check_permission
 from app.utils.timezone import now_in_app_timezone
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 calendar_bp = Blueprint("calendar", __name__)
 

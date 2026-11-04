@@ -2,11 +2,13 @@
 Tests for installation configuration and setup
 """
 
-import os
 import json
-import pytest
+import os
 from unittest import mock
 from unittest.mock import patch
+
+import pytest
+
 from app.utils.installation import InstallationConfig, get_installation_config
 
 

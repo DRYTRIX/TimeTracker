@@ -1,13 +1,15 @@
 """Tests for Payment routes"""
 
-import pytest
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+import pytest
+from factories import ClientFactory, InvoiceFactory, PaymentFactory, ProjectFactory, UserFactory
 from flask import url_for
-from app import db, create_app
-from app.models import Payment, Invoice, User, Project, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, PaymentFactory
 from sqlalchemy.pool import StaticPool
+
+from app import create_app, db
+from app.models import Client, Invoice, Payment, Project, User
 
 
 @pytest.fixture

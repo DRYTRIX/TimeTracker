@@ -1,9 +1,11 @@
-import pytest
-from app import db
-from app.models import User, Project, TimeEntry, Settings, Client
-from factories import TimeEntryFactory
 from datetime import datetime, timedelta
 from decimal import Decimal
+
+import pytest
+from factories import TimeEntryFactory
+
+from app import db
+from app.models import Client, Project, Settings, TimeEntry, User
 
 # Note: All fixtures are now imported from conftest.py
 # No duplicate fixtures needed here
@@ -242,6 +244,7 @@ def test_testing_config_respects_database_url():
     Locally without DATABASE_URL, it will use SQLite.
     """
     import os
+
     from app.config import TestingConfig
 
     config = TestingConfig()

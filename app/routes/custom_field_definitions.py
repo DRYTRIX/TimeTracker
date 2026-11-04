@@ -102,7 +102,9 @@ def edit_custom_field_definition(definition_id):
         is_mandatory = request.form.get("is_mandatory") == "on"
         is_active = request.form.get("is_active") == "on"
         order = request.form.get("order", "0", type=int)
-        entity_type = (request.form.get("entity_type") or getattr(definition, "entity_type", None) or "client").strip().lower()
+        entity_type = (
+            (request.form.get("entity_type") or getattr(definition, "entity_type", None) or "client").strip().lower()
+        )
         if entity_type not in ALLOWED_CUSTOM_FIELD_ENTITY_TYPES:
             flash(_("Invalid entity type"), "error")
             return render_template("admin/custom_field_definitions/form.html", definition=definition)

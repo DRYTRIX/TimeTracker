@@ -3,17 +3,26 @@ Tests for enhanced UI features
 """
 
 import os
+from pathlib import Path
+
 from flask import url_for
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+TEMPLATES_DIR = REPO_ROOT / "app" / "templates"
+
+# Allowlist for any intentional bootstrap.Modal leftovers (none expected).
+# Add relative paths here with a comment explaining why if one must remain.
+BOOTSTRAP_MODAL_ALLOWLIST = set()
 
 
 class TestEnhancedUI:
     """Test enhanced UI components and features"""
 
     def test_enhanced_css_loaded(self, authenticated_client):
-        """Test that enhanced UI CSS is loaded"""
+        """Test that compiled design-system CSS is loaded (enhanced-ui.css merged into input.css)."""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"enhanced-ui.css" in response.data
+        assert b"output.css" in response.data
 
     def test_enhanced_js_loaded(self, authenticated_client):
         """Test that enhanced UI JavaScript is loaded"""
@@ -48,7 +57,9 @@ class TestEnhancedUI:
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
         assert b"core-d" in response.data
-        assert b"setSubmitButtonLoading" in response.data
+        # Bundled/minified pages may mangle the name; assert on source.
+        source = Path("app/static/enhanced-ui.js").read_text(encoding="utf-8")
+        assert "setSubmitButtonLoading" in source
 
     def test_filter_ajax_error_toast_message_in_enhanced_ui(self, authenticated_client):
         """Test that enhanced-ui.js shows consistent error toast on filter failure"""
@@ -56,7 +67,20 @@ class TestEnhancedUI:
         assert response.status_code == 200
         # enhanced-ui.js ships in the "core-d" bundle.
         assert b"core-d" in response.data
-        assert b"Failed to filter results" in response.data
+        source = Path("app/static/enhanced-ui.js").read_text(encoding="utf-8")
+        assert "Failed to filter results" in source
+
+    def test_no_bootstrap_modal_in_templates(self):
+        """Templates must not use bootstrap.Modal (use showConfirm / native dialogs)."""
+        offenders = []
+        for path in TEMPLATES_DIR.rglob("*.html"):
+            rel = path.relative_to(REPO_ROOT).as_posix()
+            if rel in BOOTSTRAP_MODAL_ALLOWLIST:
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            if "bootstrap.Modal" in text:
+                offenders.append(rel)
+        assert offenders == [], f"bootstrap.Modal found in: {offenders}"
 
 
 class TestComponentLibrary:
@@ -64,8 +88,6 @@ class TestComponentLibrary:
 
     def test_ui_components_file_exists(self):
         """Test that ui.html component file exists"""
-        import os
-
         component_path = "app/templates/components/ui.html"
         assert os.path.exists(component_path)
 
@@ -205,13 +227,13 @@ class TestEnhancedTables:
         """Test projects table has enhanced attributes"""
         response = authenticated_client.get(url_for("projects.list_projects"))
         assert response.status_code == 200
-        assert b"data-enhanced" in response.data or b"Projects" in response.data
+        assert b"data-table-enhanced" in response.data
 
     def test_tasks_table_enhanced(self, authenticated_client):
         """Test tasks table has enhanced attributes"""
         response = authenticated_client.get(url_for("tasks.list_tasks"))
         assert response.status_code == 200
-        assert b"data-enhanced" in response.data or b"Tasks" in response.data
+        assert b"data-table-enhanced" in response.data or b"Tasks" in response.data
 
 
 class TestPWA:
@@ -219,15 +241,11 @@ class TestPWA:
 
     def test_service_worker_exists(self):
         """Test that service worker source file exists"""
-        import os
-
         sw_path = "app/static/js/sw.js"
         assert os.path.exists(sw_path)
 
     def test_manifest_exists(self):
         """Test that manifest file exists"""
-        import os
-
         manifest_path = "app/static/manifest.json"
         assert os.path.exists(manifest_path)
 
@@ -238,11 +256,11 @@ class TestPWA:
         assert b"manifest.json" in response.data
 
     def test_pwa_meta_tags(self, authenticated_client):
-        """Test that PWA meta tags are present"""
+        """Test that PWA meta tags use brand primary (#4F46E5)"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"theme-color" in response.data
-        assert b"#4F46E5" in response.data
+        assert b'name="theme-color"' in response.data
+        assert b'content="#4F46E5"' in response.data
 
 
 class TestAccessibility:
@@ -252,14 +270,16 @@ class TestAccessibility:
         """Test that skip to content link is present"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"Skip to content" in response.data or b"dashboard" in response.data.lower()
+        assert b"Skip to content" in response.data
+        assert b"mainContentAnchor" in response.data
 
     def test_aria_labels_present(self, authenticated_client):
-        """Test that ARIA labels are present"""
+        """Test that ARIA labels are present on key chrome"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        # Check for some common ARIA labels
-        assert b"aria-label" in response.data or response.status_code == 200
+        assert b"aria-label" in response.data
+        # Main landmark used by skip link
+        assert b'id="mainContentAnchor"' in response.data
 
 
 class TestChartJS:
@@ -272,10 +292,10 @@ class TestChartJS:
         assert b"chart.js" in response.data or b"Chart" in response.data
 
     def test_chart_manager_loaded(self, authenticated_client):
-        """Test that chart manager is loaded"""
+        """Test that chart manager is loaded via core bundle"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"charts.js" in response.data or response.status_code == 200
+        assert b"core-d" in response.data
 
 
 class TestFilterSystem:
@@ -285,7 +305,7 @@ class TestFilterSystem:
         """Test that filter forms have data-filter-form attribute"""
         response = authenticated_client.get(url_for("projects.list_projects"))
         assert response.status_code == 200
-        assert b"data-filter-form" in response.data or b"Projects" in response.data
+        assert b"data-filter-form" in response.data
 
 
 class TestBreadcrumbs:
@@ -319,38 +339,36 @@ class TestResponsiveDesign:
         """Test that mobile navigation button exists"""
         response = authenticated_client.get(url_for("main.dashboard"))
         assert response.status_code == 200
-        assert b"mobileSidebarBtn" in response.data or b"lg:hidden" in response.data or response.status_code == 200
+        assert b"mobileSidebarBtn" in response.data or b"lg:hidden" in response.data
 
 
 class TestStaticFiles:
     """Test that all new static files exist"""
 
-    def test_enhanced_ui_css_exists(self):
-        """Test enhanced-ui.css exists"""
-        import os
+    def test_design_system_css_exists(self):
+        """Test canonical design-system source CSS exists (enhanced-ui consolidated here)."""
+        assert os.path.exists("app/static/src/input.css")
+        # Compiled Tailwind output (not a legacy enhanced-ui.css file)
+        assert os.path.exists("app/static/dist/output.css")
 
-        assert os.path.exists("app/static/enhanced-ui.css")
+    def test_primary_brand_color_in_input_css(self):
+        """Brand primary in source CSS is #4F46E5"""
+        content = Path("app/static/src/input.css").read_text(encoding="utf-8")
+        assert "#4F46E5" in content
+        assert "--color-primary: #4F46E5" in content or "--brand-primary: #4F46E5" in content
 
     def test_enhanced_ui_js_exists(self):
         """Test enhanced-ui.js exists"""
-        import os
-
         assert os.path.exists("app/static/enhanced-ui.js")
 
     def test_charts_js_exists(self):
         """Test charts.js exists"""
-        import os
-
         assert os.path.exists("app/static/charts.js")
 
     def test_onboarding_js_exists(self):
         """Test onboarding.js exists"""
-        import os
-
         assert os.path.exists("app/static/onboarding.js")
 
     def test_service_worker_js_exists(self):
         """Test PWA service worker source exists"""
-        import os
-
         assert os.path.exists("app/static/js/sw.js")

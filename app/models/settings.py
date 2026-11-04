@@ -504,7 +504,9 @@ class Settings(db.Model):
         if enabled is None:
             enabled = bool(cfg("AI_ENABLED", False))
 
-        routing_strategy = (getattr(self, "ai_routing_strategy", "") or cfg("AI_ROUTING_STRATEGY", "") or "").strip().lower()
+        routing_strategy = (
+            (getattr(self, "ai_routing_strategy", "") or cfg("AI_ROUTING_STRATEGY", "") or "").strip().lower()
+        )
         if routing_strategy not in ROUTING_STRATEGIES:
             routing_strategy = ""
 
@@ -695,14 +697,8 @@ class Settings(db.Model):
             "invoices_validate_export": getattr(self, "invoices_validate_export", False),
             "invoices_verapdf_path": getattr(self, "invoices_verapdf_path", "") or "",
             "invoices_default_vat_category": getattr(self, "invoices_default_vat_category", "S") or "S",
-            "invoices_default_vat_exemption_reason": getattr(
-                self, "invoices_default_vat_exemption_reason", ""
-            )
-            or "",
-            "invoices_default_vat_exemption_code": getattr(
-                self, "invoices_default_vat_exemption_code", ""
-            )
-            or "",
+            "invoices_default_vat_exemption_reason": getattr(self, "invoices_default_vat_exemption_reason", "") or "",
+            "invoices_default_vat_exemption_code": getattr(self, "invoices_default_vat_exemption_code", "") or "",
             "invoice_pdf_template_html": self.invoice_pdf_template_html,
             "invoice_pdf_template_css": self.invoice_pdf_template_css,
             "invoice_pdf_design_json": self.invoice_pdf_design_json,

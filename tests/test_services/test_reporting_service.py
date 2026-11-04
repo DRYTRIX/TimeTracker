@@ -2,11 +2,13 @@
 Tests for ReportingService.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from app.services import ReportingService
-from app.models import TimeEntry, Project, User
+
+import pytest
+
 from app import db
+from app.models import Project, TimeEntry, User
+from app.services import ReportingService
 
 
 @pytest.mark.unit

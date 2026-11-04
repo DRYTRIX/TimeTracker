@@ -46,7 +46,9 @@ def is_safe_next_url(
     if not allowed_prefixes:
         return True
     return any(
-        candidate == prefix or candidate.startswith(prefix + "?") or candidate.startswith(prefix + "#")
+        candidate == prefix
+        or candidate.startswith(prefix + "?")
+        or candidate.startswith(prefix + "#")
         or candidate.startswith(prefix + "/")
         for prefix in allowed_prefixes
     )

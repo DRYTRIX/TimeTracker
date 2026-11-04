@@ -58,11 +58,7 @@ class ApiToken(db.Model):
 
         pepper = ""
         if has_app_context():
-            pepper = (
-                current_app.config.get("API_TOKEN_PEPPER")
-                or current_app.config.get("SECRET_KEY")
-                or ""
-            )
+            pepper = current_app.config.get("API_TOKEN_PEPPER") or current_app.config.get("SECRET_KEY") or ""
         if isinstance(pepper, bytes):
             return pepper
         return str(pepper or "timetracker-api-token").encode("utf-8")

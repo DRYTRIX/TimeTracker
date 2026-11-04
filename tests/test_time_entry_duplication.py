@@ -5,12 +5,13 @@ Tests the duplication functionality that allows users to quickly copy
 previous time entries with pre-filled data.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from flask import url_for
-from app import db
-from app.models import TimeEntry, User, Project, Task
 
+import pytest
+from flask import url_for
+
+from app import db
+from app.models import Project, Task, TimeEntry, User
 
 # ============================================================================
 # Fixtures

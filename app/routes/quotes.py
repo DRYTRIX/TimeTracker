@@ -9,10 +9,10 @@ from app import db, log_event, track_event
 from app.models import Client, Invoice, Project, Quote, QuoteAttachment, QuoteImage, QuoteItem, QuoteTemplate
 from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.quote_access import quote_list_scope_user_id
 from app.utils.safe_redirect import safe_redirect, safe_redirect_target
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 quotes_bp = Blueprint("quotes", __name__)
 

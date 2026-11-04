@@ -2,8 +2,9 @@
 
 import pytest
 from flask import url_for
-from app.models import AuditLog, User, Project
+
 from app import db
+from app.models import AuditLog, Project, User
 
 
 class TestAuditLogRoutes:

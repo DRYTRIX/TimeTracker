@@ -9,11 +9,13 @@ This module tests:
 - User permissions and access control
 """
 
-import pytest
 from datetime import datetime
 from decimal import Decimal
+
+import pytest
+
 from app import create_app, db
-from app.models import User, Project, Client, UserFavoriteProject
+from app.models import Client, Project, User, UserFavoriteProject
 
 
 @pytest.fixture

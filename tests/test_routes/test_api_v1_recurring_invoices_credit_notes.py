@@ -7,7 +7,8 @@ import pytest
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import date, timedelta
-from app.models import RecurringInvoice, CreditNote, Invoice, ApiToken
+
+from app.models import ApiToken, CreditNote, Invoice, RecurringInvoice
 
 
 class TestAPIRecurringInvoicesCreditNotes:

@@ -1,6 +1,7 @@
 """Tests for project inactive status functionality"""
 
 import pytest
+
 from app.models import Project
 
 
@@ -163,8 +164,8 @@ class TestTaskDeletion:
     @pytest.mark.routes
     def test_task_list_has_bulk_delete_features(self, admin_authenticated_client, app, project, admin_user):
         """Test that task list shows bulk delete features"""
-        from app.models import Task
         from app import db
+        from app.models import Task
 
         task = Task(name="Test Task", project_id=project.id, created_by=admin_user.id)
         db.session.add(task)

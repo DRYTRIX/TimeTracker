@@ -3,12 +3,13 @@ Test suite for Weekly Time Goals feature.
 Tests model creation, calculations, relationships, routes, and business logic.
 """
 
+from datetime import date, datetime, timedelta
+
 import pytest
-from datetime import datetime, timedelta, date
-from app.models import WeeklyTimeGoal, TimeEntry, User, Project
-from app import db
 from factories import TimeEntryFactory
 
+from app import db
+from app.models import Project, TimeEntry, User, WeeklyTimeGoal
 
 # ============================================================================
 # WeeklyTimeGoal Model Tests
@@ -527,9 +528,7 @@ def test_weekly_goal_exclude_weekends_creation(app, user):
     """Test weekly goal creation with exclude_weekends=True."""
     with app.app_context():
         week_start = date.today() - timedelta(days=date.today().weekday())
-        goal = WeeklyTimeGoal(
-            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
-        )
+        goal = WeeklyTimeGoal(user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True)
         db.session.add(goal)
         db.session.commit()
 
@@ -546,9 +545,7 @@ def test_weekly_goal_days_remaining_exclude_weekends_monday(app, user):
     with app.app_context():
         # Create a goal starting on Monday
         week_start = date.today() - timedelta(days=date.today().weekday())
-        goal = WeeklyTimeGoal(
-            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
-        )
+        goal = WeeklyTimeGoal(user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True)
         db.session.add(goal)
         db.session.commit()
 
@@ -575,9 +572,7 @@ def test_weekly_goal_average_hours_per_day_exclude_weekends(app, user):
     """Test average_hours_per_day calculation with exclude_weekends=True."""
     with app.app_context():
         week_start = date.today() - timedelta(days=date.today().weekday())
-        goal = WeeklyTimeGoal(
-            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
-        )
+        goal = WeeklyTimeGoal(user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True)
         db.session.add(goal)
         db.session.commit()
 
@@ -603,9 +598,7 @@ def test_weekly_goal_days_remaining_excludes_weekends(app, user):
         # Create a goal for a specific week (Monday to Friday)
         # Use a known Monday date
         week_start = date(2024, 1, 1)  # Monday, January 1, 2024
-        goal = WeeklyTimeGoal(
-            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
-        )
+        goal = WeeklyTimeGoal(user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True)
         db.session.add(goal)
         db.session.commit()
 
@@ -638,9 +631,7 @@ def test_weekly_goal_actual_hours_excludes_weekends(app, user, project):
     """Test that actual_hours calculation excludes weekends when exclude_weekends=True."""
     with app.app_context():
         week_start = date.today() - timedelta(days=date.today().weekday())
-        goal = WeeklyTimeGoal(
-            user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True
-        )
+        goal = WeeklyTimeGoal(user_id=user.id, target_hours=30.0, week_start_date=week_start, exclude_weekends=True)
         db.session.add(goal)
         db.session.commit()
 

@@ -1,10 +1,11 @@
-import pytest
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+import pytest
+from factories import ClientFactory, InvoiceFactory, ProjectFactory, TimeEntryFactory
+
 from app import db
-from app.models import Client, Project, Invoice, TimeEntry
-from factories import TimeEntryFactory, ClientFactory, ProjectFactory, InvoiceFactory
+from app.models import Client, Invoice, Project, TimeEntry
 
 
 @pytest.mark.smoke

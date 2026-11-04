@@ -1,11 +1,12 @@
-import pytest
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
+import pytest
+from factories import ClientFactory, InvoiceFactory, InvoiceItemFactory, PaymentFactory, ProjectFactory, UserFactory
+
 from app import db
-from app.models import User, Project, Invoice, InvoiceItem, Settings, Client, ExtraGood, ClientPrepaidConsumption
-from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory, PaymentFactory
+from app.models import Client, ClientPrepaidConsumption, ExtraGood, Invoice, InvoiceItem, Project, Settings, User
 
 
 @pytest.fixture
@@ -369,8 +370,9 @@ def test_generate_from_time_page_renders_lists(app, client, user, project):
     db.session.commit()
 
     # Add an unbilled time entry and a project cost
-    from app.models import TimeEntry, ProjectCost
     from factories import TimeEntryFactory
+
+    from app.models import ProjectCost, TimeEntry
 
     start = datetime.utcnow() - timedelta(hours=2)
     end = datetime.utcnow()
@@ -487,8 +489,9 @@ def test_generate_from_time_links_expenses_without_creating_items(app, client, u
 @pytest.mark.routes
 def test_generate_from_time_per_entry_lines(app, client, user, project):
     """Two entries on the same task should create separate lines when per_entry_lines is enabled."""
-    from app.models import Task
     from factories import TimeEntryFactory
+
+    from app.models import Task
 
     with client.session_transaction() as sess:
         sess["_user_id"] = str(user.id)
@@ -553,8 +556,9 @@ def test_generate_from_time_per_entry_lines(app, client, user, project):
 @pytest.mark.routes
 def test_unbilled_excludes_entries_on_current_invoice(app, client, user, project):
     """Entries already linked to the current invoice should not appear in the picker."""
-    from app.services import InvoiceService
     from factories import TimeEntryFactory
+
+    from app.services import InvoiceService
 
     cl = ClientFactory(name="Current Inv Client", email="cur-inv@test.com")
     db.session.commit()
@@ -601,8 +605,9 @@ def test_unbilled_excludes_entries_on_current_invoice(app, client, user, project
 @pytest.mark.routes
 def test_unbilled_diagnostics_project_mismatch(app, client, user, project):
     """Diagnostics should report unbilled hours on other client projects."""
-    from app.services import InvoiceService
     from factories import TimeEntryFactory
+
+    from app.services import InvoiceService
 
     cl = ClientFactory(name="Mismatch Client", email="mismatch@test.com")
     db.session.commit()
@@ -638,9 +643,10 @@ def test_unbilled_diagnostics_project_mismatch(app, client, user, project):
 @pytest.mark.routes
 def test_generate_from_time_applies_prepaid_hours(app, client, user):
     """Ensure prepaid hours are consumed before billing when generating invoice items."""
+    from factories import TimeEntryFactory
+
     from app import db
     from app.models import TimeEntry
-    from factories import TimeEntryFactory
 
     # Authenticate
     with client.session_transaction() as sess:
@@ -1024,6 +1030,7 @@ def test_invoice_sorted_payments_property(app, sample_invoice, sample_user):
 def test_invoice_sorted_payments_with_same_date(app, sample_invoice, sample_user):
     """Test that sorted_payments handles payments with same payment_date correctly."""
     from unittest.mock import patch
+
     from app.models.payments import Payment
 
     # Deterministic created_at ordering without time.sleep (freezegun incompatible with Py3.14)
@@ -1538,6 +1545,7 @@ def test_invoice_deletion_cascades_to_extra_goods(app, sample_invoice, sample_us
 def test_invoice_deletion_cascades_to_payments(app, sample_invoice, sample_user):
     """Test that deleting an invoice also deletes its payments (cascade)."""
     from factories import PaymentFactory
+
     from app.models.payments import Payment
 
     # Add payments to invoice

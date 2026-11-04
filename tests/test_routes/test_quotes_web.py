@@ -132,17 +132,13 @@ def test_send_quote_email_missing_recipient_redirects_for_form_post(
     assert f"/quotes/{quote.id}" in (resp.headers.get("Location") or "")
 
 
-def test_send_quote_email_success_with_real_util_return_shape(
-    admin_authenticated_client, quote, app
-):
+def test_send_quote_email_success_with_real_util_return_shape(admin_authenticated_client, quote, app):
     """Regression #652: route must handle send_quote_email's 2-tuple return."""
     with app.app_context():
         send_url = url_for("quotes.send_quote_email", quote_id=quote.id)
         app.config["MAIL_DEFAULT_SENDER"] = "noreply@test.com"
 
-    with patch("app.utils.pdf_generator.QuotePDFGenerator") as mock_pdf_gen, patch(
-        "app.mail.send"
-    ) as mock_mail_send:
+    with patch("app.utils.pdf_generator.QuotePDFGenerator") as mock_pdf_gen, patch("app.mail.send") as mock_mail_send:
         mock_instance = MagicMock()
         mock_instance.generate_pdf.return_value = b"fake_pdf_bytes"
         mock_pdf_gen.return_value = mock_instance

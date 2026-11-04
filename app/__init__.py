@@ -316,11 +316,7 @@ def create_app(config=None):
     except Exception:
         eventlet_patched = False
 
-    if (
-        eventlet_patched
-        and db_uri.startswith("postgresql")
-        and os.getenv("TT_BOOTSTRAP_MODE") != "migrate"
-    ):
+    if eventlet_patched and db_uri.startswith("postgresql") and os.getenv("TT_BOOTSTRAP_MODE") != "migrate":
         engine_opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
         # idle_in_transaction defaults to 0 (disabled): scheduler jobs often hold
         # a session open while calling external APIs; a short timeout aborts them.
@@ -347,9 +343,7 @@ def create_app(config=None):
 
             psycogreen.eventlet.patch_psycopg()
         except Exception as exc:
-            app.logger.warning(
-                "psycopg2/eventlet patch skipped (%s); DB calls may block the worker", exc
-            )
+            app.logger.warning("psycopg2/eventlet patch skipped (%s); DB calls may block the worker", exc)
 
     # Initialize extensions
     db.init_app(app)
@@ -483,9 +477,7 @@ def create_app(config=None):
                     except Exception:
                         logger.debug("send_base_first_seen failed", exc_info=True)
             else:
-                app.logger.info(
-                    "BackgroundScheduler not started (SCHEDULER_ENABLED but leadership lock not acquired)"
-                )
+                app.logger.info("BackgroundScheduler not started (SCHEDULER_ENABLED but leadership lock not acquired)")
         elif not scheduler_enabled:
             app.logger.info("BackgroundScheduler disabled via SCHEDULER_ENABLED=false")
 
@@ -864,9 +856,7 @@ def create_app(config=None):
                 response.headers["Access-Control-Allow-Origin"] = origin
                 response.headers["Vary"] = "Origin"
                 response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-                response.headers["Access-Control-Allow-Headers"] = (
-                    "Authorization, Content-Type, Accept, X-Request-ID"
-                )
+                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Request-ID"
                 response.headers["Access-Control-Max-Age"] = "600"
             return response
 
@@ -1095,9 +1085,7 @@ def create_app(config=None):
                 if cors_origin_allowed(origin, app):
                     response.headers["Access-Control-Allow-Origin"] = origin
                     response.headers["Vary"] = "Origin"
-                    response.headers["Access-Control-Allow-Methods"] = (
-                        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-                    )
+                    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
                     response.headers["Access-Control-Allow-Headers"] = (
                         "Authorization, Content-Type, Accept, X-Request-ID"
                     )
@@ -1582,8 +1570,8 @@ def create_app(config=None):
         if expected:
             provided = (request.headers.get("X-Metrics-Token") or request.args.get("token") or "").strip()
             # compare_digest requires equal length; unequal => unauthorized
-            authorized = bool(provided) and len(provided) == len(expected) and _secrets.compare_digest(
-                provided, expected
+            authorized = (
+                bool(provided) and len(provided) == len(expected) and _secrets.compare_digest(provided, expected)
             )
             if not authorized:
                 abort(401)

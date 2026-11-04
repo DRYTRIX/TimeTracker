@@ -8,9 +8,11 @@ pytestmark = [pytest.mark.unit, pytest.mark.models]
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+from factories import ExpenseCategoryFactory, ExpenseFactory, UserFactory
+
 from app import db
-from app.models import ExpenseCategory, Expense, User
-from factories import UserFactory, ExpenseFactory, ExpenseCategoryFactory
+from app.models import Expense, ExpenseCategory, User
 
 
 @pytest.fixture

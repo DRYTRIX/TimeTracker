@@ -8,7 +8,6 @@ import pytest
 from app import db
 from app.models import User
 
-
 AUDIT_GET_ROUTES = [
     "/activity",
     "/expenses",

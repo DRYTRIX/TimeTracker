@@ -1,13 +1,14 @@
 """Smoke tests for Payment tracking feature"""
 
-import pytest
 from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
+import pytest
+from factories import ClientFactory, PaymentFactory, ProjectFactory, UserFactory
+
 from app import db
-from app.models import Payment, Invoice, User, Project, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, PaymentFactory
+from app.models import Client, Invoice, Payment, Project, User
 
 
 @pytest.fixture

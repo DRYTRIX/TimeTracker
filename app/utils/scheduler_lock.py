@@ -66,8 +66,7 @@ def try_acquire_scheduler_leadership(app) -> bool:
 
         conn.close()
         logger.info(
-            "Scheduler leadership lock held by another process (key=%s); "
-            "skipping BackgroundScheduler start",
+            "Scheduler leadership lock held by another process (key=%s); " "skipping BackgroundScheduler start",
             SCHEDULER_ADVISORY_LOCK_KEY,
         )
         return False

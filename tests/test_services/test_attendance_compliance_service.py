@@ -60,9 +60,7 @@ class TestAttendanceComplianceService:
             svc.clock_out(compliance_user.id)
 
             today = date.today()
-            day = DailyAttendanceRecord.query.filter_by(
-                user_id=compliance_user.id, work_date=today
-            ).first()
+            day = DailyAttendanceRecord.query.filter_by(user_id=compliance_user.id, work_date=today).first()
             assert day is not None
             assert (day.total_break_seconds or 0) >= 0
 
@@ -88,9 +86,7 @@ class TestAttendanceComplianceService:
             count = svc.sync_time_off_request(req)
             assert count == 1
 
-            day = DailyAttendanceRecord.query.filter_by(
-                user_id=compliance_user.id, work_date=date.today()
-            ).first()
+            day = DailyAttendanceRecord.query.filter_by(user_id=compliance_user.id, work_date=date.today()).first()
             assert day is not None
             assert day.status == AttendanceDayStatus.ABSENT
 
@@ -202,9 +198,7 @@ class TestAttendanceComplianceService:
             review = svc.review_correction(corr["correction"].id, admin.id, approve=True)
             assert review["success"] is True
 
-            day = DailyAttendanceRecord.query.filter_by(
-                user_id=compliance_user.id, work_date=work_date
-            ).first()
+            day = DailyAttendanceRecord.query.filter_by(user_id=compliance_user.id, work_date=work_date).first()
             assert day is not None
             assert day.work_periods.count() == 1
             period = day.work_periods.first()

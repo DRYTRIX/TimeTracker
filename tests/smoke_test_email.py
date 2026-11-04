@@ -57,11 +57,11 @@ class TestEmailSmokeTests:
         """Smoke test: Email utilities can be imported"""
         try:
             from app.utils.email import (
-                send_email,
                 check_email_configuration,
-                send_test_email,
-                send_invoice_template_test_email,
                 init_mail,
+                send_email,
+                send_invoice_template_test_email,
+                send_test_email,
             )
 
             # If we can import, test passes
@@ -144,8 +144,9 @@ class TestEmailFeatureIntegrity:
 
     def test_all_email_functions_have_docstrings(self):
         """Verify all email functions have proper documentation"""
-        from app.utils import email
         import inspect
+
+        from app.utils import email
 
         functions = ["send_email", "check_email_configuration", "send_test_email", "init_mail"]
 
@@ -156,8 +157,9 @@ class TestEmailFeatureIntegrity:
 
     def test_email_routes_have_proper_decorators(self):
         """Verify email routes have proper authentication decorators"""
-        from app.routes import admin
         import inspect
+
+        from app.routes import admin
 
         # Get the email_support function
         email_support = getattr(admin, "email_support", None)

@@ -3,9 +3,10 @@ Tests for CommentService.
 """
 
 import pytest
-from app.services import CommentService
-from app.repositories import CommentRepository, ProjectRepository
+
 from app.models import Comment, Project
+from app.repositories import CommentRepository, ProjectRepository
+from app.services import CommentService
 
 
 class TestCommentService:

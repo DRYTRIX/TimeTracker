@@ -1,8 +1,13 @@
 [flake8]
 max-line-length = 120
 max-complexity = 10
-# C901=complexity, E501=line length, F401=unused import, E402=import not at top,
-# F541=f-string no placeholder, E712=comparison to True/False, F841=unused variable, E741=ambiguous name,
-# F811=redefinition (e.g. import inside function), W293=blank line whitespace, E203=whitespace before ':'
-extend-ignore = C901, E501, F401, E402, F541, E712, F841, E741, F811, W293, E203
-exclude = .git,__pycache__,migrations,.venv,venv,build,dist
+# Single source of truth for flake8 (CI and pre-commit both call plain `flake8`).
+# C901=complexity (legacy tree; ratchet separately), E501=line length (black handles),
+# E128=continuation indent (conflicts with black hanging indent),
+# E203=whitespace before ':' (black), W503=line break before binary op (black),
+# F401=unused import, E402=import not at top, F541=f-string no placeholder,
+# E712=comparison to True/False, F841=unused variable, E741=ambiguous name,
+# F811=redefinition (e.g. import inside function), W293=blank line whitespace,
+# E303=too many blank lines (legacy modules; black cleans new code).
+extend-ignore = C901, E501, E128, E203, W503, F401, E402, F541, E712, F841, E741, F811, W293, E303
+exclude = .git,__pycache__,migrations,.venv,venv,build,dist,node_modules,htmlcov,.pytest_cache

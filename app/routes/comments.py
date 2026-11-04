@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
-from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
@@ -10,6 +9,7 @@ from werkzeug.utils import secure_filename
 from app import db, log_event, track_event
 from app.models import Comment, CommentAttachment, Project, Quote, Task
 from app.utils.db import safe_commit
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 
 comments_bp = Blueprint("comments", __name__)
 
@@ -63,7 +63,9 @@ def create_comment():
                 or (quote_id and parent_comment.quote_id != quote_id)
             ):
                 flash(_("Invalid parent comment"), "error")
-                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
+                return safe_redirect(
+                    request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")
+                )
 
         # Create the comment
         comment = Comment(

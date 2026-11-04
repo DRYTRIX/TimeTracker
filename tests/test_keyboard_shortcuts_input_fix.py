@@ -7,8 +7,9 @@ when typing in input fields, textareas, or other editable elements.
 
 import pytest
 from flask import url_for
+
 from app import db
-from app.models import User, Project, Client
+from app.models import Client, Project, User
 
 
 class TestKeyboardShortcutsInputFix:

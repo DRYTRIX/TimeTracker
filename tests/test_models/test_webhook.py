@@ -5,8 +5,9 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.models]
 
 from datetime import datetime, timedelta
+
 from app import db
-from app.models import Webhook, WebhookDelivery, User
+from app.models import User, Webhook, WebhookDelivery
 from app.utils.timezone import now_in_app_timezone
 
 

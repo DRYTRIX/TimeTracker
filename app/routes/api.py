@@ -32,9 +32,9 @@ from app.services.llm_service import AIServiceError, LLMService
 from app.services.time_tracking_service import TimeTrackingService
 from app.utils.api_deprecation import deprecated_session_api
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.scope_filter import apply_client_scope, apply_project_scope, user_can_access_project
 from app.utils.timezone import convert_app_datetime_to_user, parse_local_datetime, utc_to_local
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 api_bp = Blueprint("api", __name__)
 
@@ -376,13 +376,10 @@ def timer_status():
 def timer_notes_suggestions():
     """Recent time-entry notes for description autocomplete, optionally scoped to a project."""
     project_id = request.args.get("project_id", type=int)
-    q = (
-        db.session.query(TimeEntry.notes)
-        .filter(
-            TimeEntry.user_id == current_user.id,
-            TimeEntry.notes.isnot(None),
-            TimeEntry.notes != "",
-        )
+    q = db.session.query(TimeEntry.notes).filter(
+        TimeEntry.user_id == current_user.id,
+        TimeEntry.notes.isnot(None),
+        TimeEntry.notes != "",
     )
     if project_id:
         q = q.filter(TimeEntry.project_id == project_id)
@@ -1116,9 +1113,7 @@ def start_focus_session():
         user_id=current_user.id,
         project_id=data.get("project_id"),
         task_id=data.get("task_id"),
-        pomodoro_length=int(
-            data.get("pomodoro_length") or getattr(current_user, "pomodoro_length", None) or 25
-        ),
+        pomodoro_length=int(data.get("pomodoro_length") or getattr(current_user, "pomodoro_length", None) or 25),
         short_break_length=int(
             data.get("short_break_length") or getattr(current_user, "pomodoro_short_break", None) or 5
         ),
@@ -2653,9 +2648,7 @@ def get_activity_stats():
             "total_activities": query.count(),
             "entity_counts": {entity: count for entity, count in entity_counts},
             "action_counts": {action: count for action, count in action_counts},
-            "user_activity": [
-                {"username": u[0], "display_name": (u[1] or u[0]), "count": u[2]} for u in user_activity
-            ],
+            "user_activity": [{"username": u[0], "display_name": (u[1] or u[0]), "count": u[2]} for u in user_activity],
             "period_days": days,
         }
     )

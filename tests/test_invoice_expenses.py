@@ -2,12 +2,14 @@
 Tests for invoice expense functionality
 """
 
-import pytest
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+import pytest
+from factories import ClientFactory, ExpenseFactory, InvoiceFactory, ProjectFactory, UserFactory
+
 from app import db
-from app.models import Invoice, InvoiceItem, Expense, User, Project, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, ExpenseFactory
+from app.models import Client, Expense, Invoice, InvoiceItem, Project, User
 
 
 @pytest.fixture

@@ -3,16 +3,17 @@ Tests for overtime-as-paid-leave flow (Issue #560).
 - Leave type 'overtime' and create_leave_request validation (requested_hours <= YTD).
 """
 
-import pytest
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+import pytest
+from factories import ClientFactory, ProjectFactory, TimeEntryFactory, UserFactory
+
 from app import db
-from app.models import User, TimeEntry, Project, Client
+from app.models import Client, Project, TimeEntry, User
 from app.models.time_off import LeaveType, TimeOffRequest
 from app.services.workforce_governance_service import WorkforceGovernanceService
 from app.utils.overtime import get_overtime_ytd
-from factories import UserFactory, ClientFactory, ProjectFactory, TimeEntryFactory
 
 
 @pytest.fixture

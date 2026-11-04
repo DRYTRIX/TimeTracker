@@ -40,9 +40,7 @@ def _ensure_edit_own_permission(user_id):
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_edit_timer_page_shows_schedule_fields_with_edit_own_permission(
-    app, authenticated_client, user, project
-):
+def test_edit_timer_page_shows_schedule_fields_with_edit_own_permission(app, authenticated_client, user, project):
     """GET /timer/edit shows date/time inputs when user has edit_own_time_entries."""
     with app.app_context():
         _ensure_edit_own_permission(user.id)
@@ -68,9 +66,7 @@ def test_edit_timer_page_shows_schedule_fields_with_edit_own_permission(
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_edit_timer_post_updates_times_with_edit_own_permission(
-    app, authenticated_client, user, project
-):
+def test_edit_timer_post_updates_times_with_edit_own_permission(app, authenticated_client, user, project):
     """POST /timer/edit applies new start/end when user has edit_own_time_entries."""
     with app.app_context():
         _ensure_edit_own_permission(user.id)
@@ -116,9 +112,7 @@ def test_edit_timer_post_updates_times_with_edit_own_permission(
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_api_entry_put_updates_times_with_edit_own_permission(
-    app, authenticated_client, user, project
-):
+def test_api_entry_put_updates_times_with_edit_own_permission(app, authenticated_client, user, project):
     """PUT /api/entry/<id> accepts start/end for own entry with edit_own_time_entries."""
     with app.app_context():
         _ensure_edit_own_permission(user.id)

@@ -2,15 +2,17 @@
 Tests for invoice email sending functionality
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
+
+import pytest
+from factories import ClientFactory, InvoiceFactory, InvoiceItemFactory, ProjectFactory, UserFactory
 from flask import current_app
+
 from app import db
-from app.models import Invoice, InvoiceEmail, User, Settings, Client, Project
+from app.models import Client, Invoice, InvoiceEmail, Project, Settings, User
 from app.utils.email import send_invoice_email, send_invoice_template_test_email
-from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory
 
 
 @pytest.fixture
@@ -452,9 +454,7 @@ class TestSendInvoiceTemplateTestEmail:
     """Tests for send_invoice_template_test_email"""
 
     @patch("app.utils.pdf_generator.InvoicePDFGenerator")
-    def test_send_invoice_template_test_email_success(
-        self, mock_pdf_class, app, test_invoice, mock_mail_send
-    ):
+    def test_send_invoice_template_test_email_success(self, mock_pdf_class, app, test_invoice, mock_mail_send):
         mock_instance = MagicMock()
         mock_instance.generate_pdf.return_value = b"fake_pdf_bytes"
         mock_pdf_class.return_value = mock_instance

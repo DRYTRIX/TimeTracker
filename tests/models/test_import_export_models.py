@@ -7,8 +7,9 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.models]
 
 from datetime import datetime, timedelta
+
 from app import create_app, db
-from app.models import User, DataImport, DataExport
+from app.models import DataExport, DataImport, User
 
 
 @pytest.fixture

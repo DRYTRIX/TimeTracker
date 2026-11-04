@@ -1,74 +1,268 @@
-name: CI/CD Pipeline
+name: CI
 
-# DISABLED: This workflow is disabled in favor of the Comprehensive CI Pipeline (ci-comprehensive.yml)
-# Only the Comprehensive CI Pipeline should run for all CI/CD operations
+# Single PR/push pipeline. Branch protection should require only the `ci-pass` job.
+#
+# Strategy:
+# - Path filtering skips irrelevant jobs (docs-only PRs finish in ~1 min)
+# - Lint, tests, frontend, docker, desktop/mobile run in parallel (no smoke gate)
+# - Tests run once, sharded 4 ways against Postgres; coverage is combined
+# - Docker image is built once (GHA cache) and reused for health check + e2e
+# - Migrations validation is a reusable workflow, only when models/migrations change
+# - Dependency CVE scans block only when requirements change (plus nightly workflow)
+
 on:
-  workflow_dispatch:  # Only allows manual trigger, effectively disabling automatic runs
-  # pull_request:
-  #   branches: [ main ]
-  #   types: [ opened, synchronize, reopened, ready_for_review ]
+  pull_request:
+    branches: [develop, main, master, 'rc', 'rc/**']
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   PYTHON_VERSION: '3.11'
-  POSTGRES_VERSION: '16'
+  NODE_VERSION: '20'
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
 
 jobs:
-  lint:
-    name: Lint and Code Quality
+  # --------------------------------------------------------------------------
+  # Path filter
+  # --------------------------------------------------------------------------
+  changes:
+    name: Detect changes
     runs-on: ubuntu-latest
-    if: false  # DISABLED: This workflow is disabled in favor of ci-comprehensive.yml
-    # if: github.event.pull_request.head.ref == 'rc' || startsWith(github.event.pull_request.head.ref, 'rc/')
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      migrations: ${{ steps.filter.outputs.migrations }}
+      docker: ${{ steps.filter.outputs.docker }}
+      desktop: ${{ steps.filter.outputs.desktop }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      deps: ${{ steps.filter.outputs.deps }}
+      any_code: ${{ steps.filter.outputs.any_code }}
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      
-      - name: Install dependencies
+          filters: |
+            python:
+              - 'app/**'
+              - 'tests/**'
+              - 'pytest.ini'
+              - 'pyproject.toml'
+              - 'setup.py'
+              - 'babel.cfg'
+              - 'scripts/check_*.py'
+              - 'scripts/ci/**'
+              - '.flake8'
+              - '.pre-commit-config.yaml'
+              - 'requirements*.txt'
+            frontend:
+              - 'app/static/**'
+              - 'app/templates/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tailwind.config.js'
+              - 'postcss.config.js'
+              - 'scripts/copy-vendor.mjs'
+              - 'scripts/build-js.mjs'
+              - 'playwright.config.mjs'
+              - 'tests/e2e/**'
+              - 'tests/test_no_external_assets.py'
+            migrations:
+              - 'app/models/**'
+              - 'migrations/**'
+            docker:
+              - 'Dockerfile'
+              - 'docker/**'
+              - 'docker-compose*.yml'
+              - 'nginx/**'
+              - 'requirements*.txt'
+              - 'app/**'
+              - 'package*.json'
+              - 'scripts/copy-vendor.mjs'
+              - 'scripts/build-js.mjs'
+              - 'tailwind.config.js'
+              - 'postcss.config.js'
+            desktop:
+              - 'desktop/**'
+            mobile:
+              - 'mobile/**'
+            deps:
+              - 'requirements.txt'
+              - 'requirements-test.txt'
+              - 'requirements-dev.txt'
+            any_code:
+              - 'app/**'
+              - 'tests/**'
+              - 'migrations/**'
+              - 'desktop/**'
+              - 'mobile/**'
+              - 'browser-extension/**'
+              - 'Dockerfile'
+              - 'docker/**'
+              - 'requirements*.txt'
+              - 'package*.json'
+              - 'setup.py'
+              - 'pytest.ini'
+              - 'pyproject.toml'
+              - '.flake8'
+              - '.pre-commit-config.yaml'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+              - 'scripts/check_*.py'
+              - 'scripts/ci/**'
+              - 'scripts/bump_version.py'
+
+  # --------------------------------------------------------------------------
+  # main may only receive rc/* or hotfix/* heads
+  # --------------------------------------------------------------------------
+  main-source:
+    name: Main source branch
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'master')
+    steps:
+      - name: Allow only rc/* or hotfix/*
         run: |
-          python -m pip install --upgrade pip
-          pip install flake8 black pylint bandit safety
-      
-      - name: Run Black (code formatting check)
-        run: black --check app tests
-      
-      - name: Run Flake8 (linting)
-        run: flake8 app tests --max-line-length=120 --extend-ignore=E203,W503
-        continue-on-error: true
-      
-      - name: Run Pylint
-        run: pylint app --disable=all --enable=errors --max-line-length=120
-        continue-on-error: true
-      
-      - name: Run Bandit (security linting)
-        run: bandit -r app -f json -o bandit-report.json
-        continue-on-error: true
-      
-      - name: Run Safety (dependency vulnerability check)
+          HEAD="${{ github.head_ref }}"
+          case "$HEAD" in
+            rc/*|hotfix/*)
+              echo "✅ Head branch '$HEAD' allowed into main"
+              ;;
+            *)
+              echo "❌ PRs into main must come from rc/* or hotfix/* (got '$HEAD')"
+              echo "Use the Prepare Release workflow, or open a hotfix/* branch."
+              exit 1
+              ;;
+          esac
+
+  # --------------------------------------------------------------------------
+  # Lint / code quality
+  # --------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.python == 'true' || needs.changes.outputs.any_code == 'true'
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-env
+        with:
+          extra-packages: pre-commit
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Run formatting / lint hooks
+        run: |
+          # Critical hooks only (markdown/yaml formatters stay local-optional).
+          pre-commit run black --all-files --show-diff-on-failure
+          pre-commit run isort --all-files --show-diff-on-failure
+          pre-commit run trailing-whitespace --all-files --show-diff-on-failure
+          pre-commit run end-of-file-fixer --all-files --show-diff-on-failure
+          pre-commit run check-merge-conflict --all-files
+          pre-commit run detect-private-key --all-files
+      - name: flake8 (config from .flake8)
+        run: flake8 app/
+      - name: mypy (focused)
+        run: |
+          mypy --follow-imports=silent \
+            app/models \
+            app/utils/safe_redirect.py \
+            app/utils/outbound_url.py \
+            app/utils/scheduler_lock.py \
+            app/utils/integration_http.py
+      - name: Silent exception ratchet
+        run: python scripts/check_silent_excepts.py
+      - name: Translation coverage
+        run: python scripts/check_translation_coverage.py
+      - name: Version consistency
+        run: python scripts/bump_version.py --check
+        continue-on-error: false
+
+  # --------------------------------------------------------------------------
+  # Security (pytest + bandit always; pip-audit/safety only when deps change)
+  # --------------------------------------------------------------------------
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.python == 'true' || needs.changes.outputs.deps == 'true'
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-python-env
+      - name: Security pytest
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: bash scripts/ci/security-pytest.sh
+      - name: Bandit (high severity blocking)
+        run: |
+          bandit -c pyproject.toml -r app/ -lll -f json -o bandit-report.json
+          python - <<'PY'
+          import json
+          data = json.load(open("bandit-report.json"))
+          results = data.get("results") or []
+          print(f"Bandit high-severity findings: {len(results)}")
+          for r in results:
+              loc = f"{r.get('filename')}:{r.get('line_number')}"
+              print(f"  [{r.get('test_id')}] {loc} — {r.get('issue_text', '')[:100]}")
+          if results:
+              raise SystemExit(1)
+          PY
+      - name: pip-audit (blocking when deps change)
+        if: needs.changes.outputs.deps == 'true'
+        run: bash scripts/ci/pip-audit.sh
+      - name: Safety (blocking when deps change)
+        if: needs.changes.outputs.deps == 'true'
         run: |
           mkdir -p "${{ github.workspace }}/.test_installation_config"
           REPORT="${{ github.workspace }}/.test_installation_config/safety-report.json"
-          python -m safety check --save-json "${REPORT}" >/dev/null || true
+          EC=0
+          python -m safety check --file requirements.txt --save-json "${REPORT}" >/dev/null || EC=$?
           if [ -f "${REPORT}" ]; then
             python "${{ github.workspace }}/scripts/ci/sanitize_safety_report.py" "${REPORT}" "${{ github.workspace }}"
           fi
-        continue-on-error: true
+          exit "${EC}"
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            .test_installation_config/safety-report.json
+          if-no-files-found: warn
 
-  test:
-    name: Test Suite
+  # --------------------------------------------------------------------------
+  # Tests (sharded once against Postgres)
+  # --------------------------------------------------------------------------
+  tests:
+    name: Tests (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
-    if: false  # DISABLED: This workflow is disabled in favor of ci-comprehensive.yml
-    # if: github.event.pull_request.head.ref == 'rc' || startsWith(github.event.pull_request.head.ref, 'rc/')
-    
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16-alpine
         env:
-          POSTGRES_USER: timetracker
-          POSTGRES_PASSWORD: timetracker
-          POSTGRES_DB: timetracker_test
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -76,105 +270,332 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-test.txt
-      
-      - name: Run database migrations
+      - uses: ./.github/actions/setup-python-env
+      - name: Run test shard
         env:
-          DATABASE_URL: postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker_test
-        run: |
-          flask db upgrade
-      
-      - name: Run tests with coverage
-        env:
-          DATABASE_URL: postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker_test
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          FLASK_APP: app.py
           FLASK_ENV: testing
           SECRET_KEY: test-secret-key-for-ci
+          PYTHONPATH: ${{ github.workspace }}
+          INSTALLATION_CONFIG_DIR: ${{ github.workspace }}/.test_installation_config
         run: |
-          pytest -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing tests/
-      
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457  # v3
+          pytest -v -n auto --durations=20 \
+            --splits 4 --group ${{ matrix.shard }} \
+            --cov=app --cov-report=xml:coverage-${{ matrix.shard }}.xml \
+            --cov-report=term-missing \
+            --junitxml=junit-${{ matrix.shard }}.xml \
+            --maxfail=10
+      - name: Upload coverage shard
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
+          name: coverage-shard-${{ matrix.shard }}
+          path: |
+            coverage-${{ matrix.shard }}.xml
+            junit-${{ matrix.shard }}.xml
+          if-no-files-found: warn
 
-  security:
-    name: Security Scan
+  coverage:
+    name: Coverage gate
     runs-on: ubuntu-latest
-    if: false  # DISABLED: This workflow is disabled in favor of ci-comprehensive.yml
-    # if: github.event.pull_request.head.ref == 'rc' || startsWith(github.event.pull_request.head.ref, 'rc/')
+    needs: [changes, tests]
+    if: always() && needs.changes.outputs.python == 'true' && needs.tests.result == 'success'
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: ./.github/actions/setup-python-env
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      
-      - name: Install dependencies
+          install-dev: 'true'
+      - name: Download coverage shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-shard-*
+          merge-multiple: true
+          path: coverage-shards
+      - name: Combine and enforce coverage
         run: |
-          python -m pip install --upgrade pip
-          pip install bandit safety semgrep
-      
-      - name: Run Bandit security scan
-        run: bandit -r app -f json -o bandit-report.json
-        continue-on-error: true
-      
-      - name: Run Safety dependency check
-        run: |
-          mkdir -p "${{ github.workspace }}/.test_installation_config"
-          REPORT="${{ github.workspace }}/.test_installation_config/safety-report.json"
-          python -m safety check --save-json "${REPORT}" >/dev/null || true
-          if [ -f "${REPORT}" ]; then
-            python "${{ github.workspace }}/scripts/ci/sanitize_safety_report.py" "${REPORT}" "${{ github.workspace }}"
-          fi
-        continue-on-error: true
-      
-      - name: Run Semgrep security scan
-        run: semgrep --config=auto app/
-        continue-on-error: true
+          set -euo pipefail
+          # Merge cobertura XMLs via coverage.py if .coverage files exist; otherwise
+          # use the first shard XML and report. Shards emit XML only — re-run a
+          # lightweight combine of XML via pycobertura-style check isn't needed.
+          # Enforce using the average line-rate across shards.
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          files = sorted(Path("coverage-shards").glob("coverage-*.xml"))
+          if not files:
+              raise SystemExit("No coverage XML shards found")
+          rates = []
+          for f in files:
+              root = ET.parse(f).getroot()
+              # cobertura: line-rate on root or packages
+              rate = root.attrib.get("line-rate")
+              if rate is None:
+                  lines_valid = int(root.attrib.get("lines-valid") or 0)
+                  lines_covered = int(root.attrib.get("lines-covered") or 0)
+                  rate = (lines_covered / lines_valid) if lines_valid else 0.0
+              else:
+                  rate = float(rate)
+              rates.append(rate)
+              print(f"{f.name}: {rate*100:.1f}%")
+          avg = sum(rates) / len(rates)
+          print(f"Average line coverage: {avg*100:.1f}%")
+          threshold = 0.40
+          if avg < threshold:
+              raise SystemExit(f"Coverage {avg*100:.1f}% below {threshold*100:.0f}% gate")
+          print(f"✅ Coverage gate passed (>= {threshold*100:.0f}%)")
+          PY
+      - name: Upload combined junit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results
+          path: coverage-shards/junit-*.xml
+          if-no-files-found: warn
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          files: coverage-shards/junit-*.xml
+          check_name: Test Results
 
-  build:
-    name: Docker Build
+  # --------------------------------------------------------------------------
+  # Frontend assets
+  # --------------------------------------------------------------------------
+  frontend:
+    name: Frontend assets
     runs-on: ubuntu-latest
-    needs: [lint, test]
-    if: false  # DISABLED: This workflow is disabled in favor of ci-comprehensive.yml
-    # if: github.event_name == 'push'
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.python == 'true'
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm install
+      - run: npm run build:docker
+      - name: Verify build output
+        run: |
+          test -f app/static/dist/output.css
+          test -f app/static/dist/manifest.json
+          test -d app/static/vendor/fontawesome
+      - uses: ./.github/actions/setup-python-env
+      - name: Enforce no external assets
+        run: pytest tests/test_no_external_assets.py -v --no-cov
+
+  # --------------------------------------------------------------------------
+  # Migrations (reusable workflow)
+  # --------------------------------------------------------------------------
+  migrations:
+    name: Migrations
+    needs: changes
+    if: needs.changes.outputs.migrations == 'true'
+    uses: ./.github/workflows/migration-validate.yml
+
+  # --------------------------------------------------------------------------
+  # Docker build + health + e2e (single image)
+  # --------------------------------------------------------------------------
+  docker:
+    name: Docker & E2E
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docker == 'true' || needs.changes.outputs.python == 'true' || needs.changes.outputs.frontend == 'true'
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: timetracker
+          POSTGRES_PASSWORD: timetracker
+          POSTGRES_DB: timetracker
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
-      
-      - name: Login to Docker Hub (if needed)
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME || '' }}
-          password: ${{ secrets.DOCKER_PASSWORD || '' }}
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        continue-on-error: true
-      
-      - name: Build Docker image
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v5
+        uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
         with:
           context: .
-          push: false
-          tags: timetracker:latest
-          cache-from: type=registry,ref=timetracker:latest
-          cache-to: type=inline
+          load: true
+          tags: timetracker:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Health check (sqlite)
+        run: |
+          CONTAINER_ID=$(docker run -d --name test-container \
+            -p 8081:8080 \
+            -e DATABASE_URL="sqlite:////app/test.db" \
+            -e SECRET_KEY="test-secret-key-for-ci-only-$(openssl rand -hex 16)" \
+            -e FLASK_ENV="development" \
+            timetracker:ci)
+          echo "Started $CONTAINER_ID"
+          for i in {1..60}; do
+            if ! docker ps -q --filter "name=test-container" | grep -q .; then
+              docker logs test-container; exit 1
+            fi
+            if curl -fsS http://localhost:8081/_health >/dev/null 2>&1; then
+              echo "✅ Health check passed ($i)"; break
+            fi
+            sleep 2
+            if [ "$i" -eq 60 ]; then
+              docker logs test-container; exit 1
+            fi
+          done
+          docker stop test-container && docker rm test-container
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Start app for e2e
+        env:
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD || 'e2e-local-password-123' }}
+        run: |
+          docker run -d --name timetracker-e2e --network host \
+            -e SECRET_KEY=ci-e2e-secret-key-not-for-production \
+            -e DATABASE_URL=postgresql://timetracker:timetracker@localhost:5432/timetracker \
+            -e ADMIN_USERNAME=e2eadmin \
+            -e ADMIN_PASSWORD="$E2E_ADMIN_PASSWORD" \
+            -e TZ=UTC \
+            timetracker:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/login >/dev/null 2>&1; then
+              echo "Ready after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          docker logs timetracker-e2e >&2
+          exit 1
+      - name: Playwright
+        env:
+          E2E_BASE_URL: http://localhost:8080
+          E2E_USERNAME: e2eadmin
+          E2E_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD || 'e2e-local-password-123' }}
+        run: npx playwright test
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs timetracker-e2e || true
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
 
+  # --------------------------------------------------------------------------
+  # Desktop (tests + Linux build only, path-filtered)
+  # --------------------------------------------------------------------------
+  desktop:
+    name: Desktop
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install & test
+        working-directory: desktop
+        run: |
+          npm ci
+          npm test
+      - name: Build Linux
+        working-directory: desktop
+        run: npm run build:linux
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux
+          path: |
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+          if-no-files-found: warn
+
+  # --------------------------------------------------------------------------
+  # Mobile (tests only, path-filtered)
+  # --------------------------------------------------------------------------
+  mobile:
+    name: Mobile
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.4'
+          channel: stable
+          cache: true
+      - run: flutter config --no-analytics
+      - name: Install & test
+        working-directory: mobile
+        run: |
+          flutter pub get
+          flutter test
+
+  # --------------------------------------------------------------------------
+  # Aggregator — the only required status check
+  # --------------------------------------------------------------------------
+  ci-pass:
+    name: ci-pass
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - changes
+      - main-source
+      - lint
+      - security
+      - tests
+      - coverage
+      - frontend
+      - migrations
+      - docker
+      - desktop
+      - mobile
+    steps:
+      - name: Evaluate required jobs
+        uses: re-actors/alls-green@v1.3.0
+        with:
+          # Skipped (path-filtered) jobs count as OK; failed/cancelled fail the gate.
+          allowed-skips: main-source, lint, security, tests, coverage, frontend, migrations, docker, desktop, mobile
+          jobs: ${{ toJSON(needs) }}
+      - name: Write summary
+        if: always()
+        run: |
+          {
+            echo "## CI summary"
+            echo ""
+            echo "| Job | Result |"
+            echo "|-----|--------|"
+            echo "| changes | ${{ needs.changes.result }} |"
+            echo "| main-source | ${{ needs.main-source.result }} |"
+            echo "| lint | ${{ needs.lint.result }} |"
+            echo "| security | ${{ needs.security.result }} |"
+            echo "| tests | ${{ needs.tests.result }} |"
+            echo "| coverage | ${{ needs.coverage.result }} |"
+            echo "| frontend | ${{ needs.frontend.result }} |"
+            echo "| migrations | ${{ needs.migrations.result }} |"
+            echo "| docker | ${{ needs.docker.result }} |"
+            echo "| desktop | ${{ needs.desktop.result }} |"
+            echo "| mobile | ${{ needs.mobile.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"

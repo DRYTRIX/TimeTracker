@@ -3,9 +3,10 @@ Tests for BaseRepository.
 """
 
 import pytest
-from app.repositories.base_repository import BaseRepository
-from app.models import Project, Client
+
 from app import db
+from app.models import Client, Project
+from app.repositories.base_repository import BaseRepository
 
 
 @pytest.mark.unit

@@ -5,8 +5,9 @@ Quick validation tests to ensure the feature is working at a basic level.
 
 import pytest
 from flask import url_for
-from app.models import User
+
 from app import db
+from app.models import User
 
 
 @pytest.mark.smoke

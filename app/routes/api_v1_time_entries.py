@@ -15,7 +15,7 @@ from app.utils.api_responses import (
     handle_validation_error,
     validation_error_response,
 )
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 
 api_v1_time_entries_bp = Blueprint("api_v1_time_entries", __name__, url_prefix="/api/v1")
 

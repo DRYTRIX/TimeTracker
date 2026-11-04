@@ -8,7 +8,8 @@ pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import date
 from decimal import Decimal
-from app.models import Expense, ApiToken, User
+
+from app.models import ApiToken, Expense, User
 
 
 class TestAPIExpensesComplete:
@@ -36,9 +37,7 @@ class TestAPIExpensesComplete:
         test_client.environ_base["HTTP_AUTHORIZATION"] = f"Bearer {plain_token}"
         return test_client
 
-    def test_list_expenses_with_filters(
-        self, app, client_with_token, user, project, expense
-    ):
+    def test_list_expenses_with_filters(self, app, client_with_token, user, project, expense):
         """Test list_expenses with various filters"""
         # Filter by project
         response = client_with_token.get(f"/api/v1/expenses?project_id={project.id}")
@@ -113,8 +112,8 @@ class TestAPIExpensesComplete:
 
     def test_expense_permissions(self, app, user, project):
         """Test expense access permissions"""
-        from app.models import ApiToken
         from app import db
+        from app.models import ApiToken
 
         # Create expense for another user
         other_user = User.query.filter(User.id != user.id).first()

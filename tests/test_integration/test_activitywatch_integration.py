@@ -102,16 +102,28 @@ class TestActivityWatchConnector:
         """Test sync imports ActivityWatch events as time entries."""
         # buckets: dict format
         mock_get.side_effect = [
-            Mock(status_code=200, raise_for_status=Mock(), json=Mock(return_value={
-                "aw-watcher-window_testhost": {"id": "aw-watcher-window_testhost", "type": "currentwindow"},
-            })),
-            Mock(status_code=200, raise_for_status=Mock(), json=Mock(return_value=[
-                {
-                    "timestamp": "2024-01-15T10:00:00.000000Z",
-                    "duration": 300.0,
-                    "data": {"app": "Chrome", "title": "Inbox"},
-                },
-            ])),
+            Mock(
+                status_code=200,
+                raise_for_status=Mock(),
+                json=Mock(
+                    return_value={
+                        "aw-watcher-window_testhost": {"id": "aw-watcher-window_testhost", "type": "currentwindow"},
+                    }
+                ),
+            ),
+            Mock(
+                status_code=200,
+                raise_for_status=Mock(),
+                json=Mock(
+                    return_value=[
+                        {
+                            "timestamp": "2024-01-15T10:00:00.000000Z",
+                            "duration": 300.0,
+                            "data": {"app": "Chrome", "title": "Inbox"},
+                        },
+                    ]
+                ),
+            ),
         ]
 
         connector = ActivityWatchConnector(activitywatch_integration, None)
@@ -143,6 +155,7 @@ class TestActivityWatchConnector:
         }
         # Build external_uid the same way the connector does (uses ts after Z->+00:00)
         import hashlib
+
         ts_uid = "2024-01-15T10:00:00.000000+00:00"
         data_str = "Chrome" + "|" + "Inbox" + ""
         h = hashlib.md5(data_str.encode("utf-8")).hexdigest()[:16]
@@ -169,9 +182,15 @@ class TestActivityWatchConnector:
         db_session.commit()
 
         mock_get.side_effect = [
-            Mock(status_code=200, raise_for_status=Mock(), json=Mock(return_value={
-                "aw-watcher-window_testhost": {"id": "aw-watcher-window_testhost"},
-            })),
+            Mock(
+                status_code=200,
+                raise_for_status=Mock(),
+                json=Mock(
+                    return_value={
+                        "aw-watcher-window_testhost": {"id": "aw-watcher-window_testhost"},
+                    }
+                ),
+            ),
             Mock(status_code=200, raise_for_status=Mock(), json=Mock(return_value=[ev])),
         ]
 

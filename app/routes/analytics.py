@@ -84,7 +84,7 @@ def hours_by_day():
                 {
                     "label": "Hours Worked",
                     "data": list(date_data.values()),
-                    "borderColor": "#3b82f6",
+                    "borderColor": "#4F46E5",
                     "backgroundColor": "rgba(59, 130, 246, 0.1)",
                     "tension": 0.4,
                     "fill": True,
@@ -241,7 +241,7 @@ def hours_by_project():
 
     # Generate colors for each project
     colors = [
-        "#3b82f6",
+        "#4F46E5",
         "#10b981",
         "#f59e0b",
         "#ef4444",
@@ -306,7 +306,7 @@ def hours_by_user():
                     "label": "Hours",
                     "data": data,
                     "backgroundColor": "rgba(59, 130, 246, 0.8)",
-                    "borderColor": "#3b82f6",
+                    "borderColor": "#4F46E5",
                     "borderWidth": 2,
                 }
             ],
@@ -650,7 +650,7 @@ def project_efficiency():
                     "label": "Hours",
                     "data": hours_data,
                     "backgroundColor": "rgba(59, 130, 246, 0.8)",
-                    "borderColor": "#3b82f6",
+                    "borderColor": "#4F46E5",
                     "borderWidth": 2,
                     "yAxisID": "y",
                 },
@@ -1207,7 +1207,7 @@ def payments_by_status():
         labels.append(status.title() if status else "Unknown")
         counts.append(count)
         amounts.append(float(amount or 0))
-        background_colors.append(colors.get(status, "#3b82f6"))
+        background_colors.append(colors.get(status, "#4F46E5"))
 
     return jsonify(
         {
@@ -1241,7 +1241,7 @@ def payments_by_method():
     labels = []
     amounts = []
     colors = [
-        "#3b82f6",
+        "#4F46E5",
         "#10b981",
         "#f59e0b",
         "#ef4444",

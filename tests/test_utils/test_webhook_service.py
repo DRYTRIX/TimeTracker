@@ -4,10 +4,11 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.utils]
 
-from unittest.mock import Mock, patch, MagicMock
-from app.models import Webhook, WebhookDelivery, User
-from app.utils.webhook_service import WebhookService, WebhookDeliveryError
+from unittest.mock import MagicMock, Mock, patch
+
 from app import db
+from app.models import User, Webhook, WebhookDelivery
+from app.utils.webhook_service import WebhookDeliveryError, WebhookService
 
 
 @pytest.fixture
@@ -121,8 +122,9 @@ class TestWebhookService:
     @patch("app.utils.webhook_service.requests.post")
     def test_retry_failed_deliveries(self, mock_post, db_session, test_webhook):
         """Test retrying failed deliveries"""
-        from app.utils.timezone import now_in_app_timezone
         from datetime import timedelta
+
+        from app.utils.timezone import now_in_app_timezone
 
         # Create a failed delivery scheduled for retry
         delivery = WebhookDelivery(

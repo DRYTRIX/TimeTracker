@@ -1,12 +1,14 @@
 """Tests for admin settings and logo upload functionality."""
 
-import pytest
-import os
 import io
+import os
+
+import pytest
 from flask import url_for
-from app import db
-from app.models import User, Settings
 from PIL import Image
+
+from app import db
+from app.models import Settings, User
 
 
 @pytest.fixture
@@ -428,20 +430,21 @@ def test_logo_display_in_settings_page_with_logo(admin_authenticated_client, sam
         settings = Settings.get_settings()
         # Create a test logo file
         import uuid
+
         upload_folder = os.path.join(app.root_path, "static", "uploads", "logos")
         os.makedirs(upload_folder, exist_ok=True)
         test_logo_filename = f"company_logo_{uuid.uuid4().hex[:8]}.png"
         test_logo_path = os.path.join(upload_folder, test_logo_filename)
-        
+
         # Save the sample image to disk
         sample_logo_image.seek(0)
         with open(test_logo_path, "wb") as f:
             f.write(sample_logo_image.read())
-        
+
         # Set the logo filename in settings
         settings.company_logo_filename = test_logo_filename
         db.session.commit()
-        
+
         # Now check the settings page
         response = admin_authenticated_client.get("/admin/settings")
         assert response.status_code == 200

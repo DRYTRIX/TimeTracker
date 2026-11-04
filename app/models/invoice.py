@@ -277,9 +277,7 @@ class Invoice(db.Model):
                 try:
                     db.session.rollback()
                 except Exception:
-                    logging.getLogger(__name__).debug(
-                        "Rollback after tax-rule DB error also failed", exc_info=True
-                    )
+                    logging.getLogger(__name__).debug("Rollback after tax-rule DB error also failed", exc_info=True)
 
     def to_dict(self):
         """Convert invoice to dictionary for API responses"""

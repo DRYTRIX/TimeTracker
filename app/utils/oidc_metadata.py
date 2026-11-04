@@ -18,11 +18,11 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urlparse
 
-from app.utils.error_handling import sanitize_log_value
-
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+from app.utils.error_handling import sanitize_log_value
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +136,11 @@ def resolve_hostname_socket(hostname: str, timeout: int = 5) -> Tuple[bool, Opti
         socket.setdefaulttimeout(timeout)
         try:
             ip_address = socket.gethostbyname(hostname)
-            logger.debug("Socket DNS resolution successful for %s: %s", sanitize_log_value(hostname), _ip_cache._mask_ip(ip_address))
+            logger.debug(
+                "Socket DNS resolution successful for %s: %s",
+                sanitize_log_value(hostname),
+                _ip_cache._mask_ip(ip_address),
+            )
             return True, ip_address, None
         finally:
             socket.setdefaulttimeout(old_timeout)
@@ -170,7 +174,9 @@ def resolve_hostname_getaddrinfo(hostname: str, timeout: int = 5) -> Tuple[bool,
             if addr_info:
                 ip_address = addr_info[0][4][0]
                 logger.debug(
-                    "getaddrinfo DNS resolution successful for %s: %s", sanitize_log_value(hostname), _ip_cache._mask_ip(ip_address)
+                    "getaddrinfo DNS resolution successful for %s: %s",
+                    sanitize_log_value(hostname),
+                    _ip_cache._mask_ip(ip_address),
                 )
                 return True, ip_address, None
         finally:
@@ -244,7 +250,11 @@ def resolve_hostname_multiple_strategies(
             return True, ip_address, None, strategy_name
         last_error = error
 
-    logger.warning("All DNS resolution strategies failed for %s. Last error: %s", sanitize_log_value(hostname), sanitize_log_value(last_error))
+    logger.warning(
+        "All DNS resolution strategies failed for %s. Last error: %s",
+        sanitize_log_value(hostname),
+        sanitize_log_value(last_error),
+    )
     return False, None, last_error or "All resolution strategies failed", "none"
 
 
@@ -349,7 +359,11 @@ def try_docker_internal_name(hostname: str, issuer_url: str) -> Optional[str]:
     if parsed.path:
         internal_url += parsed.path
 
-    logger.info("Attempting Docker internal URL: %s (original: %s)", sanitize_log_value(internal_url), sanitize_log_value(issuer_url))
+    logger.info(
+        "Attempting Docker internal URL: %s (original: %s)",
+        sanitize_log_value(internal_url),
+        sanitize_log_value(issuer_url),
+    )
     return internal_url
 
 
@@ -482,9 +496,7 @@ def fetch_oidc_metadata(
     # Rebuild discovery URL from validated issuer components only (fixed well-known path).
     from urllib.parse import urlunparse
 
-    fetch_url = urlunparse(
-        (parsed.scheme, parsed.netloc, "/.well-known/openid-configuration", "", "", "")
-    )
+    fetch_url = urlunparse((parsed.scheme, parsed.netloc, "/.well-known/openid-configuration", "", "", ""))
 
     for attempt in range(1, max_retries + 1):
         diagnostics["strategies_tried"].append(
@@ -573,9 +585,7 @@ def fetch_oidc_metadata(
                             )
                             docker_internal_tried = True
                             logger.info("Attempting Docker internal URL after DNS failure")
-                            diagnostics["strategies_tried"][-1]["docker_internal_url"] = sanitize_log_value(
-                                docker_url
-                            )
+                            diagnostics["strategies_tried"][-1]["docker_internal_url"] = sanitize_log_value(docker_url)
                             continue
                         except UnsafeOutboundURL:
                             pass

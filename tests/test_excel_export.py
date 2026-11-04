@@ -2,10 +2,12 @@
 Tests for Excel export functionality
 """
 
-import pytest
 from datetime import datetime, timedelta
-from app.models import TimeEntry, Task
+
+import pytest
 from factories import TimeEntryFactory
+
+from app.models import Task, TimeEntry
 
 
 @pytest.mark.unit

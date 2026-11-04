@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **CI / releases** — Consolidated PR checks into a single path-aware `ci.yml` with a required `ci-pass` aggregator; Dependabot + nightly dependency audit; automated Prepare/Finalize release workflows (`rc/v*` → tag → publish) and `scripts/bump_version.py` as the version source of truth.
+
 ## [5.18.5] - 2026-10-30
 
 ### Security

@@ -3,10 +3,10 @@ Test suite for route/endpoint testing.
 Tests all major routes and API endpoints.
 """
 
-import pytest
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+import pytest
 
 # ============================================================================
 # Smoke Tests - Critical Routes
@@ -141,7 +141,7 @@ def test_projects_create_page_contains_client_modal_trigger(admin_authenticated_
 def test_create_project_post_does_not_500_and_logs_activity(admin_authenticated_client, test_client, app):
     """Regression: creating a project should not 500 due to project.client being a string property."""
     from app import db
-    from app.models import Project, Activity
+    from app.models import Activity, Project
 
     with app.app_context():
         name = "Project Name test"
@@ -220,8 +220,8 @@ def test_create_project_api(client_with_token, test_client, app):
 @pytest.mark.routes
 def test_edit_project_description(admin_authenticated_client, project, app):
     """Test that project description changes are saved correctly."""
-    from app.models import Project
     from app import db
+    from app.models import Project
 
     with app.app_context():
         # Get the project ID
