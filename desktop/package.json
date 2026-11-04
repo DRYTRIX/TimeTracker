@@ -48,7 +48,9 @@
     "react-dom": "^19.2.5"
   },
   "overrides": {
-    "sprintf-js": "$sprintf-js"
+    "sprintf-js": "$sprintf-js",
+    "follow-redirects": "1.16.2",
+    "minimatch": "11.0.4"
   },
   "build": {
     "appId": "com.timetracker.desktop",
