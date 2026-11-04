@@ -32,6 +32,16 @@ docker compose -f docker-compose.nas.yml up -d
 # open http://localhost:8080 — first login creates the admin
 ```
 
+### First 5 minutes
+
+1. Open [http://localhost:8080](http://localhost:8080) and create the admin account.
+2. Add a client under **Clients → Create Client**.
+3. Create a project under **Projects → Create Project**.
+4. Start a timer or log time against the project.
+5. Optional: create a draft invoice under **Invoices**.
+
+See [client management](docs/CLIENT_MANAGEMENT_README.md) and [invoicing](docs/INVOICE_FEATURE_README.md) for the detailed flows.
+
 **Latest release: v5.18.4** — see [CHANGELOG.md](CHANGELOG.md).
 
 More install paths (HTTPS production, NAS UI paste, cloud): [Install options](#install-options).
