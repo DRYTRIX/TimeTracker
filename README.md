@@ -15,7 +15,7 @@
 
 <img src="assets/screenshots/Dashboard.png" alt="TimeTracker Dashboard" width="800">
 
-**[Live demo](https://timetracker-demo.drytrix.com)** · **[Website](https://timetracker.drytrix.com)** · **[Docs](docs/README.md)** · **[Changelog](CHANGELOG.md)**
+**[Live demo](https://timetracker-demo.drytrix.com)** (login `test` / `test123!`) · **[Website](https://timetracker.drytrix.com)** · **[Docs](docs/README.md)** · **[Changelog](CHANGELOG.md)**
 
 </div>
 
