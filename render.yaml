@@ -20,7 +20,8 @@ services:
       # and set: creds: fromRegistryCreds: name: your-ghcr-credential
 
     # Same as docker-compose: image default CMD runs python /app/start.py (DB wait, migrate, seed, gunicorn). start.py binds to PORT when set.
-    healthCheckPath: /_ready
+    # Use /_health (liveness, no DB) so transient DB blips do not mark the instance unhealthy / trigger restarts.
+    healthCheckPath: /_health
 
     envVars:
       - key: FLASK_ENV

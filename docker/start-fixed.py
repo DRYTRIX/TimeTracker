@@ -16,6 +16,79 @@ def _truthy(v: str) -> bool:
     return str(v or "").strip().lower() in ("1", "true", "yes", "y", "on")
 
 
+def resolve_gunicorn_max_requests(environ=None) -> int:
+    """Resolve GUNICORN_MAX_REQUESTS for worker recycling.
+
+    When PORT is set (Render/Railway/etc.), default to 0 (disabled): a single
+    eventlet worker cannot recycle without a no-listener window that trips
+    platform health probes. Local/docker-compose (PORT unset) keeps 1000 for
+    memory hygiene. Explicit GUNICORN_MAX_REQUESTS always wins.
+    """
+    env = environ if environ is not None else os.environ
+    raw = (env.get("GUNICORN_MAX_REQUESTS") or "").strip()
+    if raw != "":
+        try:
+            return max(0, int(raw))
+        except ValueError:
+            return 0
+    # PaaS typically injects PORT; avoid routine recycle there.
+    if (env.get("PORT") or "").strip():
+        return 0
+    return 1000
+
+
+def resolve_gunicorn_max_requests_jitter(environ=None, max_requests: int = 0) -> int:
+    """Jitter for max-requests; ignored when max_requests is 0."""
+    if max_requests <= 0:
+        return 0
+    env = environ if environ is not None else os.environ
+    raw = (env.get("GUNICORN_MAX_REQUESTS_JITTER") or "").strip()
+    if raw != "":
+        try:
+            return max(0, int(raw))
+        except ValueError:
+            return 100
+    return 100
+
+
+def build_gunicorn_argv(port: str, max_requests: int = 0, max_requests_jitter: int = 100) -> list:
+    """Build gunicorn argv (including argv[0]). Omits max-requests when disabled."""
+    argv = [
+        "gunicorn",
+        "--bind",
+        "0.0.0.0:%s" % port,
+        "--worker-class",
+        "eventlet",
+        "--workers",
+        "1",
+        "--timeout",
+        "120",
+    ]
+    if max_requests > 0:
+        argv.extend(
+            [
+                "--max-requests",
+                str(max_requests),
+                "--max-requests-jitter",
+                str(max(0, max_requests_jitter)),
+            ]
+        )
+    argv.extend(
+        [
+            "--graceful-timeout",
+            "30",
+            "--access-logfile",
+            "-",
+            "--error-logfile",
+            "-",
+            "--log-level",
+            "info",
+            "app:create_app()",
+        ]
+    )
+    return argv
+
+
 def _sqlite_path_from_url(db_url: str):
     """Resolve SQLite DATABASE_URL to an absolute file path. Returns None for non-file SQLite (e.g. :memory:)."""
     if not (db_url or "").strip().startswith("sqlite"):
@@ -676,21 +749,16 @@ def main():
     # Start gunicorn with access logs (bind to PORT when set, e.g. by Render; default 8080 for docker-compose).
     # eventlet is limited to a single worker: do not raise --workers above 1 without
     # switching worker class (multi-worker eventlet is unsupported / unsafe).
-    port = os.environ.get('PORT', '8080')
-    os.execv('/usr/local/bin/gunicorn', [
-        'gunicorn',
-        '--bind', '0.0.0.0:%s' % port,
-        '--worker-class', 'eventlet',
-        '--workers', '1',
-        '--timeout', '120',
-        '--max-requests', '1000',
-        '--max-requests-jitter', '100',
-        '--graceful-timeout', '30',
-        '--access-logfile', '-',
-        '--error-logfile', '-',
-        '--log-level', 'info',
-        'app:create_app()'
-    ])
+    # When PORT is set, max-requests defaults to 0 so recycle does not cause connection-refused
+    # health blips; override with GUNICORN_MAX_REQUESTS / GUNICORN_MAX_REQUESTS_JITTER.
+    port = os.environ.get("PORT", "8080")
+    max_requests = resolve_gunicorn_max_requests()
+    jitter = resolve_gunicorn_max_requests_jitter(max_requests=max_requests)
+    if max_requests > 0:
+        log("Gunicorn max-requests=%s (jitter=%s)" % (max_requests, jitter), "INFO")
+    else:
+        log("Gunicorn max-requests disabled (set GUNICORN_MAX_REQUESTS to enable recycle)", "INFO")
+    os.execv("/usr/local/bin/gunicorn", build_gunicorn_argv(port, max_requests, jitter))
 
 if __name__ == '__main__':
     main()
