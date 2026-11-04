@@ -24,20 +24,20 @@
     <div id="filterBody">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="projectsFilterForm" data-filter-form>
         <div>
-            <label for="projects-filter-search" class="form-label">Search</label>
+            <label for="projects-filter-search" class="form-label">{{ _('Search') }}</label>
             <input type="text" name="search" id="projects-filter-search" value="{{ search or '' }}" class="form-input">
         </div>
         <div>
-            <label for="status" class="form-label">Status</label>
+            <label for="status" class="form-label">{{ _('Status') }}</label>
             <select name="status" id="status" class="form-input">
-                <option value="all" {% if not status or status == 'all' %}selected{% endif %}>All</option>
-                <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
-                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
-                <option value="archived" {% if status == 'archived' %}selected{% endif %}>Archived</option>
+                <option value="all" {% if not status or status == 'all' %}selected{% endif %}>{{ _('All') }}</option>
+                <option value="active" {% if status == 'active' %}selected{% endif %}>{{ _('Active') }}</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>{{ _('Inactive') }}</option>
+                <option value="archived" {% if status == 'archived' %}selected{% endif %}>{{ _('Archived') }}</option>
             </select>
         </div>
         <div>
-            <label for="client" class="form-label">Client</label>
+            <label for="client" class="form-label">{{ _('Client') }}</label>
             {% set locked_client = get_locked_client() %}
             {% if locked_client %}
                 <input type="hidden" name="client" id="client" value="{{ locked_client.name }}">
@@ -57,10 +57,10 @@
             {% endif %}
         </div>
         <div>
-            <label for="favorites" class="form-label">Show</label>
+            <label for="favorites" class="form-label">{{ _('Show') }}</label>
             <select name="favorites" id="favorites" class="form-input">
-                <option value="">All Projects</option>
-                <option value="true" {% if favorites_only %}selected{% endif %}>⭐ Favorites Only</option>
+                <option value="">{{ _('All Projects') }}</option>
+                <option value="true" {% if favorites_only %}selected{% endif %}>⭐ {{ _('Favorites Only') }}</option>
             </select>
         </div>
         {% if custom_field_definitions %}
