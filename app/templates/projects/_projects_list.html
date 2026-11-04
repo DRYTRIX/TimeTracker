@@ -279,16 +279,21 @@
     {% if not projects %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
-        {% if current_user.is_admin %}
+        {% if current_user.is_admin or has_permission('create_projects') %}
         <a href="{{ url_for('projects.create_project') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
             <i class="fas fa-plus mr-2"></i>Create Your First Project
+        </a>
+        {% endif %}
+        {% if current_user.is_admin or has_permission('create_clients') %}
+        <a href="{{ url_for('clients.create_client') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <i class="fas fa-user-plus mr-2"></i>Add Your First Client
         </a>
         {% endif %}
         <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
             <i class="fas fa-question-circle mr-2"></i>Learn More
         </a>
     {% endset %}
-    {% if request.args.get('search') or request.args.get('client') or request.args.get('status') != 'all' %}
+    {% if request.args.get('search') or request.args.get('client') or request.args.get('status', 'all') != 'all' %}
         {{ empty_state('fas fa-search', 'No Projects Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new project that matches your criteria.', actions, type='no-results') }}
     {% else %}
         {{ empty_state('fas fa-folder-open', 'No Projects Yet', 'Projects help you organize your work and track time efficiently. Create your first project to get started!', actions, type='no-data') }}
