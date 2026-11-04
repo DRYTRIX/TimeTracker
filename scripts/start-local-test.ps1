@@ -24,7 +24,7 @@ try {
 }
 
 Write-Host "Building and starting containers..." -ForegroundColor Cyan
-docker-compose -f docker-compose.local-test.yml up --build
+docker-compose -f docker/docker-compose.local-test.yml up --build
 
 Write-Host ""
 Write-Host "Local test environment stopped." -ForegroundColor Green

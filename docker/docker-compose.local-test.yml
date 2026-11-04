@@ -1,6 +1,8 @@
 services:
   app:
-    build: .
+    build:
+      context: ..
+      dockerfile: Dockerfile
     container_name: timetracker-app-local-test
     environment:
       - TZ=${TZ:-Europe/Brussels}
@@ -40,7 +42,7 @@ services:
       # Mount uploads directory for logos and avatars
       - app_uploads_local_test:/app/app/static/uploads
       # Mount logs directory for easier debugging
-      - ./logs:/app/logs
+      - ../logs:/app/logs
     restart: unless-stopped
     # Run as root initially to set up permissions, then switch to timetracker user
     user: "0:0"
