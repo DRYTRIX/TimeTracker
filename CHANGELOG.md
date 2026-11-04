@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Exchange rates** — When exchangerate.host returns no rate (it now requires an access key), try a keyless exchangerate.host-compatible ECB endpoint (AllRatesToday) for the same date before the latest-only fallback.
 - **Invoices** — Deleting a draft invoice (single or bulk) now makes its project costs and expenses billable again; before, they stayed marked as invoiced and never appeared on a later invoice.
+- **Payments** — Recording a completed payment through the API (and the desktop app) no longer counts it twice in the invoice's amount paid; before, a 1.00 payment showed 2.00 paid and an invoice could read as fully paid early.
 
 ## [5.18.4] - 2026-10-28
 
