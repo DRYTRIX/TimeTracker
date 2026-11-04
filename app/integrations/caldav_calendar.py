@@ -96,6 +96,22 @@ class CalDAVClient:
         self.timeout = timeout  # Increased default timeout to 60 seconds for slow servers
 
     def _request(self, method: str, url: str, *, headers: Optional[Dict[str, str]] = None, data: Optional[str] = None):
+        from flask import current_app
+
+        from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
+
+        # Re-validate at request time (DNS rebinding / poisoned config). Private
+        # LAN CalDAV is allowed when INTEGRATIONS_ALLOW_PRIVATE_URLS is true.
+        allow_private = True
+        try:
+            allow_private = bool(current_app.config.get("INTEGRATIONS_ALLOW_PRIVATE_URLS", True))
+        except RuntimeError:
+            pass
+        try:
+            url = validate_outbound_url(url, allow_private=allow_private)
+        except UnsafeOutboundURL as e:
+            raise ValueError(f"Unsafe CalDAV URL: {e}") from e
+
         h = {
             "User-Agent": "TimeTracker-CalDAV/1.0",
         }

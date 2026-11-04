@@ -11,11 +11,16 @@ services:
       - IDLE_TIMEOUT_MINUTES=${IDLE_TIMEOUT_MINUTES:-30}
       - ADMIN_USERNAMES=${ADMIN_USERNAMES:-admin}
       # Security (required in production)
-      - SECRET_KEY=${SECRET_KEY}
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY to a random 32+ char string}
       # Version (inherited from image, but can be overridden)
       - APP_VERSION=${APP_VERSION:-}
-      # Database (bundled Postgres)
-      - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
+      - POSTGRES_DB=${POSTGRES_DB:-timetracker}
+      - POSTGRES_USER=${POSTGRES_USER:-timetracker}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set a strong POSTGRES_PASSWORD}
+      # Database (bundled Postgres) — password must match db service
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-timetracker}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-timetracker}
+      # Protect /metrics when scraping (header X-Metrics-Token or ?token=)
+      - METRICS_TOKEN=${METRICS_TOKEN:-}
       # CSRF & cookies (safe for HTTP local; tighten for HTTPS)
       - WTF_CSRF_ENABLED=${WTF_CSRF_ENABLED:-true}
       - WTF_CSRF_TIME_LIMIT=${WTF_CSRF_TIME_LIMIT:-3600}
@@ -93,7 +98,7 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-timetracker}
       - POSTGRES_USER=${POSTGRES_USER:-timetracker}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-timetracker}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set a strong POSTGRES_PASSWORD}
       - TZ=${TZ:-Europe/Brussels}
     volumes:
       - db_data:/var/lib/postgresql/data

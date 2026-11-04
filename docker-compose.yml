@@ -100,7 +100,8 @@ services:
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - OTEL_METRICS_EXPORT_INTERVAL_MS=${OTEL_METRICS_EXPORT_INTERVAL_MS:-60000}
       - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
-      - TELE_SALT=${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
+      # Required when ENABLE_TELEMETRY=true (anonymization salt). Generate: openssl rand -hex 32
+      - TELE_SALT=${TELE_SALT:-}
       # AI helper (off by default; use Compose profile "ai" for bundled Ollama or set AI_ENABLED=true for external API)
       - AI_ENABLED=${AI_ENABLED:-false}
       - AI_PROVIDER=${AI_PROVIDER:-ollama}
@@ -235,17 +236,18 @@ services:
 
   # Redis - Caching and session storage (opt-in)
   # Start with: docker compose --profile redis up -d
-  # Then set REDIS_ENABLED=true and REDIS_URL=redis://:${REDIS_PASSWORD:-timetracker}@redis:6379/0
+  # Set REDIS_PASSWORD in .env, then REDIS_ENABLED=true and
+  # REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
   redis:
     profiles:
       - redis
     image: redis:7-alpine
     container_name: timetracker-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-timetracker}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-timetracker}", "--raw", "incr", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "--raw", "incr", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -256,6 +258,8 @@ services:
   # Analytics & Monitoring Services
   # Disabled by default. Enable with: docker compose --profile monitoring up -d
   # Prometheus scrapes the app service at app:8080 (see prometheus/prometheus.yml).
+  # UI ports bind to localhost only — do not expose 9090/3000 publicly.
+  # Set GRAFANA_ADMIN_PASSWORD and METRICS_TOKEN before enabling.
   # See docs/admin/monitoring/ANALYTICS_QUICK_START.md for details.
 
   # Prometheus - Metrics collection and storage
@@ -272,7 +276,7 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     depends_on:
       - app
     restart: unless-stopped
@@ -284,14 +288,14 @@ services:
     image: grafana/grafana:latest
     container_name: timetracker-grafana
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost:3000}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
     restart: unless-stopped

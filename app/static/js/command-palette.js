@@ -291,10 +291,19 @@ import { commandScore } from 'cmdk/command-score';
     });
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   function renderEmpty(message) {
     list.innerHTML = `
       <div class="px-3 py-8 text-center text-sm text-text-muted-light dark:text-text-muted-dark">
-        ${message}
+        ${escapeHtml(message)}
       </div>
     `;
   }
@@ -319,12 +328,12 @@ import { commandScore } from 'cmdk/command-score';
 
       const left = document.createElement('div');
       left.className = 'min-w-0 flex-1';
-      left.innerHTML = `<div class="truncate">${cmd.title}</div>`;
+      left.innerHTML = `<div class="truncate">${escapeHtml(cmd.title)}</div>`;
 
       const right = document.createElement('div');
       right.className = 'shrink-0 text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-2';
       if (cmd.hint) {
-        right.innerHTML = `<span class="truncate">${cmd.hint}</span>`;
+        right.innerHTML = `<span class="truncate">${escapeHtml(cmd.hint)}</span>`;
       }
 
       btn.appendChild(left);

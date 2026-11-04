@@ -1106,26 +1106,23 @@ def caldav_setup():
         if not server_url and not calendar_url:
             errors.append(_("Either server URL or calendar URL is required."))
 
-        # Validate URL format if provided
+        # Validate URL format and block SSRF targets (metadata always; private unless allowed)
+        from flask import current_app
+
+        from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
+
+        allow_private = bool(current_app.config.get("INTEGRATIONS_ALLOW_PRIVATE_URLS", True))
         if server_url:
             try:
-                from urllib.parse import urlparse
-
-                parsed = urlparse(server_url)
-                if not parsed.scheme or not parsed.netloc:
-                    errors.append(_("Server URL must be a valid URL (e.g., https://mail.example.com/dav)."))
-            except Exception:
-                errors.append(_("Server URL format is invalid."))
+                server_url = validate_outbound_url(server_url, allow_private=allow_private)
+            except UnsafeOutboundURL:
+                errors.append(_("Server URL must be a valid http(s) URL and must not target blocked hosts."))
 
         if calendar_url:
             try:
-                from urllib.parse import urlparse
-
-                parsed = urlparse(calendar_url)
-                if not parsed.scheme or not parsed.netloc:
-                    errors.append(_("Calendar URL must be a valid URL."))
-            except Exception:
-                errors.append(_("Calendar URL format is invalid."))
+                calendar_url = validate_outbound_url(calendar_url, allow_private=allow_private)
+            except UnsafeOutboundURL:
+                errors.append(_("Calendar URL must be a valid http(s) URL and must not target blocked hosts."))
 
         # Check if we need to update credentials (username provided or password provided)
         existing_creds = IntegrationCredential.query.filter_by(integration_id=integration.id).first()
@@ -1246,8 +1243,6 @@ def caldav_setup():
 @module_enabled("integrations")
 def activitywatch_setup():
     """Setup ActivityWatch integration (no OAuth, config only)."""
-    from urllib.parse import urlparse
-
     from app.models import Project
 
     service = IntegrationService()
@@ -1284,12 +1279,20 @@ def activitywatch_setup():
         if not server_url:
             errors.append(_("ActivityWatch server URL is required."))
         else:
+            from flask import current_app
+
+            from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
+
+            allow_private = bool(current_app.config.get("INTEGRATIONS_ALLOW_PRIVATE_URLS", True))
             try:
-                parsed = urlparse(server_url)
-                if not parsed.scheme or not parsed.netloc:
-                    errors.append(_("Server URL must be a valid URL (e.g., http://localhost:5600)."))
-            except Exception:
-                errors.append(_("Server URL format is invalid."))
+                server_url = validate_outbound_url(server_url, allow_private=allow_private)
+            except UnsafeOutboundURL:
+                errors.append(
+                    _(
+                        "Server URL must be a valid http(s) URL (e.g., http://localhost:5600) "
+                        "and must not target blocked hosts."
+                    )
+                )
 
         if default_project_id:
             try:

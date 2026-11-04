@@ -176,8 +176,8 @@ class ExpenseService:
         if not is_admin and expense.user_id != user_id:
             return {"success": False, "message": "Access denied", "error": "access_denied"}
 
-        # Update fields
-        for field in ("title", "description", "category", "currency_code", "payment_method", "status", "tags", "notes"):
+        # Update fields (status/reimbursed/invoiced require dedicated approve/reject flows)
+        for field in ("title", "description", "category", "currency_code", "payment_method", "tags", "notes"):
             if field in kwargs:
                 setattr(expense, field, kwargs[field])
         if "amount" in kwargs:
@@ -186,9 +186,15 @@ class ExpenseService:
             expense.expense_date = kwargs["expense_date"]
         if "payment_date" in kwargs:
             expense.payment_date = kwargs["payment_date"]
-        for bfield in ("billable", "reimbursable", "reimbursed", "invoiced"):
+        for bfield in ("billable", "reimbursable"):
             if bfield in kwargs:
                 setattr(expense, bfield, bool(kwargs[bfield]))
+        if kwargs.get("_allow_privileged"):
+            if "status" in kwargs:
+                expense.status = kwargs["status"]
+            for bfield in ("reimbursed", "invoiced"):
+                if bfield in kwargs:
+                    setattr(expense, bfield, bool(kwargs[bfield]))
 
         if not safe_commit("update_expense", {"expense_id": expense_id, "user_id": user_id}):
             return {

@@ -358,6 +358,8 @@ class WorkflowEngine:
         """Trigger webhook"""
         import requests
 
+        from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
+
         url = action.get("url")
         method = action.get("method", "POST")
         payload = action.get("payload", {})
@@ -365,10 +367,18 @@ class WorkflowEngine:
         if not url:
             return {"sent": False, "error": "missing url"}
 
-        # Resolve template variables in payload
+        # Resolve template variables in URL and payload, then block SSRF targets
+        url = WorkflowEngine._resolve_template(url, context)
+        try:
+            url = validate_outbound_url(url)
+        except UnsafeOutboundURL as exc:
+            return {"sent": False, "error": f"unsafe url: {exc}"}
+
         resolved_payload = {k: WorkflowEngine._resolve_template(v, context) for k, v in payload.items()}
 
-        response = requests.request(method=method, url=url, json=resolved_payload, timeout=10)
+        response = requests.request(
+            method=method, url=url, json=resolved_payload, timeout=10, allow_redirects=False
+        )
 
         return {"sent": True, "status_code": response.status_code}
 

@@ -2444,8 +2444,13 @@ def download_project_attachment(attachment_id):
     if not user_can_access_project(current_user, attachment.project_id):
         abort(403)
 
-    # Build file path
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+    except PathEscapeError:
+        flash(_("File not found"), "error")
+        return redirect(url_for("projects.view_project", project_id=project.id))
 
     if not os.path.exists(file_path):
         flash(_("File not found"), "error")
@@ -2468,13 +2473,14 @@ def delete_project_attachment(attachment_id):
     attachment = ProjectAttachment.query.get_or_404(attachment_id)
     project = attachment.project
 
-    # Delete file
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
-    if os.path.exists(file_path):
-        try:
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+        if os.path.exists(file_path):
             os.remove(file_path)
-        except Exception as e:
-            current_app.logger.error(f"Failed to delete attachment file: {e}")
+    except (PathEscapeError, OSError) as e:
+        current_app.logger.error(f"Failed to delete attachment file: {e}")
 
     # Delete database record
     attachment_id_for_log = attachment.id

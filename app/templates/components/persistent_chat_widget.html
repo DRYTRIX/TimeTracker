@@ -268,11 +268,11 @@ function renderChatWidgetChannels() {
     } else {
         channelsEl.innerHTML = chatWidgetState.channels.map(channel => `
             <button
-                onclick="loadChatWidgetChannel(${channel.id})"
+                onclick="loadChatWidgetChannel(${Number(channel.id) || 0})"
                 class="w-full text-left px-2 py-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors text-sm ${chatWidgetState.currentChannelId === channel.id ? 'bg-primary/10 text-primary font-semibold' : 'text-text-light dark:text-text-dark'}"
             >
                 <i class="fas fa-hashtag text-xs mr-1"></i>
-                ${channel.name}
+                ${escapeHtml(channel.name || '')}
             </button>
         `).join('');
     }
@@ -283,11 +283,11 @@ function renderChatWidgetChannels() {
     } else {
         dmsEl.innerHTML = chatWidgetState.directMessages.map(channel => `
             <button
-                onclick="loadChatWidgetChannel(${channel.id})"
+                onclick="loadChatWidgetChannel(${Number(channel.id) || 0})"
                 class="w-full text-left px-2 py-1.5 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors text-sm ${chatWidgetState.currentChannelId === channel.id ? 'bg-primary/10 text-primary font-semibold' : 'text-text-light dark:text-text-dark'}"
             >
                 <i class="fas fa-user-circle text-xs mr-1"></i>
-                ${channel.name}
+                ${escapeHtml(channel.name || '')}
             </button>
         `).join('');
     }
@@ -364,15 +364,17 @@ function renderChatWidgetMessages(messages) {
         const time = window.formatUserTime
             ? window.formatUserTime(new Date(msg.created_at))
             : new Date(msg.created_at).toLocaleTimeString([], window.getUserTimeLocaleOptions ? window.getUserTimeLocaleOptions() : { hour: '2-digit', minute: '2-digit' });
+        const displayName = msg.display_name || msg.username || 'Unknown';
+        const initial = (displayName[0] || 'U').toUpperCase();
         return `
             <div class="flex items-start gap-2">
                 <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <span class="text-primary text-xs font-semibold">${(msg.display_name || msg.username || 'U')[0].toUpperCase()}</span>
+                    <span class="text-primary text-xs font-semibold">${escapeHtml(initial)}</span>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="font-semibold text-sm text-text-light dark:text-text-dark">${msg.display_name || msg.username || 'Unknown'}</span>
-                        <span class="text-xs text-text-muted-light dark:text-text-muted-dark">${time}</span>
+                        <span class="font-semibold text-sm text-text-light dark:text-text-dark">${escapeHtml(displayName)}</span>
+                        <span class="text-xs text-text-muted-light dark:text-text-muted-dark">${escapeHtml(time)}</span>
                     </div>
                     <div class="text-sm text-text-light dark:text-text-dark whitespace-pre-wrap">${escapeHtml(msg.message || '')}</div>
                 </div>

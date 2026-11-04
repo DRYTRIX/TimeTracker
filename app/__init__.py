@@ -355,7 +355,10 @@ def create_app(config=None):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*")
+    # Socket.IO: never "*". Allowlist + same-host (callable re-checked per request).
+    from app.utils.cors import socketio_cors_allowed_origin
+
+    socketio.init_app(app, cors_allowed_origins=socketio_cors_allowed_origin)
     oauth.init_app(app)
 
     # Optional Firebase Admin for FCM mobile idle wake-up (Issue #722). No-op when unset.
@@ -849,11 +852,18 @@ def create_app(config=None):
     @app.before_request
     def handle_api_cors_preflight():
         if request.method == "OPTIONS" and request.path.startswith("/api/v1/"):
+            from app.utils.cors import cors_origin_allowed
+
+            origin = request.headers.get("Origin")
             response = app.response_class(status=204)
-            response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin") or "*"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Request-ID"
-            response.headers["Access-Control-Max-Age"] = "600"
+            if cors_origin_allowed(origin, app):
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Vary"] = "Origin"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = (
+                    "Authorization, Content-Type, Accept, X-Request-ID"
+                )
+                response.headers["Access-Control-Max-Age"] = "600"
             return response
 
     # Start timer for Prometheus metrics
@@ -1075,10 +1085,18 @@ def create_app(config=None):
         # If CSRF is disabled, explicitly clear any existing CSRF cookie to avoid confusion
         try:
             if request.path.startswith("/api/v1/"):
-                response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin") or "*"
-                response.headers["Vary"] = "Origin"
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Request-ID"
+                from app.utils.cors import cors_origin_allowed
+
+                origin = request.headers.get("Origin")
+                if cors_origin_allowed(origin, app):
+                    response.headers["Access-Control-Allow-Origin"] = origin
+                    response.headers["Vary"] = "Origin"
+                    response.headers["Access-Control-Allow-Methods"] = (
+                        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                    )
+                    response.headers["Access-Control-Allow-Headers"] = (
+                        "Authorization, Content-Type, Accept, X-Request-ID"
+                    )
         except Exception:
             app.logger.debug("API CORS response headers failed", exc_info=True)
 

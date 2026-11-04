@@ -258,13 +258,24 @@ def test_update_invoice_status(app, test_project, test_user):
     db.session.add(invoice)
     db.session.commit()
     
-    # Update status
+    # Status changes require an explicit allow flag (not mass-assignable)
     result = service.update_invoice(
         invoice_id=invoice.id,
         status="sent",
-        user_id=test_user.id
+        user_id=test_user.id,
+        _allow_status=True,
     )
-    
+
+    assert result["success"] is True
+    db.session.refresh(invoice)
+    assert invoice.status == "sent"
+
+    # Without the flag, status in kwargs is ignored
+    result = service.update_invoice(
+        invoice_id=invoice.id,
+        status="paid",
+        user_id=test_user.id,
+    )
     assert result["success"] is True
     db.session.refresh(invoice)
     assert invoice.status == "sent"

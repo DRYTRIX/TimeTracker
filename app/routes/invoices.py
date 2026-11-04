@@ -1909,13 +1909,14 @@ def delete_invoice_image(invoice_id, image_id):
         flash(_("You do not have permission to delete images from this invoice"), "error")
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice_id))
 
-    # Delete file from disk
-    file_path = os.path.join(current_app.root_path, "..", image.file_path)
-    if os.path.exists(file_path):
-        try:
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, image.file_path)
+        if os.path.exists(file_path):
             os.remove(file_path)
-        except OSError as e:
-            current_app.logger.warning(f"Failed to delete image file {file_path}: {e}")
+    except (PathEscapeError, OSError) as e:
+        current_app.logger.warning(f"Failed to delete image file: {e}")
 
     image_id_for_log = image.id
     db.session.delete(image)
@@ -1962,7 +1963,12 @@ def get_invoice_image_base64(invoice_id, image_id):
     if not current_user.is_admin and invoice.created_by != current_user.id:
         return jsonify({"error": "Permission denied"}), 403
 
-    file_path = os.path.join(current_app.root_path, "..", image.file_path)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, image.file_path)
+    except PathEscapeError:
+        return jsonify({"error": "File not found"}), 404
     if not os.path.exists(file_path):
         return jsonify({"error": "File not found"}), 404
 

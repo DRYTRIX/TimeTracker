@@ -36,10 +36,27 @@ def _to_local_naive(dt: datetime) -> datetime:
 
 
 def _normalize_server_url(url: str) -> str:
-    """Strip trailing slash from server URL."""
+    """Strip trailing slash and validate against SSRF targets.
+
+    ActivityWatch typically runs on localhost/LAN. Private hosts are allowed when
+    ``INTEGRATIONS_ALLOW_PRIVATE_URLS`` is true (default). Cloud metadata hosts are
+    always rejected.
+    """
     if not url:
         return url
-    return url.rstrip("/")
+    from flask import current_app
+
+    from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
+
+    allow_private = True
+    try:
+        allow_private = bool(current_app.config.get("INTEGRATIONS_ALLOW_PRIVATE_URLS", True))
+    except RuntimeError:
+        pass
+    try:
+        return validate_outbound_url(url.rstrip("/"), allow_private=allow_private)
+    except UnsafeOutboundURL as exc:
+        raise ValueError(f"Invalid ActivityWatch server_url: {exc}") from exc
 
 
 class ActivityWatchConnector(BaseConnector):

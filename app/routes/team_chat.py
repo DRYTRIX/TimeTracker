@@ -448,8 +448,13 @@ def download_attachment(channel_id, message_id):
         flash(_("No attachment found"), "error")
         return redirect(url_for("team_chat.chat_channel", channel_id=channel_id))
 
-    # Build file path
-    file_path = os.path.join(current_app.root_path, "..", message.attachment_url)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, message.attachment_url)
+    except PathEscapeError:
+        flash(_("File not found"), "error")
+        return redirect(url_for("team_chat.chat_channel", channel_id=channel_id))
 
     if not os.path.exists(file_path):
         flash(_("File not found"), "error")

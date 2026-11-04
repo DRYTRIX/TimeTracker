@@ -140,7 +140,9 @@ def update_expense(expense_id):
 
     data = request.get_json() or {}
     update_kwargs = {}
-    for field in ("title", "description", "category", "currency_code", "payment_method", "status", "tags", "notes"):
+    # Privileged workflow fields (status, reimbursed, invoiced) are not mass-assignable;
+    # use /expenses/<id>/approve and /reject instead.
+    for field in ("title", "description", "category", "currency_code", "payment_method", "tags", "notes"):
         if field in data:
             update_kwargs[field] = data[field]
     if "amount" in data:
@@ -154,7 +156,7 @@ def update_expense(expense_id):
             update_kwargs["expense_date"] = parsed
     if "payment_date" in data:
         update_kwargs["payment_date"] = _parse_date(data["payment_date"])
-    for bfield in ("billable", "reimbursable", "reimbursed", "invoiced"):
+    for bfield in ("billable", "reimbursable"):
         if bfield in data:
             update_kwargs[bfield] = bool(data[bfield])
     expense_service = ExpenseService()

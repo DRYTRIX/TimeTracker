@@ -400,8 +400,13 @@ def download_attachment(attachment_id):
         if not current_user.is_admin and quote.created_by != current_user.id:
             abort(403)
 
-    # Build file path
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+    except PathEscapeError:
+        flash(_("File not found"), "error")
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     if not os.path.exists(file_path):
         flash(_("File not found"), "error")
@@ -424,13 +429,14 @@ def delete_attachment(attachment_id):
         flash(_("You do not have permission to delete this attachment"), "error")
         return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
-    # Delete file
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
-    if os.path.exists(file_path):
-        try:
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+        if os.path.exists(file_path):
             os.remove(file_path)
-        except Exception as e:
-            current_app.logger.error(f"Failed to delete attachment file: {e}")
+    except (PathEscapeError, OSError) as e:
+        current_app.logger.error(f"Failed to delete attachment file: {e}")
 
     # Delete attachment record
     db.session.delete(attachment)

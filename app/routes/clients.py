@@ -1452,8 +1452,13 @@ def download_client_attachment(attachment_id):
     if not user_can_access_client(current_user, attachment.client_id):
         abort(403)
 
-    # Build file path
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+    except PathEscapeError:
+        flash(_("File not found"), "error")
+        return redirect(url_for("clients.view_client", client_id=client.id))
 
     if not os.path.exists(file_path):
         flash(_("File not found"), "error")
@@ -1474,13 +1479,14 @@ def delete_client_attachment(attachment_id):
     attachment = ClientAttachment.query.get_or_404(attachment_id)
     client = attachment.client
 
-    # Delete file
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
-    if os.path.exists(file_path):
-        try:
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+        if os.path.exists(file_path):
             os.remove(file_path)
-        except Exception as e:
-            current_app.logger.error(f"Failed to delete attachment file: {e}")
+    except (PathEscapeError, OSError) as e:
+        current_app.logger.error(f"Failed to delete attachment file: {e}")
 
     # Delete database record
     attachment_id_for_log = attachment.id

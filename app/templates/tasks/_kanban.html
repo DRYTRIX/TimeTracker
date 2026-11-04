@@ -802,6 +802,29 @@
   const board = document.getElementById('kanbanBoard');
   if (!board) return;
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+  function safeCssColor(value) {
+    const v = String(value || '').trim();
+    if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
+    if (/^var\(--[a-zA-Z0-9-]+\)$/.test(v)) return v;
+    if (/^[a-zA-Z][a-zA-Z0-9-]*$/.test(v)) return v;
+    return 'var(--primary-color)';
+  }
+  function safeToken(value, fallback) {
+    const v = String(value || '').trim();
+    return /^[a-zA-Z0-9_-]+$/.test(v) ? v : fallback;
+  }
+  function safeIconClass(value) {
+    return String(value || 'fas fa-circle').replace(/[^a-zA-Z0-9\s\-_]/g, '');
+  }
+
   const statusLabels = { 
     {% for col in kanban_columns %}
     '{{ col.key }}': '{{ col.label }}'{% if not loop.last %},{% endif %}
@@ -847,15 +870,17 @@
 
       const header = document.createElement('div');
       header.className = 'kanban-column-header';
+      const colKey = safeToken(col.key, 'todo');
+      const colColor = safeCssColor(col.color || 'var(--primary-color)');
       header.innerHTML = `
         <div class="d-flex align-items-center justify-content-between">
           <div class="d-flex align-items-center gap-2">
-            <div class="kanban-status-icon kanban-status-${col.key}" style="--column-color: ${col.color || 'var(--primary-color)'};">
-              <i class="${col.icon || 'fas fa-circle'}"></i>
+            <div class="kanban-status-icon kanban-status-${escapeHtml(colKey)}" style="--column-color: ${escapeHtml(colColor)};">
+              <i class="${escapeHtml(safeIconClass(col.icon))}"></i>
             </div>
-            <h6 class="kanban-column-title mb-0">${col.label}</h6>
+            <h6 class="kanban-column-title mb-0">${escapeHtml(col.label || '')}</h6>
           </div>
-          <span class="kanban-count kanban-count-${col.key}">0</span>
+          <span class="kanban-count kanban-count-${escapeHtml(colKey)}">0</span>
         </div>`;
 
       const body = document.createElement('div');
@@ -1055,6 +1080,19 @@
 
 <!-- Task Modal JavaScript -->
 <script nonce="{{ csp_nonce() }}">
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+function safeToken(value, fallback) {
+  const v = String(value || '').trim();
+  return /^[a-zA-Z0-9_-]+$/.test(v) ? v : fallback;
+}
+
 // Global function to open task modal
 window.openTaskModal = async function(taskId) {
   const modalEl = document.getElementById('taskQuickViewModal');
@@ -1084,11 +1122,13 @@ window.openTaskModal = async function(taskId) {
     document.getElementById('taskModalId').textContent = `#${task.id}`;
     
     // Status badge
-    const statusBadge = `<span class="status-badge status-${task.status}">${task.status_display || task.status}</span>`;
+    const statusToken = safeToken(task.status, 'todo');
+    const statusBadge = `<span class="status-badge status-${escapeHtml(statusToken)}">${escapeHtml(task.status_display || task.status || '')}</span>`;
     document.getElementById('taskModalStatus').innerHTML = statusBadge;
     
     // Priority badge
-    const priorityBadge = `<span class="priority-badge priority-${task.priority}">${task.priority_display || task.priority}</span>`;
+    const priorityToken = safeToken(task.priority, 'medium');
+    const priorityBadge = `<span class="priority-badge priority-${escapeHtml(priorityToken)}">${escapeHtml(task.priority_display || task.priority || '')}</span>`;
     document.getElementById('taskModalPriority').innerHTML = priorityBadge;
     
     // Project info
@@ -1097,8 +1137,8 @@ window.openTaskModal = async function(taskId) {
         <i class="fas fa-project-diagram"></i>
       </div>
       <div>
-        <div class="fw-semibold" style="color: var(--text-primary);">${task.project?.name || 'N/A'}</div>
-        <small class="text-muted">${task.project?.client || ''}</small>
+        <div class="fw-semibold" style="color: var(--text-primary);">${escapeHtml(task.project?.name || 'N/A')}</div>
+        <small class="text-muted">${escapeHtml(task.project?.client || '')}</small>
       </div>
     `;
     document.getElementById('taskModalProject').innerHTML = projectHtml;
@@ -1127,7 +1167,7 @@ window.openTaskModal = async function(taskId) {
           <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
             <i class="fas fa-user text-primary" style="font-size: 12px;"></i>
           </div>
-          <span>${assigneeNames.join(', ')}</span>
+          <span>${escapeHtml(assigneeNames.join(', '))}</span>
         </div>
       `;
       document.getElementById('taskModalAssigned').innerHTML = assignedHtml;
@@ -1178,7 +1218,7 @@ window.openTaskModal = async function(taskId) {
     if (task.tags && task.tags.length > 0) {
       tagsSection.style.display = 'block';
       const tagsHtml = task.tags.map(tag => 
-        `<span class="badge bg-light text-dark border">${tag}</span>`
+        `<span class="badge bg-light text-dark border">${escapeHtml(tag)}</span>`
       ).join('');
       document.getElementById('taskModalTags').innerHTML = tagsHtml;
     } else {

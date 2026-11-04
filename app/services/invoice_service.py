@@ -496,7 +496,8 @@ class InvoiceService:
             invoice.tax_rate = Decimal(str(kwargs["tax_rate"]))
         if "currency_code" in kwargs:
             invoice.currency_code = kwargs["currency_code"]
-        if "status" in kwargs:
+        # status transitions only when explicitly allowed (e.g. cancel soft-delete)
+        if "status" in kwargs and kwargs.get("_allow_status"):
             invoice.status = kwargs["status"]
 
         if not safe_commit("update_invoice", {"invoice_id": invoice_id, "user_id": user_id}):

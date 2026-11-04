@@ -100,10 +100,25 @@ class ActivityFeed {
         }
     }
 
+    escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     renderActivity(activity) {
-        const icon = this.getActivityIcon(activity);
-        const timeAgo = this.formatTimeAgo(activity.created_at);
-        const userDisplay = activity.display_name || activity.username || 'Unknown';
+        const icon = this.escapeHtml(this.getActivityIcon(activity));
+        const timeAgo = this.escapeHtml(this.formatTimeAgo(activity.created_at));
+        const userDisplay = this.escapeHtml(activity.display_name || activity.username || 'Unknown');
+        const description = this.escapeHtml(
+            activity.description || this.formatActivityDescription(activity)
+        );
+        const extra = activity.extra_data
+            ? `<div class="activity-meta text-xs text-gray-500 mt-1">${this.escapeHtml(this.formatExtraData(activity.extra_data))}</div>`
+            : '';
 
         return `
             <div class="activity-item flex items-start gap-4 p-4 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
@@ -113,10 +128,10 @@ class ActivityFeed {
                 <div class="activity-content flex-1">
                     <div class="activity-header flex items-center gap-2 mb-1">
                         <span class="font-semibold">${userDisplay}</span>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">${activity.description || this.formatActivityDescription(activity)}</span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">${description}</span>
                         <span class="text-xs text-gray-400 ml-auto">${timeAgo}</span>
                     </div>
-                    ${activity.extra_data ? `<div class="activity-meta text-xs text-gray-500 mt-1">${this.formatExtraData(activity.extra_data)}</div>` : ''}
+                    ${extra}
                 </div>
             </div>
         `;

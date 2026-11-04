@@ -1572,8 +1572,7 @@ def update_quote(quote_id):
         update_kwargs["tax_rate"] = Decimal(str(data["tax_rate"]))
     if "currency_code" in data:
         update_kwargs["currency_code"] = data["currency_code"]
-    if "status" in data:
-        update_kwargs["status"] = data["status"]
+    # status is not mass-assignable via generic update (use dedicated quote workflow routes).
     if "payment_terms" in data:
         update_kwargs["payment_terms"] = data["payment_terms"]
     if "valid_until" in data:

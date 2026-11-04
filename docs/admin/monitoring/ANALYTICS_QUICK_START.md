@@ -27,11 +27,15 @@ docker-compose up -d
 
 **Setup:**
 ```bash
-# Deploy with monitoring profile
-docker-compose --profile monitoring up -d
+# Required before starting the monitoring profile
+export GRAFANA_ADMIN_PASSWORD="$(openssl rand -hex 16)"
+export METRICS_TOKEN="$(openssl rand -hex 24)"   # also set on the app service
 
-# Access dashboards
-# Grafana: http://localhost:3000 (admin/admin)
+# Deploy with monitoring profile (Grafana/Prometheus bind to 127.0.0.1 only)
+docker compose --profile monitoring up -d
+
+# Access dashboards (localhost only — do not expose publicly)
+# Grafana: http://localhost:3000  (admin / $GRAFANA_ADMIN_PASSWORD)
 # Prometheus: http://localhost:9090
 ```
 
@@ -182,7 +186,7 @@ curl 'http://localhost:9090/api/v1/query?query=tt_requests_total'
 
 ### Grafana Dashboards
 1. Open http://localhost:3000
-2. Login (admin/admin)
+2. Login as `admin` with `GRAFANA_ADMIN_PASSWORD` from your `.env`
 3. Create a new dashboard
 4. Add panels with Prometheus queries
 

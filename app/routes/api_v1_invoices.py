@@ -116,14 +116,12 @@ def create_invoice():
 @require_api_token("write:invoices")
 def update_invoice(invoice_id):
     """Update an invoice."""
-    from decimal import Decimal, InvalidOperation
-
     from app.services import InvoiceService
 
     data = request.get_json() or {}
     update_kwargs = {}
-    # API update dropped; also recompute totals after a tax_rate change (see below).
-    for field in ("client_name", "client_email", "client_address", "notes", "terms", "status", "currency_code", "buyer_reference"):
+    # status / amount_paid are not mass-assignable via generic update (use cancel/payment flows).
+    for field in ("client_name", "client_email", "client_address", "notes", "terms", "currency_code", "buyer_reference"):
         if field in data:
             update_kwargs[field] = data[field]
     if "issue_date" in data:
@@ -139,18 +137,10 @@ def update_invoice(invoice_id):
             update_kwargs["tax_rate"] = float(data["tax_rate"])
         except (ValueError, TypeError) as e:
             current_app.logger.warning("Invalid tax_rate value in invoice update: %s - %s", data.get("tax_rate"), e)
-    if "amount_paid" in data:
-        try:
-            update_kwargs["amount_paid"] = Decimal(str(data["amount_paid"]))
-        except (ValueError, TypeError, InvalidOperation) as e:
-            current_app.logger.warning(
-                "Invalid amount_paid value in invoice update: %s - %s", data.get("amount_paid"), e
-            )
     invoice_service = InvoiceService()
     result = invoice_service.update_invoice(invoice_id=invoice_id, user_id=g.api_user.id, **update_kwargs)
     if not result.get("success"):
         return error_response(result.get("message", "Could not update invoice"), status_code=400)
-    # InvoiceService.update_invoice — set them directly (same pattern as amount_paid below).
     direct_dirty = False
     if "buyer_reference" in data:
         result["invoice"].buyer_reference = data["buyer_reference"]
@@ -165,9 +155,6 @@ def update_invoice(invoice_id):
         direct_dirty = True
     if direct_dirty:
         db.session.commit()
-    if "amount_paid" in data:
-        result["invoice"].update_payment_status()
-        db.session.commit()
     try:
         from app.utils.integration_sync_hooks import trigger_invoice_sync
 
@@ -181,7 +168,9 @@ def update_invoice(invoice_id):
 @require_api_token("write:invoices")
 def delete_invoice(invoice_id):
     """Cancel an invoice (soft-delete)."""
-    result = _invoice_service().update_invoice(invoice_id=invoice_id, user_id=g.api_user.id, status="cancelled")
+    result = _invoice_service().update_invoice(
+        invoice_id=invoice_id, user_id=g.api_user.id, status="cancelled", _allow_status=True
+    )
     if not result.get("success"):
         return error_response(result.get("message", "Could not cancel invoice"), status_code=400)
     return jsonify({"message": "Invoice cancelled successfully"})
