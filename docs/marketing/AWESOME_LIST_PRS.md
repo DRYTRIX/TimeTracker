@@ -23,7 +23,7 @@ Submit with:
 - Name: TimeTracker
 - Tagline: Self-hosted time tracking and Peppol e-invoicing
 - Repo: https://github.com/DRYTRIX/TimeTracker
-- Demo: https://timetracker-demo.drytrix.com
+- Demo: https://timetracker-demo.drytrix.com (login `test` / `test123!`)
 - Website: https://timetracker.drytrix.com
 
 ## Do not

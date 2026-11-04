@@ -49,6 +49,14 @@ See [client management](docs/CLIENT_MANAGEMENT_README.md) and [invoicing](docs/I
 
 More install paths (HTTPS production, NAS UI paste, cloud): [Install options](#install-options).
 
+### First 5 minutes
+
+1. Open http://localhost:8080 and complete first-login admin setup
+2. [Add a client](docs/CLIENT_MANAGEMENT_README.md)
+3. Create a project under that client
+4. Start a timer or [log time](docs/GETTING_STARTED.md)
+5. (Optional) [Generate a draft invoice](docs/INVOICE_FEATURE_README.md) from tracked time
+
 ---
 
 ## Why TimeTracker?

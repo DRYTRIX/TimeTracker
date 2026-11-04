@@ -98,7 +98,7 @@
                class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
                title="{{ _('Export to CSV') }}"
                onclick="showExportLoading(this); return true;">
-                <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
+                <i class="fas fa-download mr-1"></i> <span class="export-text">{{ _('Export') }}</span>
             </a>
             {% if current_user.is_admin %}
             <div class="relative">
@@ -369,22 +369,17 @@
     {% set actions %}
         {% if current_user.is_admin or has_permission('create_projects') %}
         <a href="{{ url_for('projects.create_project') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-            <i class="fas fa-plus mr-2"></i>Create Your First Project
+            <i class="fas fa-plus mr-2"></i>{{ _('Create your first project') }}
         </a>
         {% endif %}
-        {% if current_user.is_admin or has_permission('create_clients') %}
-        <a href="{{ url_for('clients.create_client') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-            <i class="fas fa-user-plus mr-2"></i>Add Your First Client
-        </a>
-        {% endif %}
-        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-            <i class="fas fa-question-circle mr-2"></i>Learn More
+        <a href="{{ url_for('clients.list_clients') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <i class="fas fa-user-tie mr-2"></i>{{ _('Add a client first') }}
         </a>
     {% endset %}
-    {% if search or request.args.get('client') or request.args.get('status', 'all') != 'all' %}
-        {{ empty_state('fas fa-search', 'No Projects Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new project that matches your criteria.', actions, type='no-results') }}
+    {% if search or request.args.get('client') or request.args.get('status') != 'all' %}
+        {{ empty_state('fas fa-search', _('No projects match your filters'), _('Try adjusting your filters to see more results, or create a project that matches your criteria.'), actions, type='no-results') }}
     {% else %}
-        {{ empty_state('fas fa-folder-open', 'No Projects Yet', 'Projects help you organize your work and track time efficiently. Create your first project to get started!', actions, type='no-data') }}
+        {{ empty_state('fas fa-folder-open', _('No projects yet'), _('Organize work by client and project, then track time against them. Create your first project to get started.'), actions, type='no-data') }}
     {% endif %}
     {% endif %}
     </div>
@@ -1077,3 +1072,4 @@ function toggleFavorite(projectId, button) {
 })();
 </script>
 {% endblock %}
+
