@@ -13,5 +13,8 @@ RUN apk add --no-cache \
 COPY docker/generate-mkcert-certs.sh /generate-mkcert-certs.sh
 RUN chmod +x /generate-mkcert-certs.sh
 
-CMD ["/generate-mkcert-certs.sh"]
+# Run as non-root (bind-mounted ./nginx/ssl must be writable by UID 1000)
+RUN adduser -D -u 1000 certgen
+USER certgen
 
+CMD ["/generate-mkcert-certs.sh"]

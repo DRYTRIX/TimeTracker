@@ -100,20 +100,16 @@ function closeSaveFilterModal() {
 }
 
 function getCurrentFilterParameters() {
-    // Get all form inputs on the page and build filter payload
-    // Use Map to avoid remote property injection from untrusted URL param names
-    var params = new Map();
+    // Build filter payload from URL params without dynamic property writes
+    // (avoids js/remote-property-injection / prototype pollution)
     var urlParams = new URLSearchParams(window.location.search);
-
-    // Get all URL parameters
+    var parts = [];
     for (let [key, value] of urlParams.entries()) {
         if (!value) continue;
-        // Prevent prototype pollution when converting Map to a plain object
         if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
-        params.set(key, value);
+        parts.push(JSON.stringify(key) + ':' + JSON.stringify(value));
     }
-
-    return Object.fromEntries(params);
+    return JSON.parse('{' + parts.join(',') + '}');
 }
 
 function saveFilter(event) {
