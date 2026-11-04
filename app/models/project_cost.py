@@ -5,6 +5,7 @@ from app import db
 
 
 class ProjectCost(db.Model):
+    # CI drift-check probe (no schema change)
     """Project cost model for tracking expenses beyond hourly work"""
 
     __tablename__ = "project_costs"
