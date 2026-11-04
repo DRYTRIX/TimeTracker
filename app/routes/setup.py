@@ -24,6 +24,12 @@ IDLE_TIMEOUT_MIN, IDLE_TIMEOUT_MAX = 1, 480
 @setup_bp.route("/setup", methods=["GET", "POST"])
 def initial_setup():
     """Initial setup page for first-time users (guided wizard)."""
+    from flask import current_app
+
+    # Public demos never use the first-run wizard
+    if current_app.config.get("DEMO_MODE"):
+        return redirect(url_for("auth.login"))
+
     installation_config = get_installation_config()
 
     # If setup is already complete, redirect to dashboard

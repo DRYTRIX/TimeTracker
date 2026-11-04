@@ -651,6 +651,13 @@ def ensure_default_data(app):
                     if changed:
                         log(f"Updated demo user privileges: {demo_username}", "INFO")
                 db.session.commit()
+                try:
+                    from app.utils.seed_demo_data import seed_demo_sample_data
+
+                    if seed_demo_sample_data(app):
+                        log("DEMO_MODE sample data ready", "INFO")
+                except Exception as seed_err:
+                    log(f"Demo sample data seed skipped: {seed_err}", "WARNING")
             else:
                 admin_usernames = [u.strip().lower() for u in os.getenv("ADMIN_USERNAMES", "admin").split(",") if u.strip()]
                 for username in admin_usernames[:5]:  # safety cap

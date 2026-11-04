@@ -38,10 +38,12 @@ services:
         value: local
       - key: REDIS_ENABLED
         value: "false"
-      # Demo mode: uncomment below and set DEMO_PASSWORD in Render Dashboard for a single-user demo
+      # Public demo: enable DEMO_MODE so / skips the setup wizard and seeds sample data.
+      # Prefer setting DEMO_PASSWORD as a Render Secret (sync: false). Credentials are shown on /login.
       # - key: DEMO_MODE
       #   value: "true"
       # - key: DEMO_USERNAME
       #   value: demo
       # - key: DEMO_PASSWORD
       #   sync: false
+

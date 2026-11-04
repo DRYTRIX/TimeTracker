@@ -799,6 +799,10 @@ def create_app(config=None):
             if app.config.get("TESTING"):
                 return
 
+            # Public demos skip the first-run wizard entirely
+            if app.config.get("DEMO_MODE"):
+                return
+
             # Skip setup check for these routes
             skip_routes = [
                 "setup.initial_setup",
@@ -1695,6 +1699,12 @@ def create_app(config=None):
                     if changed:
                         db.session.commit()
                         print(f"Updated demo user privileges: {demo_username}")
+                try:
+                    from app.utils.seed_demo_data import seed_demo_sample_data
+
+                    seed_demo_sample_data(app)
+                except Exception as seed_err:
+                    print(f"Demo sample data seed skipped: {seed_err}")
             else:
                 admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
                 if not User.query.filter_by(username=admin_username).first():
@@ -1773,6 +1783,12 @@ def init_database(app):
                     if changed:
                         db.session.commit()
                         print(f"Updated demo user privileges: {demo_username}")
+                try:
+                    from app.utils.seed_demo_data import seed_demo_sample_data
+
+                    seed_demo_sample_data(app)
+                except Exception as seed_err:
+                    print(f"Demo sample data seed skipped: {seed_err}")
             else:
                 admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
                 if not User.query.filter_by(username=admin_username).first():

@@ -63,7 +63,11 @@ In demo mode:
 - The login page shows the demo username and password.
 - Self-registration and admin user creation are disabled; OIDC cannot create new users.
 - The demo user is created automatically on first run if it does not exist.
+- The first-run `/setup` wizard is skipped; setup is marked complete automatically.
+- On first boot (empty DB), sample clients, projects, and time entries are seeded so the dashboard is browseable.
 - The demo account has the standard **user** role only (not an administrator), so settings, PDF layout editing, and similar admin routes are unavailable on the demo login.
+
+**Public demo (this project):** [https://timetracker-demo.drytrix.com](https://timetracker-demo.drytrix.com) — username `test`, password `test123!`.
 
 **Security:** Use a strong **DEMO_PASSWORD** for any public demo. Do not use `DEMO_MODE=true` for production multi-user deployments.
 
