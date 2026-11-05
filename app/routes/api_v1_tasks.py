@@ -98,6 +98,10 @@ def get_task(task_id):
 
     from app.models import Task, TaskAssignee
 
+    from sqlalchemy.orm import selectinload
+
+    from app.models import TaskAssignee
+
     task = (
         Task.query.options(
             joinedload(Task.project),
