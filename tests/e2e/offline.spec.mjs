@@ -24,14 +24,14 @@ test.describe('Offline / air-gapped rendering', () => {
 
   test('login page renders with all external hosts blocked', async ({ page }) => {
     const problems = collectPageProblems(page);
-    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.goto('/login', { waitUntil: 'load' });
 
     await expect(page.locator('input[name="username"]')).toBeVisible();
     expect(problems.failedRequests, 'no request may go to a third-party host').toEqual([]);
   });
 
   test('stylesheets and fonts resolve locally', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.goto('/login', { waitUntil: 'load' });
 
     const fontFamily = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
     expect(fontFamily).toMatch(/Inter/i);
@@ -49,7 +49,7 @@ test.describe('Offline / air-gapped rendering', () => {
       test.skip(!(await login(page)), 'E2E_USERNAME not configured');
 
       const problems = collectPageProblems(page);
-      await page.goto(path, { waitUntil: 'networkidle' });
+      await page.goto(path, { waitUntil: 'load' });
 
       expect(problems.failedRequests, `third-party requests on ${path}`).toEqual([]);
       expect(problems.errors, `JS errors on ${path}`).toEqual([]);
@@ -59,7 +59,7 @@ test.describe('Offline / air-gapped rendering', () => {
   test('command palette works without network access', async ({ page }) => {
     test.skip(!(await login(page)), 'E2E_USERNAME not configured');
 
-    await page.goto('/', { waitUntil: 'networkidle' });
+    await page.goto('/', { waitUntil: 'load' });
     // Previously imported its scoring helper from jsDelivr at runtime, so this
     // silently did nothing when offline.
     await page.keyboard.press('Control+k');

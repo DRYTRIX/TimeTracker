@@ -32,7 +32,7 @@ test('dashboard stays within its JavaScript budget', async ({ page }) => {
     }
   });
 
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/', { waitUntil: 'load' });
 
   expect(requests, `too many JS requests (${requests})`).toBeLessThanOrEqual(MAX_JS_REQUESTS);
   expect(bytes, `JS payload grew to ${bytes} bytes`).toBeLessThanOrEqual(MAX_JS_BYTES);
@@ -42,7 +42,7 @@ test('bundles execute and expose their globals', async ({ page }) => {
   test.skip(!(await login(page)), 'E2E_USERNAME not configured');
 
   const problems = collectPageProblems(page);
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/', { waitUntil: 'load' });
 
   // One representative global per bundle group, to catch a mis-ordered concatenation.
   const globals = await page.evaluate(() => ({
@@ -60,7 +60,7 @@ test('bundles execute and expose their globals', async ({ page }) => {
 test('assets are served with content-hashed, cacheable URLs', async ({ page }) => {
   test.skip(!(await login(page)), 'E2E_USERNAME not configured');
 
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/', { waitUntil: 'load' });
 
   const bundles = await page.evaluate(() =>
     Array.from(document.querySelectorAll('script[src]'))

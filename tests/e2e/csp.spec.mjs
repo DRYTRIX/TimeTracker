@@ -39,7 +39,7 @@ test.describe('Content Security Policy', () => {
   for (const { name, path } of PUBLIC_PAGES) {
     test(`no CSP violations on ${name}`, async ({ page }) => {
       const problems = collectPageProblems(page);
-      await page.goto(path, { waitUntil: 'networkidle' });
+      await page.goto(path, { waitUntil: 'load' });
       expect(problems.csp, `CSP violations on ${path}`).toEqual([]);
     });
   }
@@ -49,7 +49,7 @@ test.describe('Content Security Policy', () => {
       test.skip(!(await login(page)), 'E2E_USERNAME not configured');
 
       const problems = collectPageProblems(page);
-      await page.goto(path, { waitUntil: 'networkidle' });
+      await page.goto(path, { waitUntil: 'load' });
       expect(problems.csp, `CSP violations on ${path}`).toEqual([]);
     });
   }

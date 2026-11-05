@@ -30,7 +30,7 @@ async function scan(page) {
 test.describe('Accessibility', () => {
   for (const { name, path } of PUBLIC_PAGES) {
     test(`${name} has no serious or critical violations`, async ({ page }) => {
-      await page.goto(path, { waitUntil: 'networkidle' });
+      await page.goto(path, { waitUntil: 'load' });
       const violations = await scan(page);
       expect(violations.length, `\n${summarize(violations)}`).toBe(0);
     });
@@ -40,7 +40,7 @@ test.describe('Accessibility', () => {
     test(`${name} has no serious or critical violations`, async ({ page }) => {
       test.skip(!(await login(page)), 'E2E_USERNAME not configured');
 
-      await page.goto(path, { waitUntil: 'networkidle' });
+      await page.goto(path, { waitUntil: 'load' });
       const violations = await scan(page);
       expect(violations.length, `\n${summarize(violations)}`).toBe(0);
     });

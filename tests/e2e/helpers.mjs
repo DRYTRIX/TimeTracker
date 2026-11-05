@@ -47,14 +47,15 @@ export function collectPageProblems(page) {
 export async function login(page) {
   if (!USERNAME) return false;
 
-  await page.goto('/login');
+  await page.goto('/login', { waitUntil: 'load' });
   await page.fill('input[name="username"]', USERNAME);
   const passwordField = page.locator('input[name="password"]');
   if (await passwordField.count()) {
     await passwordField.fill(PASSWORD);
   }
+  // Prefer waitForURL over networkidle: authenticated pages keep polling / WebSockets open.
   await Promise.all([
-    page.waitForLoadState('networkidle'),
+    page.waitForURL((url) => !String(url.pathname || url).includes('/login'), { timeout: 15_000 }),
     page.click('button[type="submit"], input[type="submit"]'),
   ]);
 
