@@ -197,21 +197,17 @@ jobs:
 
           echo ""
           echo "=== Autogenerate on PR base ($BASE_SHA) ==="
-          # Swap models + migrations (+ requirements) to the base tree so Flask can
-          # import against matching deps (e.g. marshmallow missing= vs load_default=).
-          git checkout "$BASE_SHA" -- app migrations requirements.txt requirements-test.txt 2>/dev/null \
-            || git checkout "$BASE_SHA" -- app migrations requirements.txt
-          echo "Reinstalling base requirements for comparison..."
-          pip install -q -r requirements.txt
+          # Swap only models + migrations so metadata comparison stays on the same
+          # installed deps (reinstalling base requirements changes Alembic naming
+          # helpers like batch_op.f(...) and creates false "new drift").
+          # Keep PR schemas/routes so Flask can still import (e.g. marshmallow 4).
+          git checkout "$BASE_SHA" -- app/models migrations
           reset_db
           capture_autogenerate "test_consistency_base" "$BASE_OPS"
           echo "Base op count: $(grep -c . "$BASE_OPS" || true)"
 
           # Restore PR tree and re-apply PR migrations for subsequent workflow steps
-          git checkout "$PR_SHA" -- app migrations requirements.txt requirements-test.txt 2>/dev/null \
-            || git checkout "$PR_SHA" -- app migrations requirements.txt
-          echo "Reinstalling PR requirements after base comparison..."
-          pip install -q -r requirements.txt
+          git checkout "$PR_SHA" -- app/models migrations
           reset_db
           echo "Re-applying PR migrations after base comparison..."
           if ! flask db upgrade; then
