@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-env
         with:
           install-dev: 'true'
@@ -38,7 +38,7 @@ jobs:
           fi
       - name: Open or update issue on failure
         if: steps.audit.outcome == 'failure' || steps.safety.outcome == 'failure'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const title = "Nightly dependency audit failed";

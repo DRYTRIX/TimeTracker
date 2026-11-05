@@ -59,7 +59,7 @@ jobs:
       - name: Create GitHub App token
         id: app-token
         if: steps.token.outputs.use_app == 'true'
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
@@ -74,14 +74,14 @@ jobs:
           fi
 
       - name: Checkout base
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.base }}
           fetch-depth: 0
           token: ${{ steps.auth.outputs.token }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
