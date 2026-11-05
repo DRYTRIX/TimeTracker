@@ -45,7 +45,6 @@ docker compose -f docker-compose.nas.yml up -d
 
 See [client management](docs/CLIENT_MANAGEMENT_README.md) and [invoicing](docs/INVOICE_FEATURE_README.md) for the detailed flows.
 
-**Latest release: v5.18.4** — see [CHANGELOG.md](CHANGELOG.md).
 
 More install paths (HTTPS production, NAS UI paste, cloud): [Install options](#install-options).
 
