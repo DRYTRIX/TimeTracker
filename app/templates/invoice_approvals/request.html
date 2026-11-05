@@ -14,11 +14,11 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('invoice_approvals.request_approval', invoice_id=invoice.id) }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Select Approvers') }}</h3>
             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Select one or more users who need to approve this invoice. Approvals will be processed in order.') }}</p>
-            
+
             <div class="space-y-2 max-h-64 overflow-y-auto border border-border-light dark:border-border-dark rounded-lg p-4">
                 {% for user in users %}
                 <label class="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer">
@@ -33,7 +33,7 @@
                 {% endfor %}
             </div>
         </div>
-        
+
         <div class="flex justify-end gap-4">
             <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Request Approval') }}</button>
@@ -49,7 +49,7 @@ document.querySelector('form').addEventListener('submit', function(e) {
         alert('{{ _("Please select at least one approver.") }}');
         return false;
     }
-    
+
     // Convert to JSON array
     const approvers = Array.from(checked).map(cb => parseInt(cb.value));
     const input = document.createElement('input');
@@ -60,4 +60,3 @@ document.querySelector('form').addEventListener('submit', function(e) {
 });
 </script>
 {% endblock %}
-

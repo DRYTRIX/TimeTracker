@@ -36,10 +36,27 @@ def _to_local_naive(dt: datetime) -> datetime:
 
 
 def _normalize_server_url(url: str) -> str:
-    """Strip trailing slash from server URL."""
+    """Strip trailing slash and validate against SSRF targets.
+
+    ActivityWatch typically runs on localhost/LAN. Private hosts are allowed when
+    ``INTEGRATIONS_ALLOW_PRIVATE_URLS`` is true (default). Cloud metadata hosts are
+    always rejected.
+    """
     if not url:
         return url
-    return url.rstrip("/")
+    from flask import current_app
+
+    from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
+
+    allow_private = True
+    try:
+        allow_private = bool(current_app.config.get("INTEGRATIONS_ALLOW_PRIVATE_URLS", True))
+    except RuntimeError:
+        pass
+    try:
+        return validate_outbound_url(url.rstrip("/"), allow_private=allow_private)
+    except UnsafeOutboundURL as exc:
+        raise ValueError(f"Invalid ActivityWatch server_url: {exc}") from exc
 
 
 class ActivityWatchConnector(BaseConnector):
@@ -300,7 +317,9 @@ class ActivityWatchConnector(BaseConnector):
             prev_end = prev["start_dt"] + timedelta(seconds=prev["dur_sec"])
             gap = (ev["start_dt"] - prev_end).total_seconds()
             if prev["merge_key"] and prev["merge_key"] == ev["merge_key"] and 0 <= gap <= merge_gap_seconds:
-                prev["dur_sec"] = int((ev["start_dt"] + timedelta(seconds=ev["dur_sec"]) - prev["start_dt"]).total_seconds())
+                prev["dur_sec"] = int(
+                    (ev["start_dt"] + timedelta(seconds=ev["dur_sec"]) - prev["start_dt"]).total_seconds()
+                )
                 prev["external_uid"] = f"{prev['external_uid']}+{ev['external_uid']}"[:255]
             else:
                 merged.append(ev)
@@ -321,9 +340,7 @@ class ActivityWatchConnector(BaseConnector):
                     skipped += 1
                     continue
 
-                rule = ActivityWatchRule.match_event(
-                    self.integration.user_id, ev["app"], ev["title"], ev["url"]
-                )
+                rule = ActivityWatchRule.match_event(self.integration.user_id, ev["app"], ev["title"], ev["url"])
                 project_id = rule.project_id if rule else default_project_id
                 task_id = rule.task_id if rule else None
                 billable = rule.billable if rule else default_billable

@@ -72,7 +72,7 @@ def create_entry():
         data = schema.load(request.get_json())
     except ValidationError as err:
         return validation_error_response(err.messages)
-    
+
     # Use validated data...
 ```
 
@@ -217,7 +217,7 @@ def test_start_timer():
     service = TimeTrackingService()
     service.time_entry_repo = Mock()
     service.project_repo = Mock()
-    
+
     result = service.start_timer(user_id=1, project_id=1)
     assert result['success'] == True
 ```
@@ -231,7 +231,7 @@ def test_get_active_timer(db_session, user, project):
     repo = TimeEntryRepository()
     timer = repo.create_timer(user.id, project.id)
     db_session.commit()
-    
+
     active = repo.get_active_timer(user.id)
     assert active.id == timer.id
 ```
@@ -260,4 +260,3 @@ def test_get_active_timer(db_session, user, project):
 ---
 
 **Happy coding!** 🚀
-

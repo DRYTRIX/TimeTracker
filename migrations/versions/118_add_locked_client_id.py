@@ -6,9 +6,9 @@ Create Date: 2026-02-02
 
 Adds settings.locked_client_id (nullable int) to allow locking the app to a single client.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "118_add_locked_client_id"
 down_revision = "117_add_user_calendar_type_colors"
@@ -52,4 +52,3 @@ def downgrade():
             batch_op.drop_column("locked_client_id")
     else:
         op.drop_column("settings", "locked_client_id")
-

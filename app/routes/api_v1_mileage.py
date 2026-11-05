@@ -161,13 +161,16 @@ def update_mileage(entry_id):
             except Exception:
                 invalid_numeric_fields.append(numfield)
     if invalid_numeric_fields:
-        return jsonify(
-            {
-                "error": "Invalid numeric value",
-                "fields": invalid_numeric_fields,
-                "message": f"Invalid value for: {', '.join(invalid_numeric_fields)}",
-            }
-        ), 400
+        return (
+            jsonify(
+                {
+                    "error": "Invalid numeric value",
+                    "fields": invalid_numeric_fields,
+                    "message": f"Invalid value for: {', '.join(invalid_numeric_fields)}",
+                }
+            ),
+            400,
+        )
     if "is_round_trip" in data:
         entry.is_round_trip = bool(data["is_round_trip"])
     if "distance_km" in data or "rate_per_km" in data:

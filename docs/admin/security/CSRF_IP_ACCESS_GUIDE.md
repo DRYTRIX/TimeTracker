@@ -282,4 +282,3 @@ WTF_CSRF_ENABLED=false
 
 **Last Updated:** October 2024  
 **Applies To:** TimeTracker v1.0+
-

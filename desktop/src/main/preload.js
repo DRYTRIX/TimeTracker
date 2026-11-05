@@ -5,20 +5,20 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   // App info
   getVersion: () => ipcRenderer.invoke('app:get-version'),
-  
+
   // Store operations
   storeGet: (key) => ipcRenderer.invoke('store:get', key),
   storeSet: (key, value) => ipcRenderer.invoke('store:set', key, value),
   storeDelete: (key) => ipcRenderer.invoke('store:delete', key),
   storeClear: () => ipcRenderer.invoke('store:clear'),
-  
+
   // Window operations
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   maximizeWindow: () => ipcRenderer.send('window:maximize'),
   closeWindow: () => ipcRenderer.send('window:close'),
   hideWindow: () => ipcRenderer.send('window:hide'),
   showWindow: () => ipcRenderer.send('window:show'),
-  
+
   // Timer events (from main process)
   onTimerUpdate: (callback) => {
     ipcRenderer.on('timer:update', (event, data) => callback(data));
@@ -29,7 +29,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onTimerStop: (callback) => {
     ipcRenderer.on('timer:stop', (event) => callback());
   },
-  
+
   // Tray timer events (from main process)
   onTrayAction: (callback) => {
     ipcRenderer.on('tray:action', (event, action) => callback(action));
@@ -42,12 +42,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('app:resume', handler);
     return () => ipcRenderer.removeListener('app:resume', handler);
   },
-  
+
   // Timer actions (to main process)
   timerStart: (projectId, taskId) => ipcRenderer.send('timer:start', { projectId, taskId }),
   timerStop: () => ipcRenderer.send('timer:stop'),
   timerGetStatus: () => ipcRenderer.invoke('timer:get-status'),
-  
+
   // Send timer status to main process (for tray updates)
   sendTimerStatus: (data) => ipcRenderer.send('timer:status-update', data),
 
@@ -75,7 +75,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   idleStillWorking: () => ipcRenderer.send('idle:still-working'),
   idleDismiss: () => ipcRenderer.send('idle:dismiss'),
   idleStop: () => ipcRenderer.send('idle:stop'),
-  
+
   // Splash screen
   splashReady: () => ipcRenderer.send('splash:ready'),
 });

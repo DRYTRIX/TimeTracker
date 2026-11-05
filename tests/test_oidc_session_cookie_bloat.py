@@ -6,8 +6,9 @@ Flask's cookie session can overflow cookie limits and cause the browser to drop
 or truncate the session, leading to redirect loops back to /login.
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 @pytest.mark.unit
@@ -86,4 +87,3 @@ def test_oidc_callback_does_not_store_id_token_in_cookie_session(app, client):
 
             # And the token should be stored server-side under the derived cache key
             assert stored.get(f"oidc:id_token:{key}") == huge_id_token
-

@@ -12,7 +12,7 @@
                     {{ _('First, configure OAuth credentials for Jira. You can get these from Atlassian Developer Console.') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="jira_client_id" class="block text-sm font-medium mb-2">
                     {{ _('Jira OAuth Client ID') }} <span class="text-red-500">*</span>
@@ -25,7 +25,7 @@
                     {{ _('Get this from Atlassian Developer Console') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="jira_client_secret" class="block text-sm font-medium mb-2">
                     {{ _('Jira OAuth Client Secret') }} <span class="text-red-500">*</span>
@@ -35,7 +35,7 @@
                        placeholder="{{ _('Enter OAuth Client Secret') }}" required>
             </div>
             {% endif %}
-            
+
             <div>
                 <label for="jira_url" class="block text-sm font-medium mb-2">
                     {{ _('Jira Instance URL') }} <span class="text-red-500">*</span>
@@ -48,7 +48,7 @@
                     {{ _('Your Jira Cloud or Server URL (e.g., https://your-domain.atlassian.net)') }}
                 </p>
             </div>
-            
+
             <div class="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                 <h3 class="font-semibold mb-2">{{ _('OAuth Redirect URI') }}</h3>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">
@@ -92,7 +92,7 @@
                     {{ _('Jira Query Language query to filter issues to sync. Leave empty to sync all assigned issues.') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="sync_direction" class="block text-sm font-medium mb-2">
                     {{ _('Sync Direction') }}
@@ -113,7 +113,7 @@
                     {{ _('Choose how data flows between Jira and TimeTracker') }}
                 </p>
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium mb-2">{{ _('Items to Sync') }}</label>
                 <div class="space-y-2">
@@ -162,7 +162,7 @@
             <p class="text-xs text-text-muted-light dark:text-text-muted-dark ml-6">
                 {{ _('Automatically sync when webhooks are received from Jira') }}
             </p>
-            
+
             <div>
                 <label for="sync_interval" class="block text-sm font-medium mb-2">
                     {{ _('Sync Schedule') }}
@@ -183,7 +183,7 @@
                     </option>
                 </select>
             </div>
-            
+
             <div class="flex items-center">
                 <input type="checkbox" name="create_projects" id="create_projects" value="1"
                        {% if current_config.get('create_projects', True) %}checked{% endif %}
@@ -207,7 +207,7 @@
                     <i class="fas fa-info-circle mr-2"></i>
                     {{ _('Review your configuration below. Click "Finish" to save and complete the setup.') }}
                 </p>
-                
+
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
                         <span class="font-medium">{{ _('Jira URL') }}:</span>
@@ -227,7 +227,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <input type="hidden" name="wizard_final_step" value="true">
         </div>
     </div>
@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const syncItems = Array.from(document.querySelectorAll('input[name="sync_items"]:checked'))
                         .map(cb => cb.nextElementSibling.textContent).join(', ');
                     const autoSync = document.getElementById('auto_sync')?.checked ? '{{ _("Yes") }}' : '{{ _("No") }}';
-                    
+
                     document.getElementById('review-jira-url').textContent = jiraUrl || '{{ _("Not set") }}';
                     document.getElementById('review-sync-direction').textContent = syncDirection;
                     document.getElementById('review-sync-items').textContent = syncItems || '{{ _("None") }}';
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-        
+
         wizard.addValidationCallback(2, function() {
             if (!wizard.connectionTestResult) {
                 alert('{{ _("Please test the connection before proceeding.") }}');
@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return true;
         });
-        
+
         // Handle connection test button
         const testBtn = document.getElementById('test-connection-btn');
         if (testBtn) {
@@ -277,12 +277,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('{{ _("Please enter Jira URL first.") }}');
                     return;
                 }
-                
+
                 const result = await wizard.testConnection({ jira_url: jiraUrl });
                 wizard.displayConnectionResults(result);
             });
         }
-        
+
         wizard.init();
     }
 });

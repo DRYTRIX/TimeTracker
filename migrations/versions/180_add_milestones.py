@@ -43,20 +43,28 @@ def upgrade():
         op.create_index("ix_milestones_created_by", "milestones", ["created_by"])
 
     inspector = inspect(bind)
+    # SQLite cannot ALTER to add FK constraints; use batch copy-and-move.
     if not _has_column(inspector, "tasks", "milestone_id"):
-        op.add_column(
-            "tasks",
-            sa.Column("milestone_id", sa.Integer(), sa.ForeignKey("milestones.id", ondelete="SET NULL"), nullable=True),
-        )
-        op.create_index("ix_tasks_milestone_id", "tasks", ["milestone_id"])
+        with op.batch_alter_table("tasks", schema=None) as batch_op:
+            batch_op.add_column(sa.Column("milestone_id", sa.Integer(), nullable=True))
+            batch_op.create_foreign_key(
+                "fk_tasks_milestone_id_milestones",
+                "milestones",
+                ["milestone_id"],
+                ["id"],
+                ondelete="SET NULL",
+            )
+            batch_op.create_index("ix_tasks_milestone_id", ["milestone_id"])
 
 
 def downgrade():
     bind = op.get_bind()
     inspector = inspect(bind)
     if _has_column(inspector, "tasks", "milestone_id"):
-        op.drop_index("ix_tasks_milestone_id", table_name="tasks")
-        op.drop_column("tasks", "milestone_id")
+        with op.batch_alter_table("tasks", schema=None) as batch_op:
+            batch_op.drop_index("ix_tasks_milestone_id")
+            batch_op.drop_constraint("fk_tasks_milestone_id_milestones", type_="foreignkey")
+            batch_op.drop_column("milestone_id")
     inspector = inspect(bind)
     if "milestones" in inspector.get_table_names():
         op.drop_table("milestones")

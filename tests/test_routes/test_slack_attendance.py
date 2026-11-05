@@ -9,15 +9,11 @@ from urllib.parse import urlencode
 import pytest
 
 from app import db
-from app.integrations.slack_attendance_connector import (
-    PROVIDER_KEY,
-    SlackAttendanceConnector,
-)
+from app.integrations.slack_attendance_connector import PROVIDER_KEY, SlackAttendanceConnector
 from app.models import Integration, User
 from app.models.attendance_compliance import AttendanceBreak, AttendanceWorkPeriod, DailyAttendanceRecord
 from app.models.workday_session import WorkdaySession
 from app.services.attendance_compliance_service import AttendanceComplianceService
-
 
 SIGNING_SECRET = "test-signing-secret"
 BOT_TOKEN = "xoxb-test-token"
@@ -163,9 +159,7 @@ class TestSlackAttendanceConnector:
     def test_wrong_channel_rejected(self, app, slack_attendance_integration, linked_user):
         with app.app_context():
             connector = SlackAttendanceConnector.for_global()
-            result = connector.handle_slash_command(
-                _slash_form("/in", channel_id="C_OTHER")
-            )
+            result = connector.handle_slash_command(_slash_form("/in", channel_id="C_OTHER"))
             assert result["body"]["response_type"] == "ephemeral"
             assert "attendance channel" in result["body"]["text"].lower()
 

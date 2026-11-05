@@ -31,7 +31,7 @@ B) Or do you:
    2. Click "Add Column"
    3. Fill form and submit
    4. See new column on `/kanban/columns` ✓
-   5. Go to `/tasks` 
+   5. Go to `/tasks`
    6. **Don't see the new column on kanban board** ← Problem here?
 
 C) Or something else?
@@ -146,4 +146,3 @@ Tell me:
 5. Output from Step 6 (Python shell)
 
 This will help me give you the exact fix you need!
-

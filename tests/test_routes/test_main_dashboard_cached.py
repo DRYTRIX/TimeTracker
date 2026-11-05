@@ -7,6 +7,7 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.routes]
 
 from unittest.mock import patch
+
 from app.utils.cache import get_cache
 
 

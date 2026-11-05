@@ -36,4 +36,3 @@ To test PostHog or Sentry in development, set the respective variables in `.env`
 - CSRF token errors: For HTTP (localhost), set `WTF_CSRF_SSL_STRICT=false` and ensure `SESSION_COOKIE_SECURE=false`/`CSRF_COOKIE_SECURE=false`.
 - Database not ready: The app waits for Postgres healthcheck; check `docker-compose logs db`.
 - Timezone issues: Set `TZ` to your locale.
-

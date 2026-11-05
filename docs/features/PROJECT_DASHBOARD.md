@@ -95,7 +95,7 @@ For **active** projects with estimated hours and/or a budget amount, the project
 #### Task Status Distribution Chart
 - **Type**: Doughnut Chart
 - **Data**: Count of tasks by status
-- **Colors**: 
+- **Colors**:
   - Gray: Todo
   - Blue: In Progress
   - Orange: Review
@@ -497,4 +497,3 @@ For issues or questions:
 **Last Updated**: October 2024  
 **Feature Status**: ✅ Active  
 **Requires**: TimeTracker v1.0+
-

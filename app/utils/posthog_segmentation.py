@@ -149,13 +149,9 @@ def calculate_usage_patterns(user_id: Any) -> Dict[str, Any]:
     try:
         from app.services.task_service import task_assigned_to_user_clause
 
-        assigned_tasks = Task.query.filter(
-            task_assigned_to_user_clause(user_id), Task.status != "done"
-        ).count()
+        assigned_tasks = Task.query.filter(task_assigned_to_user_clause(user_id), Task.status != "done").count()
 
-        completed_tasks = Task.query.filter(
-            task_assigned_to_user_clause(user_id), Task.status == "done"
-        ).count()
+        completed_tasks = Task.query.filter(task_assigned_to_user_clause(user_id), Task.status == "done").count()
     except Exception:
         assigned_tasks = 0
         completed_tasks = 0

@@ -6,9 +6,9 @@ Create Date: 2026-02-16
 
 When enabled, exported invoice PDFs embed EN 16931 UBL XML (ZugFerd/Factur-X).
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "128_add_invoices_zugferd_pdf"
 down_revision = "127_add_user_clients"

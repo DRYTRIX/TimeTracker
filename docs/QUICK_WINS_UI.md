@@ -21,5 +21,3 @@ This document summarizes the lightweight improvements applied to the new UI.
 
 - The sticky header effect relies on `position: sticky` applied to the `<th>` elements via `.table` class. Ensure the table is inside a scrolling container (already true for the list view wrapper).
 - Token values are minimal fallbacks; prefer Tailwind theme tokens when available. These helpers are safe to remove once the templates are fully converted to Tailwind component primitives.
-
-

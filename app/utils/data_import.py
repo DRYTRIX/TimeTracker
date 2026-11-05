@@ -147,9 +147,7 @@ def import_csv_time_entries(user_id, csv_content, import_record):
                     else:
                         time_entry.duration_seconds = apply_user_rounding(raw_seconds, rounding_user)
                         if time_entry.end_time and time_entry.start_time:
-                            time_entry.end_time = time_entry.start_time + timedelta(
-                                seconds=time_entry.duration_seconds
-                            )
+                            time_entry.end_time = time_entry.start_time + timedelta(seconds=time_entry.duration_seconds)
                 else:
                     time_entry.duration_seconds = raw_seconds
                     if time_entry.end_time is None and start_time:
@@ -242,11 +240,7 @@ def import_from_toggl(user_id, api_token, workspace_id, start_date, end_date, im
         workspace_id_safe = str(workspace_id).strip()
         if not workspace_id_safe.isdigit():
             raise ValueError("Invalid Toggl workspace_id")
-        projects_url = (
-            "https://api.track.toggl.com/api/v9/workspaces/"
-            + workspace_id_safe
-            + "/projects"
-        )
+        projects_url = "https://api.track.toggl.com/api/v9/workspaces/" + workspace_id_safe + "/projects"
         projects_response = requests.get(projects_url, headers=headers, timeout=30)
         projects_response.raise_for_status()
         toggl_projects = {p["id"]: p for p in projects_response.json()}
@@ -309,9 +303,7 @@ def import_from_toggl(user_id, api_token, workspace_id, start_date, end_date, im
                 if rounding_user:
                     settings = get_user_rounding_settings(rounding_user)
                     if settings["enabled"] and settings["method"] == "boundary" and settings["minutes"] > 1:
-                        start_naive, end_naive = round_entry_boundaries(
-                            start_naive, end_naive, settings["minutes"]
-                        )
+                        start_naive, end_naive = round_entry_boundaries(start_naive, end_naive, settings["minutes"])
                         rounded_duration = None
                     else:
                         rounded_duration = apply_user_rounding(duration_seconds, rounding_user)
@@ -501,20 +493,14 @@ def import_from_harvest(user_id, account_id, api_token, start_date, end_date, im
             raw_seconds = int(hours * 3600)
             end_time = start_time + timedelta(seconds=raw_seconds)
 
-            from app.utils.time_rounding import (
-                apply_user_rounding,
-                get_user_rounding_settings,
-                round_entry_boundaries,
-            )
+            from app.utils.time_rounding import apply_user_rounding, get_user_rounding_settings, round_entry_boundaries
 
             rounding_user = db.session.get(User, user_id)
             duration_seconds = None
             if rounding_user:
                 settings = get_user_rounding_settings(rounding_user)
                 if settings["enabled"] and settings["method"] == "boundary" and settings["minutes"] > 1:
-                    start_time, end_time = round_entry_boundaries(
-                        start_time, end_time, settings["minutes"]
-                    )
+                    start_time, end_time = round_entry_boundaries(start_time, end_time, settings["minutes"])
                 else:
                     duration_seconds = apply_user_rounding(raw_seconds, rounding_user)
             else:

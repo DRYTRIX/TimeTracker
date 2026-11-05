@@ -35,24 +35,12 @@ def upgrade():
     inspector = inspect(bind)
 
     # Settings: structured company address + IBAN + default VAT category
-    _add_column_if_missing(
-        inspector, "settings", sa.Column("company_street", sa.String(length=255), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "settings", sa.Column("company_postcode", sa.String(length=32), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "settings", sa.Column("company_city", sa.String(length=100), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "settings", sa.Column("company_country", sa.String(length=2), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "settings", sa.Column("company_iban", sa.String(length=34), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "settings", sa.Column("company_bic", sa.String(length=11), nullable=True)
-    )
+    _add_column_if_missing(inspector, "settings", sa.Column("company_street", sa.String(length=255), nullable=True))
+    _add_column_if_missing(inspector, "settings", sa.Column("company_postcode", sa.String(length=32), nullable=True))
+    _add_column_if_missing(inspector, "settings", sa.Column("company_city", sa.String(length=100), nullable=True))
+    _add_column_if_missing(inspector, "settings", sa.Column("company_country", sa.String(length=2), nullable=True))
+    _add_column_if_missing(inspector, "settings", sa.Column("company_iban", sa.String(length=34), nullable=True))
+    _add_column_if_missing(inspector, "settings", sa.Column("company_bic", sa.String(length=11), nullable=True))
     _add_column_if_missing(
         inspector,
         "settings",
@@ -76,33 +64,17 @@ def upgrade():
 
     # Clients: structured address + VAT ID
     inspector = inspect(bind)
-    _add_column_if_missing(
-        inspector, "clients", sa.Column("street", sa.String(length=255), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "clients", sa.Column("postcode", sa.String(length=32), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "clients", sa.Column("city", sa.String(length=100), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "clients", sa.Column("country", sa.String(length=2), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "clients", sa.Column("vat_id", sa.String(length=50), nullable=True)
-    )
+    _add_column_if_missing(inspector, "clients", sa.Column("street", sa.String(length=255), nullable=True))
+    _add_column_if_missing(inspector, "clients", sa.Column("postcode", sa.String(length=32), nullable=True))
+    _add_column_if_missing(inspector, "clients", sa.Column("city", sa.String(length=100), nullable=True))
+    _add_column_if_missing(inspector, "clients", sa.Column("country", sa.String(length=2), nullable=True))
+    _add_column_if_missing(inspector, "clients", sa.Column("vat_id", sa.String(length=50), nullable=True))
 
     # Invoices: per-invoice VAT category override
     inspector = inspect(bind)
-    _add_column_if_missing(
-        inspector, "invoices", sa.Column("vat_category", sa.String(length=5), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "invoices", sa.Column("vat_exemption_reason", sa.Text(), nullable=True)
-    )
-    _add_column_if_missing(
-        inspector, "invoices", sa.Column("vat_exemption_code", sa.String(length=50), nullable=True)
-    )
+    _add_column_if_missing(inspector, "invoices", sa.Column("vat_category", sa.String(length=5), nullable=True))
+    _add_column_if_missing(inspector, "invoices", sa.Column("vat_exemption_reason", sa.Text(), nullable=True))
+    _add_column_if_missing(inspector, "invoices", sa.Column("vat_exemption_code", sa.String(length=50), nullable=True))
 
 
 def downgrade():

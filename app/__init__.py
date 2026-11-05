@@ -38,11 +38,11 @@ class PathExemptCSRFProtect(CSRFProtect):
     Do not broaden this to all of /api/ — kiosk and import stay cookie/CSRF protected.
     """
 
-    def protect(self):
+    def protect(self, apply_exemptions=False):
         path = request.path or ""
         if path == "/api/v1" or path.startswith("/api/v1/"):
             return
-        return super().protect()
+        return super().protect(apply_exemptions=apply_exemptions)
 
 
 def _rate_limit_key():
@@ -316,11 +316,7 @@ def create_app(config=None):
     except Exception:
         eventlet_patched = False
 
-    if (
-        eventlet_patched
-        and db_uri.startswith("postgresql")
-        and os.getenv("TT_BOOTSTRAP_MODE") != "migrate"
-    ):
+    if eventlet_patched and db_uri.startswith("postgresql") and os.getenv("TT_BOOTSTRAP_MODE") != "migrate":
         engine_opts = dict(app.config.get("SQLALCHEMY_ENGINE_OPTIONS") or {})
         # idle_in_transaction defaults to 0 (disabled): scheduler jobs often hold
         # a session open while calling external APIs; a short timeout aborts them.
@@ -347,15 +343,16 @@ def create_app(config=None):
 
             psycogreen.eventlet.patch_psycopg()
         except Exception as exc:
-            app.logger.warning(
-                "psycopg2/eventlet patch skipped (%s); DB calls may block the worker", exc
-            )
+            app.logger.warning("psycopg2/eventlet patch skipped (%s); DB calls may block the worker", exc)
 
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*")
+    # Socket.IO: never "*". Allowlist + same-host (callable re-checked per request).
+    from app.utils.cors import socketio_cors_allowed_origin
+
+    socketio.init_app(app, cors_allowed_origins=socketio_cors_allowed_origin)
     oauth.init_app(app)
 
     # Optional Firebase Admin for FCM mobile idle wake-up (Issue #722). No-op when unset.
@@ -480,9 +477,7 @@ def create_app(config=None):
                     except Exception:
                         logger.debug("send_base_first_seen failed", exc_info=True)
             else:
-                app.logger.info(
-                    "BackgroundScheduler not started (SCHEDULER_ENABLED but leadership lock not acquired)"
-                )
+                app.logger.info("BackgroundScheduler not started (SCHEDULER_ENABLED but leadership lock not acquired)")
         elif not scheduler_enabled:
             app.logger.info("BackgroundScheduler disabled via SCHEDULER_ENABLED=false")
 
@@ -796,6 +791,10 @@ def create_app(config=None):
             if app.config.get("TESTING"):
                 return
 
+            # Public demos skip the first-run wizard entirely
+            if app.config.get("DEMO_MODE"):
+                return
+
             # Skip setup check for these routes
             skip_routes = [
                 "setup.initial_setup",
@@ -849,11 +848,16 @@ def create_app(config=None):
     @app.before_request
     def handle_api_cors_preflight():
         if request.method == "OPTIONS" and request.path.startswith("/api/v1/"):
+            from app.utils.cors import cors_origin_allowed
+
+            origin = request.headers.get("Origin")
             response = app.response_class(status=204)
-            response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin") or "*"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Request-ID"
-            response.headers["Access-Control-Max-Age"] = "600"
+            if cors_origin_allowed(origin, app):
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Vary"] = "Origin"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Request-ID"
+                response.headers["Access-Control-Max-Age"] = "600"
             return response
 
     # Start timer for Prometheus metrics
@@ -1075,10 +1079,16 @@ def create_app(config=None):
         # If CSRF is disabled, explicitly clear any existing CSRF cookie to avoid confusion
         try:
             if request.path.startswith("/api/v1/"):
-                response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin") or "*"
-                response.headers["Vary"] = "Origin"
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-                response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type, Accept, X-Request-ID"
+                from app.utils.cors import cors_origin_allowed
+
+                origin = request.headers.get("Origin")
+                if cors_origin_allowed(origin, app):
+                    response.headers["Access-Control-Allow-Origin"] = origin
+                    response.headers["Vary"] = "Origin"
+                    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                    response.headers["Access-Control-Allow-Headers"] = (
+                        "Authorization, Content-Type, Accept, X-Request-ID"
+                    )
         except Exception:
             app.logger.debug("API CORS response headers failed", exc_info=True)
 
@@ -1560,8 +1570,8 @@ def create_app(config=None):
         if expected:
             provided = (request.headers.get("X-Metrics-Token") or request.args.get("token") or "").strip()
             # compare_digest requires equal length; unequal => unauthorized
-            authorized = bool(provided) and len(provided) == len(expected) and _secrets.compare_digest(
-                provided, expected
+            authorized = (
+                bool(provided) and len(provided) == len(expected) and _secrets.compare_digest(provided, expected)
             )
             if not authorized:
                 abort(401)
@@ -1677,6 +1687,12 @@ def create_app(config=None):
                     if changed:
                         db.session.commit()
                         print(f"Updated demo user privileges: {demo_username}")
+                try:
+                    from app.utils.seed_demo_data import seed_demo_sample_data
+
+                    seed_demo_sample_data(app)
+                except Exception as seed_err:
+                    print(f"Demo sample data seed skipped: {seed_err}")
             else:
                 admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
                 if not User.query.filter_by(username=admin_username).first():
@@ -1755,6 +1771,12 @@ def init_database(app):
                     if changed:
                         db.session.commit()
                         print(f"Updated demo user privileges: {demo_username}")
+                try:
+                    from app.utils.seed_demo_data import seed_demo_sample_data
+
+                    seed_demo_sample_data(app)
+                except Exception as seed_err:
+                    print(f"Demo sample data seed skipped: {seed_err}")
             else:
                 admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
                 if not User.query.filter_by(username=admin_username).first():

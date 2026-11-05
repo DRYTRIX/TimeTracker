@@ -12,7 +12,7 @@ services:
       - ADMIN_USERNAMES=${ADMIN_USERNAMES:-admin}
       # IMPORTANT: Change SECRET_KEY in production! Used for sessions and CSRF tokens.
       # Generate a secure key: python -c "import secrets; print(secrets.token_hex(32))"
-      # 
+      #
       # TROUBLESHOOTING: If forms fail with "CSRF token missing or invalid":
       # 1. Verify SECRET_KEY is set and doesn't change between restarts
       # 2. Check CSRF is enabled: WTF_CSRF_ENABLED=true
@@ -71,5 +71,3 @@ volumes:
     driver: local
   db_data_remote_dev:
     driver: local
-
-

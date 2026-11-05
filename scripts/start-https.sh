@@ -25,7 +25,7 @@ echo ""
 if [ ! -f nginx/conf.d/https.conf ]; then
     echo "📝 Creating nginx HTTPS configuration..."
     mkdir -p nginx/conf.d
-    
+
     cat > nginx/conf.d/https.conf << 'NGINX_EOF'
 server {
     listen 80;
@@ -54,14 +54,14 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
 }
 NGINX_EOF
-    
+
     echo "✅ nginx configuration created"
     echo ""
 fi
@@ -69,18 +69,18 @@ fi
 # Update .env with HTTPS settings if it exists
 if [ -f .env ]; then
     echo "🔧 Updating .env with HTTPS settings..."
-    
+
     # Backup .env
     cp .env .env.backup 2>/dev/null || true
-    
+
     # Update settings
     sed -i.bak 's/^WTF_CSRF_SSL_STRICT=.*/WTF_CSRF_SSL_STRICT=true/' .env 2>/dev/null || echo "WTF_CSRF_SSL_STRICT=true" >> .env
     sed -i.bak 's/^SESSION_COOKIE_SECURE=.*/SESSION_COOKIE_SECURE=true/' .env 2>/dev/null || echo "SESSION_COOKIE_SECURE=true" >> .env
     sed -i.bak 's/^CSRF_COOKIE_SECURE=.*/CSRF_COOKIE_SECURE=true/' .env 2>/dev/null || echo "CSRF_COOKIE_SECURE=true" >> .env
-    
+
     # Clean up
     rm -f .env.bak
-    
+
     echo "✅ .env updated"
     echo ""
 fi
@@ -143,4 +143,3 @@ echo ""
 echo "Stop services:"
 echo "  docker-compose down"
 echo ""
-

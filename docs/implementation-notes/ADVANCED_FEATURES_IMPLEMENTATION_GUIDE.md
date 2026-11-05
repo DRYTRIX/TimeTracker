@@ -227,19 +227,19 @@ def predict_time_estimate():
     """
     # Get historical data
     historical_tasks = Task.query.filter_by(status='done').all()
-    
+
     # Train model
     X = [[t.estimated_hours, t.complexity] for t in historical_tasks]
     y = [t.actual_hours for t in historical_tasks]
-    
+
     model = LinearRegression()
     model.fit(X, y)
-    
+
     # Predict for current task
     task_id = request.args.get('task_id')
     task = Task.query.get(task_id)
     prediction = model.predict([[task.estimated_hours, task.complexity]])
-    
+
     return jsonify({
         'predicted_hours': float(prediction[0]),
         'confidence': 0.85,
@@ -252,16 +252,16 @@ def productivity_patterns():
     Analyze when user is most productive
     """
     entries = TimeEntry.query.filter_by(user_id=current_user.id).all()
-    
+
     # Group by hour of day
     hourly_data = {}
     for entry in entries:
         hour = entry.start_time.hour
         hourly_data[hour] = hourly_data.get(hour, 0) + entry.duration
-    
+
     # Find peak hours
     peak_hours = sorted(hourly_data.items(), key=lambda x: x[1], reverse=True)[:3]
-    
+
     return jsonify({
         'peak_hours': [h[0] for h in peak_hours],
         'productivity_score': calculate_productivity_score(entries),
@@ -276,20 +276,20 @@ def project_health():
     """
     project_id = request.args.get('project_id')
     project = Project.query.get(project_id)
-    
+
     # Calculate health metrics
     budget_health = (project.budget_remaining / project.budget_total) * 100
     timeline_health = calculate_timeline_health(project)
     team_velocity = calculate_team_velocity(project)
     risk_factors = identify_risk_factors(project)
-    
+
     # AI scoring
     health_score = calculate_health_score(
         budget_health,
         timeline_health,
         team_velocity
     )
-    
+
     return jsonify({
         'health_score': health_score,
         'status': 'healthy' if health_score > 70 else 'at-risk',
@@ -308,15 +308,15 @@ class AIAnalytics {
         const response = await fetch(`/api/analytics/predictions/time-estimate?task_id=${taskId}`);
         return response.json();
     }
-    
+
     async getProductivityPatterns() {
         const response = await fetch('/api/analytics/insights/productivity-patterns');
         const data = await response.json();
-        
+
         // Show insights
         this.showInsights(data);
     }
-    
+
     showInsights(data) {
         const panel = document.createElement('div');
         panel.innerHTML = `
@@ -343,7 +343,7 @@ class AIAnalytics {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(panel);
     }
 }
@@ -384,7 +384,7 @@ CREATE TABLE analytics_cache (
 
 class WorkflowRule(db.Model):
     __tablename__ = 'workflow_rules'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200))
     trigger_type = db.Column(db.String(50))  # 'task_status_change', 'time_logged', etc.
@@ -396,7 +396,7 @@ class WorkflowRule(db.Model):
 
 class WorkflowExecution(db.Model):
     __tablename__ = 'workflow_executions'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     rule_id = db.Column(db.Integer, db.ForeignKey('workflow_rules.id'))
     executed_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -412,29 +412,29 @@ class WorkflowEngine:
         """Check if rule should be triggered"""
         if rule.trigger_type != event['type']:
             return False
-        
+
         conditions = rule.trigger_conditions
         event_data = event['data']
-        
+
         # Evaluate conditions
         for condition in conditions:
             if not WorkflowEngine.check_condition(condition, event_data):
                 return False
-        
+
         return True
-    
+
     @staticmethod
     def execute_actions(rule, context):
         """Execute all actions for a rule"""
         results = []
-        
+
         for action in rule.actions:
             try:
                 result = WorkflowEngine.perform_action(action, context)
                 results.append({'action': action, 'success': True, 'result': result})
             except Exception as e:
                 results.append({'action': action, 'success': False, 'error': str(e)})
-        
+
         # Log execution
         execution = WorkflowExecution(
             rule_id=rule.id,
@@ -443,14 +443,14 @@ class WorkflowEngine:
         )
         db.session.add(execution)
         db.session.commit()
-        
+
         return results
-    
+
     @staticmethod
     def perform_action(action, context):
         """Perform a single action"""
         action_type = action['type']
-        
+
         if action_type == 'log_time':
             return WorkflowEngine.action_log_time(action, context)
         elif action_type == 'send_notification':
@@ -460,7 +460,7 @@ class WorkflowEngine:
         elif action_type == 'assign_task':
             return WorkflowEngine.action_assign_task(action, context)
         # Add more action types...
-    
+
     @staticmethod
     def action_log_time(action, context):
         """Automatically log time"""
@@ -490,7 +490,7 @@ class WorkflowBuilder {
             actions: []
         };
     }
-    
+
     showBuilder() {
         // Visual workflow builder UI
         const builder = document.createElement('div');
@@ -512,7 +512,7 @@ class WorkflowBuilder {
         `;
         return builder;
     }
-    
+
     renderTriggerSelector() {
         return `
             <select class="form-input" onchange="workflowBuilder.setTrigger(this.value)">
@@ -525,24 +525,24 @@ class WorkflowBuilder {
             </select>
         `;
     }
-    
+
     addCondition(field, operator, value) {
         this.currentRule.conditions.push({ field, operator, value });
         this.updatePreview();
     }
-    
+
     addAction(type, params) {
         this.currentRule.actions.push({ type, ...params });
         this.updatePreview();
     }
-    
+
     async save() {
         const response = await fetch('/api/workflows', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(this.currentRule)
         });
-        
+
         if (response.ok) {
             window.toastManager.success('Workflow saved!');
         }

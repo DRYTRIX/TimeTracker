@@ -1,6 +1,7 @@
 import pytest
+
 from app import db
-from app.models import Project, User, SavedFilter, Task, Client
+from app.models import Client, Project, SavedFilter, Task, User
 
 
 @pytest.mark.smoke
@@ -63,7 +64,7 @@ def test_inline_task_creation_json_flow(authenticated_client, project, user, app
     """Creating a task via AJAX JSON should return 201 and task payload with defaults."""
     with app.app_context():
         from app.models import Task
-        
+
         resp = authenticated_client.post(
             "/api/tasks/create",
             json={"name": "Inline Timer Task", "project_id": project.id},
@@ -76,7 +77,7 @@ def test_inline_task_creation_json_flow(authenticated_client, project, user, app
             assert data["name"] == "Inline Timer Task"
             assert data["id"] > 0
             assert "task" in data
-            
+
             # Verify task was created with defaults
             task = Task.query.get(data["id"])
             assert task is not None
@@ -95,7 +96,7 @@ def test_start_timer_with_new_task_creation(authenticated_client, project, user,
     """Smoke test: Start timer with new task creation flow."""
     with app.app_context():
         from app.models import TimeEntry
-        
+
         # Simulate the flow: create task inline, then start timer
         # Step 1: Create task via AJAX
         task_resp = authenticated_client.post(
@@ -103,27 +104,24 @@ def test_start_timer_with_new_task_creation(authenticated_client, project, user,
             json={"name": "Quick Task for Timer", "project_id": project.id},
             headers={"X-Requested-With": "XMLHttpRequest", "Content-Type": "application/json"},
         )
-        
+
         if task_resp.status_code == 201:
             task_data = task_resp.get_json()
             task_id = task_data["id"]
-            
+
             # Step 2: Start timer with the created task
             timer_resp = authenticated_client.post(
                 "/timer/start",
                 data={"project_id": project.id, "task_id": task_id},
                 follow_redirects=False,
             )
-            
+
             # Timer start should redirect or succeed
             assert timer_resp.status_code in (200, 302, 400, 404)
-            
+
             # Verify timer was created
             if timer_resp.status_code in (200, 302):
                 timer = TimeEntry.query.filter_by(
-                    user_id=user.id,
-                    project_id=project.id,
-                    task_id=task_id,
-                    end_time=None  # Active timer
+                    user_id=user.id, project_id=project.id, task_id=task_id, end_time=None  # Active timer
                 ).first()
                 assert timer is not None, "Timer should be created"

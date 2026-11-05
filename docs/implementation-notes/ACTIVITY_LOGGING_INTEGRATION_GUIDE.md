@@ -514,13 +514,13 @@ Once Activity logging is integrated, create an activity feed widget:
 def get_activities():
     limit = request.args.get('limit', 20, type=int)
     entity_type = request.args.get('entity_type')
-    
+
     activities = Activity.get_recent(
         user_id=current_user.id if not current_user.is_admin else None,
         limit=limit,
         entity_type=entity_type
     )
-    
+
     return jsonify({
         'activities': [a.to_dict() for a in activities]
     })

@@ -225,10 +225,12 @@ class QuoteService:
         if not is_admin and quote.created_by != user_id:
             return {"success": False, "message": "Access denied", "error": "access_denied"}
 
-        # Update fields
-        for field in ("title", "description", "status", "currency_code"):
+        # Update fields (status requires dedicated workflow; not mass-assignable)
+        for field in ("title", "description", "currency_code"):
             if field in kwargs:
                 setattr(quote, field, kwargs[field])
+        if "status" in kwargs and kwargs.get("_allow_status"):
+            quote.status = kwargs["status"]
         if "total_amount" in kwargs:
             quote.total_amount = kwargs["total_amount"]
         if "hourly_rate" in kwargs:

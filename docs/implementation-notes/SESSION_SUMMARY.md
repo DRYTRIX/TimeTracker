@@ -289,7 +289,7 @@ Add SMTP settings to `.env` file (see above)
 
 ### Excel Export Button (Add to templates)
 ```html
-<a href="{{ url_for('reports.export_excel', start_date=start_date, end_date=end_date) }}" 
+<a href="{{ url_for('reports.export_excel', start_date=start_date, end_date=end_date) }}"
    class="btn btn-success">
     <i class="fas fa-file-excel"></i> Export to Excel
 </a>

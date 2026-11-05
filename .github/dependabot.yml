@@ -1,0 +1,89 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    target-branch: develop
+    groups:
+      pip:
+        patterns: ["*"]
+    labels:
+      - dependencies
+      - python
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    target-branch: develop
+    groups:
+      npm-root:
+        patterns: ["*"]
+    labels:
+      - dependencies
+      - javascript
+    # Tailwind v4 drops the CLI binary and requires a CSS/config rewrite; stay on v3.
+    ignore:
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: /desktop
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    target-branch: develop
+    groups:
+      npm-desktop:
+        patterns: ["*"]
+    labels:
+      - dependencies
+      - desktop
+
+  - package-ecosystem: npm
+    directory: /browser-extension
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    target-branch: develop
+    groups:
+      npm-extension:
+        patterns: ["*"]
+    labels:
+      - dependencies
+      - browser-extension
+
+  - package-ecosystem: pub
+    directory: /mobile
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    target-branch: develop
+    groups:
+      pub-mobile:
+        patterns: ["*"]
+    labels:
+      - dependencies
+      - mobile
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    target-branch: develop
+    groups:
+      github-actions:
+        patterns: ["*"]
+    labels:
+      - dependencies
+      - ci

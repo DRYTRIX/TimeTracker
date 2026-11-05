@@ -62,7 +62,7 @@ class InvoiceCreateSchema(Schema):
     issue_date = fields.Date(allow_none=True)
     due_date = fields.Date(allow_none=True)
     time_entry_ids = fields.List(fields.Int(), allow_none=True)
-    include_expenses = fields.Bool(missing=False)
+    include_expenses = fields.Bool(load_default=False)
     notes = fields.Str(allow_none=True)
     terms = fields.Str(allow_none=True)
 

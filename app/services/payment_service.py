@@ -74,8 +74,12 @@ class PaymentService:
 
         # Update invoice payment status if payment is completed
         if status == "completed":
+            # Flush so the new payment is counted once by the total below, as
+            # in update_payment/delete_payment; adding ``amount`` on top of an
+            # autoflushed total counted it twice.
+            db.session.flush()
             total_payments = self.payment_repo.get_total_for_invoice(invoice_id)
-            invoice.amount_paid = total_payments + amount
+            invoice.amount_paid = total_payments
 
             # Update payment status
             if invoice.amount_paid >= invoice.total_amount:

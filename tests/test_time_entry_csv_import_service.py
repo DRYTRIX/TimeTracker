@@ -33,10 +33,7 @@ def test_import_header_only_no_data_rows(app, user):
 def test_import_small_csv_success(app, user, project):
     start = datetime.utcnow() - timedelta(hours=4)
     end = datetime.utcnow() - timedelta(hours=2)
-    csv_text = (
-        CSV_HEADER
-        + f"{start.isoformat()},{end.isoformat()},{project.id},Imported row,true,import\n"
-    )
+    csv_text = CSV_HEADER + f"{start.isoformat()},{end.isoformat()},{project.id},Imported row,true,import\n"
 
     result, status = import_time_entries_from_csv_text(
         csv_text,

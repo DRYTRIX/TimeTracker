@@ -18,23 +18,23 @@
 
 <div class="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
     <div class="flex flex-wrap gap-2">
-        <a href="{{ url_for('client_portal.issues', status='all') }}" 
+        <a href="{{ url_for('client_portal.issues', status='all') }}"
            class="px-3 py-1.5 rounded text-sm {% if status_filter == 'all' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
             {{ _('All') }}
         </a>
-        <a href="{{ url_for('client_portal.issues', status='open') }}" 
+        <a href="{{ url_for('client_portal.issues', status='open') }}"
            class="px-3 py-1.5 rounded text-sm {% if status_filter == 'open' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
             {{ _('Open') }}
         </a>
-        <a href="{{ url_for('client_portal.issues', status='in_progress') }}" 
+        <a href="{{ url_for('client_portal.issues', status='in_progress') }}"
            class="px-3 py-1.5 rounded text-sm {% if status_filter == 'in_progress' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
             {{ _('In Progress') }}
         </a>
-        <a href="{{ url_for('client_portal.issues', status='resolved') }}" 
+        <a href="{{ url_for('client_portal.issues', status='resolved') }}"
            class="px-3 py-1.5 rounded text-sm {% if status_filter == 'resolved' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
             {{ _('Resolved') }}
         </a>
-        <a href="{{ url_for('client_portal.issues', status='closed') }}" 
+        <a href="{{ url_for('client_portal.issues', status='closed') }}"
            class="px-3 py-1.5 rounded text-sm {% if status_filter == 'closed' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark{% endif %}">
             {{ _('Closed') }}
         </a>
@@ -55,7 +55,7 @@
                         {{ issue.title }}
                     </a>
                     <div class="flex flex-wrap items-center gap-2 mt-1">
-                        <span class="px-2 py-1 text-xs rounded-full 
+                        <span class="px-2 py-1 text-xs rounded-full
                             {% if issue.status == 'open' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
                             {% elif issue.status == 'in_progress' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                             {% elif issue.status == 'resolved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
@@ -63,7 +63,7 @@
                             {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
                             {{ issue.status_display }}
                         </span>
-                        <span class="px-2 py-1 text-xs rounded-full 
+                        <span class="px-2 py-1 text-xs rounded-full
                             {% if issue.priority == 'urgent' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
                             {% elif issue.priority == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
                             {% elif issue.priority == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200

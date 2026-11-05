@@ -84,9 +84,7 @@ class PurchaseOrderPDFGenerator:
             topMargin=1.5 * cm,
             bottomMargin=1.5 * cm,
         )
-        page_cb = make_page_callback(
-            self._footer, enabled=should_draw_watermark(self.settings)
-        )
+        page_cb = make_page_callback(self._footer, enabled=should_draw_watermark(self.settings))
         doc.build(self._build_story(), onFirstPage=page_cb, onLaterPages=page_cb)
         return buffer.getvalue()
 

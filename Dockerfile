@@ -177,5 +177,3 @@ ENTRYPOINT ["/app/docker/entrypoint_fixed.sh"]
 
 # Run the application
 CMD ["python", "/app/start.py"]
-
-

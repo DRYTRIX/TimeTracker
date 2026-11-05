@@ -21,11 +21,11 @@
             </p>
         </div>
         <div class="flex space-x-2">
-            <a href="{{ url_for('weekly_goals.edit', goal_id=goal.id) }}" 
+            <a href="{{ url_for('weekly_goals.edit', goal_id=goal.id) }}"
                class="btn btn-secondary">
                 <i class="fas fa-edit mr-2"></i> {{ _('Edit') }}
             </a>
-            <a href="{{ url_for('weekly_goals.index') }}" 
+            <a href="{{ url_for('weekly_goals.index') }}"
                class="btn btn-secondary">
                 <i class="fas fa-arrow-left mr-2"></i> {{ _('Back') }}
             </a>
@@ -81,7 +81,7 @@
             <i class="fas fa-chart-line mr-2"></i>
             {{ _('Progress') }}
         </h2>
-        
+
         <div class="mb-4">
             <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
                 <span>{{ goal.actual_hours }}h / {{ goal.target_hours }}h</span>
@@ -89,13 +89,13 @@
             </div>
             <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
                 {% if goal.status == 'completed' %}
-                <div class="bg-green-500 rounded-full h-4 transition-all duration-300" 
+                <div class="bg-green-500 rounded-full h-4 transition-all duration-300"
                      style="width: {{ goal.progress_percentage }}%"></div>
                 {% elif goal.status == 'failed' %}
-                <div class="bg-red-500 rounded-full h-4 transition-all duration-300" 
+                <div class="bg-red-500 rounded-full h-4 transition-all duration-300"
                      style="width: {{ goal.progress_percentage }}%"></div>
                 {% else %}
-                <div class="bg-blue-500 rounded-full h-4 transition-all duration-300" 
+                <div class="bg-blue-500 rounded-full h-4 transition-all duration-300"
                      style="width: {{ goal.progress_percentage }}%"></div>
                 {% endif %}
             </div>
@@ -123,7 +123,7 @@
             <i class="fas fa-calendar-alt mr-2"></i>
             {{ _('Daily Breakdown') }}
         </h2>
-        
+
         <div class="space-y-2">
             {% for date, hours in daily_hours.items() %}
             {% set is_weekend = date.weekday() >= 5 %}
@@ -145,7 +145,7 @@
                         {% set work_days = 5 if goal.exclude_weekends else 7 %}
                         {% set daily_target = goal.target_hours / work_days %}
                         {% set daily_percentage = (hours / daily_target * 100) if daily_target > 0 else 0 %}
-                        <div class="bg-blue-500 rounded-full h-2" 
+                        <div class="bg-blue-500 rounded-full h-2"
                              style="width: {{ [daily_percentage, 100]|min }}%"></div>
                     </div>
                 </div>
@@ -173,7 +173,7 @@
             <i class="fas fa-list mr-2"></i>
             {{ _('Time Entries This Week') }} ({{ time_entries|length }})
         </h2>
-        
+
         <div class="space-y-2">
             {% for entry in time_entries %}
             <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
@@ -229,4 +229,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

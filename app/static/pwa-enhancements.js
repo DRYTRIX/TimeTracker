@@ -70,10 +70,10 @@ class PWAEnhancements {
     onOnline() {
         // Hide offline indicator
         this.hideOfflineIndicator();
-        
+
         // Show online notification
         this.showNotification('You\'re back online!', 'Your data will sync automatically.');
-        
+
         // Trigger background sync
         if (this.serviceWorkerRegistration && this.serviceWorkerRegistration.sync) {
             this.serviceWorkerRegistration.sync.register('sync-time-entries');
@@ -86,7 +86,7 @@ class PWAEnhancements {
     onOffline() {
         // Show offline indicator
         this.showOfflineIndicator();
-        
+
         // Store current page state
         this.storePageState();
     }
@@ -112,12 +112,12 @@ class PWAEnhancements {
 
     setupInstallPrompt() {
         let deferredPrompt;
-        
+
         window.addEventListener('beforeinstallprompt', (e) => {
             // Prevent the mini-infobar from appearing
             e.preventDefault();
             deferredPrompt = e;
-            
+
             // Show custom install button
             this.showInstallButton(deferredPrompt);
         });
@@ -139,7 +139,7 @@ class PWAEnhancements {
         button.id = 'pwa-install-button';
         button.className = 'fixed bottom-4 right-4 bg-primary text-white px-4 py-2 rounded-lg shadow-lg hover:bg-primary/90 z-50';
         button.innerHTML = '<i class="fas fa-download mr-2"></i>Install App';
-        
+
         button.addEventListener('click', async () => {
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
@@ -165,12 +165,12 @@ class PWAEnhancements {
                 // Subscribe to push notifications if permission already granted
                 if (this.serviceWorkerRegistration && this.serviceWorkerRegistration.pushManager) {
                     const vapidKey = this.getVapidPublicKey();
-                    
+
                     // Only subscribe if VAPID key is available and valid
                     if (!vapidKey || vapidKey.trim() === '') {
                         return;
                     }
-                    
+
                     try {
                         const applicationServerKey = this.urlBase64ToUint8Array(vapidKey);
                         const subscription = await this.serviceWorkerRegistration.pushManager.subscribe({
@@ -179,7 +179,7 @@ class PWAEnhancements {
                         });
 
                         this.pushSubscription = subscription;
-                        
+
                         // Send subscription to server
                         await this.sendSubscriptionToServer(subscription);
                     } catch (keyError) {
@@ -205,18 +205,18 @@ class PWAEnhancements {
         if ('Notification' in window && Notification.permission === 'default') {
             try {
                 const permission = await Notification.requestPermission();
-                
+
                 if (permission === 'granted') {
                     // Subscribe to push notifications
                     if (this.serviceWorkerRegistration && this.serviceWorkerRegistration.pushManager) {
                         const vapidKey = this.getVapidPublicKey();
-                        
+
                         // Only subscribe if VAPID key is available and valid
                         if (!vapidKey || vapidKey.trim() === '') {
                             console.warn('Push notifications: VAPID public key not configured, cannot subscribe');
                             return permission;
                         }
-                        
+
                         try {
                             const applicationServerKey = this.urlBase64ToUint8Array(vapidKey);
                             const subscription = await this.serviceWorkerRegistration.pushManager.subscribe({
@@ -225,7 +225,7 @@ class PWAEnhancements {
                             });
 
                             this.pushSubscription = subscription;
-                            
+
                             // Send subscription to server
                             await this.sendSubscriptionToServer(subscription);
                         } catch (keyError) {
@@ -480,4 +480,3 @@ if (document.readyState === 'loading') {
     window.pwaEnhancements = new PWAEnhancements();
     window.__ttEnsurePushSubscription = () => window.pwaEnhancements.ensurePushSubscription();
 }
-

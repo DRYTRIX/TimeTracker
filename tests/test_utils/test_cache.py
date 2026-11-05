@@ -6,8 +6,9 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.utils]
 
-from unittest.mock import Mock, patch, MagicMock
-from app.utils.cache import get_cache, InMemoryCache, RedisCache
+from unittest.mock import MagicMock, Mock, patch
+
+from app.utils.cache import InMemoryCache, RedisCache, get_cache
 
 
 class TestInMemoryCache:

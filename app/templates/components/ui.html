@@ -7,32 +7,30 @@
    PAGE HEADERS
    ============================================ #}
 {% macro page_header(icon_class, title_text, subtitle_text=None, actions_html=None, breadcrumbs=None) %}
-<div class="bg-gradient-to-r from-card-light to-card-light/50 dark:from-card-dark dark:to-card-dark/50 rounded-lg shadow-sm mb-6 overflow-visible relative z-20">
+<div class="mb-6 overflow-visible relative z-20 border-b border-border-light dark:border-border-dark pb-4">
     {% if breadcrumbs %}
-    <div class="px-6 pt-4 pb-2">
+    <div class="mb-3">
         {{ breadcrumb_nav(breadcrumbs) }}
     </div>
     {% endif %}
-    <div class="p-6 flex flex-col md:flex-row justify-between items-start md:items-center">
-        <div class="mb-4 md:mb-0">
-            <div class="flex items-center mb-2">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div class="min-w-0">
+            <div class="flex items-center gap-3">
                 {% if icon_class %}
-                <div class="w-14 h-14 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center mr-4 backdrop-blur-sm shadow-sm">
-                    <i class="{{ icon_class }} text-primary text-xl"></i>
-                </div>
+                <i class="{{ icon_class }} text-primary text-lg shrink-0" aria-hidden="true"></i>
                 {% endif %}
-                <div>
-                    <h1 class="text-3xl font-bold bg-gradient-to-r from-text-light to-primary dark:from-text-dark dark:to-primary bg-clip-text text-transparent">
+                <div class="min-w-0">
+                    <h1 class="text-2xl font-semibold text-text-light dark:text-text-dark tracking-tight">
                         {{ _(title_text) }}
                     </h1>
                     {% if subtitle_text %}
-                    <p class="text-text-muted-light dark:text-text-muted-dark text-sm mt-1">{{ _(subtitle_text) }}</p>
+                    <p class="text-text-muted-light dark:text-text-muted-dark text-sm mt-0.5">{{ _(subtitle_text) }}</p>
                     {% endif %}
                 </div>
             </div>
         </div>
         {% if actions_html %}
-        <div class="flex flex-wrap gap-2 items-center">
+        <div class="flex flex-wrap gap-2 items-center shrink-0">
             {{ actions_html|safe }}
         </div>
         {% endif %}
@@ -107,14 +105,13 @@
    STAT CARDS
    ============================================ #}
 {% macro stat_card(title, value, icon_class, color="primary", trend=None, subtitle=None) %}
-<div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow duration-200 relative overflow-hidden group">
-    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-{{ color }} to-{{ color }}/50"></div>
-    <div class="flex items-start justify-between">
-        <div class="flex-1">
+<div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark p-5">
+    <div class="flex items-start justify-between gap-3">
+        <div class="flex-1 min-w-0">
             <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _(title) }}</p>
-            <h3 class="text-2xl lg:text-3xl font-bold text-text-light dark:text-text-dark mb-2" data-count-up="{{ value }}">{{ value }}</h3>
+            <h3 class="text-2xl font-semibold text-text-light dark:text-text-dark" data-count-up="{{ value }}">{{ value }}</h3>
             {% if subtitle %}
-            <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _(subtitle) }}</p>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _(subtitle) }}</p>
             {% endif %}
             {% if trend %}
             <div class="mt-2 flex items-center text-sm">
@@ -137,9 +134,11 @@
             </div>
             {% endif %}
         </div>
-        <div class="w-12 h-12 bg-{{ color }}/10 dark:bg-{{ color }}/20 rounded-lg flex items-center justify-center backdrop-blur-sm group-hover:scale-110 transition-transform duration-200">
-            <i class="{{ icon_class }} text-{{ color }} text-xl"></i>
+        {% if icon_class %}
+        <div class="w-10 h-10 bg-{{ color }}/10 dark:bg-{{ color }}/15 rounded-lg flex items-center justify-center shrink-0">
+            <i class="{{ icon_class }} text-{{ color }} text-base" aria-hidden="true"></i>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endmacro %}
@@ -246,7 +245,7 @@
     </div>
     {% endif %}
     <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-        <div class="h-full bg-primary rounded-full transition-all duration-300 {% if percentage is none %}animate-pulse{% endif %}" 
+        <div class="h-full bg-primary rounded-full transition-all duration-300 {% if percentage is none %}animate-pulse{% endif %}"
              style="{% if percentage is not none %}width: {{ percentage }}%{% else %}width: 100%; animation: progress-indeterminate 2s ease-in-out infinite;{% endif %}">
         </div>
     </div>
@@ -562,7 +561,7 @@
 <div class="border-b border-border-light dark:border-border-dark mb-6">
     <nav class="flex space-x-8" aria-label="Tabs">
         {% for item in items %}
-        <a href="{{ item.url }}" 
+        <a href="{{ item.url }}"
            class="py-4 px-1 border-b-2 font-medium text-sm transition-colors {% if item.id == active_tab %}border-primary text-primary{% else %}border-transparent text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark hover:border-gray-300 dark:hover:border-gray-600{% endif %}">
             {% if item.icon %}<i class="{{ item.icon }} mr-2"></i>{% endif %}
             {{ _(item.label) }}
@@ -884,12 +883,3 @@
 </tr>
 {% endfor %}
 {% endmacro %}
-
-{% macro skeleton_card() %}
-<div class="skeleton-card space-y-3">
-    <div class="skeleton skeleton-text long"></div>
-    <div class="skeleton skeleton-text medium"></div>
-    <div class="skeleton skeleton-text short"></div>
-</div>
-{% endmacro %}
-

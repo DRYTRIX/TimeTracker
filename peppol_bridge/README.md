@@ -63,4 +63,3 @@ docker run --rm -p 8088:8088 \
   -e PEPPOL_BRIDGE_AUTH_TOKEN=CHANGE_ME \
   timetracker-peppol-bridge:latest
 ```
-

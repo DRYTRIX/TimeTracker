@@ -22,8 +22,8 @@ from app.utils.data_import import (
     import_from_toggl,
     restore_from_backup,
 )
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_helpers import module_enabled
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 import_export_bp = Blueprint("import_export", __name__)
 
@@ -762,16 +762,12 @@ def import_csv_clients_route():
                     db.session.rollback()
                     current_app.logger.error(f"Failed to update import record status: {db_error}")
             # Return detailed error in debug mode, generic in production
-            error_msg = (
-                "Import failed. Please check the file format and try again."
-            )
+            error_msg = "Import failed. Please check the file format and try again."
             return jsonify({"error": error_msg}), 500
 
     except Exception as e:
         current_app.logger.exception(f"Top-level error in client import route: {str(e)}")
-        error_msg = (
-            "An unexpected error occurred. Please try again."
-        )
+        error_msg = "An unexpected error occurred. Please try again."
         return jsonify({"error": error_msg}), 500
 
 

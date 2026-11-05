@@ -106,7 +106,8 @@ class MicrosoftTeamsConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {data['access_token']}"},
+                    f"{self.GRAPH_BASE_URL}/me",
+                    headers={"Authorization": f"Bearer {data['access_token']}"},
                     timeout=(5, 30),
                 )
                 if user_response.status_code == 200:
@@ -192,7 +193,9 @@ class MicrosoftTeamsConnector(BaseConnector):
 
         try:
             # Get user info
-            response = requests.get(f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {token}"}, timeout=(5, 30))
+            response = requests.get(
+                f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {token}"}, timeout=(5, 30)
+            )
 
             if response.status_code == 200:
                 user_data = response.json()
@@ -255,7 +258,8 @@ class MicrosoftTeamsConnector(BaseConnector):
         try:
             # Get teams
             response = requests.get(
-                f"{self.GRAPH_BASE_URL}/me/joinedTeams", headers={"Authorization": f"Bearer {token}"},
+                f"{self.GRAPH_BASE_URL}/me/joinedTeams",
+                headers={"Authorization": f"Bearer {token}"},
                 timeout=(5, 30),
             )
 

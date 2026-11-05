@@ -144,7 +144,7 @@ The majority of untranslated strings are flash messages in Python route files:
    ```python
    # Before
    flash('Project created', 'success')
-   
+
    # After
    from flask_babel import _
    flash(_('Project created'), 'success')
@@ -154,7 +154,7 @@ The majority of untranslated strings are flash messages in Python route files:
    ```html
    <!-- Before -->
    <h3>Advanced Permissions</h3>
-   
+
    <!-- After -->
    <h3>{{ _('Advanced Permissions') }}</h3>
    ```
@@ -163,7 +163,7 @@ The majority of untranslated strings are flash messages in Python route files:
    ```html
    <!-- Before -->
    <button>Update Status</button>
-   
+
    <!-- After -->
    <button>{{ _('Update Status') }}</button>
    ```
@@ -174,7 +174,7 @@ The majority of untranslated strings are flash messages in Python route files:
    ```html
    <!-- Before -->
    <input placeholder="e.g., Travel, Meals">
-   
+
    <!-- After -->
    <input placeholder="{{ _('e.g., Travel, Meals') }}">
    ```
@@ -183,7 +183,7 @@ The majority of untranslated strings are flash messages in Python route files:
    ```html
    <!-- Before -->
    <button title="Export to Excel">
-   
+
    <!-- After -->
    <button title="{{ _('Export to Excel') }}">
    ```
@@ -272,4 +272,3 @@ While the TimeTracker application has a solid foundation for translations with 8
 4. **Email templates** need comprehensive translation support
 
 Addressing these issues will ensure a fully internationalized application that provides a consistent user experience across all supported languages.
-

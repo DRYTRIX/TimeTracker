@@ -69,10 +69,10 @@ ALTER TABLE quotes ADD COLUMN template_id INTEGER;
 CREATE INDEX ix_quotes_template_id ON quotes (template_id);
 
 -- Add foreign key (if quote_pdf_templates table exists)
-ALTER TABLE quotes 
-ADD CONSTRAINT fk_quotes_template_id 
-FOREIGN KEY (template_id) 
-REFERENCES quote_pdf_templates(id) 
+ALTER TABLE quotes
+ADD CONSTRAINT fk_quotes_template_id
+FOREIGN KEY (template_id)
+REFERENCES quote_pdf_templates(id)
 ON DELETE SET NULL;
 ```
 
@@ -82,8 +82,8 @@ After applying the fix, verify the column exists:
 
 ```sql
 -- PostgreSQL
-SELECT column_name, data_type, is_nullable 
-FROM information_schema.columns 
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
 WHERE table_name = 'quotes' AND column_name = 'template_id';
 
 -- Or check via Python

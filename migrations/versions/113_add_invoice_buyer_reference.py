@@ -6,9 +6,9 @@ Create Date: 2025-01-30
 
 Optional PEPPOL/EN 16931 Buyer Reference (BT-10) for use in UBL.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "113_add_invoice_buyer_reference"
 down_revision = "112_add_invoices_peppol_compliant"
@@ -18,6 +18,7 @@ depends_on = None
 
 def upgrade():
     from sqlalchemy import inspect
+
     bind = op.get_bind()
     inspector = inspect(bind)
 
@@ -42,6 +43,7 @@ def upgrade():
 
 def downgrade():
     from sqlalchemy import inspect
+
     bind = op.get_bind()
     inspector = inspect(bind)
 

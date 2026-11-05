@@ -7,7 +7,8 @@ import pytest
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import datetime, timedelta
-from app.models import TimeEntry, ApiToken, Project
+
+from app.models import ApiToken, Project, TimeEntry
 
 
 class TestAPIReportsRefactored:

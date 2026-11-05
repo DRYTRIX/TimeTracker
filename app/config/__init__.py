@@ -20,7 +20,7 @@ from app.config.analytics_defaults import get_analytics_config, has_analytics_co
 # So we need to import it properly
 try:
     # Try to import from a renamed file if it exists
-    from app.flask_config import Config, DevelopmentConfig, ProductionConfig, TestingConfig
+    from app.flask_config import Config, DevelopmentConfig, ProductionConfig, TestingConfig, normalize_database_url
 except ImportError:
     # If the file wasn't renamed, we need to import it differently
     # Add parent to path temporarily to import the shadowed config.py
@@ -37,6 +37,7 @@ except ImportError:
         ProductionConfig = flask_config.ProductionConfig
         DevelopmentConfig = flask_config.DevelopmentConfig
         TestingConfig = flask_config.TestingConfig
+        normalize_database_url = flask_config.normalize_database_url
     else:
         # Fallback - create minimal config
         class Config:  # type: ignore[no-redef]
@@ -46,6 +47,10 @@ except ImportError:
         DevelopmentConfig = Config
         TestingConfig = Config
 
+        def normalize_database_url(url):  # type: ignore[misc]
+            return url
+
+
 __all__ = [
     "get_analytics_config",
     "has_analytics_configured",
@@ -53,4 +58,5 @@ __all__ = [
     "ProductionConfig",
     "DevelopmentConfig",
     "TestingConfig",
+    "normalize_database_url",
 ]

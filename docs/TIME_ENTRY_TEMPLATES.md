@@ -241,4 +241,3 @@ We'd love to hear how you're using time entry templates! If you have suggestions
 - Open an issue on GitHub
 - Contact support
 - Contribute improvements via pull request
-

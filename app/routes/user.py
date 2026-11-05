@@ -11,10 +11,10 @@ from app import db
 from app.models import Activity, Settings, User
 from app.utils.db import safe_commit
 from app.utils.donate_hide_code import system_id_log_prefix, verify_supporter_code
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.license_utils import is_license_activated
 from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.timezone import get_available_timezones
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 

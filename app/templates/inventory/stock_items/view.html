@@ -162,7 +162,7 @@
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Stock Breakdown by Valuation') }}</h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ _('Detailed breakdown showing remaining stock with different devaluation rates') }}</p>
-            
+
             {% for warehouse_id, warehouse_data in stock_lots_by_warehouse.items() %}
             {% set warehouse = warehouse_data.warehouse %}
             {% set lots = warehouse_data.lots %}
@@ -314,4 +314,3 @@
     </div>
 </div>
 {% endblock %}
-

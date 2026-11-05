@@ -1116,8 +1116,8 @@ axios.get(`${BASE_URL}/projects`, { headers })
   .catch(error => console.error(error));
 
 // Start timer
-axios.post(`${BASE_URL}/timer/start`, 
-  { project_id: 1, task_id: 5 }, 
+axios.post(`${BASE_URL}/timer/start`,
+  { project_id: 1, task_id: 5 },
   { headers }
 )
   .then(response => console.log('Timer started:', response.data))
@@ -1196,4 +1196,3 @@ For API support:
 - Timer control endpoints
 - Reporting endpoints
 - Interactive Swagger documentation
-

@@ -22,9 +22,7 @@ from app.utils.timezone import convert_app_datetime_to_user, parse_user_local_da
 
 
 def _load_legacy_api_routes():
-    api_module_path = os.path.join(
-        os.path.dirname(__file__), "..", "app", "routes", "api.py"
-    )
+    api_module_path = os.path.join(os.path.dirname(__file__), "..", "app", "routes", "api.py")
     spec = importlib.util.spec_from_file_location("legacy_api_routes", api_module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -190,9 +188,7 @@ def test_correction_timezone_roundtrip(client, app, user):
             parsed_end = parse_user_local_datetime_from_string(end_local, user=db_user)
             assert corrected["start_time"] == parsed_start.isoformat()
             assert corrected["end_time"] == parsed_end.isoformat()
-            assert parsed_start.replace(second=0, microsecond=0) == ctx["start_time"].replace(
-                second=0, microsecond=0
-            )
+            assert parsed_start.replace(second=0, microsecond=0) == ctx["start_time"].replace(second=0, microsecond=0)
             assert parsed_end == ctx["end_time"]
     finally:
         with app.app_context():
@@ -241,9 +237,7 @@ def test_admin_approve_applies_correction_to_history(client, app, user, admin_us
             assert correction.status == AttendanceCorrectionStatus.APPLIED
             period = AttendanceWorkPeriod.query.get(ctx["period_id"])
             assert period is not None
-            assert period.end_time.replace(second=0, microsecond=0) == new_end.replace(
-                second=0, microsecond=0
-            )
+            assert period.end_time.replace(second=0, microsecond=0) == new_end.replace(second=0, microsecond=0)
     finally:
         with app.app_context():
             _cleanup_attendance(user_id)
@@ -335,9 +329,9 @@ def test_admin_reject_button_rejects(client, app, user, admin_user):
 
 @pytest.mark.unit
 def test_parse_correction_review_decision():
-    from app.routes.workday import _parse_correction_review_decision
-
     from flask import Flask
+
+    from app.routes.workday import _parse_correction_review_decision
 
     app = Flask(__name__)
     with app.test_request_context("/review", method="POST", data={"approve": "1"}):

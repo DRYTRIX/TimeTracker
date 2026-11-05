@@ -20,9 +20,9 @@
                     </div>
                 </div>
 
-                <!-- Right side controls -->
+                <!-- Right side controls: theme/language hidden on narrow screens (in user menu) -->
                 <div class="flex items-center gap-2">
-                    <div class="relative z-50" id="theme-dropdown-container">
+                    <div class="relative z-50 hidden sm:block" id="theme-dropdown-container">
                         <button id="theme-toggle" type="button" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Theme') }}" aria-haspopup="true" aria-expanded="false" aria-controls="themeDropdown">
                             <i id="theme-toggle-dark-icon" class="hidden fa-solid fa-moon w-5 h-5"></i>
                             <i id="theme-toggle-light-icon" class="hidden fa-solid fa-sun w-5 h-5"></i>
@@ -35,13 +35,8 @@
                         </ul>
                     </div>
 
-                    <!-- Chat, Timer, Help - icon buttons -->
+                    <!-- Timer (primary) + tools overflow (chat / help / AI) -->
                     <div class="flex items-center gap-1">
-                        {% if is_module_enabled('team_chat') %}
-                        <button onclick="if(typeof toggleChatWidget === 'function') { toggleChatWidget(); } else { openChatUserSelector(); }" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Open chat') }}" title="{{ _('Open chat') }}">
-                            <i class="fas fa-comments"></i>
-                        </button>
-                        {% endif %}
                         {% if current_user.is_authenticated %}
                         <div id="floatingTimerBar" class="flex shrink-0 items-center justify-center w-9 h-9"
                              data-start-label="{{ _('Start Timer') }}"
@@ -54,24 +49,36 @@
                              data-switch-label="{{ _('Switch project') }}"
                              aria-label="{{ _('Timer') }}"></div>
                         {% endif %}
-                        <a href="{{ url_for('main.help') }}" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('Help') }}" title="{{ _('Help') }}">
-                            <i class="fas fa-life-ring"></i>
-                        </a>
-                        {% if current_user.is_authenticated and ai_enabled %}
-                        <button type="button" data-ai-helper-open class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('AI Helper') }}" title="{{ _('AI Helper') }}">
-                            <i class="fas fa-wand-magic-sparkles"></i>
-                        </button>
-                        {% endif %}
-                        {% if current_user.is_authenticated and not is_license_activated %}
-                        <button type="button" id="headerSupportBtn" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-amber-800 dark:text-amber-200 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 dark:border-amber-500/40 focus:outline-none focus:ring-2 focus:ring-amber-500/40" title="{{ _('Support TimeTracker') }}">
-                            <i class="fas fa-heart text-amber-600 dark:text-amber-300" aria-hidden="true"></i>
-                            <span class="max-w-[10rem] truncate">{{ _('Support TimeTracker') }}</span>
-                        </button>
-                        {% endif %}
+                        <div class="relative z-50" id="tools-overflow-container">
+                            <button type="button" data-dropdown="toolsOverflowMenu" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50" aria-label="{{ _('More tools') }}" aria-haspopup="true" aria-expanded="false" aria-controls="toolsOverflowMenu" title="{{ _('More tools') }}">
+                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                            </button>
+                            <ul id="toolsOverflowMenu" class="hidden absolute right-0 mt-2 w-48 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg py-1" role="menu" aria-label="{{ _('More tools') }}">
+                                {% if is_module_enabled('team_chat') %}
+                                <li role="none">
+                                    <button type="button" role="menuitem" onclick="if(typeof toggleChatWidget === 'function') { toggleChatWidget(); } else { openChatUserSelector(); }" class="w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                        <i class="fas fa-comments w-4" aria-hidden="true"></i>{{ _('Chat') }}
+                                    </button>
+                                </li>
+                                {% endif %}
+                                <li role="none">
+                                    <a href="{{ url_for('main.help') }}" role="menuitem" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                        <i class="fas fa-life-ring w-4" aria-hidden="true"></i>{{ _('Help') }}
+                                    </a>
+                                </li>
+                                {% if current_user.is_authenticated and ai_enabled %}
+                                <li role="none">
+                                    <button type="button" role="menuitem" data-ai-helper-open class="w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                                        <i class="fas fa-wand-magic-sparkles w-4" aria-hidden="true"></i>{{ _('AI Helper') }}
+                                    </button>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
                     </div>
 
-                    <!-- Language Switcher -->
-                    <div class="relative z-50">
+                    <!-- Language Switcher (desktop/tablet; mobile uses user menu) -->
+                    <div class="relative z-50 hidden sm:block">
                         <button data-dropdown="langDropdown" class="flex items-center justify-center w-9 h-9 rounded-lg text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/50 lg:w-auto lg:px-2.5" aria-label="{{ _('Change language') }}" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdown" title="{{ _('Change language') }}">
                             <i class="fas fa-globe"></i>
                             <span class="ml-2 hidden lg:inline">{{ current_language_label }}</span>
@@ -124,6 +131,8 @@
                             </li>
                             <li><a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-user w-4"></i> {{ _('My Profile') }}</a></li>
                             <li><a href="{{ url_for('user.settings') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-cog w-4"></i> {{ _('My Settings') }}</a></li>
+                            <li class="sm:hidden border-t border-border-light dark:border-border-dark"><button type="button" class="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" onclick="document.getElementById('theme-toggle')?.click()"><i class="fas fa-moon w-4" aria-hidden="true"></i> {{ _('Theme') }}</button></li>
+                            <li class="sm:hidden"><a href="{{ url_for('user.settings') }}#language" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-globe w-4" aria-hidden="true"></i> {{ _('Language') }}</a></li>
                             {% if current_user.is_authenticated %}
                             <li><a href="{{ url_for('user.license') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700"><i class="fas fa-key w-4"></i> {{ _('License') }}</a></li>
                             {% endif %}

@@ -7,7 +7,8 @@ import pytest
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import datetime, timedelta
-from app.models import TimeEntry, Project, ApiToken
+
+from app.models import ApiToken, Project, TimeEntry
 
 
 class TestAPITimeEntriesComplete:
@@ -76,8 +77,8 @@ class TestAPITimeEntriesComplete:
     def test_stop_timer_uses_service_layer(self, app, client_with_token, user, project):
         """Test that stop_timer route uses service layer"""
         # First start a timer
-        from app.models import TimeEntry
         from app import db
+        from app.models import TimeEntry
 
         timer = TimeEntry(user_id=user.id, project_id=project.id, start_time=datetime.utcnow())
         db.session.add(timer)

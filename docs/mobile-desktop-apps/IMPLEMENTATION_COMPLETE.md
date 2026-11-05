@@ -234,7 +234,7 @@ desktop/
    # Android
    flutter build apk --release
    flutter build appbundle --release
-   
+
    # iOS (then use Xcode to archive)
    flutter build ios --release
    ```
@@ -260,7 +260,7 @@ desktop/
    ```bash
    # All platforms
    npm run build
-   
+
    # Platform-specific
    npm run build:win
    npm run build:mac

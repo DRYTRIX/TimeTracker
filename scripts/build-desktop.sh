@@ -146,7 +146,7 @@ fi
     if [[ "$PROJECT_ROOT" == *"OneDrive"* ]]; then
         IS_ONEDRIVE=true
     fi
-    
+
     if [ ! -d "node_modules" ]; then
         echo "  Installing dependencies (first time)..."
         if ! npm install --prefer-offline --no-audit --loglevel=warn; then
@@ -256,7 +256,7 @@ case "$PLATFORM" in
             echo "WARNING: Building Windows installer on non-Windows platform"
             echo "  This may not work correctly. Use CI/CD for cross-platform builds."
         fi
-        
+
         # Clear electron-builder cache to prevent code signing download (Windows only)
         if [ "$CURRENT_PLATFORM" = "win32" ]; then
             # Try both Windows path formats (Git Bash may use different env vars)
@@ -266,21 +266,21 @@ case "$PLATFORM" in
             elif [ -n "$HOME" ]; then
                 CACHE_BASE="$HOME/AppData/Local/electron-builder"
             fi
-            
+
             if [ -n "$CACHE_BASE" ] && [ -d "$CACHE_BASE/Cache/winCodeSign" ]; then
                 echo "Clearing winCodeSign cache (prevents symlink errors)..."
                 rm -rf "$CACHE_BASE/Cache/winCodeSign" 2>/dev/null || true
                 echo ""
             fi
         fi
-        
+
         echo "Building Windows installer..."
         echo "NOTE: Code signing is disabled (sign: null)"
         echo ""
-        
+
         # Set environment variable to prevent code signing
         export CSC_IDENTITY_AUTO_DISCOVERY=false
-        
+
         echo "  If you get symbolic link errors:"
         echo "  1. Enable Developer Mode: Win+I > Privacy & Security > For developers"
         echo "  2. Or run PowerShell/CMD as Administrator"
@@ -338,7 +338,7 @@ case "$PLATFORM" in
         case "$CURRENT_PLATFORM" in
             win32)
                 echo "Detected Windows (Git Bash/MSYS)"
-                
+
                 # Clear electron-builder cache to prevent code signing download
                 CACHE_BASE=""
                 if [ -n "$LOCALAPPDATA" ]; then
@@ -346,31 +346,31 @@ case "$PLATFORM" in
                 elif [ -n "$HOME" ]; then
                     CACHE_BASE="$HOME/AppData/Local/electron-builder"
                 fi
-                
+
                 if [ -n "$CACHE_BASE" ] && [ -d "$CACHE_BASE/Cache/winCodeSign" ]; then
                     echo "Clearing winCodeSign cache (prevents symlink errors)..."
                     rm -rf "$CACHE_BASE/Cache/winCodeSign" 2>/dev/null || true
                     echo ""
                 fi
-                
+
                 echo "Building Windows installer..."
                 echo "NOTE: Code signing is disabled (sign: null)"
                 echo ""
-                
+
                 # Set ALL environment variables to prevent code signing completely
                 export CSC_IDENTITY_AUTO_DISCOVERY=false
                 export WIN_CSC_LINK=""
                 export WIN_CSC_KEY_PASSWORD=""
                 export CSC_LINK=""
                 export CSC_KEY_PASSWORD=""
-                
+
                 echo "  If you STILL get symbolic link errors:"
                 echo "  1. Enable Developer Mode: Win+I > Privacy & Security > For developers"
                 echo "  2. Or run PowerShell/CMD as Administrator"
                 echo "  3. Or run: ./scripts/clear-all-electron-cache.sh"
                 echo "  4. Or try: ./scripts/build-desktop-no-sign.sh (more aggressive)"
                 echo ""
-                
+
                 # Build with multiple env vars and explicit CLI flags to ensure no code signing
                 CSC_IDENTITY_AUTO_DISCOVERY=false \
                 WIN_CSC_LINK="" \

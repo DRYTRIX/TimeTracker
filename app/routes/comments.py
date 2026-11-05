@@ -2,7 +2,6 @@ import os
 from datetime import datetime
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_file, url_for
-from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
@@ -10,6 +9,7 @@ from werkzeug.utils import secure_filename
 from app import db, log_event, track_event
 from app.models import Comment, CommentAttachment, Project, Quote, Task
 from app.utils.db import safe_commit
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 
 comments_bp = Blueprint("comments", __name__)
 
@@ -63,7 +63,9 @@ def create_comment():
                 or (quote_id and parent_comment.quote_id != quote_id)
             ):
                 flash(_("Invalid parent comment"), "error")
-                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
+                return safe_redirect(
+                    request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")
+                )
 
         # Create the comment
         comment = Comment(
@@ -400,8 +402,13 @@ def download_attachment(attachment_id):
         if not current_user.is_admin and quote.created_by != current_user.id:
             abort(403)
 
-    # Build file path
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+    except PathEscapeError:
+        flash(_("File not found"), "error")
+        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
     if not os.path.exists(file_path):
         flash(_("File not found"), "error")
@@ -424,13 +431,14 @@ def delete_attachment(attachment_id):
         flash(_("You do not have permission to delete this attachment"), "error")
         return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
-    # Delete file
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
-    if os.path.exists(file_path):
-        try:
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+        if os.path.exists(file_path):
             os.remove(file_path)
-        except Exception as e:
-            current_app.logger.error(f"Failed to delete attachment file: {e}")
+    except (PathEscapeError, OSError) as e:
+        current_app.logger.error(f"Failed to delete attachment file: {e}")
 
     # Delete attachment record
     db.session.delete(attachment)

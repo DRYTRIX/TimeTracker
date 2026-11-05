@@ -14,14 +14,14 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('payment_gateways.create_gateway') }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
                 <label for="name" class="form-label">{{ _('Gateway Name') }} *</label>
                 <input type="text" id="name" name="name" required class="form-input" placeholder="{{ _('e.g., Stripe Production') }}">
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('A descriptive name for this gateway configuration') }}</p>
             </div>
-            
+
             <div>
                 <label for="provider" class="form-label">{{ _('Provider') }} *</label>
                 <select id="provider" name="provider" required class="form-input" onchange="updateProviderFields()">
@@ -31,7 +31,7 @@
                 </select>
             </div>
         </div>
-        
+
         <div id="stripeFields" class="hidden border-t border-border-light dark:border-border-dark pt-4 mb-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Stripe Configuration') }}</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -52,7 +52,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div id="paypalFields" class="hidden border-t border-border-light dark:border-border-dark pt-4 mb-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('PayPal Configuration') }}</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -66,7 +66,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="border-t border-border-light dark:border-border-dark pt-4 mb-6">
             <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <input type="checkbox" id="is_test_mode" name="is_test_mode" class="rounded border-gray-300 text-primary shadow-sm">
@@ -74,7 +74,7 @@
             </label>
             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Enable test mode for development and testing') }}</p>
         </div>
-        
+
         <div class="flex justify-end gap-4">
             <a href="{{ url_for('payment_gateways.list_gateways') }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Save Gateway') }}</button>
@@ -87,7 +87,7 @@ function updateProviderFields() {
     const provider = document.getElementById('provider').value;
     document.getElementById('stripeFields').classList.add('hidden');
     document.getElementById('paypalFields').classList.add('hidden');
-    
+
     if (provider === 'stripe') {
         document.getElementById('stripeFields').classList.remove('hidden');
     } else if (provider === 'paypal') {
@@ -96,4 +96,3 @@ function updateProviderFields() {
 }
 </script>
 {% endblock %}
-

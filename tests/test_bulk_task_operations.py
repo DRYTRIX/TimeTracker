@@ -4,11 +4,12 @@ Tests bulk delete, bulk status change, bulk assignment, bulk due date, bulk prio
 """
 
 import json
+
 import pytest
 from flask import url_for
-from app.models import Task, Project, User, TaskActivity
-from app import db
 
+from app import db
+from app.models import Project, Task, TaskActivity, User
 
 # ============================================================================
 # Fixtures
@@ -109,8 +110,9 @@ def test_bulk_delete_with_time_entries_skips_task(authenticated_client, app, use
         db.session.commit()
         db.session.refresh(task)
 
-        from factories import TimeEntryFactory
         from datetime import datetime
+
+        from factories import TimeEntryFactory
 
         entry = TimeEntryFactory(
             user_id=user.id,
@@ -360,8 +362,9 @@ def test_bulk_move_project_updates_time_entries(authenticated_client, app, user,
         db.session.commit()
         db.session.refresh(task)
 
-        from factories import TimeEntryFactory
         from datetime import datetime
+
+        from factories import TimeEntryFactory
 
         entry = TimeEntryFactory(
             user_id=user.id,

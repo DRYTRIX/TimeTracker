@@ -26,7 +26,7 @@
                 <p class="text-lg text-text-light dark:text-text-dark mb-4">
                     {{ error_info.message }}
                 </p>
-                
+
                 {% if error_info.details %}
                 <div class="bg-background-light dark:bg-background-dark rounded-lg p-4 mb-6 text-left">
                     <h3 class="font-semibold mb-2 text-text-light dark:text-text-dark">{{ _('Details') }}:</h3>
@@ -42,19 +42,19 @@
             <!-- Action Buttons -->
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
                 {% if current_client %}
-                <a href="{{ url_for('client_portal.dashboard') }}" 
+                <a href="{{ url_for('client_portal.dashboard') }}"
                    class="inline-flex items-center justify-center px-6 py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg">
                     <i class="fas fa-home mr-2"></i>{{ _('Go to Dashboard') }}
                 </a>
                 {% else %}
-                <a href="{{ url_for('client_portal.login') }}" 
+                <a href="{{ url_for('client_portal.login') }}"
                    class="inline-flex items-center justify-center px-6 py-3 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg">
                     <i class="fas fa-sign-in-alt mr-2"></i>{{ _('Login to Client Portal') }}
                 </a>
                 {% endif %}
-                
+
                 {% if error_info.show_back %}
-                <button onclick="window.history.back()" 
+                <button onclick="window.history.back()"
                         class="inline-flex items-center justify-center px-6 py-3 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg transition-colors">
                     <i class="fas fa-arrow-left mr-2"></i>{{ _('Go Back') }}
                 </button>

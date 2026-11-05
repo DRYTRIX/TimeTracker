@@ -9,13 +9,14 @@ This module tests:
 - Data integrity and constraints
 """
 
-import pytest
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+import pytest
+from factories import ExpenseFactory, InvoiceFactory
+
 from app import create_app, db
-from app.models import User, Project, Client, Invoice, Expense
-from factories import InvoiceFactory
-from factories import ExpenseFactory
+from app.models import Client, Expense, Invoice, Project, User
 
 
 @pytest.fixture

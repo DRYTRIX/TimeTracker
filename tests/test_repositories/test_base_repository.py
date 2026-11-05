@@ -3,9 +3,10 @@ Tests for BaseRepository.
 """
 
 import pytest
-from app.repositories.base_repository import BaseRepository
-from app.models import Project, Client
+
 from app import db
+from app.models import Client, Project
+from app.repositories.base_repository import BaseRepository
 
 
 @pytest.mark.unit
@@ -29,12 +30,12 @@ def test_get_by_id_not_found(app):
 
 
 @pytest.mark.unit
-def test_find_by(app, test_client_model):
+def test_find_by(app, test_client):
     """Test finding records by criteria"""
     repo = BaseRepository(Project)
 
     # Create a project
-    project = Project(name="Test Project", client_id=test_client_model.id)
+    project = Project(name="Test Project", client_id=test_client.id)
     db.session.add(project)
     db.session.commit()
 
@@ -45,12 +46,12 @@ def test_find_by(app, test_client_model):
 
 
 @pytest.mark.unit
-def test_find_one_by(app, test_client_model):
+def test_find_one_by(app, test_client):
     """Test finding single record"""
     repo = BaseRepository(Project)
 
     # Create a project
-    project = Project(name="Unique Project", client_id=test_client_model.id)
+    project = Project(name="Unique Project", client_id=test_client.id)
     db.session.add(project)
     db.session.commit()
 
@@ -61,11 +62,11 @@ def test_find_one_by(app, test_client_model):
 
 
 @pytest.mark.unit
-def test_create(app, test_client_model):
+def test_create(app, test_client):
     """Test creating a record"""
     repo = BaseRepository(Project)
 
-    project = repo.create(name="New Project", client_id=test_client_model.id, status="active")
+    project = repo.create(name="New Project", client_id=test_client.id, status="active")
 
     assert project is not None
     assert project.name == "New Project"
@@ -88,13 +89,13 @@ def test_update(app, test_project):
 
 
 @pytest.mark.unit
-def test_count(app, test_client_model):
+def test_count(app, test_client):
     """Test counting records"""
     repo = BaseRepository(Project)
 
     # Create some projects
-    project1 = Project(name="Project 1", client_id=test_client_model.id)
-    project2 = Project(name="Project 2", client_id=test_client_model.id)
+    project1 = Project(name="Project 1", client_id=test_client.id)
+    project2 = Project(name="Project 2", client_id=test_client.id)
     db.session.add_all([project1, project2])
     db.session.commit()
 

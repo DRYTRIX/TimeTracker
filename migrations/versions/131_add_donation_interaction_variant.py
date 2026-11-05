@@ -6,9 +6,9 @@ Create Date: 2026-03-02
 
 Enables segmenting support CTA experiments (e.g. control, key_first, cta_alt).
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "131_add_donation_variant"
 down_revision = "130_add_peppol_transport_mode_and_native"

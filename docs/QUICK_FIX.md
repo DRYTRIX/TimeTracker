@@ -73,4 +73,3 @@ docker exec -it timetracker_db_1 psql -U timetracker -d timetracker -c "SELECT C
 Should return: `count: 4`
 
 Done! Navigate to `/tasks` and your kanban board will work with custom columns.
-

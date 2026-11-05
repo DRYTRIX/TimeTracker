@@ -46,6 +46,5 @@ def test_all_integration_requests_calls_have_timeout():
 
     assert not violations, (
         "requests.get/post/put/patch/delete/request calls under app/integrations/ "
-        "must pass timeout= (or use app.utils.integration_http). Missing:\n"
-        + "\n".join(f"  - {v}" for v in violations)
+        "must pass timeout= (or use app.utils.integration_http). Missing:\n" + "\n".join(f"  - {v}" for v in violations)
     )

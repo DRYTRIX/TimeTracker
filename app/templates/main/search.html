@@ -62,16 +62,16 @@
                                     <td>{{ entry.tags or '-' }}</td>
                                     <td class="text-end">
                                         <div class="btn-group" role="group">
-                                            <a href="{{ url_for('timer.resume_timer_by_id', timer_id=entry.id) }}" 
+                                            <a href="{{ url_for('timer.resume_timer_by_id', timer_id=entry.id) }}"
                                                class="btn btn-sm btn-action btn-action--success" title="{{ _('Resume - Start a new timer with same properties') }}">
                                                 <i class="fas fa-play"></i>
                                             </a>
-                                            <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" 
+                                            <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}"
                                                class="btn btn-sm btn-action btn-action--edit" title="{{ _('Edit entry') }}">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             {% if current_user.is_admin or entry.user_id == current_user.id %}
-                                            <form method="POST" action="{{ url_for('timer.delete_timer', timer_id=entry.id) }}" 
+                                            <form method="POST" action="{{ url_for('timer.delete_timer', timer_id=entry.id) }}"
                                                   class="d-inline" data-confirm="{{ _('Are you sure you want to delete this time entry? This action cannot be undone.') }}">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-action btn-action--danger" title="{{ _('Delete entry') }}">
@@ -140,5 +140,3 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 {% endblock %}
-
-

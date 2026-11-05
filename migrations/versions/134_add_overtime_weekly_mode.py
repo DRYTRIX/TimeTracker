@@ -6,9 +6,9 @@ Create Date: 2026-03-09
 
 Allows overtime to be calculated by weekly hours instead of daily hours.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "134_overtime_weekly"
 down_revision = "133_merge_132_129_heads"

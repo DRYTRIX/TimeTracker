@@ -5,8 +5,9 @@
 #
 # Quick install:
 #   1. Paste this entire file into your NAS stack / project editor.
-#   2. Set SECRET_KEY (required). Generate one with: openssl rand -hex 32
+#   2. Set SECRET_KEY and POSTGRES_PASSWORD (required). Generate with: openssl rand -hex 32
 #   3. Deploy the stack, then open http://<your-nas-ip>:8080
+# Do not port-forward the DB; keep this stack on a trusted LAN only.
 #
 # Full guide: docs/admin/deployment/NAS_DEPLOYMENT.md
 
@@ -24,8 +25,11 @@ services:
       - ADMIN_USERNAMES=${ADMIN_USERNAMES:-admin}
       # Required — generate with: openssl rand -hex 32
       - SECRET_KEY=${SECRET_KEY:?Generate one with openssl rand -hex 32}
-      # Database (bundled Postgres)
-      - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
+      - POSTGRES_DB=${POSTGRES_DB:-timetracker}
+      - POSTGRES_USER=${POSTGRES_USER:-timetracker}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set a strong POSTGRES_PASSWORD}
+      # Database (bundled Postgres) — password must match db service
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-timetracker}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-timetracker}
       - LOG_FILE=/app/logs/timetracker.log
       # CSRF & cookies (HTTP-safe defaults for LAN access via NAS IP)
       - WTF_CSRF_ENABLED=${WTF_CSRF_ENABLED:-true}
@@ -65,7 +69,7 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-timetracker}
       - POSTGRES_USER=${POSTGRES_USER:-timetracker}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-timetracker}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set a strong POSTGRES_PASSWORD}
       - TZ=${TZ:-Europe/Brussels}
     volumes:
       - db_data:/var/lib/postgresql/data

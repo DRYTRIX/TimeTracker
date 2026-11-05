@@ -13,9 +13,11 @@
 [![Latest Release](https://img.shields.io/github/v/release/drytrix/TimeTracker)](https://github.com/drytrix/TimeTracker/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/github/license/drytrix/TimeTracker)](LICENSE)
 
-<img src="assets/screenshots/Dashboard.png" alt="TimeTracker Dashboard" width="800">
+<img src="docs/assets/demo.gif" alt="TimeTracker: login, dashboard, log time, invoices" width="800">
 
-**[Live demo](https://timetracker-demo.drytrix.com)** · **[Website](https://timetracker.drytrix.com)** · **[Docs](docs/README.md)** · **[Changelog](CHANGELOG.md)**
+**[Live demo](https://timetracker-demo.drytrix.com)** (login `test` / `test123!`) · **[Website](https://timetracker.drytrix.com)** · **[Docs](docs/README.md)** · **[Changelog](CHANGELOG.md)**
+
+Demo login: **`test`** / **`test123!`** (standard user role; no admin settings).
 
 </div>
 
@@ -32,7 +34,15 @@ docker compose -f docker-compose.nas.yml up -d
 # open http://localhost:8080 — first login creates the admin
 ```
 
-**Latest release: v5.18.5** — see [CHANGELOG.md](CHANGELOG.md).
+**Latest release: v5.19.0** — see [CHANGELOG.md](CHANGELOG.md).
+
+### First 5 minutes
+
+1. Open [http://localhost:8080](http://localhost:8080) and create the admin account.
+2. [Add a client](docs/CLIENT_MANAGEMENT_README.md) under **Clients → Create Client**.
+3. Create a project under that client (**Projects → Create Project**).
+4. Start a timer or [log time](docs/GETTING_STARTED.md) against the project.
+5. Optional: [generate a draft invoice](docs/INVOICE_FEATURE_README.md) under **Invoices**.
 
 More install paths (HTTPS production, NAS UI paste, cloud): [Install options](#install-options).
 
@@ -45,241 +55,89 @@ More install paths (HTTPS production, NAS UI paste, cloud): [Install options](#i
 - **GPL-3.0 open source** — Free to use, modify, and run commercially; features are never locked behind a paywall.
 - **No per-user pricing** — Unlimited users and projects; optional one-time supporter key only hides donate prompts.
 
-| Feature | TimeTracker | Traditional Time Trackers |
-|---------|-------------|---------------------------|
-| **Self-Hosted** | ✅ Complete data control | ❌ Cloud-only, subscription fees |
-| **Open Source** | ✅ Free to use & modify | ❌ Proprietary, locked features |
-| **Persistent Timers** | ✅ Runs server-side | ❌ Browser-dependent |
-| **Docker Ready** | ✅ Deploy anywhere | ⚠️ Complex setup |
-| **Invoicing Built-in** | ✅ Track to bill workflow | ❌ Requires integration |
-| **No User Limits** | ✅ Unlimited users | ❌ Per-user pricing |
+| Feature | TimeTracker | Toggl Track | Clockify | Harvest |
+|---------|-------------|-------------|----------|---------|
+| **Self-hosted** | ✅ Full control | ❌ Cloud only | ❌ Cloud only | ❌ Cloud only |
+| **Open source** | ✅ GPL-3.0 | ❌ | ❌ | ❌ |
+| **Built-in invoicing** | ✅ PDF + Peppol / Factur-X | ⚠️ Limited / paid add-ons | ⚠️ Limited | ✅ |
+| **Peppol / EN 16931** | ✅ Bundled bridge | ❌ | ❌ | ❌ |
+| **Per-seat pricing** | ✅ Unlimited users | ❌ Paid seats | ⚠️ Free tier limits | ❌ Paid seats |
+| **Persistent server timers** | ✅ | ⚠️ Client-side | ⚠️ Client-side | ⚠️ Client-side |
 
 ---
 
 ## What is TimeTracker?
 
-TimeTracker is a **self-hosted, web-based time tracking application** designed for freelancers, teams, and businesses who need professional time management with complete control over their data.
+TimeTracker is a **self-hosted, web-based time tracking application** for freelancers, teams, and agencies who need professional time management with complete control over their data — an open-source alternative to Toggl Track, Clockify, and Harvest.
 
 **Perfect for:**
 - **Freelancers** tracking billable hours across multiple clients
-- **Small Teams** managing projects and tracking productivity
-- **Agencies** needing detailed reporting and client billing
-- **Privacy-focused organizations** wanting self-hosted solutions
+- **Small teams** managing projects and productivity
+- **Agencies** needing reporting and client billing
+- **EU businesses** that must send Peppol / EN 16931 e-invoices
+- **Privacy-focused organizations** that want self-hosted tooling
 
 UI layout and navigation conventions: [UI Guidelines](docs/UI_GUIDELINES.md).
 
 ---
 
-## ✨ Features
+## Features
 
-TimeTracker includes **130+ features** across 13 major categories. See the [Complete Features Documentation](docs/FEATURES_COMPLETE.md) for a comprehensive overview.
+Timers, projects, clients, CRM pipeline, PDF + Peppol invoicing, expenses, reports, OIDC/SSO, REST API, and optional mobile/desktop apps — full catalog in the docs:
 
-**📖 Quick Links:**
-- [📋 Complete Features List](docs/FEATURES_COMPLETE.md) — All features in detail
-- [⏱️ Time Tracking](docs/FEATURES_COMPLETE.md#time-tracking-features) — Timer and time entry features
-- [📊 Project Management](docs/FEATURES_COMPLETE.md#project-management) — Projects, tasks, and organization
-- [🧾 Invoicing](docs/INVOICE_FEATURE_README.md) — Invoice generation and billing
-- [💰 Financial Management](docs/FEATURES_COMPLETE.md#financial-management) — Expenses, payments, and tracking
-- [📈 Reporting & Analytics](docs/FEATURES_COMPLETE.md#reporting--analytics) — Reports and insights
-
-### ⏱️ **Smart Time Tracking**
-- **One-Click Timers** — Start tracking with a single click
-- **Persistent Timers** — Timers keep running even after browser closes
-- **Idle Detection** — Automatic pause after configurable idle time
-- **Manual Entry** — Add historical time entries with notes and tags
-- **Bulk Time Entry** — Create multiple entries for consecutive days with weekend skipping ([Guide](docs/BULK_TIME_ENTRY_README.md))
-- **Time Entry Templates** — Save and reuse common time entries for faster logging ([Guide](docs/TIME_ENTRY_TEMPLATES.md))
-- **Calendar View** — Visual calendar interface for viewing and managing time entries ([Guide](docs/CALENDAR_FEATURES_README.md))
-- **Focus Sessions** — Pomodoro-style focus session tracking
-- **Recurring Time Blocks** — Weekly recurring time block templates
-- **Time Rounding** — Configurable rounding intervals ([Guide](docs/TIME_ROUNDING_PREFERENCES.md))
-- **Real-time Updates** — See live timer updates across all devices via WebSocket
-
-### 📊 **Project & Task Management**
-- **Unlimited Projects & Tasks** — Organize work your way
-- **Client Management** — Store client details, contacts, and billing rates ([Guide](docs/CLIENT_MANAGEMENT_README.md))
-- **Task Board** — Visual task management with priorities and assignments
-- **Kanban Board** — Drag-and-drop task management with customizable columns
-- **Task Management** — Complete task tracking system ([Guide](docs/TASK_MANAGEMENT_README.md))
-- **Issue & Bug Tracking** — Full lifecycle issue and bug tracking system
-- **Status Tracking** — Monitor progress from to-do to completion
-- **Budget Tracking** — Monitor project budgets with alerts and forecasting ([Guide](docs/BUDGET_ALERTS_AND_FORECASTING.md))
-- **Project Costs** — Track direct project expenses
-- **Task Comments** — Collaborate with threaded comments on tasks
-- **Markdown Support** — Rich text formatting in project and task descriptions
-- **Project Favorites** — Quick access to frequently used projects
-
-### 💼 **CRM & Sales Management** 🆕
-- **Multiple Contacts per Client** — Manage unlimited contacts with roles and designations
-- **Sales Pipeline** — Visual Kanban-style pipeline for tracking deals and opportunities
-- **Deal Management** — Track deal value, probability, stages, and expected close dates
-- **Lead Management** — Capture, score, and convert leads into clients or deals
-- **Communication History** — Track all emails, calls, meetings, and notes with contacts
-- **Deal Activities** — Complete activity tracking for sales processes
-- **Lead Activities** — Track all interactions and activities for leads
-- **Lead Scoring** — Automated lead scoring (0-100) for prioritization
-- **Lead Conversion** — Convert leads to clients or deals with one click
-
-### 🧾 **Professional Invoicing**
-- **Generate from Time** — Convert tracked hours to invoices automatically
-- **Invoice System** — Complete invoicing solution ([Guide](docs/INVOICE_FEATURE_README.md))
-- **Custom Line Items** — Add manual items for expenses or services
-- **Tax Calculation** — Automatic tax calculations with configurable rates
-- **PDF Export** — Professional PDF invoice generation with customizable layouts
-- **PDF Invoice Layout** — Customize invoice and quote PDF layouts via Admin > PDF Layout; Items table includes time entries, extra goods, and expenses ([Guide](docs/PDF_LAYOUT_CUSTOMIZATION.md), [Extra Goods in PDF](docs/INVOICE_EXTRA_GOODS_PDF_EXPORT.md))
-- **Status Tracking** — Track draft, sent, paid, and overdue invoices
-- **Company Branding** — Add logos and custom company information
-- **Expense Integration** — Include tracked expenses in invoices
-- **Recurring Invoices** — Automate recurring billing
-- **Multi-Currency** — Support for multiple currencies with conversion
-- **Invoice Email** — Send invoices directly to clients
-- **Peppol & ZugFerd e-Invoicing (EN 16931)** — Send via Peppol (generic or native); embed EN 16931 XML in PDFs (ZugFerd/Factur-X); optional PDF/A-3 and veraPDF ([Setup Guide](docs/admin/configuration/PEPPOL_EINVOICING.md))
-
-### 💰 **Financial Management**
-- **Expense Tracking** — Track business expenses with receipts and categories ([Guide](docs/EXPENSE_TRACKING.md))
-- **Payment Tracking** — Monitor invoice payments and payment methods ([Guide](docs/PAYMENT_TRACKING.md))
-- **Reimbursement Management** — Handle expense approvals and reimbursements
-- **Billable Expenses** — Mark expenses as billable and add to invoices
-- **Payment Gateway Integration** — Track gateway transactions and fees
-- **Mileage Tracking** — Track business mileage with rate calculation
-- **Per Diem Tracking** — Manage per diem expenses and rates
-- **Multi-Currency** — Support for multiple currencies with conversion
-
-### 📈 **Analytics & Reporting**
-- **Visual Dashboards** — Charts and graphs for quick insights; dashboard includes **time-by-project chart (last 7 days)** and **weekly goal progress bar**
-- **Summary Report** — Today/week/month hours with **time-by-project** and **daily trend (14 days)** charts; **export summary as PDF**
-- **Detailed Reports** — Time breakdown by project, user, or date range
-- **CSV Export** — Export data for external analysis
-- **Billable vs Non-billable** — Separate tracking for accurate billing
-- **Custom Date Ranges** — Flexible reporting periods
-- **Saved Filters** — Save frequently used report filters for quick access
-- **User Analytics** — Individual performance metrics and productivity insights
-- **Budget Alerts** — Automatic alerts when budget thresholds are exceeded ([Guide](docs/BUDGET_ALERTS_AND_FORECASTING.md))
-- **Budget Forecasting** — Predict project completion dates based on burn rates
-- **Weekly Time Goals** — Set and track weekly hour targets ([Guide](docs/WEEKLY_TIME_GOALS.md))
-- **Overtime Tracking** — Monitor and report overtime hours
-
-### 🔐 **Multi-User & Security**
-- **Role-Based Access Control** — Granular permissions system with custom roles ([Guide](docs/ADVANCED_PERMISSIONS.md))
-- **User Management** — Add team members and manage access
-- **Self-Hosted** — Complete control over your data
-- **Flexible Authentication** — Username-only, OIDC/SSO (Azure AD, Authelia, etc.) ([Setup Guide](docs/admin/configuration/OIDC_SETUP.md))
-- **Session Management** — Secure cookies and session handling
-- **Profile Pictures** — Users can upload profile pictures
-- **API Tokens** — Generate tokens for API access and integrations ([API Docs](docs/api/REST_API.md))
-- **Audit Logs** — Track all system activity and user actions
-
-### ⌨️ **Productivity Features**
-- **Command Palette** — Keyboard-driven navigation with shortcuts (Ctrl+K / Cmd+K) ([Guide](docs/COMMAND_PALETTE_USAGE.md))
-- **Keyboard Shortcuts** — 50+ shortcuts for lightning-fast navigation and actions
-- **Quick Search** — Enhanced instant search with autocomplete and categorized results (Ctrl+K)
-- **Floating quick hub** — Bottom-right dock: unified Actions menu (timer, log time, new task/project/client, reports), optional team chat toggle with a fixed viewport panel, and AI Helper; see [UI guidelines](docs/UI_GUIDELINES.md#floating-hub-authenticated-layout)
-- **Enhanced Data Tables** — Sortable, filterable, inline-editable tables with bulk operations
-- **Email Notifications** — Configurable email alerts for tasks, invoices, and more
-- **Toast Notifications** — Beautiful in-app notifications; **post-timer toast** shows "Logged Xh on Project" with link to time entries
-- **Weekly Summaries** — Optional weekly time tracking summaries via email (enable in Settings)
-- **Remind to Log** — Optional end-of-day email reminder to log time (Settings → Remind me to log time at end of day; set time in your timezone)
-- **Activity Feed** — Track recent activity across the system
-- **Saved Filters** — Save frequently used report filters for quick access
-- **Recently Viewed** — Quick access to recently viewed items
-- **Favorites System** — Mark frequently used projects, clients, and tasks as favorites
-
-### 🛠️ **Technical Excellence**
-- **Docker Ready** — Deploy in minutes with Docker Compose
-- **Database Flexibility** — PostgreSQL for production, SQLite for testing
-- **Responsive Design** — Mobile-first design works perfectly on desktop, tablet, and mobile
-- **Native Mobile & Desktop Apps** — Flutter mobile app (iOS/Android) and Electron desktop app with time tracking, offline support, and API integration ([Build Guide](scripts/README-BUILD.md), [Docs](docs/mobile-desktop-apps/README.md))
-- **Real-time Sync** — WebSocket support for live updates across devices
-- **Automatic Backups** — Scheduled database backups (configurable)
-- **Progressive Web App (PWA)** — Install as mobile app with offline support and background sync
-- **Monitoring Stack** — Built-in Prometheus, Grafana, Loki for observability
-- **Internationalization** — Multiple language support (i18n) with translation system
-- **REST API** — Comprehensive REST API with token authentication and scoping
-- **HTTPS Support** — Automatic HTTPS setup with self-signed or trusted certificates
-- **Modern Architecture** — Service layer pattern, repository pattern, schema validation
-- **Performance Optimized** — Query optimization, eager loading, reduced N+1 queries
-- **Accessibility** — WCAG 2.1 AA compliant with full keyboard navigation and screen reader support
+- [Complete features list](docs/FEATURES_COMPLETE.md)
+- [Time tracking](docs/FEATURES_COMPLETE.md#time-tracking-features) · [Projects & tasks](docs/FEATURES_COMPLETE.md#project-management) · [Invoicing](docs/INVOICE_FEATURE_README.md)
+- [Financial management](docs/FEATURES_COMPLETE.md#financial-management) · [Reporting](docs/FEATURES_COMPLETE.md#reporting--analytics)
+- [Peppol e-invoicing setup](docs/admin/configuration/PEPPOL_EINVOICING.md)
 
 ---
 
----
-
-## 📸 Screenshots
+## Screenshots
 
 <div align="center">
 
-### 🔐 Simple Login & User Management
+### Login & profile
 <div>
-  <img src="assets/screenshots/Login.png" alt="Login" width="45%" style="display: inline-block; margin: 5px;">
-  <img src="assets/screenshots/Profile.png" alt="Profile" width="45%" style="display: inline-block; margin: 5px;">
+  <img src="docs/assets/screenshots/Login.png" alt="Login" width="45%">
+  <img src="docs/assets/screenshots/Profile.png" alt="Profile" width="45%">
 </div>
 
-*Simple username-based authentication and customizable user profiles with avatar support*
-
----
-
-### 📁 Projects & Tasks — Stay Organized
+### Projects & tasks
 <div>
-  <img src="assets/screenshots/Projects.png" alt="Projects" width="45%" style="display: inline-block; margin: 5px;">
-  <img src="assets/screenshots/Tasks.png" alt="Tasks" width="45%" style="display: inline-block; margin: 5px;">
+  <img src="docs/assets/screenshots/Projects.png" alt="Projects" width="45%">
+  <img src="docs/assets/screenshots/Tasks.png" alt="Tasks" width="45%">
 </div>
 
-*Manage multiple projects and break them down into actionable tasks*
+### Kanban
+<img src="docs/assets/screenshots/Kanban.png" alt="Kanban Board" width="700">
 
----
-
-### 📋 Kanban Board — Visual Task Management
-<img src="assets/screenshots/Kanban.png" alt="Kanban Board" width="700">
-
-*Drag-and-drop task management with customizable columns and visual workflow*
-
----
-
-### ⏱️ Time Tracking — Flexible & Powerful
+### Time tracking
 <div>
-  <img src="assets/screenshots/LogTime.png" alt="Log Time" width="45%" style="display: inline-block; margin: 5px;">
-  <img src="assets/screenshots/TimeEntryTemplates.png" alt="Time Entry Templates" width="45%" style="display: inline-block; margin: 5px;">
+  <img src="docs/assets/screenshots/LogTime.png" alt="Log Time" width="45%">
+  <img src="docs/assets/screenshots/TimeEntryTemplates.png" alt="Time Entry Templates" width="45%">
 </div>
 
-*Manual time entry and reusable templates for faster logging*
-
----
-
-### 🧾 Invoicing & Clients — Professional Billing
+### Invoicing & clients
 <div>
-  <img src="assets/screenshots/Invoices.png" alt="Invoices" width="45%" style="display: inline-block; margin: 5px;">
-  <img src="assets/screenshots/Clients.png" alt="Client Management" width="45%" style="display: inline-block; margin: 5px;">
+  <img src="docs/assets/screenshots/Invoices.png" alt="Invoices" width="45%">
+  <img src="docs/assets/screenshots/Clients.png" alt="Client Management" width="45%">
 </div>
 
-*Generate invoices from tracked time and manage client relationships*
-
----
-
-### 📊 Reports & Analytics — Data-Driven Insights
+### Reports
 <div>
-  <img src="assets/screenshots/Reports.png" alt="Reports" width="45%" style="display: inline-block; margin: 5px;">
-  <img src="assets/screenshots/UserReports.png" alt="User Reports" width="45%" style="display: inline-block; margin: 5px;">
+  <img src="docs/assets/screenshots/Reports.png" alt="Reports" width="45%">
+  <img src="docs/assets/screenshots/UserReports.png" alt="User Reports" width="45%">
 </div>
 
-*Comprehensive reporting and user analytics for informed decisions*
+### Admin
+<img src="docs/assets/screenshots/AdminDashboard.png" alt="Admin Dashboard" width="700">
 
----
-
-### 🛠️ Admin Dashboard — Complete Control
-<img src="assets/screenshots/AdminDashboard.png" alt="Admin Dashboard" width="700">
-
-*Manage users, configure settings, and monitor system health*
-
----
-
-### 🎯 Easy Creation — Streamlined Workflows
+### Create flows
 <div>
-  <img src="assets/screenshots/CreateProject.png" alt="Create Project" width="30%" style="display: inline-block; margin: 5px;">
-  <img src="assets/screenshots/CreateTask.png" alt="Create Task" width="30%" style="display: inline-block; margin: 5px;">
-  <img src="assets/screenshots/CreateClient.png" alt="Create Client" width="30%" style="display: inline-block; margin: 5px;">
+  <img src="docs/assets/screenshots/CreateProject.png" alt="Create Project" width="30%">
+  <img src="docs/assets/screenshots/CreateTask.png" alt="Create Task" width="30%">
+  <img src="docs/assets/screenshots/CreateClient.png" alt="Create Client" width="30%">
 </div>
-
-*Simple, intuitive forms for creating projects, tasks, and clients*
 
 </div>
 
@@ -459,7 +317,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 - **[Uninstall / remove data](UNINSTALL.md)** — Tear down Docker, volumes, and optional AI (Ollama); [AI helper only](UNINSTALL.md#disabling-or-removing-the-ai-helper)
 - **[OIDC/SSO Setup](docs/admin/configuration/OIDC_SETUP.md)** — Enterprise authentication
 - **[Email Configuration](docs/admin/configuration/EMAIL_CONFIGURATION.md)** — Email setup
-- **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Updates and releases
+- **[Release Process](docs/admin/deployment/RELEASE_PROCESS.md)** — Prepare/Finalize releases and version bumps
 
 **For Developers:**
 - **[Contributing](CONTRIBUTING.md)** — How to contribute (quick link)
@@ -511,7 +369,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 
 - **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase architecture
 - **[Database Migrations](migrations/README.md)** — Schema management
-- **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Release process
+- **[Release Process](docs/admin/deployment/RELEASE_PROCESS.md)** — Version bumps and publishing · [Version details](docs/admin/deployment/VERSION_MANAGEMENT.md)
 - **[CSRF Configuration](docs/admin/security/CSRF_CONFIGURATION.md)** — Security setup
 - **[CI/CD Setup](docs/cicd/CI_CD_DOCUMENTATION.md)** — Continuous integration
 

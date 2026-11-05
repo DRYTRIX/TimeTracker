@@ -74,7 +74,7 @@ class MentionsInput {
 
         // Extract query
         this.mentionQuery = textAfterTrigger.toLowerCase();
-        
+
         if (this.mentionQuery.length < this.options.minLength) {
             this.hideDropdown();
             return;
@@ -84,7 +84,7 @@ class MentionsInput {
         const filtered = this.users.filter(user => {
             const username = (user.username || '').toLowerCase();
             const displayName = (user.display_name || '').toLowerCase();
-            return username.includes(this.mentionQuery) || 
+            return username.includes(this.mentionQuery) ||
                    displayName.includes(this.mentionQuery);
         }).slice(0, this.options.maxItems);
 
@@ -323,4 +323,3 @@ const mentionsCSS = `
 const style = document.createElement('style');
 style.textContent = mentionsCSS;
 document.head.appendChild(style);
-

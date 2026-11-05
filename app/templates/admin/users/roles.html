@@ -21,7 +21,7 @@
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
                     {{ _('Select the roles this user should have. Users inherit all permissions from their assigned roles.') }}
                 </p>
-                
+
                 <div class="space-y-3">
                     {% for role in all_roles %}
                     <label class="flex items-start gap-3 p-4 border border-border-light dark:border-border-dark rounded-lg cursor-pointer hover:bg-bg-hover-light dark:hover:bg-bg-hover-dark transition">
@@ -66,7 +66,7 @@
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
             {{ _('These are all the permissions the user currently has through their roles:') }}
         </p>
-        
+
         {% set user_permissions = user.get_all_permissions() %}
         {% if user_permissions %}
         <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -82,4 +82,3 @@
     </div>
 </div>
 {% endblock %}
-

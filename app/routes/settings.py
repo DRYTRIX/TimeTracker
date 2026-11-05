@@ -9,8 +9,8 @@ from flask_login import current_user, login_required
 
 from app import db, track_page_view
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.keyboard_shortcuts_defaults import merge_overrides, validate_overrides
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 settings_bp = Blueprint("settings", __name__)
 

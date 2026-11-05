@@ -94,13 +94,9 @@ def list_tasks():
 @require_api_token("read:tasks")
 def get_task(task_id):
     """Get a specific task."""
-    from sqlalchemy.orm import joinedload
+    from sqlalchemy.orm import joinedload, selectinload
 
-    from app.models import Task
-
-    from sqlalchemy.orm import selectinload
-
-    from app.models import TaskAssignee
+    from app.models import Task, TaskAssignee
 
     task = (
         Task.query.options(

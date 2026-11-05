@@ -51,27 +51,27 @@ if "%FLASK_APP%"=="" (
 REM Check if migrations directory exists
 if exist "migrations" (
     echo ✓ Migrations directory already exists
-    
+
     REM Check if it's properly initialized
     if exist "migrations\env.py" if exist "migrations\alembic.ini" (
         echo ✓ Flask-Migrate is already initialized
-        
+
         REM Show current status
         echo.
         echo Current migration status:
         flask db current 2>nul || echo No migrations applied yet
-        
+
         echo.
         echo Migration history:
         flask db history 2>nul || echo No migration history
-        
+
         echo.
         echo To create a new migration:
         echo   flask db migrate -m "Description of changes"
         echo.
         echo To apply pending migrations:
         echo   flask db upgrade
-        
+
         pause
         exit /b 0
     ) else (
@@ -122,18 +122,18 @@ set /p "apply_migration=Do you want to apply this migration now? (y/N): "
 if /i "%apply_migration%"=="y" (
     echo Applying migration...
     flask db upgrade
-    
+
     if errorlevel 1 (
         echo ✗ Failed to apply migration
         pause
         exit /b 1
     ) else (
         echo ✓ Migration applied successfully
-        
+
         echo.
         echo Current migration status:
         flask db current
-        
+
         echo.
         echo Migration history:
         flask db history

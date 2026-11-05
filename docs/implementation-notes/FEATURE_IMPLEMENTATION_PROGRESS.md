@@ -69,4 +69,3 @@ Starting with Google Calendar integration...
 ## 📋 Pending Features
 
 See TODO list for remaining features.
-

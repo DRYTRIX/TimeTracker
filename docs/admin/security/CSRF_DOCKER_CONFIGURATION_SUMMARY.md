@@ -241,4 +241,3 @@ CSRF tokens are now properly configured for Docker deployments with:
 - ✅ Security best practices enforced
 
 The application will now properly validate CSRF tokens in Docker deployments as long as a consistent SECRET_KEY is maintained.
-

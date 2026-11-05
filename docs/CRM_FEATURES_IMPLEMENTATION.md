@@ -20,7 +20,7 @@ This document summarizes the implementation of comprehensive CRM (Customer Relat
 **Components:**
 - **Model:** `app/models/contact.py` - Contact model with full contact information
 - **Routes:** `app/routes/contacts.py` - Full CRUD operations for contacts
-- **Templates:** 
+- **Templates:**
   - `app/templates/contacts/list.html` - List all contacts for a client
   - `app/templates/contacts/form.html` - Create/edit contact form
   - `app/templates/contacts/view.html` - View contact details with communication history
@@ -284,4 +284,3 @@ flask db upgrade
 ---
 
 **Last Updated:** 2025-01-27
-

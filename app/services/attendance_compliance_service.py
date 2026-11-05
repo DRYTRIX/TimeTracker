@@ -598,9 +598,7 @@ class AttendanceComplianceService:
             applied = self._apply_correction(correction)
         except Exception:
             db.session.rollback()
-            current_app.logger.exception(
-                "Failed to apply attendance correction %s", correction_id
-            )
+            current_app.logger.exception("Failed to apply attendance correction %s", correction_id)
             return {"success": False, "message": "Could not apply correction"}
 
         if not applied:

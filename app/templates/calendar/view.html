@@ -25,50 +25,50 @@
         <div class="flex flex-wrap gap-3">
                 <!-- View Type Selector -->
                 <div class="btn-group" role="group">
-                    <a href="{{ url_for('calendar.view_calendar', view='day', date=current_date.strftime('%Y-%m-%d')) }}" 
+                    <a href="{{ url_for('calendar.view_calendar', view='day', date=current_date.strftime('%Y-%m-%d')) }}"
                        data-view="day"
                        class="btn btn-sm {% if view_type == 'day' %}btn-primary{% else %}btn-secondary{% endif %}">
                         <i class="fas fa-calendar-day mr-1"></i> {{ _('Day') }}
                     </a>
-                    <a href="{{ url_for('calendar.view_calendar', view='week', date=current_date.strftime('%Y-%m-%d')) }}" 
+                    <a href="{{ url_for('calendar.view_calendar', view='week', date=current_date.strftime('%Y-%m-%d')) }}"
                        data-view="week"
                        class="btn btn-sm {% if view_type == 'week' %}btn-primary{% else %}btn-secondary{% endif %}">
                         <i class="fas fa-calendar-week mr-1"></i> {{ _('Week') }}
                     </a>
-                    <a href="{{ url_for('calendar.view_calendar', view='month', date=current_date.strftime('%Y-%m-%d')) }}" 
+                    <a href="{{ url_for('calendar.view_calendar', view='month', date=current_date.strftime('%Y-%m-%d')) }}"
                        data-view="month"
                        class="btn btn-sm {% if view_type == 'month' %}btn-primary{% else %}btn-secondary{% endif %}">
                         <i class="fas fa-calendar mr-1"></i> {{ _('Month') }}
                     </a>
                 </div>
-                
+
                 <!-- Add Event Button -->
-                <a href="{{ url_for('calendar.new_event', date=current_date.strftime('%Y-%m-%d')) }}" 
+                <a href="{{ url_for('calendar.new_event', date=current_date.strftime('%Y-%m-%d')) }}"
                    class="btn btn-primary btn-sm">
                     <i class="fas fa-plus mr-2"></i>
                     {{ _('New Event') }}
                 </a>
             </div>
         </div>
-        
+
         <!-- Calendar Navigation -->
         <div class="flex items-center justify-between mt-6">
             <button id="prevBtn" class="btn btn-sm btn-secondary">
                 <i class="fas fa-chevron-left"></i>
             </button>
-            
+
             <div class="flex items-center gap-4">
                 <button id="todayBtn" class="btn btn-sm btn-secondary">
                     {{ _('Today') }}
                 </button>
                 <h2 id="calendarTitle" class="text-2xl font-semibold"></h2>
             </div>
-            
+
             <button id="nextBtn" class="btn btn-sm btn-secondary">
                 <i class="fas fa-chevron-right"></i>
             </button>
         </div>
-        
+
         <!-- Filters -->
         <div class="flex flex-wrap gap-3 mt-4">
             <label class="inline-flex items-center">
@@ -123,7 +123,7 @@
             </button>
         </div>
     </div>
-    
+
     <!-- Calendar Grid -->
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-sm p-6">
         <div id="calendarContainer" class="calendar-container">
@@ -134,7 +134,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Event Details Modal -->
     <div id="eventModal" class="modal" style="display: none;">
         <div class="modal-dialog">
@@ -194,4 +194,3 @@
 {% block scripts_extra %}
 <script src="{{ url_for('static', filename='calendar.js') }}?v=11"></script>
 {% endblock %}
-

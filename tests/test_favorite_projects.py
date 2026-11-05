@@ -9,11 +9,13 @@ This module tests:
 - User permissions and access control
 """
 
-import pytest
 from datetime import datetime
 from decimal import Decimal
+
+import pytest
+
 from app import create_app, db
-from app.models import User, Project, Client, UserFavoriteProject
+from app.models import Client, Project, User, UserFavoriteProject
 
 
 @pytest.fixture
@@ -388,17 +390,17 @@ class TestFavoriteProjectRoutes:
 class TestFavoriteProjectFiltering:
     """Test filtering projects by favorites."""
 
-    def test_list_projects_with_favorites_filter(self, app, client_fixture, test_user, test_project, test_project_2):
+    def test_list_projects_with_favorites_filter(self, app, client_fixture, test_admin, test_project, test_project_2):
         """Test listing only favorite projects."""
         with app.app_context():
-            # Setup: Favorite only one project
-            user = db.session.get(User, test_user)
+            # Admin has unrestricted project scope so list filters are meaningful
+            user = db.session.get(User, test_admin)
             project1 = db.session.get(Project, test_project)
             user.add_favorite_project(project1)
 
             # Login
             with client_fixture.session_transaction() as sess:
-                sess["_user_id"] = str(test_user)
+                sess["_user_id"] = str(test_admin)
 
             # Request favorites only
             response = client_fixture.get("/projects?favorites=true")
@@ -407,17 +409,17 @@ class TestFavoriteProjectFiltering:
             # Check that the response contains the favorite project
             assert b"Test Project" in response.data
 
-    def test_list_all_projects_without_filter(self, app, client_fixture, test_user, test_project, test_project_2):
+    def test_list_all_projects_without_filter(self, app, client_fixture, test_admin, test_project, test_project_2):
         """Test listing all projects without favorites filter."""
         with app.app_context():
-            # Setup: Favorite only one project
-            user = db.session.get(User, test_user)
+            # Admin has unrestricted project scope so list filters are meaningful
+            user = db.session.get(User, test_admin)
             project1 = db.session.get(Project, test_project)
             user.add_favorite_project(project1)
 
             # Login
             with client_fixture.session_transaction() as sess:
-                sess["_user_id"] = str(test_user)
+                sess["_user_id"] = str(test_admin)
 
             # Request all projects
             response = client_fixture.get("/projects")

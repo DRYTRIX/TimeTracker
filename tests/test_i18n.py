@@ -5,9 +5,10 @@ import pytest
 pytestmark = [pytest.mark.unit, pytest.mark.utils]
 
 from flask import session
+from flask_babel import get_locale
+
 from app import create_app, db
 from app.models import User
-from flask_babel import get_locale
 
 
 class TestI18nConfiguration:
@@ -76,6 +77,7 @@ class TestLocaleSelection:
             with client.session_transaction() as sess:
                 # Simulate request context
                 from flask import g
+
                 from app import babel
 
                 # The locale selector should return user's preference

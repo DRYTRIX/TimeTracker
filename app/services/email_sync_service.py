@@ -145,18 +145,12 @@ class EmailSyncService:
 
     def threads_for_lead(self, lead_id: int, limit: int = 20):
         return (
-            EmailThread.query.filter_by(lead_id=lead_id)
-            .order_by(EmailThread.last_message_at.desc())
-            .limit(limit)
-            .all()
+            EmailThread.query.filter_by(lead_id=lead_id).order_by(EmailThread.last_message_at.desc()).limit(limit).all()
         )
 
     def threads_for_deal(self, deal_id: int, limit: int = 20):
         return (
-            EmailThread.query.filter_by(deal_id=deal_id)
-            .order_by(EmailThread.last_message_at.desc())
-            .limit(limit)
-            .all()
+            EmailThread.query.filter_by(deal_id=deal_id).order_by(EmailThread.last_message_at.desc()).limit(limit).all()
         )
 
     def sync_all_connected(self) -> Dict[str, Any]:
@@ -171,8 +165,12 @@ class EmailSyncService:
                 try:
                     connector = service.get_connector(integration)
                     if connector:
-                        results.append({"integration_id": integration.id, "provider": provider, **connector.sync_data()})
+                        results.append(
+                            {"integration_id": integration.id, "provider": provider, **connector.sync_data()}
+                        )
                 except Exception as exc:
                     logger.exception("Email sync failed for %s #%s", provider, integration.id)
-                    results.append({"integration_id": integration.id, "provider": provider, "success": False, "error": str(exc)})
+                    results.append(
+                        {"integration_id": integration.id, "provider": provider, "success": False, "error": str(exc)}
+                    )
         return {"results": results}

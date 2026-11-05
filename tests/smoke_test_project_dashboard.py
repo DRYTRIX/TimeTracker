@@ -3,11 +3,13 @@ Smoke tests for Project Dashboard feature.
 Quick validation tests to ensure the dashboard is working at a basic level.
 """
 
-import pytest
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+import pytest
+
 from app import create_app, db
-from app.models import User, Project, Client, Task, TimeEntry, Activity
+from app.models import Activity, Client, Project, Task, TimeEntry, User
 from app.models.kanban_column import KanbanColumn
 
 

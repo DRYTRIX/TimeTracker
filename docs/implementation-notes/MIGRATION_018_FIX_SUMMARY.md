@@ -182,4 +182,3 @@ This fix complies with the project requirements:
 - Tests: `tests/test_project_costs.py`
 - Docs: `docs/features/PROJECT_COSTS_FEATURE.md`
 - Workflow: `.github/workflows/migration-check.yml`
-

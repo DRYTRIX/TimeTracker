@@ -9,20 +9,20 @@
     <div style="background-color: #f4f4f4; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
         <h1 style="color: #2c3e50; margin-top: 0;">{{ notification.title }}</h1>
     </div>
-    
+
     <div style="background-color: #fff; padding: 20px; border-radius: 5px; border: 1px solid #ddd;">
         <p>{{ notification.message }}</p>
-        
+
         {% if absolute_link_url or notification.link_url %}
         <div style="margin-top: 20px;">
-            <a href="{{ absolute_link_url or notification.link_url }}" 
+            <a href="{{ absolute_link_url or notification.link_url }}"
                style="display: inline-block; background-color: #3498db; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
                 {{ notification.link_text or 'View Details' }}
             </a>
         </div>
         {% endif %}
     </div>
-    
+
     <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #777;">
         <p>This is an automated notification from TimeTracker.</p>
         <p>If you have any questions, please contact us directly.</p>

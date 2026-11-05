@@ -63,7 +63,7 @@
             {% endif %}
         </dl>
     </div>
-    
+
     <!-- Statistics -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4">{{ _('Statistics') }}</h3>
@@ -145,7 +145,7 @@ function testWebhook(webhookId) {
     if (!confirm('{{ _("Send a test webhook event?") }}')) {
         return;
     }
-    
+
     fetch(`/admin/webhooks/${webhookId}/test`, {
         method: 'POST',
         headers: {
@@ -167,4 +167,3 @@ function testWebhook(webhookId) {
 }
 </script>
 {% endblock %}
-

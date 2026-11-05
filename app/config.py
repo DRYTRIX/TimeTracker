@@ -2,6 +2,20 @@ import os
 from datetime import timedelta
 
 
+def normalize_database_url(url: str | None) -> str | None:
+    """Rewrite bare postgresql:// to postgresql+psycopg2:// for SQLAlchemy 2.1+.
+
+    SQLAlchemy 2.1 maps bare ``postgresql://`` to the psycopg (v3) dialect.
+    This project installs ``psycopg2-binary`` only, so force the psycopg2 dialect
+    while leaving ``postgresql+psycopg2://``, ``sqlite://``, etc. unchanged.
+    """
+    if not url:
+        return url
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg2://" + url[len("postgresql://") :]
+    return url
+
+
 class Config:
     """Base configuration class"""
 
@@ -18,8 +32,8 @@ class Config:
     _secure_cookie_default = "false" if _is_dev_like else "true"
 
     # Database settings (default to PostgreSQL)
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL", "postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker"
+    SQLALCHEMY_DATABASE_URI = normalize_database_url(
+        os.getenv("DATABASE_URL", "postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -297,6 +311,16 @@ class Config:
     # Production should set METRICS_TOKEN; when unset the endpoint stays open but a startup warning is logged.
     METRICS_TOKEN = (os.getenv("METRICS_TOKEN") or "").strip()
 
+    # Allow CalDAV / ActivityWatch integrations to target private/LAN hosts.
+    # Cloud metadata hostnames remain blocked. Set false to require public URLs only.
+    INTEGRATIONS_ALLOW_PRIVATE_URLS = os.getenv("INTEGRATIONS_ALLOW_PRIVATE_URLS", "true").lower() == "true"
+
+    # Comma-separated browser origins allowed for /api/v1 CORS and Socket.IO.
+    # Empty = derive from APP_BASE_URL / SERVER_NAME only (no wildcard reflection).
+    CORS_ALLOWED_ORIGINS = [
+        o.strip().rstrip("/") for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
+    ]
+
     # Redis configuration
     REDIS_ENABLED = os.getenv("REDIS_ENABLED", "true").lower() == "true"
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -386,8 +410,8 @@ class DevelopmentConfig(Config):
     """Development configuration"""
 
     FLASK_DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL", "postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker"
+    SQLALCHEMY_DATABASE_URI = normalize_database_url(
+        os.getenv("DATABASE_URL", "postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker")
     )
     # CSRF can be overridden via env var, defaults to False for dev convenience
     WTF_CSRF_ENABLED = os.getenv("WTF_CSRF_ENABLED", "false").lower() == "true"
@@ -401,7 +425,7 @@ class TestingConfig(Config):
     TESTING = True
     # Allow DATABASE_URL override for CI/CD PostgreSQL testing
     # Default to in-memory SQLite for local unit tests
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///:memory:")
+    SQLALCHEMY_DATABASE_URI = normalize_database_url(os.getenv("DATABASE_URL", "sqlite:///:memory:"))
     WTF_CSRF_ENABLED = False
     SECRET_KEY = "test-secret-key"
     WTF_CSRF_SSL_STRICT = False
@@ -409,7 +433,7 @@ class TestingConfig(Config):
     def __init__(self):
         # Ensure SQLALCHEMY_DATABASE_URI reflects the current environment at instantiation time,
         # not only at module import time. This keeps parity with tests that mutate env vars.
-        self.SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///:memory:")
+        self.SQLALCHEMY_DATABASE_URI = normalize_database_url(os.getenv("DATABASE_URL", "sqlite:///:memory:"))
 
 
 class ProductionConfig(Config):

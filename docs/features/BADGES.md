@@ -130,4 +130,3 @@ You can create custom badges at [shields.io](https://shields.io/).
 ---
 
 **Note**: Replace `{owner}` and `{repo}` with your actual GitHub username and repository name.
-

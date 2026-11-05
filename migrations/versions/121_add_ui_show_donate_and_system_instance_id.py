@@ -7,9 +7,9 @@ Create Date: 2026-02-08
 Allows users to hide donate UI after verifying a code; system_instance_id
 is a stable per-installation ID shown in settings for code requests.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "121_add_ui_show_donate_system_id"
 down_revision = "120_user_nullable_date_time_format"

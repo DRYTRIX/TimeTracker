@@ -2,8 +2,8 @@
 <!-- Usage: {% include 'components/save_filter_widget.html' with scope='reports' %} -->
 
 <div class="inline-block">
-    <button onclick="openSaveFilterModal()" 
-            class="btn btn-sm btn-secondary" 
+    <button onclick="openSaveFilterModal()"
+            class="btn btn-sm btn-secondary"
             title="{{ _('Save current filters') }}">
         <i class="fas fa-bookmark mr-2"></i>{{ _('Save Filter') }}
     </button>
@@ -27,17 +27,17 @@
                     <label for="filterName" class="form-label">
                         {{ _('Filter Name') }} <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" 
-                           id="filterName" 
-                           required 
+                    <input type="text"
+                           id="filterName"
+                           required
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                            placeholder="{{ _('e.g., Last 30 days - Billable') }}">
                 </div>
 
                 <div class="mb-4">
                     <label class="flex items-center">
-                        <input type="checkbox" 
-                               id="filterShared" 
+                        <input type="checkbox"
+                               id="filterShared"
                                class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                         <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ _('Share with team') }}</span>
                     </label>
@@ -45,8 +45,8 @@
 
                 <!-- Actions -->
                 <div class="flex justify-end space-x-2">
-                    <button type="button" 
-                            onclick="closeSaveFilterModal()" 
+                    <button type="button"
+                            onclick="closeSaveFilterModal()"
                             class="btn btn-secondary min-h-[44px]">
                         {{ _('Cancel') }}
                     </button>
@@ -61,13 +61,13 @@
 
 <!-- Load Saved Filters Dropdown -->
 <div class="inline-block relative ml-2">
-    <button onclick="toggleSavedFiltersDropdown()" 
-            class="btn btn-sm btn-secondary" 
+    <button onclick="toggleSavedFiltersDropdown()"
+            class="btn btn-sm btn-secondary"
             title="{{ _('Load saved filter') }}">
         <i class="fas fa-folder-open mr-2"></i>{{ _('Load Filter') }}
     </button>
-    
-    <div id="savedFiltersDropdown" 
+
+    <div id="savedFiltersDropdown"
          class="hidden absolute right-0 sm:right-0 left-0 sm:left-auto mt-2 w-auto sm:w-72 bg-card-light dark:bg-card-dark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
         <div class="p-2 max-h-96 overflow-y-auto">
             <div id="savedFiltersList" class="space-y-1">
@@ -78,7 +78,7 @@
             </div>
         </div>
         <div class="border-t border-gray-200 dark:border-gray-700 p-2">
-            <a href="{{ url_for('saved_filters.list_filters') }}" 
+            <a href="{{ url_for('saved_filters.list_filters') }}"
                class="block text-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
                 Manage All Filters
             </a>
@@ -100,29 +100,25 @@ function closeSaveFilterModal() {
 }
 
 function getCurrentFilterParameters() {
-    // Get all form inputs on the page and build filter payload
-    // Use Map to avoid remote property injection from untrusted URL param names
-    var params = new Map();
+    // Build filter payload from URL params without dynamic property writes
+    // (avoids js/remote-property-injection / prototype pollution)
     var urlParams = new URLSearchParams(window.location.search);
-
-    // Get all URL parameters
+    var parts = [];
     for (let [key, value] of urlParams.entries()) {
         if (!value) continue;
-        // Prevent prototype pollution when converting Map to a plain object
         if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
-        params.set(key, value);
+        parts.push(JSON.stringify(key) + ':' + JSON.stringify(value));
     }
-
-    return Object.fromEntries(params);
+    return JSON.parse('{' + parts.join(',') + '}');
 }
 
 function saveFilter(event) {
     event.preventDefault();
-    
+
     var filterName = document.getElementById('filterName').value;
     var isShared = document.getElementById('filterShared').checked;
     var payload = getCurrentFilterParameters();
-    
+
     // Send to API
     fetch('/api/filters', {
         method: 'POST',
@@ -156,7 +152,7 @@ function saveFilter(event) {
 function toggleSavedFiltersDropdown() {
     var dropdown = document.getElementById('savedFiltersDropdown');
     dropdown.classList.toggle('hidden');
-    
+
     if (!dropdown.classList.contains('hidden')) {
         loadSavedFilters();
     }
@@ -167,7 +163,7 @@ function loadSavedFilters() {
         .then(response => response.json())
         .then(data => {
             var filtersList = document.getElementById('savedFiltersList');
-            
+
             if (data.filters && data.filters.length > 0) {
                 filtersList.innerHTML = '';
                 data.filters.forEach(filter => {
@@ -216,10 +212,9 @@ function showNotification(message, type) {
 document.addEventListener('click', function(event) {
     var dropdown = document.getElementById('savedFiltersDropdown');
     var button = event.target.closest('button[onclick="toggleSavedFiltersDropdown()"]');
-    
+
     if (!dropdown.contains(event.target) && !button) {
         dropdown.classList.add('hidden');
     }
 });
 </script>
-

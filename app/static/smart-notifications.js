@@ -40,7 +40,7 @@ class SmartNotificationManager {
             try {
                 const permission = await Notification.requestPermission();
                 this.permissionGranted = permission === 'granted';
-                
+
                 if (this.permissionGranted) {
                     this.showNotification({
                         title: 'Notifications Enabled',
@@ -187,7 +187,7 @@ class SmartNotificationManager {
             this.show(options);
             setTimeout(recur, interval);
         };
-        
+
         setTimeout(recur, interval);
     }
 
@@ -203,7 +203,7 @@ class SmartNotificationManager {
             let lastCheckTime = 0;
             const checkInterval = 60 * 60 * 1000; // 1 hour
             const notifiedDeadlines = new Set(); // Track notified deadlines to avoid duplicates
-            
+
             const checkDeadlinesNow = async () => {
                 try {
                     // Skip if checked recently (within last 50 minutes)
@@ -212,20 +212,20 @@ class SmartNotificationManager {
                         return;
                     }
                     lastCheckTime = now;
-                    
+
                     // Check if fetch is available
                     if (typeof fetch === 'undefined') {
                         console.warn('[SmartNotifications] Fetch not available for deadline check');
                         return;
                     }
-                    
+
                     const response = await fetch('/api/deadlines/upcoming', {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json'
                         }
                     });
-                    
+
                     // Check if response is OK before reading body
                     if (!response.ok) {
                         // Log status but don't throw error
@@ -234,38 +234,38 @@ class SmartNotificationManager {
                         }
                         return;
                     }
-                    
+
                     const deadlines = await response.json();
-                    
+
                     // Validate response is an array
                     if (!Array.isArray(deadlines)) {
                         console.warn('[SmartNotifications] Invalid deadlines response format');
                         return;
                     }
-                    
+
                     deadlines.forEach(deadline => {
                         try {
                             // Validate deadline structure
                             if (!deadline || !deadline.due_date || !deadline.task_id) {
                                 return;
                             }
-                            
+
                             const deadlineKey = `deadline_${deadline.task_id}`;
-                            
+
                             // Skip if already notified
                             if (notifiedDeadlines.has(deadlineKey)) {
                                 return;
                             }
-                            
+
                             const dueDate = new Date(deadline.due_date);
                             if (isNaN(dueDate.getTime())) {
                                 console.warn('[SmartNotifications] Invalid due date:', deadline.due_date);
                                 return;
                             }
-                            
+
                             const timeUntil = dueDate.getTime() - Date.now();
                             const hoursUntil = timeUntil / (1000 * 60 * 60);
-                            
+
                             // Notify if deadline is within 24 hours
                             if (hoursUntil <= 24 && hoursUntil > 0) {
                                 this.show({
@@ -276,9 +276,9 @@ class SmartNotificationManager {
                                     url: `/tasks/${deadline.task_id}`,
                                     group: 'deadlines'
                                 });
-                                
+
                                 notifiedDeadlines.add(deadlineKey);
-                                
+
                                 // Remove from set after 25 hours to allow re-notification if deadline changes
                                 setTimeout(() => {
                                     notifiedDeadlines.delete(deadlineKey);
@@ -295,10 +295,10 @@ class SmartNotificationManager {
                     }
                 }
             };
-            
+
             // Initial check after 1 minute (to avoid immediate check on page load)
             setTimeout(checkDeadlinesNow, 60 * 1000);
-            
+
             // Then check every hour
             setInterval(checkDeadlinesNow, checkInterval);
         } catch (error) {
@@ -414,7 +414,7 @@ class SmartNotificationManager {
     budgetAlert(project, percentage) {
         let type = 'info';
         let priority = 'normal';
-        
+
         if (percentage >= 90) {
             type = 'error';
             priority = 'high';
@@ -506,8 +506,8 @@ class SmartNotificationManager {
 
     shouldShow(type, priority) {
         // Rate limiting logic
-        const recent = this.notifications.filter(n => 
-            n.type === type && 
+        const recent = this.notifications.filter(n =>
+            n.type === type &&
             Date.now() - n.timestamp < 60000 // Last minute
         );
 
@@ -667,7 +667,7 @@ class NotificationCenter {
     updateBadge() {
         const badge = document.getElementById('notificationBadge');
         const unread = this.manager.getUnread().length;
-        
+
         if (badge) {
             badge.textContent = unread;
             badge.classList.toggle('hidden', unread === 0);
@@ -683,7 +683,7 @@ class NotificationCenter {
     createPanel() {
         const panel = document.createElement('div');
         panel.className = 'fixed inset-0 z-50 overflow-hidden';
-        
+
         const permissionBanner = !this.manager.permissionGranted && 'Notification' in window && Notification.permission === 'default' ? `
             <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
                 <div class="flex items-center justify-between">
@@ -694,8 +694,8 @@ class NotificationCenter {
                             <p class="text-xs text-gray-600 dark:text-gray-400">Get notified about important events</p>
                         </div>
                     </div>
-                    <button 
-                        onclick="smartNotifications.requestPermission().then(() => { this.closest('.fixed').remove(); smartNotifications.notificationCenter.toggle(); })" 
+                    <button
+                        onclick="smartNotifications.requestPermission().then(() => { this.closest('.fixed').remove(); smartNotifications.notificationCenter.toggle(); })"
                         class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
                     >
                         Enable
@@ -703,7 +703,7 @@ class NotificationCenter {
                 </div>
             </div>
         ` : '';
-        
+
         panel.innerHTML = `
             <div class="absolute inset-0 bg-black/50" onclick="this.parentElement.remove()"></div>
             <div class="absolute right-0 top-0 h-full w-full max-w-md bg-card-light dark:bg-card-dark shadow-xl transform transition-transform">
@@ -724,13 +724,13 @@ class NotificationCenter {
                 </div>
             </div>
         `;
-        
+
         return panel;
     }
 
     renderNotifications() {
         const notifications = this.manager.getAll().reverse();
-        
+
         if (notifications.length === 0) {
             return `
                 <div class="p-12 text-center text-gray-500">
@@ -782,7 +782,7 @@ class NotificationCenter {
         const minutes = Math.floor(diff / 60000);
         const hours = Math.floor(minutes / 60);
         const days = Math.floor(hours / 24);
-        
+
         if (days > 0) return `${days}d ago`;
         if (hours > 0) return `${hours}h ago`;
         if (minutes > 0) return `${minutes}m ago`;
@@ -793,5 +793,3 @@ class NotificationCenter {
 // Initialize
 window.smartNotifications = new SmartNotificationManager();
 window.notificationCenter = new NotificationCenter(window.smartNotifications);
-
-

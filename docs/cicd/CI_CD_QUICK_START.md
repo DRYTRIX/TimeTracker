@@ -380,4 +380,3 @@ pytest
 ---
 
 **Ready to contribute?** Start by running `pytest -m smoke` and create your first PR! 🎉
-

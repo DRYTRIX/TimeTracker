@@ -24,7 +24,7 @@ from werkzeug.utils import secure_filename
 from app import db, log_event, track_event
 from app.models import Client, Expense, Project, User
 from app.utils.db import safe_commit
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_file_remove
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response, safe_file_remove
 from app.utils.module_helpers import module_enabled
 from app.utils.ocr import get_suggested_expense_data, is_ocr_available, scan_receipt
 

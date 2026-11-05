@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.19.0] - 2026-11-05
+### Added
+
+- **Public demo (`DEMO_MODE`)** — Skip the setup wizard and seed browseable sample data for public demos; README/demo assets aligned with the live demo.
+- **App shell UX** — Improved UI look, information architecture, and brand consistency across the app shell.
+- **First-run / contributor UX** — Onboarding, empty states, and i18n improvements for new installs and contributors.
+
+### Security
+
+- **SSRF / XSS / mass-assignment / deploy defaults** — Harden outbound URL validation, CORS/Socket.IO, DOM escaping, attachment path jailing, and compose/env credential defaults.
+- **Render health checks** — Tolerate transient connection-refused blips during deploys.
+- **CodeQL follow-ups** — Clear property-injection, stack-trace, and log-injection findings; run helper images as non-root; Dependabot overrides for `follow-redirects` and `minimatch`.
+
+### Fixed
+
+- **Timer** — Bulk entry can add a slot that starts when another entry ends (adjacent slots).
+- **Projects** — Show the new-install empty state when no status filter is set; wrap filter labels/options in gettext.
+- **Web** — Restore `#746` reconnect guards; harden entry/invoice paths; restore curated timezones and template script blocks.
+- **Migrations** — Make late SQLite upgrades batch-safe.
+- **Mobile** — Use named `flutter_local_notifications` APIs after dependency updates.
+- **Docker** — Fix local-test compose build context for the root Dockerfile (#818); restore app boot after Dependabot major bumps.
+- **CI / develop image** — Broaden CD-Development path filters for image-affecting trees and stop cancelling in-flight publishes so `:develop` reaches GHCR/Docker Hub more reliably.
+
+### Changed
+
+- **CI / releases** — Consolidated PR checks into a single path-aware `ci.yml` with a required `ci-pass` aggregator; Dependabot + nightly dependency audit; automated Prepare/Finalize release workflows (`rc/v*` → tag → publish) and `scripts/bump_version.py` as the version source of truth.
+- **Dependencies** — Large pip, GitHub Actions, npm (root + desktop), and Flutter mobile dependency bumps.
+
+### Documentation
+
+- First-five-minutes checklist after Docker quick start; demo credentials beside the live demo link; refreshed dashboard screenshot; community/discovery funnel tweaks.
+- Release and version docs aligned with Prepare/Finalize + `bump_version.py` (superseding manual GitHub Releases / `version-manager.sh` as the primary path).
+
 ## [5.18.5] - 2026-10-30
 
 ### Security
@@ -16,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Multi-assignee tasks** — Tasks (and recurring task templates) support multiple equal assignees via `task_assignees` / `recurring_task_assignees`. Create/edit/bulk-assign UI, filters, permissions, kanban, API (`assignee_ids`, legacy `assignee_id`), and workflows updated; existing `assigned_to` values are migrated.
+### Fixed
+
+- **Exchange rates** — When exchangerate.host returns no rate (it now requires an access key), try a keyless exchangerate.host-compatible ECB endpoint (AllRatesToday) for the same date before the latest-only fallback.
+- **Invoices** — Deleting a draft invoice (single or bulk) now makes its project costs and expenses billable again; before, they stayed marked as invoiced and never appeared on a later invoice.
+- **Payments** — Recording a completed payment through the API (and the desktop app) no longer counts it twice in the invoice's amount paid; before, a 1.00 payment showed 2.00 paid and an invoice could read as fully paid early.
 
 ### Fixed
 

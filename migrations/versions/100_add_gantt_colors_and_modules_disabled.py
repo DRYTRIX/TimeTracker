@@ -5,9 +5,9 @@ Revises: 099_add_peppol_settings_columns
 Create Date: 2026-01-19
 
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "100_gantt_colors_modules"
 down_revision = "099_add_peppol_settings_columns"

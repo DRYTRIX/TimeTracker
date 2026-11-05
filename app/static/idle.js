@@ -677,5 +677,3 @@
     refreshTimerUiAfterStop();
   };
 })();
-
-

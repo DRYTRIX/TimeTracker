@@ -7,10 +7,11 @@ import pytest
 pytestmark = [pytest.mark.integration]
 
 from datetime import datetime, timedelta
-from app.repositories import TimeEntryRepository
-from app.models import TimeEntry, Project, User
+
 from app import db
 from app.constants import TimeEntrySource
+from app.models import Project, TimeEntry, User
+from app.repositories import TimeEntryRepository
 
 
 @pytest.fixture

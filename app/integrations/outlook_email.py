@@ -126,7 +126,10 @@ class OutlookEmailConnector(BaseConnector):
             timeout=20,
         )
         if r.status_code == 200:
-            return {"success": True, "message": f"Outlook OK ({r.json().get('mail') or r.json().get('userPrincipalName')})"}
+            return {
+                "success": True,
+                "message": f"Outlook OK ({r.json().get('mail') or r.json().get('userPrincipalName')})",
+            }
         return {"success": False, "message": f"HTTP {r.status_code}"}
 
     def list_recent_threads(self, max_results: int = 25) -> List[Dict[str, Any]]:
@@ -166,7 +169,11 @@ class OutlookEmailConnector(BaseConnector):
                 "to": to_list,
                 "subject": msg.get("subject"),
                 "snippet": msg.get("bodyPreview"),
-                "body_text": (msg.get("body") or {}).get("content") if (msg.get("body") or {}).get("contentType") == "text" else None,
+                "body_text": (
+                    (msg.get("body") or {}).get("content")
+                    if (msg.get("body") or {}).get("contentType") == "text"
+                    else None
+                ),
                 "sent_at": sent_at,
             }
             if conv not in by_conv:

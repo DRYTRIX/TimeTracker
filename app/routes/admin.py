@@ -26,7 +26,6 @@ from werkzeug.utils import secure_filename
 import app as app_module
 from app import db, limiter
 from app.config.analytics_defaults import get_analytics_config
-from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 from app.models import (
     DonationInteraction,
     Invoice,
@@ -41,9 +40,10 @@ from app.models import (
 )
 from app.utils.auth_method import auth_includes_ldap, auth_includes_oidc, normalize_auth_method
 from app.utils.db import safe_commit
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_log
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response, safe_log
 from app.utils.installation import get_installation_config
 from app.utils.invoice_numbering import sanitize_invoice_pattern, sanitize_invoice_prefix, validate_invoice_pattern
+from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
 from app.utils.permissions import admin_or_permission_required
 from app.utils.safe_template_render import render_sandboxed_string
 from app.utils.telemetry import get_telemetry_fingerprint, is_telemetry_enabled
@@ -610,8 +610,9 @@ body {{
             img_src = safe_img_src(source)
             if img_src.startswith("/uploads/template_images/"):
                 try:
-                    from app.utils.template_filters import get_image_base64
                     from werkzeug.utils import secure_filename as _secure_filename
+
+                    from app.utils.template_filters import get_image_base64
 
                     filename = _secure_filename(img_src.rsplit("/", 1)[-1])
                     relative_path = f"app/static/uploads/template_images/{filename}"
@@ -996,6 +997,93 @@ def admin_dashboard():
         "last_backup": None,
     }
 
+    # Needs-attention queue (best-effort; skip if module/model unavailable)
+    attention_items = []
+    try:
+        from app.models import Invoice
+
+        overdue_count = Invoice.query.filter(Invoice.status == "overdue").count()
+        if overdue_count:
+            attention_items.append(
+                {
+                    "label": _("Overdue invoices"),
+                    "count": overdue_count,
+                    "url": url_for("invoices.list_invoices", status="overdue"),
+                    "icon": "fas fa-file-invoice-dollar",
+                    "tone": "red",
+                }
+            )
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Admin attention overdue invoices skipped: %s", e)
+
+    try:
+        from app.models.time_entry_approval import ApprovalStatus, TimeEntryApproval
+
+        pending_te = TimeEntryApproval.query.filter_by(status=ApprovalStatus.PENDING).count()
+        if pending_te:
+            attention_items.append(
+                {
+                    "label": _("Pending time approvals"),
+                    "count": pending_te,
+                    "url": url_for("time_approvals.list_approvals", status="pending"),
+                    "icon": "fas fa-user-clock",
+                    "tone": "amber",
+                }
+            )
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Admin attention time approvals skipped: %s", e)
+
+    try:
+        from app.models import Mileage
+
+        pending_mileage = Mileage.query.filter_by(status="pending").count()
+        if pending_mileage:
+            attention_items.append(
+                {
+                    "label": _("Pending mileage"),
+                    "count": pending_mileage,
+                    "url": url_for("mileage.list_mileage", status="pending"),
+                    "icon": "fas fa-car",
+                    "tone": "amber",
+                }
+            )
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Admin attention mileage skipped: %s", e)
+
+    try:
+        from app.models import PerDiem
+
+        pending_pd = PerDiem.query.filter_by(status="pending").count()
+        if pending_pd:
+            attention_items.append(
+                {
+                    "label": _("Pending per diem"),
+                    "count": pending_pd,
+                    "url": url_for("per_diem.list_per_diem", status="pending"),
+                    "icon": "fas fa-utensils",
+                    "tone": "amber",
+                }
+            )
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Admin attention per diem skipped: %s", e)
+
+    try:
+        from app.models import Expense
+
+        pending_exp = Expense.query.filter_by(status="pending").count()
+        if pending_exp:
+            attention_items.append(
+                {
+                    "label": _("Pending expenses"),
+                    "count": pending_exp,
+                    "url": url_for("expenses.expense_approvals"),
+                    "icon": "fas fa-receipt",
+                    "tone": "amber",
+                }
+            )
+    except Exception as e:
+        safe_log(current_app.logger, "debug", "Admin attention expenses skipped: %s", e)
+
     return render_template(
         "admin/dashboard.html",
         stats=stats,
@@ -1006,6 +1094,7 @@ def admin_dashboard():
         oidc_auth_method=auth_method,
         oidc_users_count=oidc_users_count,
         chart_data=chart_data,
+        attention_items=attention_items,
     )
 
 
@@ -1679,9 +1768,7 @@ def settings():
         unanswered = (request.form.get("idle_unanswered_action") or "review").strip().lower()
         settings_obj.idle_unanswered_action = unanswered if unanswered in ("review", "auto_stop") else "review"
         try:
-            settings_obj.idle_auto_stop_hours = max(
-                0, min(168, int(request.form.get("idle_auto_stop_hours", 0) or 0))
-            )
+            settings_obj.idle_auto_stop_hours = max(0, min(168, int(request.form.get("idle_auto_stop_hours", 0) or 0)))
         except (TypeError, ValueError):
             settings_obj.idle_auto_stop_hours = getattr(settings_obj, "idle_auto_stop_hours", 0) or 0
         settings_obj.backup_retention_days = int(request.form.get("backup_retention_days", 30))
@@ -2055,7 +2142,9 @@ def admin_ldap_test():
     return jsonify(
         {
             "success": bool(result.get("success")),
-            "message": result.get("message") if result.get("success") else (result.get("message") or "LDAP connection failed"),
+            "message": (
+                result.get("message") if result.get("success") else (result.get("message") or "LDAP connection failed")
+            ),
             "user_count": result.get("user_count"),
         }
     )
@@ -2206,13 +2295,12 @@ def admin_peppol_setup_wizard_send_test():
         svc = PeppolService()
         success, tx, message = svc.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
         if success:
-            return jsonify(
-                {"ok": True, "message": "Invoice sent via Peppol", "peppol_tx_id": tx.id if tx else None}
-            )
+            return jsonify({"ok": True, "message": "Invoice sent via Peppol", "peppol_tx_id": tx.id if tx else None})
         current_app.logger.warning("Peppol wizard test send failed: %s", message)
-        return jsonify(
-            {"ok": False, "error": "Failed to send invoice via Peppol", "peppol_tx_id": tx.id if tx else None}
-        ), 400
+        return (
+            jsonify({"ok": False, "error": "Failed to send invoice via Peppol", "peppol_tx_id": tx.id if tx else None}),
+            400,
+        )
     except Exception:
         current_app.logger.exception("Peppol wizard test send failed")
         return client_error_response("Failed to send invoice via Peppol", 500)
@@ -4713,9 +4801,7 @@ def serve_template_image(filename):
     if not safe_name or safe_name != filename.replace("\\", "/").split("/")[-1]:
         return "Not found", 404
 
-    upload_folder = os.path.realpath(
-        os.path.join(current_app.root_path, "..", "app/static/uploads/template_images")
-    )
+    upload_folder = os.path.realpath(os.path.join(current_app.root_path, "..", "app/static/uploads/template_images"))
     return send_from_directory(upload_folder, safe_name)
 
 
@@ -5431,7 +5517,11 @@ def ldap_wizard_test_connection():
         jsonify(
             {
                 "success": bool(result.get("success")),
-                "message": result.get("message") if result.get("success") else (result.get("message") or "LDAP connection failed"),
+                "message": (
+                    result.get("message")
+                    if result.get("success")
+                    else (result.get("message") or "LDAP connection failed")
+                ),
                 "user_count": result.get("user_count"),
             }
         ),
@@ -6075,8 +6165,8 @@ def delete_payroll_template(template_id):
 @login_required
 @admin_or_permission_required("access_admin")
 def geofences():
-    from app.models.geofence import Geofence, GeofencePolicy
     from app.models import Project
+    from app.models.geofence import Geofence, GeofencePolicy
 
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
@@ -6136,8 +6226,8 @@ def geofences():
 @login_required
 @admin_or_permission_required("access_admin")
 def edit_geofence(geofence_id):
-    from app.models.geofence import Geofence, GeofencePolicy
     from app.models import Project
+    from app.models.geofence import Geofence, GeofencePolicy
 
     geofence = Geofence.query.get_or_404(geofence_id)
     projects = Project.query.filter_by(status="active").order_by(Project.name.asc()).all()

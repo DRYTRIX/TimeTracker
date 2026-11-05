@@ -60,8 +60,8 @@
                 <div class="relative w-48 h-48 lg:w-64 lg:h-64 mb-6">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                         <!-- Background circle -->
-                        <circle cx="50" cy="50" r="45" stroke="currentColor" 
-                                class="text-gray-200 dark:text-gray-700" 
+                        <circle cx="50" cy="50" r="45" stroke="currentColor"
+                                class="text-gray-200 dark:text-gray-700"
                                 stroke-width="8" fill="none" />
                         <!-- Progress circle -->
                         {% set elapsed_seconds = active_timer.current_duration_seconds %}
@@ -69,8 +69,8 @@
                         {% set progress = (elapsed_seconds / max_seconds * 100) if max_seconds > 0 else 0 %}
                         {% set circumference = 2 * 3.14159 * 45 %}
                         {% set stroke_dashoffset = circumference - (progress / 100 * circumference) %}
-                        <circle cx="50" cy="50" r="45" stroke="currentColor" 
-                                class="text-primary transition-all duration-1000" 
+                        <circle cx="50" cy="50" r="45" stroke="currentColor"
+                                class="text-primary transition-all duration-1000"
                                 stroke-width="8" fill="none"
                                 stroke-dasharray="{{ circumference }}"
                                 stroke-dashoffset="{{ stroke_dashoffset }}"
@@ -116,7 +116,7 @@
                     <button type="submit" class="btn btn-primary btn-sm">{{ _('Save') }}</button>
                     <button type="button" id="btn-cancel-edit" class="btn btn-secondary btn-sm">{{ _('Cancel') }}</button>
                 </form>
-                
+
                 <!-- Timer Controls -->
                 <div class="flex gap-4 flex-wrap">
                     {% if active_timer.is_paused %}
@@ -144,7 +144,7 @@
                 {% if active_timer.break_seconds %}
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('Break') }}: {{ active_timer.break_formatted }}</p>
                 {% endif %}
-                
+
                 <!-- Duration Estimation -->
                 <div class="mt-6 p-4 bg-background-light dark:bg-background-dark rounded-lg w-full max-w-md">
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Estimated Completion') }}</h3>
@@ -161,8 +161,8 @@
             <div class="flex flex-col items-center justify-center py-12">
                 <div class="w-48 h-48 lg:w-64 lg:h-64 mb-6 flex items-center justify-center">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="45" stroke="currentColor" 
-                                class="text-gray-200 dark:text-gray-700" 
+                        <circle cx="50" cy="50" r="45" stroke="currentColor"
+                                class="text-gray-200 dark:text-gray-700"
                                 stroke-width="8" fill="none" />
                     </svg>
                     <div class="absolute text-4xl font-bold text-text-muted-light dark:text-text-muted-dark">
@@ -173,14 +173,14 @@
             </div>
             {% endif %}
         </div>
-        
+
         <!-- Quick Project/Task Selection -->
         {% if not active_timer %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
             <h2 class="text-lg font-semibold mb-4">{{ _('Start New Timer') }}</h2>
             <form action="{{ url_for('timer.start_timer') }}" method="POST" id="timer-start-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
+
                 <div class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -211,7 +211,7 @@
                             </p>
                         </div>
                     </div>
-                    
+
                     <div>
                         <label for="task_id" class="form-label">
                             {{ _('Task') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
@@ -228,7 +228,7 @@
                             {{ _('Select a project first to load tasks. Type to search or create.') }}
                         </p>
                     </div>
-                    
+
                     <div>
                         <label for="notes" class="form-label">
                             {{ _('Notes') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
@@ -254,7 +254,7 @@
                             {{ _('Leave blank to start now, or enter a past time to backdate.') }}
                         </p>
                     </div>
-                    
+
                     {% if templates %}
                     <div>
                         <label class="form-label">
@@ -262,7 +262,7 @@
                         </label>
                         <div class="space-y-2">
                             {% for template in templates %}
-                            <button type="button" 
+                            <button type="button"
                                     onclick="applyTemplate({{ template.id }})"
                                     class="w-full text-left p-3 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                                 <div class="flex items-center justify-between">
@@ -279,14 +279,14 @@
                                 </div>
                             </button>
                             {% endfor %}
-                            <a href="{{ url_for('time_entry_templates.list_templates') }}" 
+                            <a href="{{ url_for('time_entry_templates.list_templates') }}"
                                class="block text-center text-sm text-blue-600 dark:text-blue-400 hover:underline pt-2">
                                 View all templates →
                             </a>
                         </div>
                     </div>
                     {% endif %}
-                    
+
                     <button type="submit" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-md w-full">
                         <i class="fas fa-play mr-2"></i>Start Timer
                     </button>
@@ -295,7 +295,7 @@
         </div>
         {% endif %}
     </div>
-    
+
     <!-- Sidebar -->
     <div class="space-y-6">
         <!-- Focus / Pomodoro -->
@@ -347,7 +347,7 @@
             <h2 class="text-lg font-semibold mb-4">{{ _('Recent Projects') }}</h2>
             <div class="space-y-2">
                 {% for project in recent_projects %}
-                <button type="button" 
+                <button type="button"
                         onclick="selectRecentProject({{ project.id }}, '{{ project.name|e }}')"
                         class="w-full text-left px-4 py-3 rounded-lg bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <div class="font-medium text-text-light dark:text-text-dark">{{ project.name }}</div>
@@ -359,7 +359,7 @@
             </div>
         </div>
         {% endif %}
-        
+
         <!-- Quick Stats -->
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-lg shadow-md">
             <h2 class="text-lg font-semibold mb-4">{{ _("Today's Stats") }}</h2>
@@ -507,19 +507,19 @@ const timerStartForm = document.getElementById('timer-start-form');
 if (timerStartForm) {
     const submitBtn = timerStartForm.querySelector('button[type="submit"]');
     let originalButtonHTML = submitBtn ? submitBtn.innerHTML : null;
-    
+
     timerStartForm.addEventListener('submit', function(e) {
         const projectVal = projectSelectEl ? projectSelectEl.value : '';
         const clientVal = clientSelectEl ? clientSelectEl.value : '';
         if (!projectVal && !clientVal) {
             e.preventDefault();
             e.stopImmediatePropagation();
-            
+
             if (submitBtn && originalButtonHTML) {
                 submitBtn.innerHTML = originalButtonHTML;
                 submitBtn.disabled = false;
             }
-            
+
             const errorMsg = '{{ _("Please select either a project or a client") }}';
             if (window.toastManager && typeof window.toastManager.error === 'function') {
                 window.toastManager.error(errorMsg, '{{ _("Error") }}', 5000);
@@ -598,17 +598,17 @@ let startTime = new Date('{{ active_timer.start_time.isoformat() }}').getTime();
 function updateTimer() {
     const now = new Date().getTime();
     const elapsed = Math.floor((now - startTime) / 1000);
-    
+
     const hours = Math.floor(elapsed / 3600);
     const minutes = Math.floor((elapsed % 3600) / 60);
     const seconds = elapsed % 60;
-    
+
     const display = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     const timerDisplay = document.getElementById('timer-display');
     if (timerDisplay) {
         timerDisplay.textContent = display;
     }
-    
+
     // Update progress ring
     const maxSeconds = 8 * 3600; // 8 hours
     const progress = Math.min((elapsed / maxSeconds) * 100, 100);
@@ -618,7 +618,7 @@ function updateTimer() {
     if (progressRing) {
         progressRing.style.strokeDashoffset = strokeDashoffset;
     }
-    
+
     // Update estimated completion
     updateEstimatedCompletion(elapsed);
 }
@@ -629,7 +629,7 @@ function updateEstimatedCompletion(elapsedSeconds) {
     const avgSessionSeconds = 2 * 3600;
     const estimatedTotal = avgSessionSeconds;
     const remaining = Math.max(0, estimatedTotal - elapsedSeconds);
-    
+
     if (remaining > 0) {
         const hours = Math.floor(remaining / 3600);
         const minutes = Math.floor((remaining % 3600) / 60);
@@ -744,17 +744,17 @@ window.applyTemplate = async function(templateId) {
             throw new Error(`HTTP ${response.status}`);
         }
         const template = await response.json();
-        
+
         // Get form elements
         const projectSelect = document.getElementById('project_id');
         const clientSelect = document.getElementById('timerPageClient') || document.getElementById('client_id');
         const taskSelect = document.getElementById('task_id');
         const notesField = document.getElementById('notes');
-        
+
         if (!projectSelect || !taskSelect || !notesField) {
             throw new Error('Form elements not found');
         }
-        
+
         // Apply template values to form
         if (template.client_id && clientSelect) {
             clientSelect.value = String(template.client_id);
@@ -764,7 +764,7 @@ window.applyTemplate = async function(templateId) {
             projectSelect.value = template.project_id;
             // Trigger change event to load tasks / sync client
             projectSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            
+
             // Wait a bit for tasks to load, then select task
             setTimeout(() => {
                 if (template.task_id) {
@@ -776,7 +776,7 @@ window.applyTemplate = async function(templateId) {
         if (template.default_notes) {
             notesField.value = template.default_notes;
         }
-        
+
         // Mark template as used
         fetch(`/api/templates/${templateId}/use`, {
             method: 'POST',
@@ -785,7 +785,7 @@ window.applyTemplate = async function(templateId) {
                 'X-CSRFToken': '{{ csrf_token() }}'
             }
         }).catch(() => {});  // Silently fail if marking fails
-        
+
     } catch (error) {
         console.error('Error applying template:', error);
         ttAlert('Failed to load template. Please try again.');

@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 1. **app/routes/kanban.py**
    - Updated imports to include `make_response` and `socketio`
-   - Added `db.session.close()` to `list_columns()` 
+   - Added `db.session.close()` to `list_columns()`
    - Added explicit commit, expire_all, and close to `reorder_columns()`
    - Added rollback on error
 
@@ -224,13 +224,13 @@ document.addEventListener('DOMContentLoaded', function() {
    ```python
    # Make changes
    column.label = "New Label"
-   
+
    # Commit immediately
    db.session.commit()
-   
+
    # Clear cache
    db.session.expire_all()
-   
+
    # Emit event
    socketio.emit('kanban_columns_updated', {...})
    ```
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
    # Before reading, clear cache and close
    db.session.expire_all()
    db.session.close()
-   
+
    # Now query - will create new session
    columns = KanbanColumn.get_all_columns()
    ```
@@ -329,4 +329,3 @@ The application now properly:
 7. Uses standard Bootstrap modals for confirmations
 
 Perfect! 🎉
-

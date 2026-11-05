@@ -10,8 +10,7 @@ def test_absolutize_link_joins_base_url(app):
         app.config["APP_BASE_URL"] = "https://time.example.com"
         svc = ClientNotificationService()
         assert (
-            svc._absolutize_link("/client-portal/invoices/42")
-            == "https://time.example.com/client-portal/invoices/42"
+            svc._absolutize_link("/client-portal/invoices/42") == "https://time.example.com/client-portal/invoices/42"
         )
 
 
@@ -45,9 +44,7 @@ def test_send_email_notification_passes_absolute_link(app):
         contact = type("C", (), {"email": "c@example.com", "is_active": True})()
 
         with (
-            patch(
-                "app.services.client_notification_service.ClientNotificationPreferences.query"
-            ) as prefs_q,
+            patch("app.services.client_notification_service.ClientNotificationPreferences.query") as prefs_q,
             patch("app.services.client_notification_service.Contact.query") as contact_q,
             patch("app.services.client_notification_service.send_template_email") as mock_send,
         ):
@@ -56,6 +53,5 @@ def test_send_email_notification_passes_absolute_link(app):
             ClientNotificationService()._send_email_notification(notification)
             assert mock_send.called
             assert (
-                mock_send.call_args.kwargs["absolute_link_url"]
-                == "https://time.example.com/client-portal/invoices/7"
+                mock_send.call_args.kwargs["absolute_link_url"] == "https://time.example.com/client-portal/invoices/7"
             )

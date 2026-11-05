@@ -201,8 +201,9 @@ desktop/*.p12
 desktop/*.spc
 desktop/*.pvk
 
-# Android release signing (never commit)
+# Android release signing / local SDK path (never commit)
 mobile/android/key.properties
+mobile/android/local.properties
 mobile/android/*.jks
 mobile/android/*.keystore
 
@@ -238,6 +239,7 @@ scripts/generate_donate_hide_code.py
 mobile/android/app/build/
 mobile/android/.gradle/
 mobile/ios/build/
+mobile/**/ephemeral/
 mobile/ios/Pods/
 mobile/ios/Podfile.lock
 mobile/ios/Podfile.lock.lock

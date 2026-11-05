@@ -24,13 +24,13 @@
                 <input type="text" name="name" value="{{ webhook.name if webhook else '' }}" required
                        class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium mb-2">{{ _('Description') }}</label>
                 <textarea name="description" rows="3"
                           class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">{{ webhook.description if webhook else '' }}</textarea>
             </div>
-            
+
             <!-- URL Configuration -->
             <div>
                 <label class="block text-sm font-medium mb-2">{{ _('Webhook URL') }} *</label>
@@ -39,7 +39,7 @@
                        class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The URL where webhook events will be sent') }}</p>
             </div>
-            
+
             <!-- Events -->
             <div>
                 <label class="block text-sm font-medium mb-2">{{ _('Events') }} *</label>
@@ -57,7 +57,7 @@
                 </div>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select which events should trigger this webhook') }}</p>
             </div>
-            
+
             <!-- HTTP Configuration -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -69,14 +69,14 @@
                         <option value="PATCH" {% if webhook and webhook.http_method == 'PATCH' %}selected{% endif %}>PATCH</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">{{ _('Content Type') }}</label>
                     <input type="text" name="content_type" value="{{ webhook.content_type if webhook else 'application/json' }}"
                            class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
                 </div>
             </div>
-            
+
             <!-- Retry Configuration -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -84,20 +84,20 @@
                     <input type="number" name="max_retries" value="{{ webhook.max_retries if webhook else 3 }}" min="0" max="10"
                            class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">{{ _('Retry Delay (seconds)') }}</label>
                     <input type="number" name="retry_delay_seconds" value="{{ webhook.retry_delay_seconds if webhook else 60 }}" min="1"
                            class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium mb-2">{{ _('Timeout (seconds)') }}</label>
                     <input type="number" name="timeout_seconds" value="{{ webhook.timeout_seconds if webhook else 30 }}" min="1"
                            class="w-full px-4 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark">
                 </div>
             </div>
-            
+
             <!-- Status -->
             <div>
                 <label class="flex items-center space-x-2 cursor-pointer">
@@ -106,7 +106,7 @@
                     <span>{{ _('Active') }}</span>
                 </label>
             </div>
-            
+
             {% if webhook %}
             <!-- Regenerate Secret -->
             <div>
@@ -118,7 +118,7 @@
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Warning: Regenerating the secret will invalidate the current secret') }}</p>
             </div>
             {% endif %}
-            
+
             <!-- Actions -->
             <div class="flex flex-col sm:flex-row gap-3">
                 <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90">
@@ -132,4 +132,3 @@
     </form>
 </div>
 {% endblock %}
-

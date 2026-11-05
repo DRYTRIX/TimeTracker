@@ -2,10 +2,10 @@
 
 from datetime import datetime, timezone
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import insert, update
-from zoneinfo import ZoneInfo
 
 from app import db
 from app.models import TimeEntry, User, UserSmartNotificationDismissal

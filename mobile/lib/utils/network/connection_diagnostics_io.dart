@@ -191,4 +191,3 @@ ConnectionDiagnostics diagnoseDioFailure(
     isCertificateIssue: isCertIssue,
   );
 }
-

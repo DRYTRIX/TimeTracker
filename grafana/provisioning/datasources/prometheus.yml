@@ -12,4 +12,3 @@ datasources:
     editable: true
     jsonData:
       timeInterval: 30s
-

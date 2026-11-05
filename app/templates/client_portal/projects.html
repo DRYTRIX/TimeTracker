@@ -32,7 +32,7 @@
             <p class="text-sm text-blue-100 line-clamp-2 mt-2 break-words">{{ stat.project.description }}</p>
             {% endif %}
         </div>
-        
+
         <!-- Project Stats -->
         <div class="p-6">
             <div class="space-y-4">
@@ -48,7 +48,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Time Entries Count -->
                 <div class="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
                     <div class="flex items-center space-x-3">
@@ -61,7 +61,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Hourly Rate (if available) -->
                 {% if stat.project.hourly_rate %}
                 <div class="flex items-center justify-between p-3 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
@@ -77,10 +77,10 @@
                 </div>
                 {% endif %}
             </div>
-            
+
             <!-- View Details Links -->
             <div class="mt-6 pt-4 border-t border-border-light dark:border-border-dark space-y-2">
-                <a href="{{ url_for('client_portal.time_entries', project_id=stat.project.id) }}" 
+                <a href="{{ url_for('client_portal.time_entries', project_id=stat.project.id) }}"
                    class="w-full inline-flex items-center justify-center px-4 py-2 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors group">
                     <span>{{ _('View Time Entries') }}</span>
                     <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>

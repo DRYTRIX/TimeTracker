@@ -14,7 +14,7 @@ class CommentSchema(Schema):
     task_id = fields.Int(allow_none=True)
     quote_id = fields.Int(allow_none=True)
     user_id = fields.Int(required=True)
-    is_internal = fields.Bool(missing=True)
+    is_internal = fields.Bool(load_default=True)
     parent_id = fields.Int(allow_none=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
@@ -34,7 +34,7 @@ class CommentCreateSchema(Schema):
     task_id = fields.Int(allow_none=True)
     quote_id = fields.Int(allow_none=True)
     parent_id = fields.Int(allow_none=True)
-    is_internal = fields.Bool(missing=True)
+    is_internal = fields.Bool(load_default=True)
 
 
 class CommentUpdateSchema(Schema):

@@ -6,9 +6,9 @@ Create Date: 2026-03-11
 
 Optional default break rules (e.g. Germany: >6h = 30 min, >9h = 45 min).
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "138_add_break_rules"
 down_revision = "137_add_break_time"

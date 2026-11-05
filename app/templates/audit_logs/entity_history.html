@@ -58,13 +58,13 @@
                             <div class="space-y-1">
                                 {% if log.old_value %}
                                 <div class="text-xs">
-                                    <span class="text-red-600 dark:text-red-400">-</span> 
+                                    <span class="text-red-600 dark:text-red-400">-</span>
                                     <span class="line-through">{{ log.get_old_value() }}</span>
                                 </div>
                                 {% endif %}
                                 {% if log.new_value %}
                                 <div class="text-xs">
-                                    <span class="text-green-600 dark:text-green-400">+</span> 
+                                    <span class="text-green-600 dark:text-green-400">+</span>
                                     {{ log.get_new_value() }}
                                 </div>
                                 {% endif %}
@@ -74,7 +74,7 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <a href="{{ url_for('audit_logs.view_audit_log', log_id=log.id) }}" 
+                        <a href="{{ url_for('audit_logs.view_audit_log', log_id=log.id) }}"
                            class="text-primary hover:underline">
                             <i class="fas fa-eye"></i> View
                         </a>
@@ -84,7 +84,7 @@
             </tbody>
         </table>
     </div>
-    
+
     {{ pagination_nav(pagination, 'audit_logs.entity_history', {
         'entity_type': entity_type,
         'entity_id': entity_id
@@ -95,10 +95,9 @@
 </div>
 
 <div class="mt-6">
-    <a href="{{ url_for('audit_logs.list_audit_logs') }}" 
+    <a href="{{ url_for('audit_logs.list_audit_logs') }}"
        class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
         <i class="fas fa-arrow-left mr-2"></i>Back to Audit Logs
     </a>
 </div>
 {% endblock %}
-

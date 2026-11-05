@@ -326,4 +326,3 @@ docker-compose up -d
 
 **Last Updated:** October 2025  
 **Applies To:** TimeTracker v1.0+
-

@@ -16,13 +16,13 @@
 <div class="max-w-4xl mx-auto">
     <form method="POST" enctype="multipart/form-data" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" novalidate data-validate-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <!-- Basic Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-info-circle mr-2"></i>{{ _('Basic Information') }}
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
                     <label for="title" class="form-label">
@@ -33,7 +33,7 @@
                            placeholder="{{ _('e.g., Flight to Berlin') }}"
                            class="form-input">
                 </div>
-                
+
                 <div class="md:col-span-2">
                     <label for="description" class="form-label">
                         Description
@@ -42,7 +42,7 @@
                               placeholder="{{ _('Additional details about the expense...') }}"
                               class="form-input">{{ expense.description if expense else '' }}</textarea>
                 </div>
-                
+
                 <div>
                     <label for="category" class="form-label">
                         Category <span class="text-red-500">*</span>
@@ -57,7 +57,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="expense_date" class="form-label">
                         Expense Date <span class="text-red-500">*</span>
@@ -68,13 +68,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Amount Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-euro-sign mr-2"></i>{{ _('Amount Details') }}
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label for="amount" class="form-label">
@@ -85,7 +85,7 @@
                            placeholder="0.00"
                            class="form-input">
                 </div>
-                
+
                 <div>
                     <label for="tax_amount" class="form-label">
                         Tax Amount
@@ -95,7 +95,7 @@
                            placeholder="0.00"
                            class="form-input">
                 </div>
-                
+
                 <div>
                     <label for="currency_code" class="form-label">
                         Currency
@@ -109,7 +109,7 @@
                     </select>
                 </div>
             </div>
-            
+
             <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <p class="text-sm text-blue-800 dark:text-blue-200">
                     <i class="fas fa-info-circle mr-1"></i>
@@ -117,13 +117,13 @@
                 </p>
             </div>
         </div>
-        
+
         <!-- Project & Client -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-project-diagram mr-2"></i>{{ _('Association') }}
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="project_id" class="form-label">
@@ -133,7 +133,7 @@
                             class="form-input">
                         <option value="">No Project</option>
                         {% for project in projects %}
-                        <option value="{{ project.id }}" 
+                        <option value="{{ project.id }}"
                                 data-client-id="{{ project.client_id if project.client_id else '' }}"
                                 {% if expense and expense.project_id == project.id %}selected{% endif %}>
                             {{ project.name }}
@@ -142,7 +142,7 @@
                     </select>
                     <p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle"></i> Selecting a project will auto-fill the client</p>
                 </div>
-                
+
                 <div>
                     <label for="client_id" class="form-label">
                         Client
@@ -151,13 +151,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Payment Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-credit-card mr-2"></i>{{ _('Payment Details') }}
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label for="payment_method" class="form-label">
@@ -173,7 +173,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="payment_date" class="form-label">
                         Payment Date
@@ -182,7 +182,7 @@
                            value="{{ expense.payment_date.strftime('%Y-%m-%d') if expense and expense.payment_date else '' }}"
                            class="form-input user-date-input">
                 </div>
-                
+
                 <div>
                     <label for="vendor" class="form-label">
                         Vendor
@@ -194,13 +194,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Receipt & Additional Info -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-file-alt mr-2"></i>{{ _('Receipt & Additional Information') }}
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label for="receipt_file" class="form-label">
@@ -216,7 +216,7 @@
                     </p>
                     {% endif %}
                 </div>
-                
+
                 <div>
                     <label for="receipt_number" class="form-label">
                         {{ _('Receipt/Invoice Number') }}
@@ -227,7 +227,7 @@
                            class="form-input">
                 </div>
             </div>
-            
+
             <div class="mb-4">
                 <label for="tags" class="form-label">
                     Tags (comma-separated)
@@ -237,7 +237,7 @@
                        placeholder="{{ _('e.g., conference, client-meeting, urgent') }}"
                        class="form-input">
             </div>
-            
+
             <div>
                 <label for="notes" class="form-label">
                     Notes
@@ -247,13 +247,13 @@
                           class="form-input">{{ expense.notes if expense else '' }}</textarea>
             </div>
         </div>
-        
+
         <!-- Flags -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-toggle-on mr-2"></i>{{ _('Options') }}
             </h3>
-            
+
             <div class="space-y-3">
                 <div class="flex items-center">
                     <input type="checkbox" name="billable" id="billable"
@@ -264,7 +264,7 @@
                         <span class="block text-xs text-gray-500">This expense can be billed to the client</span>
                     </label>
                 </div>
-                
+
                 <div class="flex items-center">
                     <input type="checkbox" name="reimbursable" id="reimbursable"
                            {% if not expense or expense.reimbursable %}checked{% endif %}
@@ -276,14 +276,14 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Actions -->
         <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) if expense else url_for('expenses.list_expenses') }}" 
+            <a href="{{ url_for('expenses.view_expense', expense_id=expense.id) if expense else url_for('expenses.list_expenses') }}"
                class="btn btn-secondary">
                 <i class="fas fa-times mr-2"></i>Cancel
             </a>
-            
+
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-save mr-2"></i>{{ 'Update Expense' if expense else 'Create Expense' }}
             </button>
@@ -310,11 +310,11 @@ document.getElementById('project_id').addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
     const clientId = selectedOption.getAttribute('data-client-id');
     const clientSelect = document.getElementById('client_id');
-    
+
     if (clientId) {
         // Set the client dropdown to the project's client
         clientSelect.value = clientId;
-        
+
         // Visual feedback
         clientSelect.classList.add('bg-green-100', 'dark:bg-green-900/30', 'transition-colors', 'duration-300');
         setTimeout(() => {
@@ -334,4 +334,3 @@ document.getElementById('expense_date').value = new Date().toISOString().split('
 </script>
 
 {% endblock %}
-

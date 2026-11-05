@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """Run each test file individually and report results"""
-import sys
+
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 # Run from project root (parent of scripts/)
@@ -27,19 +28,12 @@ for test_file in test_files:
     print(f"\n{'='*70}")
     print(f"Testing: {test_name}")
     print(f"{'='*70}")
-    
+
     # Run pytest for this specific file
-    cmd = [
-        sys.executable,
-        "-m", "pytest",
-        str(test_file),
-        "-v",
-        "--tb=line",
-        "-x"  # Stop on first failure
-    ]
-    
+    cmd = [sys.executable, "-m", "pytest", str(test_file), "-v", "--tb=line", "-x"]  # Stop on first failure
+
     result = subprocess.run(cmd, capture_output=False, text=True)
-    
+
     status = "✓ PASSED" if result.returncode == 0 else "✗ FAILED"
     results.append((test_name, status, result.returncode))
     print(f"\nResult: {status} (exit code: {result.returncode})")
@@ -54,4 +48,3 @@ passed = sum(1 for _, s, _ in results if "PASSED" in s)
 failed = sum(1 for _, s, _ in results if "FAILED" in s)
 print(f"\nTotal: {len(results)} test files | Passed: {passed} | Failed: {failed}")
 print("=" * 70)
-

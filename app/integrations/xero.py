@@ -107,7 +107,8 @@ class XeroConnector(BaseConnector):
         if "access_token" in data:
             try:
                 tenants_response = requests.get(
-                    f"{self.BASE_URL}/connections", headers={"Authorization": f"Bearer {data['access_token']}"},
+                    f"{self.BASE_URL}/connections",
+                    headers={"Authorization": f"Bearer {data['access_token']}"},
                     timeout=(5, 30),
                 )
                 if tenants_response.status_code == 200:

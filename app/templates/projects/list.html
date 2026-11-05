@@ -14,30 +14,44 @@
     actions_html='<a href="' + url_for("projects.create_project") + '" class="btn btn-primary"><i class="fas fa-plus"></i>Create Project</a>' if (current_user.is_admin or has_permission('create_projects')) else None
 ) }}
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold">{{ _('Filter Projects') }}</h2>
-        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}" aria-label="{{ _('Toggle Filters') }}">
-            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+{% set _proj_search = (search or request.args.get('search', ''))|trim %}
+{% set _proj_status = status or request.args.get('status', 'all') %}
+{% set _proj_client = request.args.get('client', '') %}
+{% set _proj_fav = favorites_only|default(false) or request.args.get('favorites') == 'true' %}
+{% set _has_active_filters = (_proj_search|length > 0) or (_proj_status and _proj_status != 'all') or (_proj_client|length > 0) or _proj_fav %}
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-tt border border-border-light dark:border-border-dark mb-6">
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="text-sm font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('Filter Projects') }}</h2>
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}" aria-label="{{ _('Toggle Filters') }}" aria-expanded="{{ 'true' if _has_active_filters else 'false' }}">
+            <i class="fas {% if _has_active_filters %}fa-chevron-up{% else %}fa-chevron-down{% endif %}" id="filterToggleIcon"></i>
         </button>
     </div>
-    <div id="filterBody">
+    {% if _has_active_filters %}
+    <div class="flex flex-wrap gap-2 mb-3" id="activeFilterChips">
+        {% if _proj_search %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Search') }}: {{ _proj_search }}</span>{% endif %}
+        {% if _proj_status and _proj_status != 'all' %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Status') }}: {{ _proj_status }}</span>{% endif %}
+        {% if _proj_client %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Client') }}: {{ _proj_client }}</span>{% endif %}
+        {% if _proj_fav %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Favorites') }}</span>{% endif %}
+        <a href="{{ url_for('projects.list_projects') }}" class="text-xs text-primary hover:underline self-center">{{ _('Clear filters') }}</a>
+    </div>
+    {% endif %}
+    <div id="filterBody" class="{% if not _has_active_filters %}filter-collapsed{% endif %}">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="projectsFilterForm" data-filter-form>
         <div>
-            <label for="projects-filter-search" class="form-label">Search</label>
+            <label for="projects-filter-search" class="form-label">{{ _('Search') }}</label>
             <input type="text" name="search" id="projects-filter-search" value="{{ search or '' }}" class="form-input">
         </div>
         <div>
-            <label for="status" class="form-label">Status</label>
+            <label for="status" class="form-label">{{ _('Status') }}</label>
             <select name="status" id="status" class="form-input">
-                <option value="all" {% if not status or status == 'all' %}selected{% endif %}>All</option>
-                <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
-                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
-                <option value="archived" {% if status == 'archived' %}selected{% endif %}>Archived</option>
+                <option value="all" {% if not status or status == 'all' %}selected{% endif %}>{{ _('All') }}</option>
+                <option value="active" {% if status == 'active' %}selected{% endif %}>{{ _('Active') }}</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>{{ _('Inactive') }}</option>
+                <option value="archived" {% if status == 'archived' %}selected{% endif %}>{{ _('Archived') }}</option>
             </select>
         </div>
         <div>
-            <label for="client" class="form-label">Client</label>
+            <label for="client" class="form-label">{{ _('Client') }}</label>
             {% set locked_client = get_locked_client() %}
             {% if locked_client %}
                 <input type="hidden" name="client" id="client" value="{{ locked_client.name }}">
@@ -57,19 +71,19 @@
             {% endif %}
         </div>
         <div>
-            <label for="favorites" class="form-label">Show</label>
+            <label for="favorites" class="form-label">{{ _('Show') }}</label>
             <select name="favorites" id="favorites" class="form-input">
-                <option value="">All Projects</option>
-                <option value="true" {% if favorites_only %}selected{% endif %}>⭐ Favorites Only</option>
+                <option value="">{{ _('All Projects') }}</option>
+                <option value="true" {% if favorites_only %}selected{% endif %}>⭐ {{ _('Favorites Only') }}</option>
             </select>
         </div>
         {% if custom_field_definitions %}
         {% for definition in custom_field_definitions %}
         <div>
             <label for="custom_field_{{ definition.field_key }}" class="form-label">{{ definition.label }}</label>
-            <input type="text" name="custom_field_{{ definition.field_key }}" id="custom_field_{{ definition.field_key }}" 
-                   value="{{ request.args.get('custom_field_' + definition.field_key, '') }}" 
-                   class="form-input" 
+            <input type="text" name="custom_field_{{ definition.field_key }}" id="custom_field_{{ definition.field_key }}"
+                   value="{{ request.args.get('custom_field_' + definition.field_key, '') }}"
+                   class="form-input"
                    placeholder="{{ definition.description or '' }}">
         </div>
         {% endfor %}
@@ -94,11 +108,11 @@
                     <i class="fas fa-th"></i>
                 </button>
             </div>
-            <a href="{{ url_for('projects.export_projects', status=status, client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}" 
-               class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
+            <a href="{{ url_for('projects.export_projects', status=status, client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}"
+               class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn"
                title="{{ _('Export to CSV') }}"
                onclick="showExportLoading(this); return true;">
-                <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
+                <i class="fas fa-download mr-1"></i> <span class="export-text">{{ _('Export') }}</span>
             </a>
             {% if current_user.is_admin %}
             <div class="relative">
@@ -116,10 +130,10 @@
             {% endif %}
         </div>
     </div>
-    
+
     <!-- List View -->
     <div id="listView" class="view-container">
-    <table class="table table-zebra w-full text-left responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
+    <table class="table table-zebra w-full text-left enhanced-table responsive-cards" data-table-enhanced data-page-size="25" data-sticky-header="true" data-column-visibility="true">
         <thead class="border-b border-border-light dark:border-border-dark">
             <tr>
                 {% if current_user.is_admin %}
@@ -147,8 +161,8 @@
                 {% endif %}
                 <td class="p-4 text-center">
                     {% set is_fav = favorite_project_ids and project.id in favorite_project_ids %}
-                    <button type="button" 
-                            class="favorite-btn text-xl hover:scale-110 transition-transform" 
+                    <button type="button"
+                            class="favorite-btn text-xl hover:scale-110 transition-transform"
                             data-project-id="{{ project.id }}"
                             data-is-favorited="{{ 'true' if is_fav else 'false' }}"
                             onclick="toggleFavorite({{ project.id }}, this)"
@@ -231,20 +245,20 @@
                 <!-- Quick Actions on Hover -->
                 <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <div class="flex gap-1">
-                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
-                           class="p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" 
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}"
+                           class="p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
                            title="{{ _('View Project') }}">
                             <i class="fas fa-eye text-xs"></i>
                         </a>
                         {% if current_user.is_admin or has_permission('edit_projects') %}
-                        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" 
-                           class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" 
+                        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}"
+                           class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                            title="{{ _('Edit Project') }}">
                             <i class="fas fa-edit text-xs"></i>
                         </a>
                         {% endif %}
-                        <button type="button" 
-                                class="favorite-btn p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors" 
+                        <button type="button"
+                                class="favorite-btn p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
                                 data-project-id="{{ project.id }}"
                                 data-is-favorited="{{ 'true' if (favorite_project_ids and project.id in favorite_project_ids) else 'false' }}"
                                 onclick="toggleFavorite({{ project.id }}, this)"
@@ -253,7 +267,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Project Header -->
                 <div class="p-6 pb-4">
                     <div class="flex items-start justify-between mb-2">
@@ -272,20 +286,20 @@
                             {{ project.status|title }}
                         </span>
                     </div>
-                    
+
                     {% if project.client %}
                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
                         <i class="fas fa-building mr-1"></i>{{ project.client }}
                     </p>
                     {% endif %}
-                    
+
                     {% if project.description %}
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4 line-clamp-2 prose prose-sm dark:prose-invert max-w-none">
                         {{ project.description | markdown | safe }}
                     </div>
                     {% endif %}
                 </div>
-                
+
                 <!-- Progress Indicators -->
                 <div class="px-6 pb-4 space-y-3">
                     {% if project.budget_amount %}
@@ -295,7 +309,7 @@
                         <div>
                             <div class="flex justify-between items-center mb-1">
                                 <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Budget</span>
-                                <span class="text-xs font-semibold 
+                                <span class="text-xs font-semibold
                                     {% if pct >= 90 %}text-red-600
                                     {% elif pct >= 70 %}text-amber-600
                                     {% else %}text-green-600{% endif %}">
@@ -306,7 +320,7 @@
                                 <div class="h-full rounded-full transition-all duration-300
                                     {% if pct >= 90 %}bg-red-500
                                     {% elif pct >= 70 %}bg-amber-500
-                                    {% else %}bg-green-500{% endif %}" 
+                                    {% else %}bg-green-500{% endif %}"
                                     style="width: {{ [pct,100]|min }}%">
                                 </div>
                             </div>
@@ -315,7 +329,7 @@
                             </div>
                         </div>
                     {% endif %}
-                    
+
                     <!-- Hours Progress -->
                     <div>
                         <div class="flex justify-between items-center mb-1">
@@ -327,7 +341,7 @@
                         {% if project.estimated_hours %}
                             {% set hours_pct = (project.total_hours / project.estimated_hours * 100) if project.estimated_hours > 0 else 0 %}
                             <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div class="h-full bg-primary rounded-full transition-all duration-300" 
+                                <div class="h-full bg-primary rounded-full transition-all duration-300"
                                     style="width: {{ [hours_pct,100]|min }}%">
                                 </div>
                             </div>
@@ -337,7 +351,7 @@
                         {% endif %}
                     </div>
                 </div>
-                
+
                 <!-- Project Footer -->
                 <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
                     <div class="flex items-center justify-between">
@@ -353,7 +367,7 @@
                             </span>
                             {% endif %}
                         </div>
-                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}"
                            class="text-primary hover:text-primary/80 text-sm font-medium">
                             View <i class="fas fa-arrow-right ml-1"></i>
                         </a>
@@ -363,23 +377,23 @@
             {% endfor %}
         </div>
     </div>
-    
+
     {% if not projects %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
-        {% if current_user.is_admin %}
+        {% if current_user.is_admin or has_permission('create_projects') %}
         <a href="{{ url_for('projects.create_project') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-            <i class="fas fa-plus mr-2"></i>Create Your First Project
+            <i class="fas fa-plus mr-2"></i>{{ _('Create your first project') }}
         </a>
         {% endif %}
-        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-            <i class="fas fa-question-circle mr-2"></i>Learn More
+        <a href="{{ url_for('clients.list_clients') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <i class="fas fa-user-tie mr-2"></i>{{ _('Add a client first') }}
         </a>
     {% endset %}
     {% if search or request.args.get('client') or request.args.get('status') != 'all' %}
-        {{ empty_state('fas fa-search', 'No Projects Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new project that matches your criteria.', actions, type='no-results') }}
+        {{ empty_state('fas fa-search', _('No projects match your filters'), _('Try adjusting your filters to see more results, or create a project that matches your criteria.'), actions, type='no-results') }}
     {% else %}
-        {{ empty_state('fas fa-folder-open', 'No Projects Yet', 'Projects help you organize your work and track time efficiently. Create your first project to get started!', actions, type='no-data') }}
+        {{ empty_state('fas fa-folder-open', _('No projects yet'), _('Organize work by client and project, then track time against them. Create your first project to get started.'), actions, type='no-data') }}
     {% endif %}
     {% endif %}
     </div>
@@ -420,7 +434,7 @@ function setViewMode(mode) {
     const gridView = document.getElementById('gridView');
     const listBtn = document.getElementById('listViewBtn');
     const gridBtn = document.getElementById('gridViewBtn');
-    
+
     if (mode === 'list') {
         listView.classList.remove('hidden');
         gridView.classList.add('hidden');
@@ -456,9 +470,9 @@ function toggleFilterVisibility() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
     const isCollapsed = filterBody.classList.contains('filter-collapsed');
-    
+
     if (isCollapsed) {
         // Show filters
         filterBody.classList.remove('filter-collapsed');
@@ -481,19 +495,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
+    const hasActiveFilters = {{ 'true' if _has_active_filters else 'false' }};
     const filtersVisible = localStorage.getItem('projectListFiltersVisible');
-    if (filtersVisible === 'false') {
+    // Expand when filters are active; otherwise collapse unless user explicitly expanded
+    const shouldExpand = hasActiveFilters || filtersVisible === 'true';
+    if (!shouldExpand) {
         filterBody.classList.add('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-up');
         toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'false');
     } else {
-        // Explicitly set the icon to chevron-up when filter is visible
         filterBody.classList.remove('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-down');
         toggleIcon.classList.add('fa-chevron-up');
         toggleButton.title = '{{ _('Hide Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'true');
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
 });
@@ -560,7 +578,7 @@ function submitBulkDelete(){
 function showBulkArchiveDialog(){
     const count = document.querySelectorAll('.project-checkbox:checked').length;
     if (count === 0) return false;
-    
+
     // Create a custom modal for archive reason
     const modalHtml = `
         <div id="bulkArchiveModal" class="fixed inset-0 z-50 flex items-center justify-center">
@@ -585,7 +603,7 @@ function showBulkArchiveDialog(){
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     return false;
 }
@@ -621,21 +639,21 @@ function submitBulkStatusChange(){
     document.querySelectorAll('.project-checkbox:checked').forEach(cb => {
         const i = document.createElement('input'); i.type='hidden'; i.name='project_ids[]'; i.value=cb.value; form.appendChild(i);
     });
-    
+
     // Show loading state
     const btn = document.getElementById('bulkActionsBtn');
     if (btn) {
         const originalHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
-        
+
         // Re-enable after timeout (safety fallback)
         setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.disabled = false;
         }, 10000);
     }
-    
+
     form.submit();
 }
 
@@ -644,7 +662,7 @@ function showExportLoading(link) {
     const originalHTML = link.innerHTML;
     link.classList.add('pointer-events-none', 'opacity-60');
     link.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> <span class="export-text">Exporting...</span>';
-    
+
     // Reset after 5 seconds (fallback)
     setTimeout(() => {
         link.innerHTML = originalHTML;
@@ -656,22 +674,22 @@ function showExportLoading(link) {
 function toggleFavorite(projectId, button) {
     // Font Awesome converts <i> to <svg>, so we need to look for either
     const icon = button.querySelector('i, svg');
-    
+
     // Safety check
     if (!icon) {
         console.error('Star icon not found in button');
         console.log('Button HTML:', button.innerHTML);
         return;
     }
-    
+
     // Check if favorited by looking at classes (works for both <i> and <svg>)
-    const isFavorited = icon.classList.contains('fa-star') && 
+    const isFavorited = icon.classList.contains('fa-star') &&
                         (icon.classList.contains('fas') || icon.getAttribute('data-prefix') === 'fas');
     const action = isFavorited ? 'unfavorite' : 'favorite';
-    
+
     // Disable button to prevent double clicks
     button.disabled = true;
-    
+
     // Optimistic UI update - toggle classes
     if (isFavorited) {
         // Change to unfilled star
@@ -690,7 +708,7 @@ function toggleFavorite(projectId, button) {
         }
         button.title = 'Remove from favorites';
     }
-    
+
     // Send AJAX request
     fetch(`/projects/${projectId}/${action}`, {
         method: 'POST',
@@ -768,16 +786,16 @@ function toggleFavorite(projectId, button) {
 // Projects Filter Handler - Simple AJAX filtering
 (function() {
     'use strict';
-    
+
     let filterTimeout = null;
     let searchTimeout = null;
-    
+
     function getFilterParams() {
         const form = document.getElementById('projectsFilterForm');
         if (!form) return {};
-        
+
         const params = {};
-        
+
         // Get search input value directly (more reliable than FormData for text inputs)
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
@@ -786,7 +804,7 @@ function toggleFavorite(projectId, button) {
                 params.search = searchValue;
             }
         }
-        
+
         // Get other form fields from FormData
         const formData = new FormData(form);
         for (const [key, value] of formData.entries()) {
@@ -799,39 +817,39 @@ function toggleFavorite(projectId, button) {
                 params[key] = trimmed;
             }
         }
-        
+
         // Always include status, default to "all" if not set
         if (!params.status) {
             params.status = 'all';
         }
-        
+
         return params;
     }
-    
+
     function buildFilterUrl() {
         const params = getFilterParams();
         const queryString = new URLSearchParams(params).toString();
         return `/projects?${queryString}`;
     }
-    
+
     function applyFilters() {
         const url = buildFilterUrl();
         const container = document.getElementById('projectsListContainer');
-        
+
         if (!container) {
             console.error('projectsListContainer not found');
             return;
         }
-        
+
         // Show loading state
         container.style.opacity = '0.5';
         container.style.pointerEvents = 'none';
-        
+
         // Update URL
         if (window.history && window.history.pushState) {
             window.history.pushState({}, '', url);
         }
-        
+
         // Fetch filtered results
         fetch(url, {
             method: 'GET',
@@ -865,7 +883,7 @@ function toggleFavorite(projectId, button) {
                 const savedMode = localStorage.getItem('projectsViewMode') || 'list';
                 setViewMode(savedMode);
             }
-            
+
             // Update filter chips after successful filter
             updateFilterChips();
         })
@@ -876,7 +894,7 @@ function toggleFavorite(projectId, button) {
                 liveContainer.style.opacity = '';
                 liveContainer.style.pointerEvents = '';
             }
-            
+
             // Show error message
             if (window.toastManager) {
                 window.toastManager.show('Failed to filter projects. Please refresh the page.', 'error');
@@ -892,33 +910,33 @@ function toggleFavorite(projectId, button) {
             }
         });
     }
-    
+
     function debouncedApplyFilters(delay = 100) {
         if (filterTimeout) {
             clearTimeout(filterTimeout);
         }
         filterTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     function debouncedSearch(delay = 500) {
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
         searchTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     function updateFilterChips() {
         const form = document.getElementById('projectsFilterForm');
         if (!form) return;
-        
+
         const params = getFilterParams();
         const chipsContainer = document.getElementById('filterChipsContainer');
-        
+
         // Remove old chips container if it exists
         if (chipsContainer) {
             chipsContainer.remove();
         }
-        
+
         // Get active filters (exclude empty values and "all" status)
         const activeFilters = {};
         Object.entries(params).forEach(([key, value]) => {
@@ -926,25 +944,25 @@ function toggleFavorite(projectId, button) {
                 activeFilters[key] = value;
             }
         });
-        
+
         // If no active filters, don't show chips
         if (Object.keys(activeFilters).length === 0) {
             return;
         }
-        
+
         // Create chips container
         const container = document.createElement('div');
         container.id = 'filterChipsContainer';
         container.className = 'flex flex-wrap items-center gap-2 mb-4';
-        
+
         // Add filter chips
         Object.entries(activeFilters).forEach(([key, value]) => {
             const chip = document.createElement('span');
             chip.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 dark:bg-primary/20 text-primary border border-primary/20 dark:border-primary/30';
-            
+
             const input = form.querySelector(`[name="${key}"]`);
             const label = input?.labels?.[0]?.textContent || key;
-            
+
             chip.innerHTML = `
                 <span class="font-medium">${label}:</span>
                 <span class="ml-1">${value}</span>
@@ -952,15 +970,15 @@ function toggleFavorite(projectId, button) {
                     <i class="fas fa-times"></i>
                 </button>
             `;
-            
+
             // Add remove listener
             chip.querySelector('button').addEventListener('click', () => {
                 removeFilter(key);
             });
-            
+
             container.appendChild(chip);
         });
-        
+
         // Add "Clear All" button
         const clearAllBtn = document.createElement('button');
         clearAllBtn.type = 'button';
@@ -968,18 +986,18 @@ function toggleFavorite(projectId, button) {
         clearAllBtn.innerHTML = '<i class="fas fa-times-circle mr-1"></i> Clear all';
         clearAllBtn.addEventListener('click', clearAllFilters);
         container.appendChild(clearAllBtn);
-        
+
         // Insert after filter form
         const filterBody = document.getElementById('filterBody');
         if (filterBody) {
             filterBody.appendChild(container);
         }
     }
-    
+
     function removeFilter(key) {
         const form = document.getElementById('projectsFilterForm');
         if (!form) return;
-        
+
         const input = form.querySelector(`[name="${key}"]`);
         if (input) {
             if (input.tagName === 'SELECT') {
@@ -988,32 +1006,32 @@ function toggleFavorite(projectId, button) {
                 input.value = '';
             }
         }
-        
+
         applyFilters();
     }
-    
+
     function clearAllFilters() {
         const form = document.getElementById('projectsFilterForm');
         if (!form) return;
-        
+
         // Reset all form fields
         form.reset();
-        
+
         // Set status to "all"
         const statusSelect = form.querySelector('[name="status"]');
         if (statusSelect) {
             statusSelect.value = 'all';
         }
-        
+
         // Clear text inputs
         form.querySelectorAll('input[type="text"]').forEach(input => {
             input.value = '';
         });
-        
+
         // Apply filters immediately
         applyFilters();
     }
-    
+
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('projectsFilterForm');
@@ -1021,21 +1039,21 @@ function toggleFavorite(projectId, button) {
             console.error('Projects filter form not found');
             return;
         }
-        
+
         // Auto-submit on dropdown changes
         form.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', () => {
                 debouncedApplyFilters(100);
             });
         });
-        
+
         // Auto-submit on search input (debounced)
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 debouncedSearch(500);
             });
-            
+
             // Submit on Enter
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -1049,7 +1067,7 @@ function toggleFavorite(projectId, button) {
         } else {
             console.error('Search input not found in form');
         }
-        
+
         // Prevent form submission (use AJAX instead)
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -1062,10 +1080,10 @@ function toggleFavorite(projectId, button) {
             }
             applyFilters();
         });
-        
+
         // Initial filter chips update
         setTimeout(updateFilterChips, 100);
-        
+
         // Export clear function
         window.clearProjectsFilters = clearAllFilters;
     });

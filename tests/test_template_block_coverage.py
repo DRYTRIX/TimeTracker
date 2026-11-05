@@ -30,6 +30,7 @@ LAYOUT_BLOCKS = {
         "twitter_description",
         "twitter_image",
         "content",
+        "scripts_extra",
     },
     "kiosk/base.html": {
         "title",

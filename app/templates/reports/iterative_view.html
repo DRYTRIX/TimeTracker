@@ -29,11 +29,11 @@
                     {{ custom_field_name|replace('_', ' ')|title }}: <span class="text-primary">{{ field_value }}</span>
                 </h3>
                 <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                    {{ report_data.summary.get('total_entries', 0) }} {{ _('entries') }} • 
+                    {{ report_data.summary.get('total_entries', 0) }} {{ _('entries') }} •
                     {{ report_data.summary.get('total_hours', 0) }} {{ _('hours') }}
                 </div>
             </div>
-            
+
             {% if report_data.data and report_data.data|length > 0 %}
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-border-light dark:divide-border-dark responsive-cards">
@@ -68,7 +68,7 @@
                     </tfoot>
                 </table>
             </div>
-            
+
             {% if report_data.summary.get('by_client') %}
             <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
                 <h4 class="text-sm font-semibold mb-3">{{ _('Summary by Client') }}</h4>
@@ -102,4 +102,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

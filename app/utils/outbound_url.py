@@ -37,7 +37,7 @@ _METADATA_HOSTS = frozenset(
 )
 
 
-def _is_blocked_ip(ip: ipaddress._BaseAddress) -> bool:
+def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
         return True
     for network in _BLOCKED_NETWORKS:

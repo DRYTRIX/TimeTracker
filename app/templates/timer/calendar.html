@@ -3,7 +3,8 @@
 {% block title %}{{ _('Calendar') }} - {{ app_name }}{% endblock %}
 
 {% block extra_css %}
-{# FullCalendar v6 injects its own styles from the JS bundle; no separate stylesheet. #}
+{# FullCalendar v7 ships styles separately; skeleton.css is the base grid/layout sheet. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/fullcalendar/skeleton.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
 <style>
 .event-modal-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
@@ -22,7 +23,7 @@
             <h5 class="mb-0 d-flex align-items-center">
               <i class="fas fa-calendar-alt me-2 text-primary"></i>{{ _('Calendar') }}
             </h5>
-            
+
             <div class="calendar-controls">
               <!-- View Controls -->
               <button class="btn btn-sm btn-outline-secondary" id="todayBtn">
@@ -34,7 +35,7 @@
                 <button class="btn btn-sm btn-outline-primary" id="monthBtn">{{ _('Month') }}</button>
                 <button class="btn btn-sm btn-outline-primary" id="agendaBtn">{{ _('Agenda') }}</button>
               </div>
-              
+
               <!-- Action Buttons -->
               <button class="btn btn-sm btn-primary" id="newEventBtn">
                 <i class="fas fa-plus me-1"></i>{{ _('New Event') }}
@@ -42,7 +43,7 @@
               <button class="btn btn-sm btn-outline-secondary" id="manageRecurringBtn">
                 <i class="fas fa-redo me-1"></i>{{ _('Recurring') }}
               </button>
-              
+
               <!-- Export Dropdown -->
               <div class="dropdown">
                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown">
@@ -55,7 +56,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Filters Row -->
           <div class="calendar-filters mt-3">
             <select id="filterProject" class="form-input form-input-sm calendar-filter-project">
@@ -64,29 +65,29 @@
               <option value="{{ p.id }}">{{ p.name }} ({{ p.client.name if p.client else 'No Client' }})</option>
               {% endfor %}
             </select>
-            
+
             <select id="filterTask" class="form-input form-input-sm calendar-filter-task">
               <option value="">{{ _('All Tasks') }}</option>
             </select>
-            
+
             <input type="text" id="filterTags" class="form-input text-sm py-2 calendar-filter-tags" placeholder="{{ _('Filter by tags...') }}">
-            
+
             <!-- Quick Filter: Billable Only -->
             <button class="btn btn-sm btn-outline-success" id="filterBillableOnly" title="{{ _('Show billable entries only') }}">
               <i class="fas fa-dollar-sign me-1"></i>{{ _('Billable Only') }}
             </button>
-            
+
             <button class="btn btn-sm btn-outline-danger" id="clearFilters">
               <i class="fas fa-times me-1"></i>{{ _('Clear') }}
             </button>
-            
+
             <select id="assignProject" class="form-input form-input-sm calendar-assign">
               <option value="">{{ _('Assign to project for new events...') }}</option>
               {% for p in projects %}
               <option value="{{ p.id }}">{{ p.name }} ({{ p.client.name if p.client else 'No Client' }})</option>
               {% endfor %}
             </select>
-            
+
             <!-- Total Hours Display -->
             <div class="calendar-hours-summary">
               <span class="text-muted small">{{ _('Total Hours:') }}</span>
@@ -94,13 +95,13 @@
             </div>
           </div>
         </div>
-        
+
         <div class="p-6 position-relative">
           <!-- Loading Indicator -->
           <div class="calendar-loading" id="calendarLoading">
             <div class="calendar-spinner"></div>
           </div>
-          
+
           <!-- Daily Capacity Bar -->
           <div id="dailyCapacityBar" class="daily-capacity-bar" style="display: none;">
             <div class="capacity-bar-header">
@@ -111,17 +112,17 @@
               <div id="capacityBarFill" class="capacity-bar-fill"></div>
             </div>
           </div>
-          
+
           <!-- Calendar View -->
           <div id="calendarView">
             <div id="calendar"></div>
           </div>
-          
+
           <!-- Agenda View -->
           <div id="agendaView" class="agenda-view">
             <div id="agendaContent"></div>
           </div>
-          
+
           <!-- Legend -->
           <div class="calendar-legend" id="calendarLegend">
             <div class="legend-item">
@@ -153,14 +154,14 @@
             {% endfor %}
           </select>
         </div>
-        
+
         <div class="mb-3">
           <label class="form-label">{{ _('Task') }}</label>
           <select class="form-input" id="createTask">
             <option value="">{{ _('No task') }}</option>
           </select>
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
           <div>
             <label class="form-label">{{ _('Start Date') }} <span class="text-danger">*</span></label>
@@ -171,7 +172,7 @@
             <input type="time" class="form-input user-time-input" id="createStartTime" required>
           </div>
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
           <div>
             <label class="form-label">{{ _('End Date') }} <span class="text-danger">*</span></label>
@@ -182,17 +183,17 @@
             <input type="time" class="form-input user-time-input" id="createEndTime" required>
           </div>
         </div>
-        
+
         <div class="mb-3">
           <label class="form-label">{{ _('Notes') }}</label>
           <textarea class="form-input" id="createNotes" rows="3"></textarea>
         </div>
-        
+
         <div class="mb-3">
           <label class="form-label">{{ _('Tags') }}</label>
           <input type="text" class="form-input" id="createTags" placeholder="{{ _('Comma-separated tags') }}">
         </div>
-        
+
         <div class="form-check">
           <input class="form-check-input" type="checkbox" id="createBillable" checked>
           <label class="form-check-label" for="createBillable">
@@ -292,7 +293,7 @@
             <span>{{ _('Navigate Days') }}</span>
           </div>
         </div>
-        
+
         <div class="shortcut-section">
           <h5 class="text-muted mb-3">{{ _('Views') }}</h5>
           <div class="shortcut-item">
@@ -312,7 +313,7 @@
             <span>{{ _('Agenda View') }}</span>
           </div>
         </div>
-        
+
         <div class="shortcut-section">
           <h5 class="text-muted mb-3">{{ _('Actions') }}</h5>
           <div class="shortcut-item">
@@ -332,7 +333,7 @@
             <span>{{ _('Close Modal') }}</span>
           </div>
         </div>
-        
+
         <div class="shortcut-section">
           <h5 class="text-muted mb-3">{{ _('Help') }}</h5>
           <div class="shortcut-item">
@@ -351,7 +352,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='vendor/fullcalendar/index.global.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/temporal-polyfill/global.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/fullcalendar/global.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
   const calendarEl = document.getElementById('calendar');
@@ -361,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const filterTags = document.getElementById('filterTags');
   const agendaView = document.getElementById('agendaView');
   const calendarView = document.getElementById('calendarView');
-  
+
   let currentView = 'calendar';
   let currentFilters = {
     project_id: null,
@@ -407,36 +409,36 @@ document.addEventListener('DOMContentLoaded', function() {
       minute: '2-digit',
       hour12: !!(window.userPrefs && window.userPrefs.timeFormat === '12h')
     },
-    
+
     events: async (info, success, failure) => {
       try {
         showLoading(true);
         let url = `/api/calendar/events?start=${encodeURIComponent(info.startStr)}&end=${encodeURIComponent(info.endStr)}`;
-        
+
         if (currentFilters.project_id) url += `&project_id=${currentFilters.project_id}`;
         if (currentFilters.task_id) url += `&task_id=${currentFilters.task_id}`;
         if (currentFilters.tags) url += `&tags=${encodeURIComponent(currentFilters.tags)}`;
-        
+
         const res = await fetch(url);
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Failed');
-        
+
         let events = json.events || [];
-        
+
         // Apply billable-only filter (client-side)
         if (currentFilters.billable_only) {
           events = events.filter(e => e.extendedProps.billable === true);
         }
-        
+
         // Update total hours display
         updateTotalHours(events);
-        
+
         // Update capacity bar for current view
         updateCapacityDisplay(events, info);
-        
+
         // Update legend with actual projects
         updateLegend(events);
-        
+
         success(events);
       } catch(e) {
         console.error('Calendar events error:', e);
@@ -449,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resetAllButtonStates();
       }
     },
-    
+
     select: function(selection) {
       // Open create modal with pre-filled dates
       const pid = projectSelect.value;
@@ -457,65 +459,65 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast('{{ _("Please select a project for new entries") }}', 'warning');
         return;
       }
-      
+
       document.getElementById('createProject').value = pid;
       loadTasksForProject(pid, 'create');
-      
+
       const startDate = new Date(selection.start);
       const endDate = new Date(selection.end);
-      
+
       document.getElementById('createStartDate').value = startDate.toISOString().split('T')[0];
       document.getElementById('createStartTime').value = startDate.toTimeString().slice(0, 5);
       document.getElementById('createEndDate').value = endDate.toISOString().split('T')[0];
       document.getElementById('createEndTime').value = endDate.toTimeString().slice(0, 5);
-      
+
       openModal('eventCreateModal');
       calendar.unselect();
     },
-    
+
     eventClick: function(info) {
       showEventDetails(info.event, info.jsEvent);
     },
-    
+
     eventDrop: async function(info) {
       await updateEventTime(info.event);
       // Clear any loading states immediately after drag
       resetAllButtonStates();
     },
-    
+
     eventResize: async function(info) {
       await updateEventTime(info.event);
       // Clear any loading states immediately after resize
       resetAllButtonStates();
     }
   });
-  
+
   calendar.render();
-  
+
   // Clear any stuck loading states on initialization
   setTimeout(() => {
     showLoading(false);
     // Reset ALL buttons that might be stuck in loading state
     resetAllButtonStates();
   }, 100);
-  
+
   // Function to reset all button states
   function resetAllButtonStates() {
     const buttons = document.querySelectorAll('.btn');
     buttons.forEach(btn => {
       // Remove any processing classes
       btn.classList.remove('processing', 'loading', 'disabled');
-      
+
       // Restore original text if it was saved (textContent avoids XSS via attribute)
       const originalText = btn.getAttribute('data-original-text');
       if (originalText) {
         btn.textContent = originalText;
         btn.removeAttribute('data-original-text');
       }
-      
+
       // Re-enable button if it was disabled
       btn.disabled = false;
-      
+
       // Remove any spinner icons
       const spinner = btn.querySelector('.fa-spinner, .fa-spin');
       if (spinner) {
@@ -550,20 +552,20 @@ document.addEventListener('DOMContentLoaded', function() {
       showToast('{{ _("Please select a project first") }}', 'warning');
       return;
     }
-    
+
     // Set default times to now and 1 hour from now
     const now = new Date();
     const later = new Date(now.getTime() + 60 * 60 * 1000);
-    
+
     document.getElementById('createProject').value = pid;
     loadTasksForProject(pid, 'create');
     document.getElementById('createStartDate').value = now.toISOString().split('T')[0];
     document.getElementById('createStartTime').value = now.toTimeString().slice(0, 5);
     document.getElementById('createEndDate').value = later.toISOString().split('T')[0];
     document.getElementById('createEndTime').value = later.toTimeString().slice(0, 5);
-    
+
     openModal('eventCreateModal');
-    
+
     // Ensure loading state is cleared
     showLoading(false);
   });
@@ -583,14 +585,14 @@ document.addEventListener('DOMContentLoaded', function() {
     currentFilters.project_id = filterProject.value || null;
     currentFilters.task_id = null; // Reset task filter
     filterTask.value = '';
-    
+
     if (filterProject.value) {
       loadTasksForProject(filterProject.value, 'filter');
     } else {
       filterTask.innerHTML = '<option value="">{{ _("All Tasks") }}</option>';
       filterTask.disabled = true;
     }
-    
+
     calendar.refetchEvents();
   });
 
@@ -613,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Billable Only Filter
   document.getElementById('filterBillableOnly').addEventListener('click', function() {
     currentFilters.billable_only = !currentFilters.billable_only;
-    
+
     if (currentFilters.billable_only) {
       this.classList.remove('btn-outline-success');
       this.classList.add('btn-success');
@@ -622,7 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
       this.classList.remove('btn-success');
       this.classList.add('btn-outline-success');
     }
-    
+
     calendar.refetchEvents();
   });
 
@@ -633,12 +635,12 @@ document.addEventListener('DOMContentLoaded', function() {
     filterTask.disabled = true;
     filterTags.value = '';
     currentFilters = { project_id: null, task_id: null, tags: null, billable_only: false };
-    
+
     // Reset billable button
     const billableBtn = document.getElementById('filterBillableOnly');
     billableBtn.classList.remove('btn-success');
     billableBtn.classList.add('btn-outline-success');
-    
+
     calendar.refetchEvents();
   });
 
@@ -695,19 +697,19 @@ document.addEventListener('DOMContentLoaded', function() {
   async function loadTasksForProject(projectId, prefix) {
     const taskSelect = document.getElementById(prefix + 'Task');
     if (!taskSelect) return;
-    
+
     taskSelect.innerHTML = '<option value="">{{ _("Loading...") }}</option>';
-    
+
     if (!projectId) {
       taskSelect.innerHTML = '<option value="">{{ _("No task") }}</option>';
       taskSelect.disabled = true;
       return;
     }
-    
+
     try {
       const res = await fetch(`/api/projects/${projectId}/tasks`);
       const json = await res.json();
-      
+
       if (res.ok && json.tasks) {
         taskSelect.innerHTML = '<option value="">{{ _("No task") }}</option>';
         json.tasks.forEach(task => {
@@ -738,27 +740,27 @@ document.addEventListener('DOMContentLoaded', function() {
       tags: document.getElementById('createTags').value.trim() || null,
       billable: document.getElementById('createBillable').checked
     };
-    
+
     try {
       const res = await fetch('/api/entries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      
+
       const json = await res.json();
-      
+
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'Create failed');
       }
-      
+
       showToast('{{ _("Entry created successfully") }}', 'success');
       closeModal('eventCreateModal');
       calendar.refetchEvents();
-      
+
       // Reset form
       document.getElementById('eventCreateForm').reset();
-      
+
       // Clear loading states immediately
       resetAllButtonStates();
     } catch(e) {
@@ -778,13 +780,13 @@ document.addEventListener('DOMContentLoaded', function() {
           end_time: event.end.toISOString()
         })
       });
-      
+
       const json = await res.json();
-      
+
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'Update failed');
       }
-      
+
       showToast('{{ _("Entry updated") }}', 'success');
       // Clear loading states immediately
       resetAllButtonStates();
@@ -945,11 +947,11 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const res = await fetch(`/api/entry/${eventId}`, { method: 'DELETE' });
       const json = await res.json();
-      
+
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'Delete failed');
       }
-      
+
       showToast('{{ _("Entry deleted") }}', 'success');
       closeModal('eventDetailModal');
       calendar.refetchEvents();
@@ -966,13 +968,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const view = calendar.view;
     const start = view.activeStart.toISOString();
     const end = view.activeEnd.toISOString();
-    
+
     let url = `/api/calendar/export?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&format=${format}`;
-    
+
     if (currentFilters.project_id) {
       url += `&project_id=${currentFilters.project_id}`;
     }
-    
+
     window.location.href = url;
     showToast('{{ _("Export started") }}', 'info');
   }
@@ -981,14 +983,14 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const res = await fetch('/api/recurring-blocks');
       const json = await res.json();
-      
+
       const listEl = document.getElementById('recurringList');
-      
+
       if (!json.blocks || json.blocks.length === 0) {
         listEl.innerHTML = '<p class="text-muted text-center py-4">{{ _("No recurring blocks yet") }}</p>';
         return;
       }
-      
+
       listEl.innerHTML = json.blocks.map(block => {
         const blockId = Number(block.id);
         if (!Number.isFinite(blockId)) return '';
@@ -1026,25 +1028,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
   async function renderAgendaView() {
     showLoading(true);
-    
+
     try {
       const view = calendar.view;
       const start = view.activeStart.toISOString();
       const end = view.activeEnd.toISOString();
-      
+
       let url = `/api/calendar/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
-      
+
       if (currentFilters.project_id) url += `&project_id=${currentFilters.project_id}`;
       if (currentFilters.task_id) url += `&task_id=${currentFilters.task_id}`;
       if (currentFilters.tags) url += `&tags=${encodeURIComponent(currentFilters.tags)}`;
-      
+
       const res = await fetch(url);
       const json = await res.json();
-      
+
       if (!res.ok) throw new Error(json.error || 'Failed');
-      
+
       const events = json.events || [];
-      
+
       // Group events by date
       const grouped = {};
       events.forEach(event => {
@@ -1054,18 +1056,18 @@ document.addEventListener('DOMContentLoaded', function() {
           month: 'long',
           day: 'numeric'
         });
-        
+
         if (!grouped[date]) grouped[date] = [];
         grouped[date].push(event);
       });
-      
+
       const content = document.getElementById('agendaContent');
-      
+
       if (Object.keys(grouped).length === 0) {
         content.innerHTML = '<p class="text-muted text-center py-4">{{ _("No events in this period") }}</p>';
         return;
       }
-      
+
       content.innerHTML = Object.entries(grouped).map(([date, dateEvents]) => `
         <div class="agenda-date-group">
           <div class="agenda-date-header">${escapeHtml(date)}</div>
@@ -1081,7 +1083,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const durationHours = event.extendedProps && event.extendedProps.duration_hours != null
               ? Number(event.extendedProps.duration_hours).toFixed(2)
               : '';
-            
+
             return `
               <div class="agenda-event" style="border-left-color: ${safeCssColor(event.backgroundColor)};" onclick="showAgendaEvent(${eventId})">
                 <div class="agenda-event-time">${escapeHtml(start)} - ${escapeHtml(end)}</div>
@@ -1109,9 +1111,9 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const res = await fetch(`/api/entry/${eventId}`);
       const json = await res.json();
-      
+
       if (!res.ok) throw new Error('Failed to load event');
-      
+
       // Create a FullCalendar event-like object for consistency
       const event = {
         id: json.id,
@@ -1127,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function() {
           source: json.source
         }
       };
-      
+
       showEventDetails(event);
     } catch(e) {
       showToast('{{ _("Failed to load event details") }}', 'danger');
@@ -1150,40 +1152,40 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     );
     if (!confirmed) return;
-    
+
     try {
       const res = await fetch(`/api/recurring-blocks/${blockId}`, { method: 'DELETE' });
       const json = await res.json();
-      
+
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'Delete failed');
       }
-      
+
       showToast('{{ _("Recurring block deleted") }}', 'success');
       await loadRecurringBlocks();
     } catch(e) {
       showToast(e.message || '{{ _("Failed to delete recurring block") }}', 'danger');
     }
   };
-  
+
   // Quick Win: Duplicate Event
   async function duplicateEvent(event) {
     try {
       const props = event.extendedProps;
       const duration = (new Date(event.end) - new Date(event.start)) / (1000 * 60 * 60); // hours
-      
+
       // Ask for new date/time
       const newStartStr = prompt('{{ _("Enter new start time (YYYY-MM-DD HH:MM):") }}', '');
       if (!newStartStr) return;
-      
+
       const newStart = new Date(newStartStr);
       if (isNaN(newStart.getTime())) {
         showToast('{{ _("Invalid date format") }}', 'danger');
         return;
       }
-      
+
       const newEnd = new Date(newStart.getTime() + (duration * 60 * 60 * 1000));
-      
+
       const data = {
         project_id: props.project_id,
         task_id: props.task_id,
@@ -1193,19 +1195,19 @@ document.addEventListener('DOMContentLoaded', function() {
         tags: props.tags,
         billable: props.billable
       };
-      
+
       const res = await fetch('/api/entries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
-      
+
       const json = await res.json();
-      
+
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'Duplication failed');
       }
-      
+
       showToast('{{ _("Entry duplicated successfully") }}', 'success');
       closeModal('eventDetailModal');
       calendar.refetchEvents();
@@ -1217,31 +1219,31 @@ document.addEventListener('DOMContentLoaded', function() {
       resetAllButtonStates();
     }
   }
-  
+
   // Quick Win: Update Total Hours Display
   function updateTotalHours(events) {
     const totalHours = events.reduce((sum, event) => {
       return sum + (event.extendedProps.duration_hours || 0);
     }, 0);
-    
+
     const displayEl = document.getElementById('totalHoursDisplay');
     if (displayEl) {
       displayEl.textContent = `${totalHours.toFixed(1)}h`;
     }
   }
-  
+
   // Quick Win: Update Legend with Actual Projects
   function updateLegend(events) {
     const legendEl = document.getElementById('calendarLegend');
     if (!legendEl) return;
-    
+
     // Get unique projects from events
     const projectMap = new Map();
     events.forEach(event => {
       const projectId = event.extendedProps.project_id;
       const projectName = event.extendedProps.project_name;
       const color = event.backgroundColor;
-      
+
       if (projectId && projectName && color) {
         projectMap.set(projectId, {
           name: projectName,
@@ -1249,7 +1251,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       }
     });
-    
+
     // Create legend items
     const legendItems = Array.from(projectMap.values())
       .sort((a, b) => a.name.localeCompare(b.name)) // Sort alphabetically
@@ -1260,7 +1262,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <span>${escapeHtml(project.name)}</span>
         </div>
       `).join('');
-    
+
     // Update legend content
     const infoItem = `
       <div class="legend-item">
@@ -1268,9 +1270,9 @@ document.addEventListener('DOMContentLoaded', function() {
         <span class="text-muted small">{{ _('Colors assigned by project') }}</span>
       </div>
     `;
-    
+
     legendEl.innerHTML = legendItems + infoItem;
-    
+
     // Show/hide legend based on whether we have projects
     if (projectMap.size === 0) {
       legendEl.style.display = 'none';
@@ -1278,43 +1280,43 @@ document.addEventListener('DOMContentLoaded', function() {
       legendEl.style.display = 'flex';
     }
   }
-  
+
   // Quick Win: Update Capacity Display
   function updateCapacityDisplay(events, info) {
     const view = calendar.view;
-    
+
     // Only show for day view for now
     if (view.type !== 'timeGridDay') {
       document.getElementById('dailyCapacityBar').style.display = 'none';
       return;
     }
-    
+
     // Calculate hours for the visible day
     const dayStart = new Date(view.currentStart);
     const dayEnd = new Date(view.currentEnd);
-    
+
     const dayEvents = events.filter(e => {
       const eventStart = new Date(e.start);
       return eventStart >= dayStart && eventStart < dayEnd;
     });
-    
+
     const dayHours = dayEvents.reduce((sum, event) => {
       return sum + (event.extendedProps.duration_hours || 0);
     }, 0);
-    
+
     const capacity = 8.0; // Default capacity, can be made dynamic later
     const percentage = Math.min((dayHours / capacity) * 100, 100);
-    
+
     // Update display
     const barEl = document.getElementById('dailyCapacityBar');
     const fillEl = document.getElementById('capacityBarFill');
     const dateLabel = document.getElementById('capacityDateLabel');
     const hoursLabel = document.getElementById('capacityHoursLabel');
-    
+
     if (barEl && fillEl && dateLabel && hoursLabel) {
       barEl.style.display = 'block';
       fillEl.style.width = `${percentage}%`;
-      
+
       // Color based on capacity
       if (percentage < 90) {
         fillEl.className = 'capacity-bar-fill capacity-ok';
@@ -1323,18 +1325,18 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         fillEl.className = 'capacity-bar-fill capacity-over';
       }
-      
+
       dateLabel.textContent = dayStart.toLocaleDateString('{{ current_user.preferred_language or "en" }}', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric'
       });
-      
+
       hoursLabel.textContent = `${dayHours.toFixed(1)}h / ${capacity.toFixed(0)}h (${percentage.toFixed(0)}%)`;
     }
   }
-  
+
   // Quick Win: Keyboard Shortcuts
   document.addEventListener('keydown', function(e) {
     // Don't trigger shortcuts when typing in input fields
@@ -1348,34 +1350,34 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       return;
     }
-    
+
     const key = e.key.toLowerCase();
-    
+
     switch(key) {
       // Navigation
       case 't':
         calendar.today();
         showToast('{{ _("Jumped to today") }}', 'info');
         break;
-        
+
       case 'n':
         calendar.next();
         break;
-        
+
       case 'p':
         calendar.prev();
         break;
-        
+
       case 'arrowleft':
         calendar.prev();
         e.preventDefault();
         break;
-        
+
       case 'arrowright':
         calendar.next();
         e.preventDefault();
         break;
-      
+
       // Views
       case 'd':
         calendar.changeView('timeGridDay', calendar.getDate());
@@ -1384,7 +1386,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('weekBtn').classList.remove('active');
         document.getElementById('monthBtn').classList.remove('active');
         break;
-        
+
       case 'w':
         calendar.changeView('timeGridWeek', calendar.getDate());
         setActiveView('calendar');
@@ -1392,7 +1394,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('dayBtn').classList.remove('active');
         document.getElementById('monthBtn').classList.remove('active');
         break;
-        
+
       case 'm':
         calendar.changeView('dayGridMonth', calendar.getDate());
         setActiveView('calendar');
@@ -1400,12 +1402,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('dayBtn').classList.remove('active');
         document.getElementById('weekBtn').classList.remove('active');
         break;
-        
+
       case 'a':
         setActiveView('agenda');
         renderAgendaView();
         break;
-      
+
       // Actions
       case 'c':
         if (e.shiftKey) {
@@ -1416,17 +1418,17 @@ document.addEventListener('DOMContentLoaded', function() {
           document.getElementById('newEventBtn').click();
         }
         break;
-        
+
       case 'f':
         // Focus filter input
         document.getElementById('filterProject').focus();
         break;
-        
+
       case '?':
         // Show keyboard shortcuts help
         openModal('keyboardShortcutsModal');
         break;
-        
+
       case 'escape':
         // Close active modal
         const activeModal = document.querySelector('.event-modal.show');
@@ -1436,12 +1438,12 @@ document.addEventListener('DOMContentLoaded', function() {
         break;
     }
   });
-  
+
   // Show toast message on page load to inform about shortcuts
   setTimeout(() => {
     showToast('{{ _("💡 Press ? to see keyboard shortcuts") }}', 'info');
   }, 1000);
-  
+
   // Global function to reset all button states (can be called from console if needed)
   window.resetCalendarButtons = resetAllButtonStates;
 });

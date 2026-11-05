@@ -70,12 +70,12 @@ class EstimateActualsService:
             task_estimated_sum = sum(r["estimated_hours"] or 0 for r in project_tasks)
             task_actual_sum = sum(r["actual_hours"] for r in project_tasks)
             project_estimated = float(project.estimated_hours) if project.estimated_hours is not None else None
-            effective_estimate = project_estimated if project_estimated is not None else (
-                round(task_estimated_sum, 2) if task_estimated_sum else None
+            effective_estimate = (
+                project_estimated
+                if project_estimated is not None
+                else (round(task_estimated_sum, 2) if task_estimated_sum else None)
             )
-            variance = (
-                round(task_actual_sum - effective_estimate, 2) if effective_estimate is not None else None
-            )
+            variance = round(task_actual_sum - effective_estimate, 2) if effective_estimate is not None else None
             project_rows.append(
                 {
                     "project_id": project.id,

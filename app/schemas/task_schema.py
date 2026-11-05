@@ -36,9 +36,9 @@ class TaskCreateSchema(Schema):
     name = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     description = fields.Str(allow_none=True)
     project_id = fields.Int(required=True)
-    assignee_ids = fields.List(fields.Int(), missing=list)
+    assignee_ids = fields.List(fields.Int(), load_default=list)
     assignee_id = fields.Int(allow_none=True)  # Deprecated singular
-    priority = fields.Str(missing="medium", validate=validate.OneOf(["low", "medium", "high", "urgent"]))
+    priority = fields.Str(load_default="medium", validate=validate.OneOf(["low", "medium", "high", "urgent"]))
     due_date = fields.Date(allow_none=True)
     tags = fields.Str(allow_none=True)
 

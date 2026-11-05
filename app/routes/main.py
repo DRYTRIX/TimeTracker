@@ -20,7 +20,19 @@ from sqlalchemy import or_, text
 from sqlalchemy.orm import joinedload
 
 from app import csrf, db, limiter, track_event, track_page_view
-from app.models import Activity, Client, Invoice, Milestone, Project, Settings, Task, TimeEntry, TimeEntryTemplate, User, WeeklyTimeGoal
+from app.models import (
+    Activity,
+    Client,
+    Invoice,
+    Milestone,
+    Project,
+    Settings,
+    Task,
+    TimeEntry,
+    TimeEntryTemplate,
+    User,
+    WeeklyTimeGoal,
+)
 from app.models.time_entry import local_now
 from app.utils.license_utils import is_license_activated
 from app.utils.posthog_segmentation import update_user_segments_if_needed
@@ -374,9 +386,7 @@ def dashboard():
     overdue_invoices_summary = None
     from app.utils.module_helpers import is_module_enabled
 
-    if is_module_enabled("invoices") and (
-        current_user.is_admin or current_user.has_permission("create_invoices")
-    ):
+    if is_module_enabled("invoices") and (current_user.is_admin or current_user.has_permission("create_invoices")):
         overdue_rows = (
             Invoice.query.filter(
                 Invoice.status.in_(["sent", "overdue", "partially_paid"]),

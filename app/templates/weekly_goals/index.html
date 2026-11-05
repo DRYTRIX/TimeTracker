@@ -88,7 +88,7 @@
                 <p class="text-xl font-bold">{{ current_goal.actual_hours }}h</p>
             </div>
         </div>
-        
+
         <!-- Progress Bar -->
         <div class="mb-4">
             <div class="flex justify-between text-sm mb-2">
@@ -96,7 +96,7 @@
                 <span>{{ current_goal.progress_percentage }}%</span>
             </div>
             <div class="w-full bg-white bg-opacity-30 rounded-full h-4">
-                <div class="bg-white rounded-full h-4 transition-all duration-300" 
+                <div class="bg-white rounded-full h-4 transition-all duration-300"
                      style="width: {{ current_goal.progress_percentage }}%"></div>
             </div>
         </div>
@@ -117,11 +117,11 @@
         </div>
 
         <div class="mt-4 flex space-x-2">
-            <a href="{{ url_for('weekly_goals.view', goal_id=current_goal.id) }}" 
+            <a href="{{ url_for('weekly_goals.view', goal_id=current_goal.id) }}"
                class="bg-white text-blue-600 px-4 py-2 rounded hover:bg-opacity-90 transition">
                 <i class="fas fa-eye mr-2"></i> {{ _('View Details') }}
             </a>
-            <a href="{{ url_for('weekly_goals.edit', goal_id=current_goal.id) }}" 
+            <a href="{{ url_for('weekly_goals.edit', goal_id=current_goal.id) }}"
                class="bg-white bg-opacity-20 text-white px-4 py-2 rounded hover:bg-opacity-30 transition">
                 <i class="fas fa-edit mr-2"></i> {{ _('Edit Goal') }}
             </a>
@@ -141,7 +141,7 @@
                 <p class="text-yellow-700 dark:text-yellow-300 mt-1">
                     {{ _('Create a weekly time goal to start tracking your progress') }}
                 </p>
-                <a href="{{ url_for('weekly_goals.create') }}" 
+                <a href="{{ url_for('weekly_goals.create') }}"
                    class="inline-block mt-3 bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition">
                     <i class="fas fa-plus mr-2"></i> {{ _('Create Goal') }}
                 </a>
@@ -157,7 +157,7 @@
             <i class="fas fa-history mr-2 text-gray-600"></i>
             {{ _('Goal History') }}
         </h2>
-        
+
         <div class="space-y-4">
             {% for goal in goals %}
             <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-lg transition">
@@ -186,12 +186,12 @@
                         </p>
                     </div>
                     <div class="flex space-x-2">
-                        <a href="{{ url_for('weekly_goals.view', goal_id=goal.id) }}" 
+                        <a href="{{ url_for('weekly_goals.view', goal_id=goal.id) }}"
                            class="text-blue-600 hover:text-blue-800 dark:text-blue-400"
                            title="{{ _('View') }}">
                             <i class="fas fa-eye"></i>
                         </a>
-                        <a href="{{ url_for('weekly_goals.edit', goal_id=goal.id) }}" 
+                        <a href="{{ url_for('weekly_goals.edit', goal_id=goal.id) }}"
                            class="text-gray-600 hover:text-gray-800 dark:text-gray-400"
                            title="{{ _('Edit') }}">
                             <i class="fas fa-edit"></i>
@@ -221,4 +221,3 @@
     </div>
     {% endif %}
 {% endblock %}
-

@@ -3,11 +3,11 @@
    window.ttInlineCreate.open('task', { targetSelect, name, projectId }).
    Posts JSON to /api/tasks/create (api.create_task_inline).
 #}
-<div id="createTaskInlineModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+<div id="createTaskInlineModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="createTaskInlineModalTitle">
     <div class="absolute inset-0 bg-black/50" data-close-create-task></div>
     <div class="relative max-w-lg mx-auto mt-10 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-lg shadow-xl">
         <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
-            <h3 class="text-lg font-semibold">{{ _('Create Task') }}</h3>
+            <h3 id="createTaskInlineModalTitle" class="text-lg font-semibold">{{ _('Create Task') }}</h3>
             <button type="button" id="closeCreateTaskInlineModal" class="px-2 py-1 text-sm hover:bg-background-light dark:hover:bg-background-dark rounded" aria-label="{{ _('Close') }}">{{ _('Close') }}</button>
         </div>
         <div class="p-4">

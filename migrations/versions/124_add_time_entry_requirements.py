@@ -6,6 +6,7 @@ Create Date: 2026-02-13
 
 Admin-configurable requirements for task and description when logging time.
 """
+
 from alembic import op
 import sqlalchemy as sa
 

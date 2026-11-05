@@ -90,9 +90,10 @@ The following icon files need to be generated from the SVG logo:
 ## 🎨 Brand Assets Summary
 
 ### Colors
-- Primary: `#4A90E2`
+- Primary: `#4F46E5`
 - Secondary: `#50E3C2`
-- Theme: `#3b82f6`
+- Info: `#3b82f6`
+- Theme accent default: `#4F46E5`
 
 ### Logo Files
 - Main: `app/static/images/timetracker-logo.svg`
@@ -108,8 +109,7 @@ The following icon files need to be generated from the SVG logo:
 ## 🔧 Tools & Scripts
 
 - **Icon Generator:** `scripts/generate-icons.js`
-- **Brand Colors (Web):** `app/static/css/brand-colors.css`
-- **Brand Colors (Desktop):** `desktop/src/renderer/css/brand-colors.css`
+- **Brand tokens:** `app/static/src/input.css` + `tailwind.config.js` (see BRAND_GUIDELINES.md)
 
 ## 📝 Notes
 

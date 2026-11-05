@@ -6,6 +6,7 @@ api_v1 PATCH validation errors, error_handling helpers, backup observability.
 """
 
 import logging
+
 import pytest
 
 pytestmark = [pytest.mark.unit]
@@ -53,9 +54,10 @@ def test_safe_file_remove_with_logger():
 @pytest.mark.api
 def test_api_v1_per_diem_patch_invalid_full_days_returns_400(app, client):
     """PATCH per_diem with invalid full_days returns 400 and validation_error."""
-    from app import db
-    from app.models import User, ApiToken, PerDiem
     from datetime import date, timedelta
+
+    from app import db
+    from app.models import ApiToken, PerDiem, User
 
     with app.app_context():
         user = User(username="pduser", email="pd@test.com", role="user")
@@ -98,7 +100,7 @@ def test_api_v1_per_diem_patch_invalid_full_days_returns_400(app, client):
 def test_team_chat_api_message_invalid_attachment_size_returns_400(app, client):
     """POST /api/chat/channels/<id>/messages with invalid attachment_size returns 400 when module enabled."""
     from app import db
-    from app.models import User, Settings
+    from app.models import Settings, User
     from app.models.team_chat import ChatChannel, ChatChannelMember
 
     with app.app_context():
@@ -189,6 +191,7 @@ def test_backup_get_alembic_revision_returns_none_on_error(app):
     from app.utils.backup import _get_alembic_revision
 
     with app.app_context():
+
         class BadSession:
             def execute(self, *args, **kwargs):
                 raise RuntimeError("test failure")

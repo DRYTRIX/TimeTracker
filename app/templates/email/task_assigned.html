@@ -12,7 +12,7 @@
             padding: 20px;
         }
         .header {
-            background-color: #3b82f6;
+            background-color: #4F46E5;
             color: white;
             padding: 20px;
             text-align: center;
@@ -28,7 +28,7 @@
             background-color: white;
             padding: 15px;
             margin: 15px 0;
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid #4F46E5;
         }
         .task-details table {
             width: 100%;
@@ -70,12 +70,12 @@
     <div class="header">
         <h1>📋 {{ _('Task Assignment') }}</h1>
     </div>
-    
+
     <div class="content">
         <p>Hello {{ user.display_name }},</p>
-        
+
         <p><strong>{{ assigned_by.display_name }}</strong> has assigned you to a task:</p>
-        
+
         <div class="task-details">
             <table>
                 <tr>
@@ -104,14 +104,14 @@
                 </tr>
             </table>
         </div>
-        
+
         {% if task.description %}
         <div class="description">
             <strong>Description:</strong>
             <p>{{ task.description }}</p>
         </div>
         {% endif %}
-        
+
         {% if task_url %}
         <center>
             <a href="{{ task_url }}" class="button">
@@ -120,11 +120,10 @@
         </center>
         {% endif %}
     </div>
-    
+
     <div class="footer">
         <p>TimeTracker - Time Tracking & Project Management</p>
         <p>To manage your notification preferences, visit your user settings.</p>
     </div>
 </body>
 </html>
-

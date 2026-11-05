@@ -24,11 +24,8 @@ from datetime import datetime, timezone
 from typing import Any, Optional, Tuple
 
 from app.utils.cii_invoice import CIIParty, build_cii_invoice_xml
-from app.utils.pdfa3 import (
-    FACTURX_EMBEDDED_FILENAME as _PDFA_FX_NAME,
-    apply_output_intent,
-    apply_pdfa3_metadata,
-)
+from app.utils.pdfa3 import FACTURX_EMBEDDED_FILENAME as _PDFA_FX_NAME
+from app.utils.pdfa3 import apply_output_intent, apply_pdfa3_metadata
 
 # Standard embedded filename per Factur-X specification
 FACTURX_EMBEDDED_FILENAME = "factur-x.xml"
@@ -49,8 +46,8 @@ def _get_seller_party(settings: Any) -> CIIParty:
     country = (getattr(settings, "company_country", None) or "").strip() or None
     if not country:
         country = (
-            (getattr(settings, "peppol_sender_country", "") or os.getenv("PEPPOL_SENDER_COUNTRY") or "").strip() or None
-        )
+            getattr(settings, "peppol_sender_country", "") or os.getenv("PEPPOL_SENDER_COUNTRY") or ""
+        ).strip() or None
     address_line = street or (getattr(settings, "company_address", None) or "").strip() or None
 
     return CIIParty(
@@ -110,9 +107,11 @@ def _get_buyer_party(invoice: Any) -> CIIParty:
         street = (getattr(client, "street", None) or "").strip() or None
         city = (getattr(client, "city", None) or "").strip() or None
         postcode = (getattr(client, "postcode", None) or "").strip() or None
-        address_line = street or (
-            getattr(client, "address", None) or getattr(invoice, "client_address", None) or ""
-        ).strip() or None
+        address_line = (
+            street
+            or (getattr(client, "address", None) or getattr(invoice, "client_address", None) or "").strip()
+            or None
+        )
         email = (getattr(client, "email", None) or getattr(invoice, "client_email", None) or "").strip() or None
         phone = (getattr(client, "phone", None) or "").strip() or None
     else:

@@ -3,12 +3,13 @@ Test suite for calendar routes and endpoints.
 Tests calendar views, event CRUD operations, and API endpoints.
 """
 
-import pytest
 import json
 from datetime import date, datetime, timedelta
-from app.models import CalendarEvent, Task
-from app import db
 
+import pytest
+
+from app import db
+from app.models import CalendarEvent, Task
 
 # ============================================================================
 # Calendar View Routes
@@ -68,7 +69,11 @@ def test_calendar_default_view_no_param_uses_month_or_session(authenticated_clie
     assert response.status_code == 200, "Calendar view should be available for authenticated users"
     # Template injects viewType: 'month' or last session value
     assert b"viewType:" in response.data
-    assert b"viewType: 'day'" in response.data or b"viewType: 'week'" in response.data or b"viewType: 'month'" in response.data
+    assert (
+        b"viewType: 'day'" in response.data
+        or b"viewType: 'week'" in response.data
+        or b"viewType: 'month'" in response.data
+    )
 
 
 @pytest.mark.routes

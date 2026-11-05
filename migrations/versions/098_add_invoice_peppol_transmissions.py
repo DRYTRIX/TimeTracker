@@ -8,7 +8,6 @@ Create Date: 2026-01-03
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
 revision = "098_add_invoice_peppol_transmissions"
 down_revision = "097_add_stock_lots_for_devaluation"
@@ -19,15 +18,16 @@ depends_on = None
 def upgrade():
     """Add invoice_peppol_transmissions table"""
     from sqlalchemy import inspect
+
     bind = op.get_bind()
     inspector = inspect(bind)
-    
+
     existing_tables = inspector.get_table_names()
-    
-    if 'invoice_peppol_transmissions' in existing_tables:
+
+    if "invoice_peppol_transmissions" in existing_tables:
         print("✓ Table invoice_peppol_transmissions already exists")
         return
-    
+
     try:
         op.create_table(
             "invoice_peppol_transmissions",
@@ -69,7 +69,7 @@ def upgrade():
         print("✓ Created invoice_peppol_transmissions table")
     except Exception as e:
         error_msg = str(e)
-        if 'already exists' in error_msg.lower() or 'duplicate' in error_msg.lower():
+        if "already exists" in error_msg.lower() or "duplicate" in error_msg.lower():
             print("✓ Table invoice_peppol_transmissions already exists (detected via error)")
         else:
             print(f"✗ Error creating invoice_peppol_transmissions table: {e}")
@@ -79,15 +79,16 @@ def upgrade():
 def downgrade():
     """Remove invoice_peppol_transmissions table"""
     from sqlalchemy import inspect
+
     bind = op.get_bind()
     inspector = inspect(bind)
-    
+
     existing_tables = inspector.get_table_names()
-    
-    if 'invoice_peppol_transmissions' not in existing_tables:
+
+    if "invoice_peppol_transmissions" not in existing_tables:
         print("⊘ Table invoice_peppol_transmissions does not exist, skipping")
         return
-    
+
     try:
         op.drop_index("ix_invoice_peppol_transmissions_created_at", table_name="invoice_peppol_transmissions")
         op.drop_index("ix_invoice_peppol_transmissions_status", table_name="invoice_peppol_transmissions")
@@ -96,8 +97,7 @@ def downgrade():
         print("✓ Dropped invoice_peppol_transmissions table")
     except Exception as e:
         error_msg = str(e)
-        if 'does not exist' in error_msg.lower() or 'no such table' in error_msg.lower():
+        if "does not exist" in error_msg.lower() or "no such table" in error_msg.lower():
             print("⊘ Table invoice_peppol_transmissions does not exist (detected via error)")
         else:
             print(f"⚠ Warning: Could not drop invoice_peppol_transmissions table: {e}")
-

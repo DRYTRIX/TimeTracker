@@ -273,7 +273,7 @@ All client-facing features have been fully implemented with models, services, ro
 
 ## 🎉 Conclusion
 
-**ALL CLIENT FEATURES ARE COMPLETE!** 
+**ALL CLIENT FEATURES ARE COMPLETE!**
 
 The client portal now provides a comprehensive, professional experience with:
 - Time entry approval workflow

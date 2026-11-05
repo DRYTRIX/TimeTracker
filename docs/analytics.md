@@ -56,4 +56,3 @@ Per-user **report generation counts** for the support modal are stored in `users
 - If no telemetry arrives, verify `GRAFANA_OTLP_ENDPOINT` and `GRAFANA_OTLP_TOKEN`
 - If detailed events are missing, confirm detailed analytics is enabled in admin settings
 - If only base events appear, consent is likely disabled (expected behavior)
-

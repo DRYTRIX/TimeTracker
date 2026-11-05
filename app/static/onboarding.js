@@ -28,29 +28,67 @@ class OnboardingManager {
         }
         this.active = true;
 
-        // Disable tour on mobile devices (width < 768px)
+        // Mobile: show compact checklist sheet instead of desktop spotlight tour
         const isMobile = window.innerWidth <= 768;
         if (isMobile) {
-            // Mark as completed to prevent future attempts
-            localStorage.setItem(this.storageKey, 'true');
+            this.showMobileChecklist();
             return;
         }
 
         this.steps = steps;
         this.createOverlay();
         this.createTooltip();
-        
+
         // Add resize handler to handle window resizing during tour
         this.resizeHandler = () => {
-            const isMobile = window.innerWidth <= 768;
-            if (isMobile) {
-                // If window is resized to mobile size, cancel the tour
-                this.complete();
+            if (window.innerWidth <= 768) {
+                this.complete(true);
+                this.showMobileChecklist();
             }
         };
         window.addEventListener('resize', this.resizeHandler);
-        
+
         this.showStep(0);
+    }
+
+    /**
+     * Compact first-run checklist for mobile (does not auto-complete).
+     */
+    showMobileChecklist() {
+        if (document.getElementById('tt-onboarding-sheet')) return;
+        const sheet = document.createElement('div');
+        sheet.id = 'tt-onboarding-sheet';
+        sheet.setAttribute('role', 'dialog');
+        sheet.setAttribute('aria-modal', 'true');
+        sheet.setAttribute('aria-labelledby', 'tt-onboarding-sheet-title');
+        sheet.innerHTML = `
+            <div class="fixed inset-0 z-[9998] bg-black/40" data-dismiss></div>
+            <div class="fixed inset-x-0 bottom-0 z-[9999] rounded-t-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4 pb-safe shadow-2xl">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                        <h2 id="tt-onboarding-sheet-title" class="text-base font-semibold text-text-light dark:text-text-dark">Get started</h2>
+                        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-0.5">Three steps to your first tracked hour.</p>
+                    </div>
+                    <button type="button" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark" data-dismiss aria-label="Dismiss">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <ol class="space-y-2 text-sm">
+                    <li><a class="flex items-center gap-3 min-h-[44px] px-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark" href="/clients/create"><span class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">1</span><span>Create a client</span></a></li>
+                    <li><a class="flex items-center gap-3 min-h-[44px] px-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark" href="/projects/create"><span class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">2</span><span>Create a project</span></a></li>
+                    <li><a class="flex items-center gap-3 min-h-[44px] px-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark" href="/"><span class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">3</span><span>Start the timer</span></a></li>
+                </ol>
+                <button type="button" class="mt-3 w-full btn btn-secondary" data-complete>Got it</button>
+            </div>`;
+        document.body.appendChild(sheet);
+        const dismiss = (complete) => {
+            sheet.remove();
+            this.active = false;
+            if (complete) localStorage.setItem(this.storageKey, 'true');
+        };
+        sheet.querySelectorAll('[data-dismiss]').forEach((el) => el.addEventListener('click', () => dismiss(false)));
+        sheet.querySelector('[data-complete]')?.addEventListener('click', () => dismiss(true));
+        sheet.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => dismiss(false)));
     }
 
     /**
@@ -70,14 +108,14 @@ class OnboardingManager {
                     animation: fadeIn 0.3s ease-out;
                     pointer-events: none;
                 }
-                
+
                 .onboarding-overlay * {
                     pointer-events: none;
                 }
-                
+
                 .onboarding-highlight {
                     position: fixed;
-                    border: 4px solid #3b82f6;
+                    border: 4px solid #4F46E5;
                     border-radius: 8px;
                     /* No !important: skip() must be able to lower these layers
                        below the skip-confirmation dialog via inline styles. */
@@ -85,13 +123,13 @@ class OnboardingManager {
                     transition: all 0.3s ease-out;
                     pointer-events: none;
                     background: transparent;
-                    box-shadow: 
+                    box-shadow:
                         0 0 0 0 rgba(59, 130, 246, 0),
                         0 0 20px rgba(59, 130, 246, 0.6),
                         0 0 40px rgba(59, 130, 246, 0.4),
                         inset 0 0 20px rgba(59, 130, 246, 0.2);
                 }
-                
+
                 .onboarding-highlight::before {
                     content: '';
                     position: fixed;
@@ -102,7 +140,7 @@ class OnboardingManager {
                     mask: radial-gradient(ellipse at center, transparent 0%, transparent 100%);
                     -webkit-mask: radial-gradient(ellipse at center, transparent 0%, transparent 100%);
                 }
-                
+
                 .onboarding-overlay {
                     position: fixed;
                     inset: 0;
@@ -112,7 +150,7 @@ class OnboardingManager {
                     animation: fadeIn 0.3s ease-out;
                     pointer-events: none;
                 }
-                
+
                 .onboarding-mask {
                     position: fixed;
                     inset: 0;
@@ -121,7 +159,7 @@ class OnboardingManager {
                     pointer-events: none;
                     transition: all 0.3s ease-out;
                 }
-                
+
                 .onboarding-tooltip {
                     position: fixed;
                     background: white;
@@ -137,7 +175,7 @@ class OnboardingManager {
                     transition: opacity 0.2s ease-out;
                     pointer-events: auto;
                 }
-                
+
                 /* Mobile responsive styles (for future use if tour is enabled on mobile) */
                 @media (max-width: 768px) {
                     .onboarding-tooltip {
@@ -151,67 +189,67 @@ class OnboardingManager {
                         bottom: 20px !important;
                         transform: translateY(0) !important;
                     }
-                    
+
                     .onboarding-tooltip-header {
                         margin-bottom: 10px;
                     }
-                    
+
                     .onboarding-tooltip-title {
                         font-size: 16px;
                     }
-                    
+
                     .onboarding-tooltip-body {
                         font-size: 14px;
                         margin-bottom: 16px;
                     }
-                    
+
                     .onboarding-tooltip-footer {
                         flex-direction: column;
                         gap: 12px;
                     }
-                    
+
                     .onboarding-tooltip-buttons {
                         width: 100%;
                         flex-direction: column;
                     }
-                    
+
                     .onboarding-btn {
                         width: 100%;
                         padding: 12px 16px;
                     }
-                    
+
                     .onboarding-tooltip-progress {
                         text-align: center;
                         width: 100%;
                     }
                 }
-                
+
                 .onboarding-tooltip * {
                     pointer-events: auto;
                 }
-                
+
                 .dark .onboarding-tooltip {
                     background: #2d3748;
                     color: #e2e8f0;
                 }
-                
+
                 .onboarding-tooltip-header {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                     margin-bottom: 12px;
                 }
-                
+
                 .onboarding-tooltip-title {
                     font-size: 18px;
                     font-weight: 600;
                     color: #1e293b;
                 }
-                
+
                 .dark .onboarding-tooltip-title {
                     color: #e2e8f0;
                 }
-                
+
                 .onboarding-tooltip-close {
                     background: none;
                     border: none;
@@ -225,21 +263,21 @@ class OnboardingManager {
                     align-items: center;
                     justify-content: center;
                 }
-                
+
                 .onboarding-tooltip-close:hover {
                     color: #ef4444;
                 }
-                
+
                 .onboarding-tooltip-body {
                     color: #64748b;
                     line-height: 1.6;
                     margin-bottom: 20px;
                 }
-                
+
                 .dark .onboarding-tooltip-body {
                     color: #94a3b8;
                 }
-                
+
                 .onboarding-tooltip-body kbd {
                     display: inline-block;
                     padding: 2px 6px;
@@ -251,38 +289,38 @@ class OnboardingManager {
                     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
                     color: #334155;
                 }
-                
+
                 .dark .onboarding-tooltip-body kbd {
                     background: #1e293b;
                     border-color: #334155;
                     color: #e2e8f0;
                 }
-                
+
                 .onboarding-tooltip-body strong {
                     color: #1e293b;
                     font-weight: 600;
                 }
-                
+
                 .dark .onboarding-tooltip-body strong {
                     color: #e2e8f0;
                 }
-                
+
                 .onboarding-tooltip-footer {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                 }
-                
+
                 .onboarding-tooltip-progress {
                     font-size: 14px;
                     color: #9ca3af;
                 }
-                
+
                 .onboarding-tooltip-buttons {
                     display: flex;
                     gap: 8px;
                 }
-                
+
                 .onboarding-btn {
                     padding: 8px 16px;
                     border-radius: 6px;
@@ -292,39 +330,39 @@ class OnboardingManager {
                     border: none;
                     font-size: 14px;
                 }
-                
+
                 .onboarding-btn-skip {
                     background: #f3f4f6;
                     color: #6b7280;
                 }
-                
+
                 .dark .onboarding-btn-skip {
                     background: #374151;
                     color: #9ca3af;
                 }
-                
+
                 .onboarding-btn-skip:hover {
                     background: #e5e7eb;
                 }
-                
+
                 .dark .onboarding-btn-skip:hover {
                     background: #4b5563;
                 }
-                
+
                 .onboarding-btn-primary {
-                    background: #3b82f6;
+                    background: #4F46E5;
                     color: white;
                 }
-                
+
                 .onboarding-btn-primary:hover {
                     background: #2563eb;
                 }
-                
+
                 @keyframes fadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                
+
                 @keyframes slideInUp {
                     from {
                         opacity: 0;
@@ -363,10 +401,10 @@ class OnboardingManager {
 
         // Find target element with better selector handling
         let target = null;
-        
+
         // Try to find the element
         const elements = document.querySelectorAll(step.target);
-        
+
         if (elements.length === 0) {
             console.warn(`Onboarding target not found: ${step.target}`);
             // Try once more after a short delay in case element is still loading
@@ -382,41 +420,41 @@ class OnboardingManager {
             }, 200);
             return;
         }
-        
+
         // If multiple elements found, prefer visible ones or first one
         for (const el of elements) {
             const rect = el.getBoundingClientRect();
             const style = window.getComputedStyle(el);
             // Check if element is visible (not hidden by display:none or visibility:hidden)
-            if (rect.width > 0 && rect.height > 0 && 
-                style.display !== 'none' && 
+            if (rect.width > 0 && rect.height > 0 &&
+                style.display !== 'none' &&
                 style.visibility !== 'hidden' &&
                 style.opacity !== '0') {
                 target = el;
                 break;
             }
         }
-        
+
         // If no visible element found, use first one anyway
         if (!target && elements.length > 0) {
             target = elements[0];
-            
+
             // Try to make it visible if it's in a hidden dropdown
             const dropdown = target.closest('[id*="Dropdown"]');
             if (dropdown && dropdown.classList.contains('hidden')) {
                 dropdown.classList.remove('hidden');
             }
         }
-        
+
         if (!target) {
             console.warn(`Onboarding target not accessible: ${step.target}`);
             this.showStep(index + 1);
             return;
         }
-        
+
         this.displayStep(target, step, index);
     }
-    
+
     /**
      * Display a step for a given target element
      */
@@ -426,7 +464,7 @@ class OnboardingManager {
         if (dropdown && dropdown.classList.contains('hidden')) {
             dropdown.classList.remove('hidden');
         }
-        
+
         // Scroll target into view first
         target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 
@@ -441,16 +479,16 @@ class OnboardingManager {
                     // Get fresh element position after scroll
                     const finalRect = target.getBoundingClientRect();
                     const style = window.getComputedStyle(target);
-                    
+
                     // Validate that element is actually visible
                     if (finalRect.width === 0 || finalRect.height === 0) {
                         console.warn('Target element has zero dimensions, but continuing anyway');
                         // Don't skip - just proceed with positioning
                     }
-                    
+
                     // Highlight target after content is rendered
                     this.highlightElement(target);
-                    
+
                     // Position tooltip
                     this.positionTooltip(target, step);
                 });
@@ -464,13 +502,13 @@ class OnboardingManager {
     highlightElement(element) {
         let highlight = document.querySelector('.onboarding-highlight');
         let mask = document.querySelector('.onboarding-mask');
-        
+
         if (!highlight) {
             highlight = document.createElement('div');
             highlight.className = 'onboarding-highlight';
             document.body.appendChild(highlight);
         }
-        
+
         if (!mask) {
             mask = document.createElement('div');
             mask.className = 'onboarding-mask';
@@ -487,9 +525,9 @@ class OnboardingManager {
 
         // Use getBoundingClientRect which already accounts for scroll
         const rect = element.getBoundingClientRect();
-        
+
         const padding = 10;
-        
+
         // Calculate highlight position
         const highlightTop = Math.round(rect.top - padding);
         const highlightLeft = Math.round(rect.left - padding);
@@ -505,7 +543,7 @@ class OnboardingManager {
         highlight.style.display = 'block';
         highlight.style.zIndex = '10000';
         highlight.style.visibility = 'visible';
-        
+
         // Create a mask that reveals the highlighted area
         // Use CSS radial gradient for the cutout
         const centerX = rect.left + rect.width / 2;
@@ -513,7 +551,7 @@ class OnboardingManager {
         // Make cutout larger than the highlight for better visibility
         const ellipseWidth = Math.max(highlightWidth * 2, 200);
         const ellipseHeight = Math.max(highlightHeight * 2, 200);
-        
+
         // Apply mask to overlay mask element using CSS radial gradient
         // In CSS mask-image: white/opaque = visible (shows), black/transparent = hidden (hides)
         // We want: hide overlay at center (reveal element), show overlay at edges (cover everything else)
@@ -528,7 +566,7 @@ class OnboardingManager {
             overlayMask.style.maskPosition = '0 0';
             overlayMask.style.maskRepeat = 'no-repeat';
         }
-        
+
         // Also apply mask to the base overlay
         const baseOverlay = document.querySelector('.onboarding-overlay');
         if (baseOverlay) {
@@ -549,13 +587,13 @@ class OnboardingManager {
         if (this._skipPending) return;
         // Get element position first - getBoundingClientRect already accounts for scroll
         const rect = element.getBoundingClientRect();
-        
+
         // Validate element is visible
         if (rect.width === 0 || rect.height === 0) {
             console.warn('Cannot position tooltip: element has zero dimensions');
             return;
         }
-        
+
         // Ensure tooltip is positioned off-screen for measurement
         this.tooltip.style.position = 'fixed';
         this.tooltip.style.top = '-9999px';
@@ -564,10 +602,10 @@ class OnboardingManager {
         this.tooltip.style.display = 'block';
         this.tooltip.style.opacity = '0';
         this.tooltip.style.transform = 'scale(0)';
-        
+
         // Force a reflow to ensure tooltip is rendered
         void this.tooltip.offsetWidth;
-        
+
         // Now measure the tooltip
         const tooltipRect = this.tooltip.getBoundingClientRect();
         const position = step.position || 'bottom';
@@ -575,7 +613,7 @@ class OnboardingManager {
         // If tooltip has no dimensions, use default dimensions
         const tooltipWidth = tooltipRect.width > 0 ? tooltipRect.width : 400;
         const tooltipHeight = tooltipRect.height > 0 ? tooltipRect.height : 200;
-        
+
         let top, left;
 
         // Calculate position based on preference
@@ -655,10 +693,10 @@ class OnboardingManager {
      */
     updateTooltip(step, index) {
         const isLast = index === this.steps.length - 1;
-        
+
         // Store reference to manager for event handlers
         const manager = this;
-        
+
         this.tooltip.innerHTML = `
             <div class="onboarding-tooltip-header">
                 <h3 class="onboarding-tooltip-title">${step.title}</h3>
@@ -688,7 +726,7 @@ class OnboardingManager {
                 </div>
             </div>
         `;
-        
+
         // Attach event listeners using event delegation
         this.tooltip.querySelectorAll('[data-action]').forEach(btn => {
             const action = btn.getAttribute('data-action');
@@ -756,7 +794,7 @@ class OnboardingManager {
         if (this.tooltip) {
             this.tooltip.style.zIndex = '1502';
         }
-        
+
         const confirmed = await showConfirm(
             'Are you sure you want to skip the tour? You can restart it later from the Help menu.',
             {
@@ -766,7 +804,7 @@ class OnboardingManager {
                 variant: 'warning'
             }
         );
-        
+
         // Restore original z-index values
         if (mask) {
             if (originalMaskZ) {
@@ -796,7 +834,7 @@ class OnboardingManager {
                 this.tooltip.style.zIndex = '';
             }
         }
-        
+
         if (confirmed) {
             this.complete();
         }
@@ -804,8 +842,9 @@ class OnboardingManager {
 
     /**
      * Complete the tour
+     * @param {boolean} [silent=false] Skip toast when switching to mobile checklist
      */
-    complete() {
+    complete(silent = false) {
         // Remove elements
         if (this.overlay) this.overlay.remove();
         if (this.tooltip) this.tooltip.remove();
@@ -823,7 +862,7 @@ class OnboardingManager {
         localStorage.setItem(this.storageKey, 'true');
 
         // Show success message
-        if (window.toastManager) {
+        if (!silent && window.toastManager) {
             window.toastManager.success('Tour completed! You\'re all set to start tracking time.');
         }
 
@@ -848,90 +887,24 @@ class OnboardingManager {
     }
 }
 
-// Default tour steps for TimeTracker
+// Short first-run checklist (3 steps). Module-gated selectors are skipped if missing.
 const defaultTourSteps = [
     {
-        target: '#sidebar',
-        title: 'Welcome to TimeTracker! 👋',
-        content: 'Let\'s take a quick tour to help you get started. This is your main navigation where you can access all features. <strong>Tip:</strong> Click the arrow icon to collapse or expand the sidebar and maximize your workspace. You can also press <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>B</kbd> to toggle it.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="dashboard"]',
-        title: 'Dashboard',
-        content: 'Your command center! View today\'s hours, active timers, recent entries, top projects, and activity timeline. <strong>Pro tip:</strong> Customize widgets to see what matters most to you. You can also see your time tracking at a glance without navigating away.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="timer"]',
-        title: 'Time Tracking',
-        content: 'Start timers or manually log your time. <strong>Key features:</strong><br>• Timers run server-side (even if browser closes!)<br>• Press <kbd>T</kbd> to quickly toggle timer<br>• Use bulk entry for multiple days<br>• Save time entry templates for recurring work<br>• Idle detection auto-pauses after inactivity',
+        target: 'a[href*="clients"]',
+        title: '1. Create a client',
+        content: 'Start with a client so projects and invoices have somewhere to bill. Open <strong>Clients</strong> and add your first one.',
         position: 'right'
     },
     {
         target: 'a[href*="projects"]',
-        title: 'Projects',
-        content: 'Organize your work with projects. <strong>What you can do:</strong><br>• Link projects to clients for billing<br>• Set hourly rates per project<br>• Track billable vs non-billable hours<br>• Monitor project budgets and costs<br>• Add project descriptions with Markdown<br>• Archive completed projects',
+        title: '2. Create a project',
+        content: 'Projects hold the work you track. Open <strong>Projects</strong>, create one, and link it to your client.',
         position: 'right'
     },
     {
-        target: 'a[href*="clients"]',
-        title: 'Clients',
-        content: 'Manage your clients and their information. Store contact details, billing rates, and company information. Clients are automatically linked to projects for streamlined invoicing and reporting.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="tasks"]',
-        title: 'Tasks',
-        content: 'Break down projects into manageable tasks. <strong>Features:</strong><br>• Track time against specific tasks<br>• Set priorities and due dates<br>• Assign tasks to team members<br>• Monitor progress with status tracking<br>• Use estimates vs actuals for planning<br>• Add comments for collaboration',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="kanban"]',
-        title: 'Kanban Board',
-        content: 'Visual task management with drag-and-drop! Move tasks between columns (To Do, In Progress, Review, Done) to track progress. Perfect for agile workflows and visual project management. <strong>Power feature:</strong> Customize columns to match your workflow.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="calendar"]',
-        title: 'Calendar View',
-        content: 'Visualize your time entries on a calendar. See your schedule at a glance, spot gaps, and plan your time more effectively. Drag and drop entries to reschedule them quickly.',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="reports"]',
-        title: 'Reports & Analytics',
-        content: 'Gain insights into your time usage. <strong>Available reports:</strong><br>• Time breakdown by project, user, or date<br>• Billable vs non-billable analysis<br>• Export to PDF or CSV<br>• Custom date ranges<br>• Save filters for quick access<br>• Visual charts and graphs',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="invoices"]',
-        title: 'Invoicing',
-        content: 'Generate professional invoices from your tracked time. <strong>Features:</strong><br>• Auto-generate from time entries<br>• Add custom line items and expenses<br>• Tax calculations<br>• PDF export with branding<br>• Track payment status<br>• Send invoices to clients',
-        position: 'right'
-    },
-    {
-        target: 'a[href*="analytics"]',
-        title: 'Analytics Dashboard',
-        content: 'Deep insights into your productivity and time patterns. View trends, project analytics, and performance metrics. Identify your most productive times and optimize your workflow.',
-        position: 'right'
-    },
-    {
-        target: '#header-search',
-        title: 'Global Search',
-        content: 'Quickly find anything! Search across projects, tasks, clients, and time entries. <strong>Keyboard shortcut:</strong> Press <kbd>Ctrl+/</kbd> (or <kbd>Cmd+/</kbd> on Mac) to focus the search bar instantly.',
-        position: 'bottom'
-    },
-    {
-        target: 'button[onclick*="openCommandPalette"]',
-        title: 'Command Palette',
-        content: 'Power user feature! Press <kbd>Ctrl+K</kbd> (or <kbd>Cmd+K</kbd> on Mac) to open the command palette. Navigate to any feature, execute actions, and access shortcuts without using your mouse. <strong>Try it:</strong> Press <kbd>Ctrl+K</kbd> now!',
-        position: 'bottom'
-    },
-    {
-        target: '#theme-toggle',
-        title: 'Theme Toggle',
-        content: 'Switch between light and dark mode. Your preference is saved automatically. <strong>Keyboard shortcut:</strong> Press <kbd>Ctrl+Shift+L</kbd> to toggle themes quickly.',
+        target: '#floatingTimerBar, a[href="/"], a[href*="dashboard"]',
+        title: '3. Start the timer',
+        content: 'Use the timer in the top bar or the <strong>Track</strong> item under Time. Live timers run on the server even if you close the browser.',
         position: 'bottom'
     }
 ];
@@ -941,16 +914,10 @@ window.onboardingManager = new OnboardingManager();
 
 // Auto-start onboarding for new users
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if user is on dashboard and hasn't completed onboarding
     if (window.location.pathname === '/main/dashboard' || window.location.pathname === '/') {
         setTimeout(() => {
-            // Skip on mobile devices (width < 768px)
-            const isMobile = window.innerWidth <= 768;
-            if (!isMobile && !window.onboardingManager.isCompleted()) {
+            if (!window.onboardingManager.isCompleted()) {
                 window.onboardingManager.init(defaultTourSteps);
-            } else if (isMobile) {
-                // Mark as completed on mobile to prevent future attempts
-                localStorage.setItem('onboarding_completed', 'true');
             }
         }, 1000);
     }
@@ -961,4 +928,3 @@ function restartTour() {
     window.onboardingManager.reset();
     window.onboardingManager.init(defaultTourSteps);
 }
-

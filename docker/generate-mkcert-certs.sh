@@ -65,4 +65,3 @@ echo "   3. Restart your browser"
 echo "   4. Access: https://localhost or https://$HOST_IP"
 echo ""
 echo "=========================================="
-

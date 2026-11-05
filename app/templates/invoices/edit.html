@@ -88,7 +88,7 @@
                             <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}
                         </button>
                     </div>
-                    
+
                     <!-- Items header (desktop) -->
                     <div class="hidden md:grid md:grid-cols-12 gap-3 mb-2 px-3 text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase">
                         <div class="md:col-span-2">{{ _('Project / Stock Item') }}</div>
@@ -98,7 +98,7 @@
                         <div class="md:col-span-2">{{ _('Unit Price') }}</div>
                         <div class="md:col-span-1 text-center">{{ _('Action') }}</div>
                     </div>
-                    
+
                     <div id="invoice-items" class="space-y-2">
                         {% for item in invoice.items %}
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 md:p-3 rounded-xl md:rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row min-w-0 hover:shadow-sm transition shadow-sm md:shadow-none" data-is-time-based="{{ 'true' if item.time_entry_ids else 'false' }}">
@@ -160,7 +160,7 @@
                         </div>
                         {% endfor %}
                     </div>
-                    
+
                     <div id="items-subtotal" class="mt-3 p-3 bg-blue-50/30 dark:bg-blue-950/10 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
                         <div class="flex justify-between items-center text-sm font-medium">
                             <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Items Subtotal') }}:</span>
@@ -188,7 +188,7 @@
                         </button>
                         </div>
                     </div>
-                    
+
                     <!-- Expenses header (desktop) -->
                     <div class="hidden md:grid md:grid-cols-12 gap-3 mb-2 px-3 text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase">
                         <div class="md:col-span-3">{{ _('Title') }}</div>
@@ -198,7 +198,7 @@
                         <div class="md:col-span-1">{{ _('Date') }}</div>
                         <div class="md:col-span-1 text-center">{{ _('Action') }}</div>
                     </div>
-                    
+
                     <div id="invoice-expenses" class="space-y-2">
                         <input type="hidden" name="expenses_sync" value="1">
                         {% for expense in invoice.expenses.all() %}
@@ -238,7 +238,7 @@
                         </div>
                         {% endfor %}
                     </div>
-                    
+
                     <div id="expenses-subtotal" class="mt-3 p-3 bg-amber-50/30 dark:bg-amber-950/10 rounded-lg border border-amber-200/30 dark:border-amber-800/30">
                         <div class="flex justify-between items-center text-sm font-medium">
                             <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Expenses Subtotal') }}:</span>
@@ -261,7 +261,7 @@
                             <i class="fas fa-plus mr-2"></i>{{ _('Add Good') }}
                         </button>
                     </div>
-                    
+
                     <!-- Goods header (desktop) -->
                     <div class="hidden md:grid md:grid-cols-12 gap-3 mb-2 px-3 text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase">
                         <div class="md:col-span-2">{{ _('Name') }}</div>
@@ -272,7 +272,7 @@
                         <div class="md:col-span-1">{{ _('SKU') }}</div>
                         <div class="md:col-span-1 text-center">{{ _('Action') }}</div>
                     </div>
-                    
+
                     <div id="invoice-goods" class="space-y-2">
                         {% for good in invoice.extra_goods %}
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50 invoice-good-row min-w-0 hover:shadow-sm transition">
@@ -308,7 +308,7 @@
                         </div>
                         {% endfor %}
                     </div>
-                    
+
                     <div id="goods-subtotal" class="mt-3 p-3 bg-emerald-50/30 dark:bg-emerald-950/10 rounded-lg border border-emerald-200/30 dark:border-emerald-800/30">
                         <div class="flex justify-between items-center text-sm font-medium">
                             <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Goods Subtotal') }}:</span>
@@ -341,7 +341,7 @@
                 <i class="fas fa-calculator mr-2 text-primary"></i>
                 {{ _('Live Preview') }}
             </h3>
-            
+
             <div class="space-y-4">
                 <!-- Invoice Info -->
                 <div class="pb-4 border-b border-border-light dark:border-border-dark">
@@ -372,7 +372,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Calculation Preview -->
                 <div class="space-y-3">
                     <div class="flex justify-between text-sm">
@@ -402,7 +402,7 @@
                         <span class="text-2xl font-bold text-primary" id="preview-total">0.00</span>
                     </div>
                 </div>
-                
+
                 <!-- Payment Info -->
                 <div class="pt-4 border-t border-border-light dark:border-border-dark space-y-2 text-sm">
                     <div class="flex justify-between">
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const expensesContainer = document.getElementById('invoice-expenses');
     const goodsContainer = document.getElementById('invoice-goods');
     const taxRateInput = document.getElementById('tax_rate');
-    
+
     // Calculate totals function
     function calculateTotals() {
         // Calculate items
@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 itemsCount++;
             }
         });
-        
+
         // Calculate expenses
         let expensesTotal = 0;
         let expensesCount = 0;
@@ -463,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 expensesCount++;
             }
         });
-        
+
         // Calculate goods
         let goodsTotal = 0;
         let goodsCount = 0;
@@ -475,17 +475,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 goodsCount++;
             }
         });
-        
+
         // Calculate subtotal and tax
         const subtotal = itemsTotal + expensesTotal + goodsTotal;
         const taxRate = parseFloat(taxRateInput?.value || 0);
         const taxAmount = subtotal * (taxRate / 100);
         const total = subtotal + taxAmount;
-        
+
         // Calculate outstanding
         const amountPaid = parseFloat('{{ invoice.amount_paid or 0 }}');
         const outstanding = Math.max(0, total - amountPaid);
-        
+
         // Update displays
         document.getElementById('items-count').textContent = itemsCount;
         document.getElementById('expenses-count').textContent = expensesCount;
@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('items-subtotal-amount').textContent = itemsTotal.toFixed(2);
         document.getElementById('expenses-subtotal-amount').textContent = expensesTotal.toFixed(2);
         document.getElementById('goods-subtotal-amount').textContent = goodsTotal.toFixed(2);
-        
+
         // Update preview panel
         document.getElementById('preview-items-count').textContent = itemsCount;
         document.getElementById('preview-expenses-count').textContent = expensesCount;
@@ -507,11 +507,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('preview-total').textContent = total.toFixed(2);
         document.getElementById('preview-outstanding').textContent = outstanding.toFixed(2);
     }
-    
+
     // Stock items and warehouses data
     const stockItems = {{ stock_items_json | safe if stock_items_json else '[]' }};
     const warehouses = {{ warehouses_json | safe if warehouses_json else '[]' }};
-    
+
     // Handle stock item selection
     function setupStockItemHandlers() {
         document.querySelectorAll('.item-stock-select').forEach(select => {
@@ -520,13 +520,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 const stockItemId = this.value;
                 const selectedOption = this.options[this.selectedIndex];
                 const hiddenStockInput = row.querySelector('input[name="item_stock_item_id[]"]');
-                
+
                 hiddenStockInput.value = stockItemId || '';
-                
+
                 if (stockItemId && selectedOption) {
                     const price = parseFloat(selectedOption.dataset.price || 0);
                     const description = selectedOption.dataset.description || '';
-                    
+
                     // Auto-populate fields
                     if (description && !row.querySelector('.item-description').value) {
                         row.querySelector('.item-description').value = description;
@@ -539,13 +539,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     // Add item button
     const addBtn = document.getElementById('add-item');
     addBtn && addBtn.addEventListener('click', function() {
         const row = document.createElement('div');
         row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row hover:shadow-sm transition';
-        
+
         // Build stock items dropdown
         let stockItemsHtml = '<option value="">{{ _("None") }}</option>';
         if (stockItems && Array.isArray(stockItems)) {
@@ -556,7 +556,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 stockItemsHtml += '<option value="' + item.id + '" data-price="' + price + '" data-unit="' + unit + '" data-description="' + desc.replace(/"/g, '&quot;') + '">' + item.sku + ' - ' + item.name + '</option>';
             });
         }
-        
+
         // Build warehouses dropdown
         let warehousesHtml = '<option value="">{{ _("None") }}</option>';
         if (warehouses && Array.isArray(warehouses)) {
@@ -564,7 +564,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 warehousesHtml += '<option value="' + wh.id + '">' + wh.code + ' - ' + wh.name + '</option>';
             });
         }
-        
+
         row.innerHTML = `
             <input type="hidden" name="item_stock_item_id[]" value="">
             <input type="hidden" name="item_warehouse_id[]" value="">
@@ -595,14 +595,14 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         itemsContainer.appendChild(row);
-        
+
         // Setup handlers for new row
         const stockSelect = row.querySelector('.item-stock-select');
         stockSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             const hiddenStockInput = row.querySelector('input[name="item_stock_item_id[]"]');
             hiddenStockInput.value = this.value || '';
-            
+
             if (this.value && selectedOption) {
                 const price = parseFloat(selectedOption.dataset.price || 0);
                 const description = selectedOption.dataset.description || '';
@@ -611,26 +611,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 calculateTotals();
             }
         });
-        
+
         const warehouseSelect = row.querySelector('.item-warehouse-select');
         warehouseSelect.addEventListener('change', function() {
             const hiddenWarehouseInput = row.querySelector('input[name="item_warehouse_id[]"]');
             hiddenWarehouseInput.value = this.value || '';
         });
-        
+
         // Setup calculation triggers
         row.querySelectorAll('[data-calc-trigger]').forEach(input => {
             input.addEventListener('input', calculateTotals);
         });
-        
+
         calculateTotals();
         setupStockItemHandlers();
         row.querySelector('.item-stock-select').focus();
     });
-    
+
     // Initialize stock item handlers for existing rows
     setupStockItemHandlers();
-    
+
     // Setup warehouse handlers
     document.querySelectorAll('.item-warehouse-select').forEach(select => {
         select.addEventListener('change', function() {
@@ -742,24 +742,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
+
     // Live calculation on input changes
     document.addEventListener('input', function(e) {
         if (e.target.hasAttribute('data-calc-trigger') || e.target.id === 'tax_rate') {
             calculateTotals();
         }
     });
-    
+
     // Initial calculation
     calculateTotals();
-    
+
     // Form validation before submit
     const form = document.getElementById('editInvoiceForm');
     form && form.addEventListener('submit', function(e) {
         const itemRows = document.querySelectorAll('.invoice-item-row');
         const expenseRows = document.querySelectorAll('.invoice-expense-row');
         const goodRows = document.querySelectorAll('.invoice-good-row');
-        
+
         if (itemRows.length === 0 && expenseRows.length === 0 && goodRows.length === 0) {
             e.preventDefault();
             alert('{{ _("Please add at least one item, expense, or extra good to the invoice") }}');
@@ -817,13 +817,13 @@ function sendInvoiceEmail(event) {
   event.preventDefault();
   const form = event.target;
   const formData = new FormData(form);
-  
+
   // Show loading state
   const submitBtn = form.querySelector('button[type="submit"]');
   const originalText = submitBtn.textContent;
   submitBtn.disabled = true;
   submitBtn.textContent = 'Sending...';
-  
+
   fetch("{{ url_for('invoices.send_invoice_email_route', invoice_id=invoice.id) }}", {
     method: 'POST',
     body: formData
@@ -832,7 +832,7 @@ function sendInvoiceEmail(event) {
     // Check content type to determine how to parse
     const contentType = response.headers.get('content-type') || '';
     const isJson = contentType.includes('application/json');
-    
+
     // Always try JSON first if content-type suggests it, otherwise read as text
     if (isJson) {
       const data = await response.json();

@@ -29,26 +29,26 @@ The Extra Goods feature allows you to add physical products, services, materials
 ```python
 class ExtraGood(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    
+
     # Links (can be associated with project, invoice, or both)
     project_id = db.Column(db.Integer, nullable=True)
     invoice_id = db.Column(db.Integer, nullable=True)
-    
+
     # Good details
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
     category = db.Column(db.String(50), nullable=False)
-    
+
     # Pricing
     quantity = db.Column(db.Numeric(10, 2), nullable=False, default=1)
     unit_price = db.Column(db.Numeric(10, 2), nullable=False)
     total_amount = db.Column(db.Numeric(10, 2), nullable=False)
     currency_code = db.Column(db.String(3), nullable=False, default='EUR')
-    
+
     # Billing
     billable = db.Column(db.Boolean, default=True, nullable=False)
     sku = db.Column(db.String(100), nullable=True)
-    
+
     # Metadata
     created_by = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
@@ -227,4 +227,3 @@ For issues or questions about the extra goods feature:
 2. Verify database migration is applied
 3. Review the model tests in `tests/test_extra_good_model.py`
 4. Check the route implementations in `app/routes/invoices.py` and `app/routes/projects.py`
-

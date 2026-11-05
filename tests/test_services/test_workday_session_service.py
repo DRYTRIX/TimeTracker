@@ -58,9 +58,7 @@ class TestWorkdaySessionService:
             assert start["success"] is True
             session = start["session"]
 
-            yesterday_start = (local_now() - timedelta(days=1)).replace(
-                hour=9, minute=0, second=0, microsecond=0
-            )
+            yesterday_start = (local_now() - timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
             session.start_time = yesterday_start
             period = AttendanceWorkPeriod.query.filter_by(workday_session_id=session.id).first()
             assert period is not None
@@ -134,7 +132,9 @@ class TestWorkdaySessionPeriodTotals:
             today = local_now().date()
             today_hours = WorkdaySession.get_total_hours_for_period(workday_user.id, today, today)
             assert today_hours < 18.0
-            assert today_hours == round((end_today - datetime.combine(today, datetime.min.time())).total_seconds() / 3600, 2)
+            assert today_hours == round(
+                (end_today - datetime.combine(today, datetime.min.time())).total_seconds() / 3600, 2
+            )
 
     def test_active_session_clips_to_period_end(self, app, workday_user):
         with app.app_context():

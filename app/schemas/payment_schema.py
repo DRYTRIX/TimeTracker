@@ -42,7 +42,9 @@ class PaymentCreateSchema(Schema):
     method = fields.Str(allow_none=True)
     reference = fields.Str(allow_none=True, validate=validate.Length(max=100))
     notes = fields.Str(allow_none=True)
-    status = fields.Str(missing="completed", validate=validate.OneOf(["completed", "pending", "failed", "refunded"]))
+    status = fields.Str(
+        load_default="completed", validate=validate.OneOf(["completed", "pending", "failed", "refunded"])
+    )
     gateway_transaction_id = fields.Str(allow_none=True)
     gateway_fee = fields.Decimal(allow_none=True, places=2, validate=validate.Range(min=Decimal("0")))
 

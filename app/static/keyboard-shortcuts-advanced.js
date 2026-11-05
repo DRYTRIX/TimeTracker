@@ -176,7 +176,7 @@ class KeyboardShortcutManager {
             // Block ALL other shortcuts when typing
             return;
         }
-        
+
         const key = this.getKeyCombo(e);
         const normalizedKey = this.normalizeKey(key);
 
@@ -273,21 +273,21 @@ class KeyboardShortcutManager {
      */
     getKeyCombo(e) {
         const parts = [];
-        
+
         if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
         if (e.altKey) parts.push('Alt');
         if (e.shiftKey) parts.push('Shift');
-        
+
         let key = e.key;
         if (key === ' ') key = 'Space';
-        
+
         // Don't uppercase special characters like /, ?, etc.
         if (key.length === 1 && key.match(/[a-zA-Z0-9]/)) {
             key = key.toUpperCase();
         }
-        
+
         parts.push(key);
-        
+
         return parts.join('+');
     }
 
@@ -374,7 +374,7 @@ class KeyboardShortcutManager {
      */
     renderShortcutsList() {
         const categories = {};
-        
+
         // Organize by category
         this.shortcuts.forEach((contextShortcuts) => {
             contextShortcuts.forEach((shortcut, key) => {
@@ -581,6 +581,3 @@ class KeyboardShortcutManager {
 
 // Initialize
 window.shortcutManager = new KeyboardShortcutManager();
-
-
-

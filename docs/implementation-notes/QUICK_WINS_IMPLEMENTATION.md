@@ -173,7 +173,7 @@ Activity.log(
   @login_required
   def duplicate_invoice(invoice_id):
       original = Invoice.query.get_or_404(invoice_id)
-      
+
       # Create new invoice
       new_invoice = Invoice(
           invoice_number=generate_invoice_number(),  # Generate new number
@@ -188,10 +188,10 @@ Activity.log(
       new_invoice.tax_rate = original.tax_rate
       new_invoice.notes = original.notes
       new_invoice.terms = original.terms
-      
+
       db.session.add(new_invoice)
       db.session.flush()  # Get new invoice ID
-      
+
       # Copy invoice items
       for item in original.items:
           new_item = InvoiceItem(
@@ -201,7 +201,7 @@ Activity.log(
               unit_price=item.unit_price
           )
           db.session.add(new_item)
-      
+
       db.session.commit()
       flash('Invoice duplicated successfully', 'success')
       return redirect(url_for('invoices.edit_invoice', invoice_id=new_invoice.id))
@@ -284,9 +284,9 @@ function setTheme(theme) {
   def bulk_tasks():
       task_ids = request.form.getlist('task_ids[]')
       action = request.form.get('action')
-      
+
       tasks = Task.query.filter(Task.id.in_(task_ids)).all()
-      
+
       if action == 'status_change':
           new_status = request.form.get('status')
           for task in tasks:
@@ -299,7 +299,7 @@ function setTheme(theme) {
       elif action == 'delete':
           for task in tasks:
               db.session.delete(task)
-      
+
       db.session.commit()
       flash(f'{len(tasks)} tasks updated', 'success')
       return redirect(url_for('tasks.list_tasks'))

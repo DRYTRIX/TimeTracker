@@ -67,19 +67,19 @@ CREATE INDEX IF NOT EXISTS idx_time_entries_start_time ON time_entries(start_tim
 
 
 -- Insert default admin user (password: admin)
-INSERT INTO users (username, role, is_active) 
+INSERT INTO users (username, role, is_active)
 VALUES ('admin', 'admin', true)
 ON CONFLICT (username) DO NOTHING;
 
 -- Insert default project
-INSERT INTO projects (name, client, description, billable, status) 
+INSERT INTO projects (name, client, description, billable, status)
 VALUES ('General', 'Default Client', 'Default project for general tasks', true, 'active')
 ON CONFLICT DO NOTHING;
 
 
 
 -- Insert default settings
-INSERT INTO settings (timezone, currency, rounding_minutes, single_active_timer, allow_self_register, idle_timeout_minutes, backup_retention_days, backup_time, export_delimiter) 
+INSERT INTO settings (timezone, currency, rounding_minutes, single_active_timer, allow_self_register, idle_timeout_minutes, backup_retention_days, backup_time, export_delimiter)
 VALUES ('Europe/Rome', 'EUR', 1, true, true, 30, 30, '02:00', ',')
 ON CONFLICT (id) DO NOTHING;
 

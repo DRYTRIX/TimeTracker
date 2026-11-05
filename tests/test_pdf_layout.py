@@ -1,15 +1,16 @@
 """Tests for PDF layout customization functionality."""
 
 import json
+from datetime import date, timedelta
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
-from datetime import date, timedelta
-from decimal import Decimal
-from app import db
-from app.models import User, Project, Invoice, InvoiceItem, Settings, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, InvoiceItemFactory
+from factories import ClientFactory, InvoiceFactory, InvoiceItemFactory, ProjectFactory, UserFactory
 from flask import url_for
+
+from app import db
+from app.models import Client, Invoice, InvoiceItem, Project, Settings, User
 
 
 @pytest.fixture
@@ -206,9 +207,7 @@ def test_pdf_layout_preview(admin_authenticated_client, sample_invoice):
 
 @pytest.mark.smoke
 @pytest.mark.admin
-def test_pdf_layout_preview_prefers_form_template_json_over_database(
-    admin_authenticated_client, app, sample_invoice
-):
+def test_pdf_layout_preview_prefers_form_template_json_over_database(admin_authenticated_client, app, sample_invoice):
     """Issue #600: preview must use template_json from the POST body when present, not only the DB."""
     from app.models import InvoicePDFTemplate
 
@@ -393,9 +392,9 @@ def test_pdf_layout_navigation_link_exists(admin_authenticated_client, app):
         pdf_layout_url = url_for("admin.pdf_layout")
         # Check for various possible indicators of the PDF layout link
         assert (
-            "admin.pdf_layout" in html 
-            or "pdf-layout" in html 
-            or "PDF Templates" in html 
+            "admin.pdf_layout" in html
+            or "pdf-layout" in html
+            or "PDF Templates" in html
             or "pdf templates" in html.lower()
             or pdf_layout_url in html
             or "/admin/pdf-layout" in html
@@ -504,6 +503,7 @@ def test_pdf_layout_with_invoice_items_loop(app, sample_invoice):
 def test_pdf_layout_save_and_restore_tables(app):
     """Test that a layout with items table and expenses table in design_json/template_json persists and loads correctly."""
     import json
+
     from app.models import InvoicePDFTemplate
 
     # Minimal Konva stage design_json with items-table and expenses-table group names (as saved by the editor fix)
@@ -532,7 +532,12 @@ def test_pdf_layout_save_and_restore_tables(app):
 
     # Minimal ReportLab template_json with two table elements
     template_json = {
-        "page": {"size": "A4", "width": 595, "height": 842, "margin": {"top": 20, "right": 20, "bottom": 20, "left": 20}},
+        "page": {
+            "size": "A4",
+            "width": 595,
+            "height": 842,
+            "margin": {"top": 20, "right": 20, "bottom": 20, "left": 20},
+        },
         "elements": [
             {
                 "type": "table",
@@ -581,7 +586,7 @@ def test_pdf_layout_save_and_restore_tables(app):
         template = InvoicePDFTemplate.get_template("A4")
         template.design_json = json.dumps(design_json)
         template.template_json = json.dumps(template_json)
-        template.template_html = "<div class=\"invoice-wrapper\"><h1>Test</h1></div>"
+        template.template_html = '<div class="invoice-wrapper"><h1>Test</h1></div>'
         template.template_css = "@page { size: A4; }"
         db.session.commit()
 

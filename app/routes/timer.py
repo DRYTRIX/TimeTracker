@@ -905,11 +905,7 @@ def set_timer_start():
         flash(_("No active timer to adjust"), "error")
         return redirect(url_for("main.dashboard"))
 
-    raw = (
-        request.form.get("start_time")
-        or (request.get_json(silent=True) or {}).get("start_time")
-        or ""
-    )
+    raw = request.form.get("start_time") or (request.get_json(silent=True) or {}).get("start_time") or ""
     from app.models.time_entry import local_now
 
     now_local = local_now()
@@ -2057,8 +2053,8 @@ def bulk_entry():
             # Check for overlapping entries
             overlapping = TimeEntry.query.filter(
                 TimeEntry.user_id == target_user_id,
-                TimeEntry.start_time <= end_datetime,
-                TimeEntry.end_time >= start_datetime,
+                TimeEntry.start_time < end_datetime,
+                TimeEntry.end_time > start_datetime,
                 TimeEntry.end_time.isnot(None),
             ).first()
 
@@ -2856,9 +2852,7 @@ def time_entries_overview():
             ).all()
             entry_ids_with_pending_approval = {a.time_entry_id for a in pending}
         except Exception:
-            current_app.logger.warning(
-                "Failed to load pending time-entry approvals for list view", exc_info=True
-            )
+            current_app.logger.warning("Failed to load pending time-entry approvals for list view", exc_info=True)
             try:
                 db.session.rollback()
             except Exception:

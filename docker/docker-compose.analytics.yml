@@ -9,25 +9,25 @@ services:
       # Sentry Error Monitoring
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_TRACES_RATE=${SENTRY_TRACES_RATE:-0.0}
-      
+
       # OTEL OTLP export
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       - OTEL_EXPORTER_OTLP_TOKEN=${OTEL_EXPORTER_OTLP_TOKEN:-}
       - ENABLE_TRACING=${ENABLE_TRACING:-true}
       - ENABLE_METRICS=${ENABLE_METRICS:-true}
       - OTEL_METRICS_EXPORT_INTERVAL_MS=${OTEL_METRICS_EXPORT_INTERVAL_MS:-60000}
-      
+
       # Telemetry (opt-in detailed analytics; base telemetry is always-on)
       - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
       - TELE_SALT=${TELE_SALT:-change-me}
       - APP_VERSION=${APP_VERSION:-1.0.0}
-      
+
     volumes:
       # Mount logs directory for persistent JSON logs
       - ./logs:/app/logs
       # Mount data directory for telemetry marker files
       - ./data:/app/data
-    
+
     # Expose metrics endpoint (optional, for Prometheus scraping)
     # ports:
     #   - "8000:8000"  # Already exposed in base compose
@@ -104,7 +104,7 @@ volumes:
     driver: local
 
 # Usage:
-# 
+#
 # 1. Base setup with analytics enabled (Sentry, Grafana OTLP):
 #    docker-compose -f docker-compose.yml -f docker/docker-compose.analytics.yml up -d
 #
@@ -120,4 +120,3 @@ volumes:
 # Configuration:
 # - Copy env.example to .env and configure analytics variables
 # - See docs/analytics.md for detailed configuration instructions
-

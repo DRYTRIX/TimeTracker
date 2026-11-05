@@ -6,21 +6,23 @@ pytestmark = [pytest.mark.integration]
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+
 from flask import url_for
+
 from app import db
 from app.models import (
-    Warehouse,
-    StockItem,
-    WarehouseStock,
-    StockReservation,
-    StockMovement,
-    Quote,
-    QuoteItem,
+    Client,
     Invoice,
     InvoiceItem,
     Project,
-    Client,
+    Quote,
+    QuoteItem,
+    StockItem,
+    StockMovement,
+    StockReservation,
     User,
+    Warehouse,
+    WarehouseStock,
 )
 
 

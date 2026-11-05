@@ -298,4 +298,3 @@ For issues or questions about the Activity Feed:
 - Review the [API Documentation](../api/README.md)
 - Open an issue on GitHub
 - Contact support
-

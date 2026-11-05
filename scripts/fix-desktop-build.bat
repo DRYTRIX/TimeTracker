@@ -74,7 +74,7 @@ if /i "%REMOVE_ALL%"=="y" (
             echo Successfully removed node_modules
         )
     )
-    
+
     echo.
     echo Installing dependencies fresh...
     call npm install --prefer-offline --no-audit

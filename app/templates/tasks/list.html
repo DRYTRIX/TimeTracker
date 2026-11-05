@@ -21,21 +21,38 @@
     {% set in_progress_count = task_counts.get('in_progress', 0) if task_counts else (tasks|selectattr('status', 'equalto', 'in_progress')|list|length) %}
     {% set review_count = task_counts.get('review', 0) if task_counts else (tasks|selectattr('status', 'equalto', 'review')|list|length) %}
     {% set done_count = task_counts.get('done', 0) if task_counts else (tasks|selectattr('status', 'equalto', 'done')|list|length) %}
-    
+
     {{ stat_card('To Do', todo_count, 'fas fa-list', 'slate-500') }}
     {{ stat_card('In Progress', in_progress_count, 'fas fa-spinner', 'blue-500') }}
     {{ stat_card('In Review', review_count, 'fas fa-eye', 'amber-500') }}
     {{ stat_card('Completed', done_count, 'fas fa-check-circle', 'green-500') }}
 </div>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold">{{ _('Filter Tasks') }}</h2>
-        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
-            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+{% set _task_search = (search or '')|trim %}
+{% set _task_tags = (tags or '')|trim %}
+{% set _task_status = status or '' %}
+{% set _task_priority = priority or '' %}
+{% set _task_overdue = overdue|default(false) %}
+{% set _task_milestone = milestone_id|default(none) %}
+{% set _has_active_filters = (_task_search|length > 0) or (_task_tags|length > 0) or (_task_status|length > 0) or (_task_priority|length > 0) or _task_overdue or (_task_milestone is not none) or (project_ids|default([])|length > 0) or (assigned_to_ids|default([])|length > 0) %}
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-tt border border-border-light dark:border-border-dark mb-6">
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="text-sm font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('Filter Tasks') }}</h2>
+        <button type="button" class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}" aria-expanded="{{ 'true' if _has_active_filters else 'false' }}">
+            <i class="fas {% if _has_active_filters %}fa-chevron-up{% else %}fa-chevron-down{% endif %}" id="filterToggleIcon"></i>
         </button>
     </div>
-    <div id="filterBody">
+    {% if _has_active_filters %}
+    <div class="flex flex-wrap gap-2 mb-3" id="activeFilterChips">
+        {% if _task_search %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Search') }}: {{ _task_search }}</span>{% endif %}
+        {% if _task_status %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Status') }}: {{ _task_status }}</span>{% endif %}
+        {% if _task_priority %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Priority') }}: {{ _task_priority }}</span>{% endif %}
+        {% if _task_tags %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Tags') }}: {{ _task_tags }}</span>{% endif %}
+        {% if _task_overdue %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Overdue') }}</span>{% endif %}
+        <a href="{{ url_for('tasks.list_tasks') }}" class="text-xs text-primary hover:underline self-center">{{ _('Clear filters') }}</a>
+    </div>
+    {% endif %}
+    <div id="filterBody" class="{% if not _has_active_filters %}filter-collapsed{% endif %}">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="tasksFilterForm" data-filter-form>
         <div class="lg:col-span-1">
             <label for="tasks-filter-search" class="form-label">Search</label>
@@ -264,10 +281,10 @@ function updateBulkDeleteButton() {
     const count = checkboxes.length;
     const btn = document.getElementById('bulkActionsBtn');
     const countSpan = document.getElementById('selectedCount');
-    
+
     if (countSpan) countSpan.textContent = count;
     if (btn) btn.disabled = count === 0;
-    
+
     // Update select all checkbox state
     const allCheckboxes = document.querySelectorAll('.task-checkbox');
     const selectAll = document.getElementById('selectAll');
@@ -288,10 +305,10 @@ function closeBulkDeleteDialog() {
 
 function submitBulkDelete() {
     const form = document.getElementById('confirmBulkDelete-form');
-    
+
     // Clear existing hidden inputs
     form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
-    
+
     // Add selected task IDs to form
     const checkboxes = document.querySelectorAll('.task-checkbox:checked');
     checkboxes.forEach(cb => {
@@ -301,7 +318,7 @@ function submitBulkDelete() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     // Submit the form
     form.submit();
 }
@@ -322,13 +339,13 @@ function submitBulkStatus() {
         alert('Please select a status');
         return;
     }
-    
+
     const form = document.getElementById('bulkStatusForm');
     document.getElementById('bulkStatusValue').value = status;
-    
+
     // Clear existing hidden inputs
     form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
-    
+
     // Add selected task IDs to form
     const checkboxes = document.querySelectorAll('.task-checkbox:checked');
     checkboxes.forEach(cb => {
@@ -338,7 +355,7 @@ function submitBulkStatus() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     form.submit();
 }
 
@@ -359,7 +376,7 @@ function submitBulkAssign() {
         alert('Please select at least one user');
         return;
     }
-    
+
     const form = document.getElementById('bulkAssignForm');
     form.querySelectorAll('input[name="task_ids[]"], input[name="assignee_ids"]').forEach(input => input.remove());
 
@@ -370,7 +387,7 @@ function submitBulkAssign() {
         input.value = uid;
         form.appendChild(input);
     });
-    
+
     // Add selected task IDs to form
     const checkboxes = document.querySelectorAll('.task-checkbox:checked');
     checkboxes.forEach(cb => {
@@ -380,7 +397,7 @@ function submitBulkAssign() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     form.submit();
 }
 
@@ -400,13 +417,13 @@ function submitBulkProject() {
         alert('Please select a project');
         return;
     }
-    
+
     const form = document.getElementById('bulkProjectForm');
     document.getElementById('bulkProjectValue').value = projectId;
-    
+
     // Clear existing hidden inputs
     form.querySelectorAll('input[name="task_ids[]"]').forEach(input => input.remove());
-    
+
     // Add selected task IDs to form
     const checkboxes = document.querySelectorAll('.task-checkbox:checked');
     checkboxes.forEach(cb => {
@@ -416,7 +433,7 @@ function submitBulkProject() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     form.submit();
 }
 
@@ -431,7 +448,7 @@ function confirmDeleteTask(taskId, taskName, hasTimeEntries) {
         }
         return;
     }
-    
+
     const msg = (i18nTasksList.confirm_delete || 'Are you sure you want to delete the task "{name}"?').replace('{name}', taskName);
     window.showConfirm(msg, {
         title: '{{ _("Delete Task") }}',
@@ -443,14 +460,14 @@ function confirmDeleteTask(taskId, taskName, hasTimeEntries) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/tasks/${taskId}/delete`;
-        
+
         // Add CSRF token
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = 'csrf_token';
         csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content') || '';
         form.appendChild(csrfInput);
-        
+
         document.body.appendChild(form);
         form.submit();
     });
@@ -461,9 +478,9 @@ function toggleFilterVisibility() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
     const isCollapsed = filterBody.classList.contains('filter-collapsed');
-    
+
     if (isCollapsed) {
         // Show filters
         filterBody.classList.remove('filter-collapsed');
@@ -486,19 +503,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
+    const hasActiveFilters = {{ 'true' if _has_active_filters else 'false' }};
     const filtersVisible = localStorage.getItem('taskListFiltersVisible');
-    if (filtersVisible === 'false') {
+    const shouldExpand = hasActiveFilters || filtersVisible === 'true';
+    if (!shouldExpand) {
         filterBody.classList.add('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-up');
         toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'false');
     } else {
-        // Explicitly set the icon to chevron-up when filter is visible
         filterBody.classList.remove('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-down');
         toggleIcon.classList.add('fa-chevron-up');
         toggleButton.title = '{{ _('Hide Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'true');
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
 });
@@ -506,16 +526,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // Tasks Filter Handler - AJAX filtering
 (function() {
     'use strict';
-    
+
     let filterTimeout = null;
     let searchTimeout = null;
-    
+
     function getFilterParams() {
         const form = document.getElementById('tasksFilterForm');
         if (!form) return {};
-        
+
         const params = {};
-        
+
         // Get search input value directly
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
@@ -524,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 params.search = searchValue;
             }
         }
-        
+
         // Get other form fields from FormData
         const formData = new FormData(form);
         for (const [key, value] of formData.entries()) {
@@ -534,7 +554,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 params[key] = trimmed;
             }
         }
-        
+
         // Preserve pagination parameters from current URL
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('per_page')) {
@@ -543,34 +563,34 @@ document.addEventListener('DOMContentLoaded', function() {
         if (urlParams.has('page')) {
             params.page = urlParams.get('page');
         }
-        
+
         return params;
     }
-    
+
     function buildFilterUrl() {
         const params = getFilterParams();
         const queryString = new URLSearchParams(params).toString();
         return `/tasks?${queryString}`;
     }
-    
+
     function applyFilters() {
         const url = buildFilterUrl();
         const container = document.getElementById('tasksListContainer');
-        
+
         if (!container) {
             console.error('tasksListContainer not found');
             return;
         }
-        
+
         // Show loading state
         container.style.opacity = '0.5';
         container.style.pointerEvents = 'none';
-        
+
         // Update URL
         if (window.history && window.history.pushState) {
             window.history.pushState({}, '', url);
         }
-        
+
         // Fetch filtered results
         fetch(url, {
             method: 'GET',
@@ -589,9 +609,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(html => {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html.trim();
-            
+
             const newContainer = tempDiv.querySelector('#tasksListContainer');
-            
+
             if (newContainer) {
                 container.innerHTML = newContainer.innerHTML;
             } else {
@@ -618,21 +638,21 @@ document.addEventListener('DOMContentLoaded', function() {
             container.style.pointerEvents = '';
         });
     }
-    
+
     function debouncedApplyFilters(delay = 100) {
         if (filterTimeout) {
             clearTimeout(filterTimeout);
         }
         filterTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     function debouncedSearch(delay = 500) {
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
         searchTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('tasksFilterForm');
@@ -640,35 +660,35 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Tasks filter form not found');
             return;
         }
-        
+
         // Auto-submit on dropdown changes
         form.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', () => {
                 debouncedApplyFilters(100);
             });
         });
-        
+
         // Auto-submit on checkbox changes (including overdue filter)
         form.querySelectorAll('input[type="checkbox"]:not(.multi-select-checkbox):not(.multi-select-all)').forEach(checkbox => {
             checkbox.addEventListener('change', () => {
                 debouncedApplyFilters(100);
             });
         });
-        
+
         // Auto-submit on multi-select hidden input changes (triggered by Apply button)
         form.querySelectorAll('input[name="project_ids"], input[name="assigned_to_ids"]').forEach(input => {
             input.addEventListener('change', () => {
                 debouncedApplyFilters(100);
             });
         });
-        
+
         // Auto-submit on search input (debounced)
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             searchInput.addEventListener('input', () => {
                 debouncedSearch(500);
             });
-            
+
             // Submit on Enter
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -680,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         // Auto-submit on tags input (debounced)
         const tagsInput = form.querySelector('input[name="tags"], input#tags');
         if (tagsInput) {
@@ -697,7 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         // Prevent form submission (use AJAX instead)
         form.addEventListener('submit', (e) => {
             e.preventDefault();

@@ -13,28 +13,42 @@
     subtitle_text='Create and manage invoices for your clients',
     breadcrumbs=breadcrumbs,
     actions_html=''
-        + '<div class="flex gap-2">'
-        +   '<a href="' + url_for("recurring_invoices.list_recurring_invoices") + '" class="btn bg-purple-600 text-white hover:bg-purple-700"><i class="fas fa-sync-alt mr-2"></i>Recurring Invoices</a>'
-        +   '<a href="' + url_for("invoices.export_invoices_excel") + '" class="btn bg-green-600 text-white hover:bg-green-700"><i class="fas fa-file-excel mr-2"></i>Export to Excel</a>'
+        + '<div class="flex flex-wrap gap-2 items-center">'
         +   '<a href="' + url_for("invoices.create_invoice") + '" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Create Invoice</a>'
+        +   '<a href="' + url_for("recurring_invoices.list_recurring_invoices") + '" class="btn btn-secondary"><i class="fas fa-sync-alt mr-2"></i>Recurring</a>'
+        +   '<a href="' + url_for("invoices.export_invoices_excel") + '" class="btn btn-ghost"><i class="fas fa-file-excel mr-2"></i>Export</a>'
         + '</div>'
 ) }}
 
+{% set _inv_period_label = summary.period_label if summary is defined and summary.period_label is defined else _('All time') %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-    {{ info_card("Total Invoiced", "%.2f"|format(summary.total_amount), "All time") }}
-    {{ info_card("Total Paid", "%.2f"|format(summary.paid_amount), "All time") }}
-    {{ info_card("Outstanding", "%.2f"|format(summary.outstanding_amount), "All time") }}
-    {{ info_card("Overdue", "%.2f"|format(summary.overdue_amount), "All time") }}
+    {{ info_card("Total Invoiced", "%.2f"|format(summary.total_amount), _inv_period_label) }}
+    {{ info_card("Total Paid", "%.2f"|format(summary.paid_amount), _inv_period_label) }}
+    {{ info_card("Outstanding", "%.2f"|format(summary.outstanding_amount), _inv_period_label) }}
+    {{ info_card("Overdue", "%.2f"|format(summary.overdue_amount), _inv_period_label) }}
 </div>
+<p class="text-xs text-text-muted-light dark:text-text-muted-dark -mt-4 mb-6">{{ _('Summary covers all invoices (all-time), not the current filter.') }}</p>
 
-<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-semibold">{{ _('Filter Invoices') }}</h2>
-        <button type="button" class="btn btn-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}">
-            <i class="fas fa-chevron-up" id="filterToggleIcon"></i>
+{% set _inv_status = request.args.get('status', '') %}
+{% set _inv_payment = request.args.get('payment_status', '') %}
+{% set _inv_search = request.args.get('search', '')|trim %}
+{% set _has_active_filters = (_inv_status|length > 0) or (_inv_payment|length > 0) or (_inv_search|length > 0) %}
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-tt border border-border-light dark:border-border-dark mb-6">
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="text-sm font-semibold text-text-muted-light dark:text-text-muted-dark uppercase tracking-wide">{{ _('Filter Invoices') }}</h2>
+        <button type="button" class="btn btn-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700" id="toggleFilters" onclick="toggleFilterVisibility()" title="{{ _('Toggle Filters') }}" aria-expanded="{{ 'true' if _has_active_filters else 'false' }}">
+            <i class="fas {% if _has_active_filters %}fa-chevron-up{% else %}fa-chevron-down{% endif %}" id="filterToggleIcon"></i>
         </button>
     </div>
-    <div id="filterBody">
+    {% if _has_active_filters %}
+    <div class="flex flex-wrap gap-2 mb-3" id="activeFilterChips">
+        {% if _inv_status %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Status') }}: {{ _inv_status }}</span>{% endif %}
+        {% if _inv_payment %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Payment') }}: {{ _inv_payment }}</span>{% endif %}
+        {% if _inv_search %}<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">{{ _('Search') }}: {{ _inv_search }}</span>{% endif %}
+        <a href="{{ url_for('invoices.list_invoices') }}" class="text-xs text-primary hover:underline self-center">{{ _('Clear filters') }}</a>
+    </div>
+    {% endif %}
+    <div id="filterBody" class="{% if not _has_active_filters %}filter-collapsed{% endif %}">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="invoicesFilterForm" data-filter-form>
         <div>
             <label for="status" class="form-label">Status</label>
@@ -293,9 +307,9 @@ function toggleFilterVisibility() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
     const isCollapsed = filterBody.classList.contains('filter-collapsed');
-    
+
     if (isCollapsed) {
         // Show filters
         filterBody.classList.remove('filter-collapsed');
@@ -318,19 +332,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
+    const hasActiveFilters = {{ 'true' if _has_active_filters else 'false' }};
     const filtersVisible = localStorage.getItem('invoiceListFiltersVisible');
-    if (filtersVisible === 'false') {
+    const shouldExpand = hasActiveFilters || filtersVisible === 'true';
+    if (!shouldExpand) {
         filterBody.classList.add('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-up');
         toggleIcon.classList.add('fa-chevron-down');
         toggleButton.title = '{{ _('Show Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'false');
     } else {
-        // Explicitly set the icon to chevron-up when filter is visible
         filterBody.classList.remove('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-down');
         toggleIcon.classList.add('fa-chevron-up');
         toggleButton.title = '{{ _('Hide Filters') }}';
+        toggleButton.setAttribute('aria-expanded', 'true');
     }
     setTimeout(() => { filterBody.classList.add('filter-toggle-transition'); }, 100);
 });
@@ -338,16 +355,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // Invoices Filter Handler - AJAX filtering
 (function() {
     'use strict';
-    
+
     let filterTimeout = null;
     let searchTimeout = null;
-    
+
     function getFilterParams() {
         const form = document.getElementById('invoicesFilterForm');
         if (!form) return {};
-        
+
         const params = {};
-        
+
         // Get search input value directly
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
@@ -356,46 +373,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 params.search = searchValue;
             }
         }
-        
+
         // Get status from hidden input
         const statusInput = form.querySelector('#statusFilter');
         if (statusInput && statusInput.value) {
             params.status = statusInput.value;
         }
-        
+
         // Get payment status
         const paymentStatusSelect = form.querySelector('[name="payment_status"]');
         if (paymentStatusSelect && paymentStatusSelect.value) {
             params.payment_status = paymentStatusSelect.value;
         }
-        
+
         return params;
     }
-    
+
     function buildFilterUrl() {
         const params = getFilterParams();
         const queryString = new URLSearchParams(params).toString();
         return `/invoices?${queryString}`;
     }
-    
+
     function applyFilters() {
         const url = buildFilterUrl();
         const container = document.getElementById('invoicesListContainer');
-        
+
         if (!container) {
             console.error('invoicesListContainer not found');
             return;
         }
-        
+
         // Show loading state
         container.style.opacity = '0.5';
         container.style.pointerEvents = 'none';
-        
+
         // Update URL
         if (window.history && window.history.pushState) {
             window.history.pushState({}, '', url);
         }
-        
+
         // Fetch filtered results
         fetch(url, {
             method: 'GET',
@@ -414,9 +431,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(html => {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html.trim();
-            
+
             const newContainer = tempDiv.querySelector('#invoicesListContainer');
-            
+
             if (newContainer) {
                 container.innerHTML = newContainer.innerHTML;
             } else {
@@ -443,24 +460,24 @@ document.addEventListener('DOMContentLoaded', function() {
             container.style.pointerEvents = '';
         });
     }
-    
+
     // Export function for status filter buttons
     window.applyInvoiceFilters = applyFilters;
-    
+
     function debouncedApplyFilters(delay = 100) {
         if (filterTimeout) {
             clearTimeout(filterTimeout);
         }
         filterTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     function debouncedSearch(delay = 500) {
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
         searchTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('invoicesFilterForm');
@@ -468,21 +485,21 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Invoices filter form not found');
             return;
         }
-        
+
         // Auto-submit on dropdown changes
         form.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', () => {
                 debouncedApplyFilters(100);
             });
         });
-        
+
         // Auto-submit on search input (debounced)
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             searchInput.addEventListener('input', () => {
                 debouncedSearch(500);
             });
-            
+
             // Submit on Enter
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -494,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         // Prevent form submission (use AJAX instead)
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -524,7 +541,7 @@ function updateBulkDeleteButton() {
     const count = checkboxes.length;
     const btn = document.getElementById('bulkActionsBtn');
     const countSpan = document.getElementById('selectedCount');
-    
+
     if (countSpan) countSpan.textContent = count;
     if (btn) btn.disabled = count === 0;
 }
@@ -539,7 +556,7 @@ function openMenu(triggerEl, menuId) {
     const willOpen = menu.classList.contains('hidden');
     closeAllMenus();
     if (!willOpen) return;
-    
+
     // Position menu (dropup if not enough space below)
     menu.style.top = '';
     menu.style.bottom = '';
@@ -583,15 +600,15 @@ function closeBulkDeleteDialog() {
 function submitBulkDelete() {
     const form = document.getElementById('confirmBulkDelete-form');
     if (!form) return;
-    
+
     form.querySelectorAll('input[name="invoice_ids[]"]').forEach(input => input.remove());
-    
+
     const checkboxes = document.querySelectorAll('.invoice-checkbox:checked');
     if (checkboxes.length === 0) {
         alert('Please select at least one invoice to delete.');
         return;
     }
-    
+
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -599,7 +616,7 @@ function submitBulkDelete() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     // Show loading state
     const btn = document.getElementById('bulkActionsBtn');
     let originalHTML = '';
@@ -607,14 +624,14 @@ function submitBulkDelete() {
         originalHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
-        
+
         // Re-enable after timeout (safety fallback)
         setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.disabled = false;
         }, 10000);
     }
-    
+
     // Submit the form - routes are already implemented
     form.submit();
 }
@@ -649,7 +666,7 @@ function toggleInvoiceReferenceField() {
     const statusSelect = document.getElementById('bulkStatusSelect');
     const referenceField = document.getElementById('invoiceReferenceField');
     if (!statusSelect || !referenceField) return;
-    
+
     if (statusSelect.value === 'paid') {
         referenceField.classList.remove('hidden');
     } else {
@@ -660,27 +677,27 @@ function toggleInvoiceReferenceField() {
 function submitBulkStatus() {
     const statusSelect = document.getElementById('bulkStatusSelect');
     if (!statusSelect) return;
-    
+
     const status = statusSelect.value;
     if (!status) {
         alert('Please select a status');
         return;
     }
-    
+
     const form = document.getElementById('bulkStatusForm');
     if (!form) return;
-    
+
     const statusValueInput = document.getElementById('bulkStatusValue');
     if (statusValueInput) {
         statusValueInput.value = status;
     }
-    
+
     // Clear existing invoice_reference input if any
     const existingRefInput = form.querySelector('input[name="invoice_reference"]');
     if (existingRefInput) {
         existingRefInput.remove();
     }
-    
+
     // Add invoice reference if provided and status is paid
     const referenceInput = document.getElementById('bulkInvoiceReference');
     if (status === 'paid' && referenceInput && referenceInput.value.trim()) {
@@ -690,17 +707,17 @@ function submitBulkStatus() {
         refInput.value = referenceInput.value.trim();
         form.appendChild(refInput);
     }
-    
+
     // Clear existing hidden inputs
     form.querySelectorAll('input[name="invoice_ids[]"]').forEach(input => input.remove());
-    
+
     // Add selected invoice IDs to form
     const checkboxes = document.querySelectorAll('.invoice-checkbox:checked');
     if (checkboxes.length === 0) {
         alert('Please select at least one invoice to update.');
         return;
     }
-    
+
     // Show loading state
     const btn = document.getElementById('bulkActionsBtn');
     let originalHTML = '';
@@ -708,14 +725,14 @@ function submitBulkStatus() {
         originalHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
-        
+
         // Re-enable after timeout (safety fallback)
         setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.disabled = false;
         }, 10000);
     }
-    
+
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -723,7 +740,7 @@ function submitBulkStatus() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     // Submit the form - routes are already implemented
     form.submit();
 }
@@ -748,7 +765,7 @@ function showExportLoading(link) {
     const originalHTML = link.innerHTML;
     link.classList.add('pointer-events-none', 'opacity-60');
     link.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> <span class="export-text">Exporting...</span>';
-    
+
     // Reset after 5 seconds (fallback)
     setTimeout(() => {
         link.innerHTML = originalHTML;

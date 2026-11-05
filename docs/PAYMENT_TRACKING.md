@@ -404,4 +404,3 @@ Initial release of Payment Tracking feature:
 - Invoice integration
 - Comprehensive test coverage
 - Full documentation
-

@@ -64,9 +64,7 @@ def test_reject_approval_does_not_500(admin_authenticated_client, admin_user, te
         url = url_for("quotes.reject_approval", quote_id=quote_id)
 
     with patch("app.utils.email.send_email") as mock_send:
-        resp = admin_authenticated_client.post(
-            url, data={"reason": "Needs revision"}, follow_redirects=False
-        )
+        resp = admin_authenticated_client.post(url, data={"reason": "Needs revision"}, follow_redirects=False)
         assert resp.status_code in (302, 303), resp.data[:500]
         assert mock_send.called
 

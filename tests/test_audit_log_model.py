@@ -1,9 +1,11 @@
 """Tests for AuditLog model"""
 
-import pytest
 from datetime import datetime
-from app.models import AuditLog, User, Project
+
+import pytest
+
 from app import db
+from app.models import AuditLog, Project, User
 
 
 class TestAuditLogModel:
@@ -159,13 +161,13 @@ class TestAuditLogModel:
                 entity_name=test_project.name,
             )
 
-            # Filter by action
-            created_logs = AuditLog.get_recent(action="created", limit=10)
+            # Filter by action for this user (shared DBs may have other fixtures' logs)
+            created_logs = AuditLog.get_recent(action="created", user_id=test_user.id, limit=10)
             assert len(created_logs) == 1
             assert created_logs[0].action == "created"
 
-            # Filter by entity type
-            project_logs = AuditLog.get_recent(entity_type="Project", limit=10)
+            # Filter by entity type for this user
+            project_logs = AuditLog.get_recent(entity_type="Project", user_id=test_user.id, limit=10)
             assert len(project_logs) == 3
 
     def test_audit_log_to_dict(self, app, test_user, test_project):

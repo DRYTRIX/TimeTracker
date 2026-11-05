@@ -9,10 +9,10 @@ from app import db, log_event, track_event
 from app.models import Client, Invoice, Project, Quote, QuoteAttachment, QuoteImage, QuoteItem, QuoteTemplate
 from app.utils.config_manager import ConfigManager
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.quote_access import quote_list_scope_user_id
 from app.utils.safe_redirect import safe_redirect, safe_redirect_target
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 quotes_bp = Blueprint("quotes", __name__)
 
@@ -1303,8 +1303,13 @@ def download_attachment(attachment_id):
         flash(_("You do not have permission to download this attachment"), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote.id))
 
-    # Build file path
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+    except PathEscapeError:
+        flash(_("File not found"), "error")
+        return redirect(url_for("quotes.view_quote", quote_id=quote.id))
 
     if not os.path.exists(file_path):
         flash(_("File not found"), "error")
@@ -1332,13 +1337,14 @@ def delete_attachment(attachment_id):
         flash(_("You do not have permission to delete this attachment"), "error")
         return redirect(url_for("quotes.view_quote", quote_id=quote.id))
 
-    # Delete file
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
-    if os.path.exists(file_path):
-        try:
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+        if os.path.exists(file_path):
             os.remove(file_path)
-        except Exception as e:
-            current_app.logger.error(f"Failed to delete attachment file: {e}")
+    except (PathEscapeError, OSError) as e:
+        current_app.logger.error(f"Failed to delete attachment file: {e}")
 
     # Delete database record
     attachment_id_for_log = attachment.id
@@ -2243,13 +2249,14 @@ def delete_quote_image(quote_id, image_id):
         flash(_("You do not have permission to delete images from this quote"), "error")
         return redirect(url_for("quotes.edit_quote", quote_id=quote_id))
 
-    # Delete file from disk
-    file_path = os.path.join(current_app.root_path, "..", image.file_path)
-    if os.path.exists(file_path):
-        try:
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, image.file_path)
+        if os.path.exists(file_path):
             os.remove(file_path)
-        except OSError as e:
-            current_app.logger.warning(f"Failed to delete image file {file_path}: {e}")
+    except (PathEscapeError, OSError) as e:
+        current_app.logger.warning(f"Failed to delete image file: {e}")
 
     image_id_for_log = image.id
     db.session.delete(image)
@@ -2296,7 +2303,12 @@ def get_quote_image_base64(quote_id, image_id):
     if not current_user.is_admin and quote.created_by != current_user.id:
         return jsonify({"error": "Permission denied"}), 403
 
-    file_path = os.path.join(current_app.root_path, "..", image.file_path)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, image.file_path)
+    except PathEscapeError:
+        return jsonify({"error": "File not found"}), 404
     if not os.path.exists(file_path):
         return jsonify({"error": "File not found"}), 404
 

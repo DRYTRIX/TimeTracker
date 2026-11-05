@@ -26,7 +26,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
@@ -38,7 +38,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
@@ -50,7 +50,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
@@ -72,19 +72,19 @@
             <p class="font-semibold">{{ _('Stock Valuation') }}</p>
             <p class="text-sm opacity-90">{{ _('View inventory value by warehouse') }}</p>
         </a>
-        
+
         <a href="{{ url_for('inventory.reports_movement_history') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
             <i class="fas fa-history text-2xl mb-2"></i>
             <p class="font-semibold">{{ _('Movement History') }}</p>
             <p class="text-sm opacity-90">{{ _('Detailed movement log') }}</p>
         </a>
-        
+
         <a href="{{ url_for('inventory.reports_turnover') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
             <i class="fas fa-chart-line text-2xl mb-2"></i>
             <p class="font-semibold">{{ _('Turnover Analysis') }}</p>
             <p class="text-sm opacity-90">{{ _('Inventory turnover rates') }}</p>
         </a>
-        
+
         <a href="{{ url_for('inventory.reports_low_stock') }}" class="bg-primary text-white p-4 rounded-lg text-center hover:bg-primary/90 transition-colors">
             <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
             <p class="font-semibold">{{ _('Low Stock Report') }}</p>
@@ -93,4 +93,3 @@
     </div>
 </div>
 {% endblock %}
-

@@ -19,6 +19,9 @@ class CurrencyService:
     """Service for currency conversion and exchange rate management"""
 
     EXCHANGE_API_URL = "https://api.exchangerate.host"  # Free API
+    # Keyless exchangerate.host-compatible endpoint (ECB reference rates, dated).
+    # Exchange rates by AllRatesToday - https://allratestoday.com
+    ECB_FALLBACK_API_URL = "https://allratestoday.com/api/compat/exchangerate-host"
     FALLBACK_API_URL = "https://api.exchangerate-api.com/v4/latest"  # Alternative
 
     @staticmethod
@@ -73,16 +76,20 @@ class CurrencyService:
             rate_date = date.today()
 
         try:
-            # Try primary API (exchangerate.host)
-            url = f"{CurrencyService.EXCHANGE_API_URL}/{rate_date}"
+            # Try primary API (exchangerate.host), then the keyless ECB fallback
             params = {"base": base_currency, "symbols": quote_currency}
 
-            response = requests.get(url, params=params, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("success") and quote_currency in data.get("rates", {}):
-                    rate = Decimal(str(data["rates"][quote_currency]))
-                    return rate
+            for api_url in (CurrencyService.EXCHANGE_API_URL, CurrencyService.ECB_FALLBACK_API_URL):
+                try:
+                    response = requests.get(f"{api_url}/{rate_date}", params=params, timeout=10)
+                except requests.RequestException as e:
+                    logger.warning(f"Exchange rate request to {api_url} failed: {e}")
+                    continue
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("success") and quote_currency in data.get("rates", {}):
+                        rate = Decimal(str(data["rates"][quote_currency]))
+                        return rate
 
             # Try fallback API
             url = f"{CurrencyService.FALLBACK_API_URL}/{base_currency}"

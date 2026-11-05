@@ -34,7 +34,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center">
             <div class="flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-full p-3">
@@ -48,7 +48,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center">
             <div class="flex-shrink-0 bg-gray-100 dark:bg-gray-700 rounded-full p-3">
@@ -62,7 +62,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-card-light dark:bg-card-dark p-4 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center">
             <div class="flex-shrink-0 bg-green-100 dark:bg-green-900/30 rounded-full p-3">
@@ -109,7 +109,7 @@
                 </td>
                 <td class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark" data-label="Description">{{ role.description or '-' }}</td>
                 <td class="p-4" data-label="Permissions">
-                    <button type="button" 
+                    <button type="button"
                             onclick="document.getElementById('perms-{{ role.id }}').classList.toggle('hidden')"
                             class="text-primary hover:underline text-sm flex items-center gap-1">
                         <span>{{ role.permissions|length }} {{ _('permissions') }}</span>
@@ -166,7 +166,7 @@
                             {% endif %}
                             {% set _ = categories[permission.category].append(permission) %}
                         {% endfor %}
-                        
+
                         {% if categories %}
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {% for category, perms in categories.items() %}
@@ -231,4 +231,3 @@ async function confirmDeleteRole(roleId, roleName) {
 }
 </script>
 {% endblock %}
-

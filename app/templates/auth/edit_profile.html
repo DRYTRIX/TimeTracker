@@ -97,17 +97,17 @@
 function previewAvatar(input) {
     const preview = document.getElementById('avatar-preview');
     const fallback = document.getElementById('avatarPreviewFallback');
-    
+
     if (input.files && input.files[0]) {
         const file = input.files[0];
-        
+
         // Validate file size (5MB limit)
         if (file.size > 5 * 1024 * 1024) {
             alert('File size must be less than 5MB');
             input.value = '';
             return;
         }
-        
+
         // Validate file type
         const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
         if (!allowedTypes.includes(file.type)) {
@@ -115,7 +115,7 @@ function previewAvatar(input) {
             input.value = '';
             return;
         }
-        
+
         // Read and display the image
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -132,7 +132,7 @@ function handleRemoveAvatar(event) {
     // Show fallback after removing avatar
     const preview = document.getElementById('avatar-preview');
     const fallback = document.getElementById('avatarPreviewFallback');
-    
+
     // Let the form submit, but prepare the UI for the fallback
     setTimeout(() => {
         if (preview) preview.style.display = 'none';
@@ -149,16 +149,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const passwordConfirmError = document.getElementById('password_confirm-error');
     const saveButton = document.getElementById('save-button');
     const form = document.querySelector('form');
-    
+
     if (!passwordInput || !passwordConfirmInput) {
         return; // Password fields not present
     }
-    
+
     function validatePasswords() {
         const password = passwordInput.value.trim();
         const passwordConfirm = passwordConfirmInput.value.trim();
         let isValid = true;
-        
+
         // Clear previous errors
         if (passwordError) {
             passwordError.classList.add('hidden');
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
             passwordConfirmError.classList.add('hidden');
             passwordConfirmError.textContent = '';
         }
-        
+
         // If both fields are empty, that's valid (user wants to keep current password)
         if (!password && !passwordConfirm) {
             if (saveButton) {
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return true;
         }
-        
+
         // If one field is filled but not the other, show error
         if ((password && !passwordConfirm) || (!password && passwordConfirm)) {
             if (passwordConfirmError) {
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             isValid = false;
         }
-        
+
         // Validate password length if password is provided
         if (password) {
             if (password.length < 8) {
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 isValid = false;
             }
-            
+
             // Check if passwords match
             if (passwordConfirm && password !== passwordConfirm) {
                 if (passwordConfirmError) {
@@ -205,21 +205,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 isValid = false;
             }
         }
-        
+
         // Enable/disable save button based on validation
         if (saveButton) {
             saveButton.disabled = !isValid;
         }
-        
+
         return isValid;
     }
-    
+
     // Add event listeners for real-time validation
     passwordInput.addEventListener('input', validatePasswords);
     passwordInput.addEventListener('blur', validatePasswords);
     passwordConfirmInput.addEventListener('input', validatePasswords);
     passwordConfirmInput.addEventListener('blur', validatePasswords);
-    
+
     // Validate on form submit
     form.addEventListener('submit', function(e) {
         if (!validatePasswords()) {
@@ -228,12 +228,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
     });
-    
+
     // Initial validation
     validatePasswords();
 });
 {% endif %}
 </script>
 {% endblock %}
-
-

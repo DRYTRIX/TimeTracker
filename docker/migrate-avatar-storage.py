@@ -30,9 +30,9 @@ def get_old_avatar_dir():
     """Get the old avatar directory path"""
     # Try to find the app directory
     possible_paths = [
-        'app/static/uploads/avatars',
-        '../app/static/uploads/avatars',
-        '/app/static/uploads/avatars',
+        "app/static/uploads/avatars",
+        "../app/static/uploads/avatars",
+        "/app/static/uploads/avatars",
     ]
     for path in possible_paths:
         if os.path.exists(path):
@@ -42,7 +42,7 @@ def get_old_avatar_dir():
 
 def get_new_avatar_dir():
     """Get the new avatar directory path"""
-    return '/data/uploads/avatars'
+    return "/data/uploads/avatars"
 
 
 def ensure_directory(path):
@@ -55,12 +55,12 @@ def migrate_avatars():
     """Migrate avatar files from old to new location"""
     old_dir = get_old_avatar_dir()
     new_dir = get_new_avatar_dir()
-    
+
     print("=" * 70)
     print("User Avatar Storage Migration")
     print("=" * 70)
     print()
-    
+
     if not old_dir:
         print("⚠️  Old avatar directory not found. Possible reasons:")
         print("   - No avatars have been uploaded yet")
@@ -72,44 +72,44 @@ def migrate_avatars():
         print()
         print("✓ Migration complete (no files to migrate)")
         return
-    
+
     print(f"Old location: {old_dir}")
     print(f"New location: {new_dir}")
     print()
-    
+
     # Ensure new directory exists
     ensure_directory(new_dir)
-    
+
     # Get list of avatar files
     try:
         avatar_files = [f for f in os.listdir(old_dir) if os.path.isfile(os.path.join(old_dir, f))]
     except Exception as e:
         print(f"❌ Error listing files in {old_dir}: {e}")
         return
-    
+
     if not avatar_files:
         print("ℹ️  No avatar files found in old location")
         print("✓ Migration complete (nothing to migrate)")
         return
-    
+
     print(f"Found {len(avatar_files)} avatar file(s) to migrate")
     print()
-    
+
     # Migrate each file
     migrated = 0
     skipped = 0
     errors = 0
-    
+
     for filename in avatar_files:
         old_path = os.path.join(old_dir, filename)
         new_path = os.path.join(new_dir, filename)
-        
+
         # Skip if already exists in new location
         if os.path.exists(new_path):
             print(f"⊘ Skipped (already exists): {filename}")
             skipped += 1
             continue
-        
+
         # Copy file
         try:
             shutil.copy2(old_path, new_path)
@@ -118,7 +118,7 @@ def migrate_avatars():
         except Exception as e:
             print(f"❌ Error migrating {filename}: {e}")
             errors += 1
-    
+
     print()
     print("=" * 70)
     print("Migration Summary")
@@ -127,7 +127,7 @@ def migrate_avatars():
     print(f"⊘ Skipped (already exist): {skipped}")
     print(f"❌ Errors: {errors}")
     print()
-    
+
     if migrated > 0:
         print("⚠️  IMPORTANT: Old avatar files are still in place.")
         print("   After verifying all avatars work correctly, you can safely")
@@ -135,27 +135,27 @@ def migrate_avatars():
         print()
         print("   To remove old files, run:")
         print(f"   rm -rf {old_dir}")
-    
+
     if errors > 0:
         print("⚠️  Some files could not be migrated. Please check the errors above.")
     elif migrated > 0 or skipped > 0:
         print("✓ Migration completed successfully!")
-    
+
     print()
 
 
 def verify_migration():
     """Verify that the new directory is accessible and writable"""
     new_dir = get_new_avatar_dir()
-    test_file = os.path.join(new_dir, '.test_write')
-    
+    test_file = os.path.join(new_dir, ".test_write")
+
     print("Verifying new directory permissions...")
     try:
         # Test write
-        with open(test_file, 'w') as f:
-            f.write('test')
+        with open(test_file, "w") as f:
+            f.write("test")
         # Test read
-        with open(test_file, 'r') as f:
+        with open(test_file, "r") as f:
             content = f.read()
         # Cleanup
         os.remove(test_file)
@@ -167,10 +167,9 @@ def verify_migration():
         return False
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print()
     migrate_avatars()
     print()
     verify_migration()
     print()
-

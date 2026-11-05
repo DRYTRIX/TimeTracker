@@ -19,7 +19,7 @@
 <!-- Filter Tabs with Enhanced Design -->
 <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg p-4 mb-6">
     <div class="flex flex-wrap gap-2">
-        <a href="{{ url_for('client_portal.invoices', status='all') }}" 
+        <a href="{{ url_for('client_portal.invoices', status='all') }}"
            class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
            {% if status_filter == 'all' %}
            bg-primary text-white shadow-md
@@ -29,7 +29,7 @@
             <i class="fas fa-list"></i>
             <span>{{ _('All') }}</span>
         </a>
-        <a href="{{ url_for('client_portal.invoices', status='paid') }}" 
+        <a href="{{ url_for('client_portal.invoices', status='paid') }}"
            class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
            {% if status_filter == 'paid' %}
            bg-green-600 text-white shadow-md
@@ -39,7 +39,7 @@
             <i class="fas fa-check-circle"></i>
             <span>{{ _('Paid') }}</span>
         </a>
-        <a href="{{ url_for('client_portal.invoices', status='unpaid') }}" 
+        <a href="{{ url_for('client_portal.invoices', status='unpaid') }}"
            class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
            {% if status_filter == 'unpaid' %}
            bg-yellow-600 text-white shadow-md
@@ -49,7 +49,7 @@
             <i class="fas fa-clock"></i>
             <span>{{ _('Unpaid') }}</span>
         </a>
-        <a href="{{ url_for('client_portal.invoices', status='overdue') }}" 
+        <a href="{{ url_for('client_portal.invoices', status='overdue') }}"
            class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
            {% if status_filter == 'overdue' %}
            bg-red-600 text-white shadow-md
@@ -80,7 +80,7 @@
                 {% for invoice in invoices %}
                 <tr class="hover:bg-background-light dark:hover:bg-background-dark transition-colors group">
                     <td class="py-4 px-6">
-                        <a href="{{ url_for('client_portal.view_invoice', invoice_id=invoice.id) }}" 
+                        <a href="{{ url_for('client_portal.view_invoice', invoice_id=invoice.id) }}"
                            class="font-semibold text-primary hover:text-primary/80 hover:underline flex items-center space-x-2 group-hover:text-primary transition-colors">
                             <i class="fas fa-file-invoice text-sm"></i>
                             <span>{{ invoice.invoice_number }}</span>
@@ -121,7 +121,7 @@
                             {% else %}
                             bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300
                             {% endif %}">
-                            <i class="fas 
+                            <i class="fas
                                 {% if invoice.payment_status == 'fully_paid' %}fa-check-circle
                                 {% elif invoice.is_overdue %}fa-exclamation-triangle
                                 {% elif invoice.payment_status == 'partially_paid' %}fa-clock
@@ -130,7 +130,7 @@
                         </span>
                     </td>
                     <td class="py-4 px-6">
-                        <a href="{{ url_for('client_portal.view_invoice', invoice_id=invoice.id) }}" 
+                        <a href="{{ url_for('client_portal.view_invoice', invoice_id=invoice.id) }}"
                            class="inline-flex items-center px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-medium rounded-lg transition-colors group">
                             <span>{{ _('View') }}</span>
                             <i class="fas fa-arrow-right ml-2 text-xs group-hover:translate-x-1 transition-transform"></i>
@@ -167,7 +167,7 @@
             {% endif %}
         </p>
         {% if status_filter != 'all' %}
-        <a href="{{ url_for('client_portal.invoices', status='all') }}" 
+        <a href="{{ url_for('client_portal.invoices', status='all') }}"
            class="inline-flex items-center mt-4 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors">
             <i class="fas fa-list mr-2"></i>
             {{ _('View All Invoices') }}

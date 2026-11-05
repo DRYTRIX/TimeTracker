@@ -49,7 +49,7 @@ echo ""
 if [ -d "node_modules" ]; then
     echo "Removing existing node_modules..."
     echo "  (This may take a moment on Windows/OneDrive)"
-    
+
     # Try to remove with retries
     MAX_RETRIES=3
     RETRY=0

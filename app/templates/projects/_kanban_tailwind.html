@@ -6,7 +6,7 @@
         <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm ring-1 ring-border-light/60 dark:ring-border-dark/60 flex flex-col flex-1 min-w-[280px] max-w-full" role="region" aria-labelledby="col-{{ col.key }}-title">
             <div class="p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center bg-gradient-to-b from-background-light/60 dark:from-background-dark/40 to-transparent rounded-t-xl">
                 <h3 id="col-{{ col.key }}-title" class="text-base font-semibold flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full" style="background-color: {{ col.color or '#4A90E2' }}"></span>
+                    <span class="w-2.5 h-2.5 rounded-full" style="background-color: {{ col.color or '#4F46E5' }}"></span>
                     <span>{{ col.label }}</span>
                 </h3>
                 <div class="flex items-center gap-2">
@@ -38,7 +38,7 @@
                             {% if task.description %}
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ task.description | truncate(80) }}</p>
                             {% endif %}
-                            
+
                             <div class="flex items-center justify-between text-sm text-text-muted-light dark:text-text-muted-dark">
                                 <span class="text-sm font-semibold px-2 py-1 rounded-full
                                     {% if task.priority == 'urgent' %} bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
@@ -55,7 +55,7 @@
                                 {% endif %}
                             </div>
                         </a>
-                        
+
                         <div class="mt-4 flex justify-between items-center">
                             {% if task.assigned_user %}
                                 {% if task.assigned_user.get_avatar_url() %}
@@ -75,15 +75,25 @@
 
                         <div class="mt-3 flex items-center justify-end gap-2">
                             <div class="flex items-center gap-2">
-                                <a href="{{ url_for('timer.start_timer_for_project', project_id=task.project_id) }}?task_id={{ task.id }}" class="text-xs px-2 py-1 rounded bg-primary text-white hover:opacity-90">{{ _('Start') }}</a>
-                                <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="text-xs px-2 py-1 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('View') }}</a>
+                                <a href="{{ url_for('timer.start_timer_for_project', project_id=task.project_id) }}?task_id={{ task.id }}"
+                                   class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] px-3 py-2 text-sm font-medium rounded-lg bg-primary text-white hover:opacity-90"
+                                   data-confirm="{{ _('Start timer for this task?') }}"
+                                   onclick="return confirm(this.getAttribute('data-confirm'));">{{ _('Start') }}</a>
+                                <a href="{{ url_for('tasks.view_task', task_id=task.id) }}"
+                                   class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] px-3 py-2 text-sm font-medium rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('View') }}</a>
                             </div>
                         </div>
                     </div>
                     {% endfor %}
                 {% else %}
-                <div class="kanban-empty text-center text-text-muted-light dark:text-text-muted-dark py-10 border border-dashed border-border-light dark:border-border-dark rounded-lg" aria-live="polite">
-                    <p>{{ _('No tasks in this column.') }}</p>
+                <div class="kanban-empty text-center text-text-muted-light dark:text-text-muted-dark py-10 px-4 border border-dashed border-border-light dark:border-border-dark rounded-lg" aria-live="polite">
+                    <i class="fas fa-inbox text-2xl mb-3 opacity-50" aria-hidden="true"></i>
+                    <p class="font-medium text-text-light dark:text-text-dark mb-1">{{ _('No tasks in %(column)s', column=col.label) }}</p>
+                    <p class="text-sm mb-4">{{ _('Add a task here or drag one from another column.') }}</p>
+                    <a href="{{ url_for('tasks.create_task', project_id=project_id if project_id is defined and project_id else none, status=col.key, next=kanban_return_url if kanban_return_url is defined else request.full_path) }}"
+                       class="inline-flex items-center justify-center min-h-[44px] gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-white hover:opacity-90">
+                        <i class="fas fa-plus" aria-hidden="true"></i>{{ _('Add task') }}
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -91,5 +101,3 @@
         {% endfor %}
     </div>
 </div>
-
-

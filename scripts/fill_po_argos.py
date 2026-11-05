@@ -11,6 +11,7 @@ Requires: pip install polib argostranslate
 Install Argos language pair once, e.g.:
   python -c "import argostranslate.package as p; p.update_package_index(); ..."
 """
+
 from __future__ import annotations
 
 import argparse

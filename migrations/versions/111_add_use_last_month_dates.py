@@ -7,9 +7,9 @@ Create Date: 2025-01-30
 For monthly cadence: when use_last_month_dates is True, the report uses
 the previous calendar month as the date range at run time.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "111_add_use_last_month_dates"
 down_revision = "110_add_disabled_module_ids"

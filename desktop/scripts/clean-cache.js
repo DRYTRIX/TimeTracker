@@ -10,8 +10,8 @@ const path = require('path');
 const fs = require('fs');
 
 const platform = os.platform();
-const cacheDir = path.join(os.homedir(), 
-  platform === 'win32' 
+const cacheDir = path.join(os.homedir(),
+  platform === 'win32'
     ? 'AppData/Local/electron-builder/Cache'
     : platform === 'darwin'
     ? 'Library/Caches/electron-builder'

@@ -2,10 +2,24 @@
 Comprehensive tests for TimeTrackingService including update and delete methods.
 """
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
+
+from app import db
+from app.models import Project, TimeEntry, User
 from app.services import TimeTrackingService
-from app.models import TimeEntry, Project, User
+
+
+@pytest.fixture
+def other_user(app):
+    """A second user used to assert access-denied paths."""
+    other = User(username="other_tt_user", role="user", email="other_tt@example.com")
+    other.is_active = True
+    other.set_password("password123")
+    db.session.add(other)
+    db.session.commit()
+    return other
 
 
 class TestTimeTrackingServiceComplete:
@@ -44,9 +58,9 @@ class TestTimeTrackingServiceComplete:
         assert result["success"] is True
         assert result["entry"].start_time == new_start
         assert result["entry"].end_time == new_end
-        assert result["entry"].duration_seconds == expected_seconds, (
-            f"duration_seconds should be {expected_seconds} after editing start/end, got {result['entry'].duration_seconds} (old was {old_duration})"
-        )
+        assert (
+            result["entry"].duration_seconds == expected_seconds
+        ), f"duration_seconds should be {expected_seconds} after editing start/end, got {result['entry'].duration_seconds} (old was {old_duration})"
 
     def test_update_entry_not_found(self, app, user):
         """Test update with non-existent entry"""

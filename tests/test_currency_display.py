@@ -6,17 +6,19 @@ properly respect the currency setting from the database/environment
 instead of hardcoding Euro symbols.
 """
 
-import pytest
 import re
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
-from app import db, create_app
-from app.models import User, Project, Settings, Client, Payment, Invoice, Expense
-from factories import ClientFactory, ProjectFactory, InvoiceFactory
+
+import pytest
+from factories import ClientFactory, InvoiceFactory, ProjectFactory
 from flask_login import login_user
 from sqlalchemy import text
 from sqlalchemy.pool import StaticPool
+
+from app import create_app, db
+from app.models import Client, Expense, Invoice, Payment, Project, Settings, User
 
 
 @pytest.fixture
@@ -39,56 +41,56 @@ def app():
     with app.app_context():
         # Import all models to ensure they're registered
         from app.models import (
-            User,
-            Project,
-            TimeEntry,
+            Activity,
+            ApiToken,
+            AuditLog,
+            BudgetAlert,
+            CalendarEvent,
             Client,
-            Settings,
-            Invoice,
-            InvoiceItem,
-            Task,
-            TaskActivity,
+            ClientNote,
+            ClientPrepaidConsumption,
             Comment,
+            CreditNote,
+            Currency,
+            DataExport,
+            DataImport,
+            ExchangeRate,
+            Expense,
             ExpenseCategory,
-            Mileage,
-            PerDiem,
-            PerDiemRate,
             ExtraGood,
             FocusSession,
-            RecurringBlock,
-            RateOverride,
-            SavedFilter,
-            ProjectCost,
-            KanbanColumn,
-            TimeEntryTemplate,
-            Activity,
-            UserFavoriteProject,
-            ClientNote,
-            WeeklyTimeGoal,
-            Expense,
-            Permission,
-            Role,
-            ApiToken,
-            CalendarEvent,
-            BudgetAlert,
-            DataImport,
-            DataExport,
-            InvoicePDFTemplate,
-            ClientPrepaidConsumption,
-            AuditLog,
-            RecurringInvoice,
+            Invoice,
             InvoiceEmail,
+            InvoiceItem,
+            InvoicePDFTemplate,
+            InvoiceReminderSchedule,
+            InvoiceTemplate,
+            KanbanColumn,
+            Mileage,
+            Payment,
+            PerDiem,
+            PerDiemRate,
+            Permission,
+            Project,
+            ProjectCost,
+            RateOverride,
+            RecurringBlock,
+            RecurringInvoice,
+            ReportEmailSchedule,
+            Role,
+            SavedFilter,
+            SavedReportView,
+            Settings,
+            Task,
+            TaskActivity,
+            TaxRule,
+            TimeEntry,
+            TimeEntryTemplate,
+            User,
+            UserFavoriteProject,
             Webhook,
             WebhookDelivery,
-            InvoiceTemplate,
-            Currency,
-            ExchangeRate,
-            TaxRule,
-            Payment,
-            CreditNote,
-            InvoiceReminderSchedule,
-            SavedReportView,
-            ReportEmailSchedule,
+            WeeklyTimeGoal,
         )
 
         # Create all tables, handling index creation errors gracefully

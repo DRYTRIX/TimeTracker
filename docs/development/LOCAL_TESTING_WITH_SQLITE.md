@@ -168,7 +168,7 @@ If you encounter issues with the entrypoint script (like `su-exec: not found`), 
    ```yaml
    # Change this line:
    entrypoint: ["/app/docker/entrypoint-local-test.sh"]
-   
+
    # To this:
    entrypoint: ["/app/docker/entrypoint-local-test-simple.sh"]
    ```

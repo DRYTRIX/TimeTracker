@@ -132,4 +132,3 @@ def test_event_tracking(mock_track):
 ---
 
 **Quick Tip:** Use person properties and cohorts in PostHog for analysis; gate behavior in the app with config and env vars.
-

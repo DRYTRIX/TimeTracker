@@ -63,7 +63,7 @@
         <p>Filter: {{ custom_field_name }} = {{ custom_field_value }}</p>
         {% endif %}
     </div>
-    
+
     <div class="content">
         <div class="summary">
             <h2>Summary</h2>
@@ -83,7 +83,7 @@
             {% endif %}
             {% endif %}
         </div>
-        
+
         {% if report_data.data and report_data.data|length > 0 %}
         <h2>Report Data</h2>
         <table>
@@ -114,7 +114,7 @@
         <p>No data found for this report.</p>
         {% endif %}
     </div>
-    
+
     <div class="footer">
         <p>Generated at: {{ generated_at|user_datetime if generated_at else 'N/A' }}</p>
         <p>This is an automated report from TimeTracker.</p>

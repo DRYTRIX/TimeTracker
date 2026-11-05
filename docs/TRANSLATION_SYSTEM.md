@@ -300,4 +300,3 @@ For questions or issues with translations:
 **Last Updated**: 2026-04-29 (catalog sync and `babel.cfg` extractors note)
 **Flask-Babel Version**: 4.0.0
 **Babel Version**: 2.14.0
-

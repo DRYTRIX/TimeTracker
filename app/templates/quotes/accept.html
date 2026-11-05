@@ -40,10 +40,10 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">{{ _('Create Project') }}</h2>
     <p class="text-gray-600 dark:text-gray-400 mb-4">{{ _('Accepting this quote will create a new project with the budget from the quote.') }}</p>
-    
+
     <form method="POST" action="{{ url_for('quotes.accept_quote', quote_id=quote.id) }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="mb-4">
             <label for="project_name" class="form-label">{{ _('Project Name') }} *</label>
             <input type="text" id="project_name" name="project_name" required value="{{ quote.title }}" placeholder="{{ _('Project name') }}" class="form-input">
@@ -57,4 +57,3 @@
     </form>
 </div>
 {% endblock %}
-

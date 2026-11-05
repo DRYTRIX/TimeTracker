@@ -42,19 +42,30 @@ def upgrade():
     bind = op.get_bind()
     inspector = inspect(bind)
 
+    # SQLite cannot ALTER to add FK constraints; use batch copy-and-move.
     if not _table_has_column(inspector, "clients", "created_by"):
-        op.add_column(
-            "clients",
-            sa.Column("created_by", sa.Integer(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
-        )
-        op.create_index("ix_clients_created_by", "clients", ["created_by"], unique=False)
+        with op.batch_alter_table("clients", schema=None) as batch_op:
+            batch_op.add_column(sa.Column("created_by", sa.Integer(), nullable=True))
+            batch_op.create_foreign_key(
+                "fk_clients_created_by_users",
+                "users",
+                ["created_by"],
+                ["id"],
+                ondelete="SET NULL",
+            )
+            batch_op.create_index("ix_clients_created_by", ["created_by"], unique=False)
 
     if not _table_has_column(inspector, "projects", "created_by"):
-        op.add_column(
-            "projects",
-            sa.Column("created_by", sa.Integer(), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
-        )
-        op.create_index("ix_projects_created_by", "projects", ["created_by"], unique=False)
+        with op.batch_alter_table("projects", schema=None) as batch_op:
+            batch_op.add_column(sa.Column("created_by", sa.Integer(), nullable=True))
+            batch_op.create_foreign_key(
+                "fk_projects_created_by_users",
+                "users",
+                ["created_by"],
+                ["id"],
+                ondelete="SET NULL",
+            )
+            batch_op.create_index("ix_projects_created_by", ["created_by"], unique=False)
 
     _seed_own_scope_permissions(bind)
     _update_system_roles(bind)
@@ -77,9 +88,7 @@ def _seed_own_scope_permissions(connection):
         ("delete_all_clients", "Delete all clients", "clients"),
     ]
     for name, description, category in perm_defs:
-        exists = connection.execute(
-            sa.text("SELECT id FROM permissions WHERE name = :name"), {"name": name}
-        ).fetchone()
+        exists = connection.execute(sa.text("SELECT id FROM permissions WHERE name = :name"), {"name": name}).fetchone()
         if not exists:
             connection.execute(
                 sa.text(
@@ -133,16 +142,12 @@ def _update_system_roles(connection):
                 continue
             perm_id = perm_row[0]
             exists = connection.execute(
-                sa.text(
-                    "SELECT 1 FROM role_permissions WHERE role_id = :role_id AND permission_id = :perm_id"
-                ),
+                sa.text("SELECT 1 FROM role_permissions WHERE role_id = :role_id AND permission_id = :perm_id"),
                 {"role_id": role_id, "perm_id": perm_id},
             ).fetchone()
             if not exists:
                 connection.execute(
-                    sa.text(
-                        "INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :perm_id)"
-                    ),
+                    sa.text("INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :perm_id)"),
                     {"role_id": role_id, "perm_id": perm_id},
                 )
 
@@ -160,9 +165,7 @@ def _update_system_roles(connection):
             if not perm_row:
                 continue
             connection.execute(
-                sa.text(
-                    "DELETE FROM role_permissions WHERE role_id = :role_id AND permission_id = :perm_id"
-                ),
+                sa.text("DELETE FROM role_permissions WHERE role_id = :role_id AND permission_id = :perm_id"),
                 {"role_id": role_id, "perm_id": perm_row[0]},
             )
 
@@ -183,16 +186,12 @@ def downgrade():
             if not perm_row:
                 continue
             exists = bind.execute(
-                sa.text(
-                    "SELECT 1 FROM role_permissions WHERE role_id = :role_id AND permission_id = :perm_id"
-                ),
+                sa.text("SELECT 1 FROM role_permissions WHERE role_id = :role_id AND permission_id = :perm_id"),
                 {"role_id": role_id, "perm_id": perm_row[0]},
             ).fetchone()
             if not exists:
                 bind.execute(
-                    sa.text(
-                        "INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :perm_id)"
-                    ),
+                    sa.text("INSERT INTO role_permissions (role_id, permission_id) VALUES (:role_id, :perm_id)"),
                     {"role_id": role_id, "perm_id": perm_row[0]},
                 )
 
@@ -201,8 +200,12 @@ def downgrade():
             bind.execute(sa.text("DELETE FROM permissions WHERE name = :name"), {"name": name})
 
     if _table_has_column(inspector, "projects", "created_by"):
-        op.drop_index("ix_projects_created_by", table_name="projects")
-        op.drop_column("projects", "created_by")
+        with op.batch_alter_table("projects", schema=None) as batch_op:
+            batch_op.drop_index("ix_projects_created_by")
+            batch_op.drop_constraint("fk_projects_created_by_users", type_="foreignkey")
+            batch_op.drop_column("created_by")
     if _table_has_column(inspector, "clients", "created_by"):
-        op.drop_index("ix_clients_created_by", table_name="clients")
-        op.drop_column("clients", "created_by")
+        with op.batch_alter_table("clients", schema=None) as batch_op:
+            batch_op.drop_index("ix_clients_created_by")
+            batch_op.drop_constraint("fk_clients_created_by_users", type_="foreignkey")
+            batch_op.drop_column("created_by")

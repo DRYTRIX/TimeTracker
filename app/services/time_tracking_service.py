@@ -462,6 +462,13 @@ class TimeTrackingService:
             if not project:
                 return {"success": False, "message": "Invalid project", "error": "invalid_project"}
 
+            if project.status == "archived":
+                return {
+                    "success": False,
+                    "message": "Cannot create time entries for an archived project. Please unarchive the project first.",
+                    "error": "project_archived",
+                }
+
             # Validate task if provided (only valid when project_id is set)
             if task_id:
                 task = Task.query.filter_by(id=task_id, project_id=project_id).first()
@@ -543,19 +550,13 @@ class TimeTrackingService:
             # is derived from rounded start/end (apply_user_rounding alone would leave
             # raw timestamps).
             from app.models import User
-            from app.utils.time_rounding import (
-                apply_user_rounding,
-                get_user_rounding_settings,
-                round_entry_boundaries,
-            )
+            from app.utils.time_rounding import apply_user_rounding, get_user_rounding_settings, round_entry_boundaries
 
             rounding_user = db.session.get(User, user_id)
             if rounding_user is not None:
                 settings = get_user_rounding_settings(rounding_user)
                 if settings["enabled"] and settings["method"] == "boundary" and settings["minutes"] > 1:
-                    start_time, end_time = round_entry_boundaries(
-                        start_time, end_time, settings["minutes"]
-                    )
+                    start_time, end_time = round_entry_boundaries(start_time, end_time, settings["minutes"])
                     duration_seconds = None
                 else:
                     duration_seconds = apply_user_rounding(duration_seconds, rounding_user)

@@ -122,9 +122,9 @@
             {% for definition in custom_field_definitions %}
             <div>
                 <label for="custom_field_{{ definition.field_key }}" class="form-label">{{ definition.label }} (Client)</label>
-                <input type="text" name="custom_field_{{ definition.field_key }}" id="custom_field_{{ definition.field_key }}" 
-                       value="{{ filters.client_custom_field.get(definition.field_key, '') if filters.client_custom_field else '' }}" 
-                       class="form-input" 
+                <input type="text" name="custom_field_{{ definition.field_key }}" id="custom_field_{{ definition.field_key }}"
+                       value="{{ filters.client_custom_field.get(definition.field_key, '') if filters.client_custom_field else '' }}"
+                       class="form-input"
                        placeholder="{{ definition.description or '' }}">
             </div>
             {% endfor %}
@@ -262,7 +262,7 @@ function toggleSelectAll() {
     const selectAllHeader = document.getElementById('selectAllHeader');
     const checkboxes = document.querySelectorAll('.entry-checkbox');
     const checked = selectAll.checked || selectAllHeader.checked;
-    
+
     checkboxes.forEach(cb => cb.checked = checked);
     selectAll.checked = checked;
     selectAllHeader.checked = checked;
@@ -275,7 +275,7 @@ function updateBulkActions() {
     const countValue = document.getElementById('countValue');
     const selectedCount = document.getElementById('selectedCount');
     const bulkActionsBtn = document.getElementById('bulkActionsBtn');
-    
+
     if (count > 0) {
         countValue.textContent = count;
         selectedCount.classList.remove('hidden');
@@ -306,7 +306,7 @@ function toggleInvoiceReferenceField() {
     const statusSelect = document.getElementById('bulkPaidSelect');
     const referenceField = document.getElementById('invoiceReferenceField');
     if (!statusSelect || !referenceField) return;
-    
+
     if (statusSelect.value === 'true') {
         referenceField.classList.remove('hidden');
     } else {
@@ -350,11 +350,11 @@ function submitBulkPaid() {
     const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
     const form = document.getElementById('bulkPaidForm');
     const paidValue = document.getElementById('bulkPaidSelect').value;
-    
+
     // Clear existing entry IDs and invoice reference
     form.querySelectorAll('input[name="entry_ids[]"]').forEach(input => input.remove());
     form.querySelectorAll('input[name="invoice_reference"]').forEach(input => input.remove());
-    
+
     // Add selected entry IDs to form
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
@@ -363,7 +363,7 @@ function submitBulkPaid() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     // Add invoice reference if provided and status is paid
     const referenceInput = document.getElementById('bulkInvoiceReference');
     if (paidValue === 'true' && referenceInput && referenceInput.value.trim()) {
@@ -373,7 +373,7 @@ function submitBulkPaid() {
         refInput.value = referenceInput.value.trim();
         form.appendChild(refInput);
     }
-    
+
     document.getElementById('bulkPaidValue').value = paidValue;
     form.submit();
 }
@@ -386,12 +386,12 @@ function showBulkDeleteConfirm() {
     }
     const count = checkboxes.length;
     const msg = `{{ _("Are you sure you want to delete") }} ${count} {{ _("time entry/entries") }}? {{ _("This action cannot be undone.") }}`;
-    
+
     // Show custom dialog with reason field
     document.getElementById('bulkDeleteMessage').textContent = msg;
     document.getElementById('bulkDeleteReasonInput').value = '';
     document.getElementById('bulkDeleteDialog').classList.remove('hidden');
-    
+
     // Close the menu
     document.getElementById('bulkActionsMenu').classList.add('hidden');
     return false;
@@ -405,13 +405,13 @@ function confirmBulkDelete() {
     const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
     const form = document.getElementById('bulkDeleteForm');
     const reasonInput = document.getElementById('bulkDeleteReasonInput');
-    
+
     // Set reason in form
     document.getElementById('bulkDeleteReason').value = reasonInput.value.trim();
-    
+
     // Clear existing entry IDs
     form.querySelectorAll('input[name="entry_ids[]"]').forEach(input => input.remove());
-    
+
     // Add selected entry IDs to form
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
@@ -420,7 +420,7 @@ function confirmBulkDelete() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     // Close dialog and submit
     closeBulkDeleteDialog();
     form.submit();
@@ -429,7 +429,7 @@ function confirmBulkDelete() {
 // Time Entries Filter Handler - AJAX filtering
 (function() {
     'use strict';
-    
+
     let filterTimeout = null;
     let searchTimeout = null;
     let activeController = null;
@@ -465,13 +465,13 @@ function confirmBulkDelete() {
             pdfBtn.href = u.pathname + u.search;
         }
     }
-    
+
     function getFilterParams() {
         const form = document.getElementById('timeEntriesFilterForm');
         if (!form) return {};
-        
+
         const params = {};
-        
+
         // Get search input value directly (more reliable than FormData for text inputs) (Issue #489)
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
@@ -480,7 +480,7 @@ function confirmBulkDelete() {
                 params.search = searchValue;
             }
         }
-        
+
         // Explicitly read filter fields that may be hidden (e.g. client_select uses hidden input when locked)
         ['user_id', 'project_id', 'client_id', 'start_date', 'end_date', 'paid', 'billable'].forEach(function(name) {
             const el = form.querySelector('[name="' + name + '"]');
@@ -490,7 +490,7 @@ function confirmBulkDelete() {
             const val = (el.value || '').trim();
             if (val) params[name] = val;
         });
-        
+
         // Collect remaining from FormData (custom_field_*, etc.)
         const formData = new FormData(form);
         for (const [key, value] of formData.entries()) {
@@ -512,23 +512,23 @@ function confirmBulkDelete() {
         if (clientEl && clientEl.getAttribute('data-auto-client') === 'true' && 'client_id' in params) {
             delete params.client_id;
         }
-        
+
         if (typeof console !== 'undefined' && console.debug) {
             console.debug('[Time Entries] Filter params:', params);
         }
         return params;
     }
-    
+
     function buildFilterUrl() {
         const params = getFilterParams();
         const queryString = new URLSearchParams(params).toString();
         return queryString ? `/time-entries?${queryString}` : '/time-entries';
     }
-    
+
     function applyFilters() {
         const url = buildFilterUrl();
         const container = document.getElementById('timeEntriesListContainer');
-        
+
         if (!container) {
             console.error('[Time Entries] timeEntriesListContainer not found');
             return;
@@ -543,11 +543,11 @@ function confirmBulkDelete() {
             return;
         }
         inFlightUrl = url;
-        
+
         // Show loading state
         container.style.opacity = '0.5';
         container.style.pointerEvents = 'none';
-        
+
         // Update URL
         if (window.history && window.history.pushState) {
             window.history.pushState({}, '', url);
@@ -562,7 +562,7 @@ function confirmBulkDelete() {
         } catch (_) {}
         activeController = new AbortController();
         const requestId = ++latestRequestId;
-        
+
         // Fetch filtered results
         fetch(url, {
             method: 'GET',
@@ -605,7 +605,7 @@ function confirmBulkDelete() {
                 }
                 if (inFlightUrl === url) inFlightUrl = null;
             }
-            
+
             // Re-initialize bulk actions after content update
             updateBulkActions();
 
@@ -640,21 +640,21 @@ function confirmBulkDelete() {
             if (inFlightUrl === url) inFlightUrl = null;
         });
     }
-    
+
     function debouncedApplyFilters(delay = 100) {
         if (filterTimeout) {
             clearTimeout(filterTimeout);
         }
         filterTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     function debouncedSearch(delay = 500) {
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
         searchTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     function initTimeEntriesFilters() {
         const form = document.getElementById('timeEntriesFilterForm');
         if (!form) {
@@ -755,7 +755,7 @@ function confirmBulkDelete() {
                 applyFilters();
             }
         });
-        
+
         // Prevent form submission (use AJAX instead)
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -782,4 +782,3 @@ function confirmBulkDelete() {
 </script>
 <script src="{{ url_for('static', filename='time-entries-inline-edit.js') }}?v={{ app_version }}"></script>
 {% endblock %}
-

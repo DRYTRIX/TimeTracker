@@ -4,10 +4,11 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.models]
 
-from decimal import Decimal
 from datetime import date, datetime
+from decimal import Decimal
+
 from app import db
-from app.models import PurchaseOrder, PurchaseOrderItem, Supplier, StockItem, Warehouse, User
+from app.models import PurchaseOrder, PurchaseOrderItem, StockItem, Supplier, User, Warehouse
 
 
 @pytest.fixture

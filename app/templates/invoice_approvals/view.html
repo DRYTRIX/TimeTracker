@@ -26,24 +26,24 @@
                         {{ approval.status|title }}
                     </span>
                 </div>
-                
+
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Requested By') }}</dt>
                     <dd class="text-text-light dark:text-text-dark">{{ approval.requester.username }}</dd>
                 </div>
-                
+
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Requested At') }}</dt>
                     <dd class="text-text-light dark:text-text-dark">{{ approval.requested_at|user_datetime }}</dd>
                 </div>
-                
+
                 {% if approval.approved_at %}
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Approved By') }}</dt>
                     <dd class="text-text-light dark:text-text-dark">{{ approval.approver.username if approval.approver else _('Unknown') }}</dd>
                 </div>
                 {% endif %}
-                
+
                 {% if approval.rejected_at %}
                 <div>
                     <dt class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">{{ _('Rejected By') }}</dt>
@@ -58,7 +58,7 @@
                 {% endif %}
             </div>
         </div>
-        
+
         {% if approval.stages %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Approval Stages') }}</h2>
@@ -94,7 +94,7 @@
         </div>
         {% endif %}
     </div>
-    
+
     <div>
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4">{{ _('Quick Actions') }}</h3>
@@ -120,4 +120,3 @@
     </div>
 </div>
 {% endblock %}
-

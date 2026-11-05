@@ -1,19 +1,21 @@
+from datetime import date, datetime, timedelta, timezone
+
 import pytest
 import pytz
-from datetime import date, datetime, timedelta, timezone
+from flask_login import login_user
+
 from app import create_app, db
-from app.models import Settings, TimeEntry, User, Project
+from app.models import Project, Settings, TimeEntry, User
+from app.routes.user import update_preferences
 from app.utils.timezone import (
-    get_app_timezone,
-    utc_to_local,
-    local_to_utc,
-    now_in_app_timezone,
     convert_app_datetime_to_user,
     format_user_datetime,
+    get_app_timezone,
     get_available_timezones,
+    local_to_utc,
+    now_in_app_timezone,
+    utc_to_local,
 )
-from app.routes.user import update_preferences
-from flask_login import login_user
 
 
 @pytest.fixture

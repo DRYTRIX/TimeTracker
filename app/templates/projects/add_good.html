@@ -13,18 +13,18 @@
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="md:col-span-2">
                     <label for="name" class="form-label">{{ _('Name') }} *</label>
                     <input type="text" name="name" id="name" required class="form-input">
                 </div>
-                
+
                 <div class="md:col-span-2">
                     <label for="description" class="form-label">{{ _('Description') }}</label>
                     <textarea name="description" id="description" rows="3" class="form-input"></textarea>
                 </div>
-                
+
                 <div>
                     <label for="category" class="form-label">{{ _('Category') }} *</label>
                     <select name="category" id="category" required class="form-input">
@@ -35,7 +35,7 @@
                         <option value="other">{{ _('Other') }}</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="sku" class="form-label">{{ _('SKU/Product Code') }}</label>
                     <input type="text" name="sku" id="sku" class="form-input">
@@ -51,22 +51,22 @@
                     </select>
                     <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('When this good is invoiced and the invoice is sent/paid, linked stock is depleted.') }}</p>
                 </div>
-                
+
                 <div>
                     <label for="quantity" class="form-label">{{ _('Quantity') }} *</label>
                     <input type="number" name="quantity" id="quantity" value="1" step="0.01" min="0.01" required class="form-input">
                 </div>
-                
+
                 <div>
                     <label for="unit_price" class="form-label">{{ _('Unit Price') }} *</label>
                     <input type="number" name="unit_price" id="unit_price" step="0.01" min="0" required class="form-input">
                 </div>
-                
+
                 <div>
                     <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
                     <input type="text" name="currency_code" id="currency_code" value="EUR" maxlength="3" class="form-input">
                 </div>
-                
+
                 <div>
                     <label class="flex items-center mt-6">
                         <input type="checkbox" name="billable" checked class="form-checkbox">
@@ -74,7 +74,7 @@
                     </label>
                 </div>
             </div>
-            
+
             <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
                 <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg">{{ _('Cancel') }}</a>
                 <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg">{{ _('Add Good') }}</button>
@@ -83,4 +83,3 @@
     </div>
 </div>
 {% endblock %}
-

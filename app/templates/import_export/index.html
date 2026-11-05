@@ -28,7 +28,7 @@
                 <div class="mb-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('CSV Import - Time Entries') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import time entries from a CSV file') }}</p>
-                    
+
                     <div class="flex flex-wrap items-center gap-3">
                         <label for="csv-file" class="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
                             <i class="fas fa-upload mr-2"></i>{{ _('Choose CSV File') }}
@@ -47,7 +47,7 @@
                 <div class="mb-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('CSV Import - Clients') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import clients with custom fields and multiple contacts from a CSV file') }}</p>
-                    
+
                     <div class="flex flex-wrap items-center gap-3">
                         <label for="csv-clients-file" class="cursor-pointer bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
                             <i class="fas fa-upload mr-2"></i>{{ _('Choose CSV File') }}
@@ -84,7 +84,7 @@
                 <div class="mb-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Import from Toggl Track') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import time entries from Toggl Track') }}</p>
-                    
+
                     <button onclick="showTogglImportForm()" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">
                         <i class="fas fa-clock mr-2"></i>{{ _('Import from Toggl') }}
                     </button>
@@ -96,7 +96,7 @@
                 <div class="mb-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Import from Harvest') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Import time entries from Harvest') }}</p>
-                    
+
                     <button onclick="showHarvestImportForm()" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition">
                         <i class="fas fa-clock mr-2"></i>{{ _('Import from Harvest') }}
                     </button>
@@ -109,7 +109,7 @@
                 <div>
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Restore from Backup') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Restore data from a JSON or ZIP backup file') }}</p>
-                    
+
                     <label for="backup-file" class="cursor-pointer bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition inline-block">
                         <i class="fas fa-file-upload mr-2"></i>{{ _('Restore Backup') }}
                     </label>
@@ -141,7 +141,7 @@
                 <div class="mb-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Full Data Export (GDPR)') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Export all your personal data') }}</p>
-                    
+
                     <div class="flex flex-wrap gap-3">
                         <button onclick="exportGdpr('json')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
                             <i class="fas fa-file-code mr-2"></i>{{ _('Export as JSON') }}
@@ -159,7 +159,7 @@
                 <div class="mb-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Filtered Export') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Export specific data with filters') }}</p>
-                    
+
                     <button onclick="showFilteredExportForm()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
                         <i class="fas fa-filter mr-2"></i>{{ _('Export with Filters') }}
                     </button>
@@ -171,7 +171,7 @@
                 <div class="mb-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Export Clients') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Export all clients with custom fields and contacts to CSV') }}</p>
-                    
+
                     <a href="/clients/export" class="inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
                         <i class="fas fa-download mr-2"></i>{{ _('Export Clients to CSV') }}
                     </a>
@@ -184,7 +184,7 @@
                 <div>
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Create Backup') }}</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Create a full database backup') }}</p>
-                    
+
                     <button onclick="createBackup()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition">
                         <i class="fas fa-database mr-2"></i>{{ _('Create Backup') }}
                     </button>
@@ -209,28 +209,28 @@
 <div id="toggl-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-card-light dark:bg-card-dark rounded-lg p-6 max-w-md w-full mx-4">
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">{{ _('Import from Toggl Track') }}</h3>
-        
+
         <form id="toggl-form" onsubmit="submitTogglImport(event)" class="space-y-4">
             <div>
                 <label class="form-label">{{ _('API Token') }}</label>
                 <input type="text" name="api_token" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
-            
+
             <div>
                 <label class="form-label">{{ _('Workspace ID') }}</label>
                 <input type="text" name="workspace_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
-            
+
             <div>
                 <label class="form-label">{{ _('Start Date') }}</label>
                 <input type="date" name="start_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
-            
+
             <div>
                 <label class="form-label">{{ _('End Date') }}</label>
                 <input type="date" name="end_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
-            
+
             <div class="flex space-x-3">
                 <button type="submit" class="flex-1 bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">
                     {{ _('Import') }}
@@ -247,28 +247,28 @@
 <div id="harvest-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-card-light dark:bg-card-dark rounded-lg p-6 max-w-md w-full mx-4">
         <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">{{ _('Import from Harvest') }}</h3>
-        
+
         <form id="harvest-form" onsubmit="submitHarvestImport(event)" class="space-y-4">
             <div>
                 <label class="form-label">{{ _('Account ID') }}</label>
                 <input type="text" name="account_id" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
-            
+
             <div>
                 <label class="form-label">{{ _('API Token') }}</label>
                 <input type="text" name="api_token" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
-            
+
             <div>
                 <label class="form-label">{{ _('Start Date') }}</label>
                 <input type="date" name="start_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
-            
+
             <div>
                 <label class="form-label">{{ _('End Date') }}</label>
                 <input type="date" name="end_date" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
             </div>
-            
+
             <div class="flex space-x-3">
                 <button type="submit" class="flex-1 bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition">
                     {{ _('Import') }}
@@ -286,27 +286,27 @@
 async function handleCsvUpload(input) {
     const file = input.files[0];
     if (!file) return;
-    
+
     const statusEl = document.getElementById('csv-upload-status');
     statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Uploading...</span>';
-    
+
     const formData = new FormData();
     formData.append('file', file);
-    
+
     // Get CSRF token from meta tag and add to form data
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (csrfToken) {
         formData.append('csrf_token', csrfToken);
     }
-    
+
     try {
         const response = await fetch('/api/import/csv', {
             method: 'POST',
             body: formData
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok) {
             statusEl.innerHTML = `<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Import successful: ${data.summary.successful} records imported</span>`;
             loadImportHistory();
@@ -316,7 +316,7 @@ async function handleCsvUpload(input) {
     } catch (error) {
         statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${error.message}</span>`;
     }
-    
+
     input.value = '';
 }
 
@@ -331,20 +331,20 @@ function escapeHtml(text) {
 async function handleCsvClientsUpload(input) {
     const file = input.files[0];
     if (!file) return;
-    
+
     const statusEl = document.getElementById('csv-clients-upload-status');
     statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Uploading...</span>';
-    
+
     const skipDuplicates = document.getElementById('skip-duplicates').checked;
     const formData = new FormData();
     formData.append('file', file);
-    
+
     // Get CSRF token from meta tag and add to form data
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (csrfToken) {
         formData.append('csrf_token', csrfToken);
     }
-    
+
     // Collect duplicate detection fields
     const duplicateFields = [];
     if (document.getElementById('dup-field-name').checked) {
@@ -356,7 +356,7 @@ async function handleCsvClientsUpload(input) {
         const customFields = customFieldsInput.split(',').map(f => f.trim()).filter(f => f);
         duplicateFields.push(...customFields);
     }
-    
+
     try {
         let url = `/api/import/csv/clients?skip_duplicates=${skipDuplicates}`;
         if (duplicateFields.length > 0) {
@@ -366,11 +366,11 @@ async function handleCsvClientsUpload(input) {
             method: 'POST',
             body: formData
         });
-        
+
         // Get response text first (we can only read the body once)
         const text = await response.text();
         let data;
-        
+
         // Try to parse as JSON
         try {
             data = JSON.parse(text);
@@ -380,14 +380,14 @@ async function handleCsvClientsUpload(input) {
             statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: Server returned non-JSON response. Status: ${response.status} ${response.statusText}</span>`;
             statusEl.innerHTML += `<br><span class="text-xs text-gray-600 dark:text-gray-400">Content-Type: ${contentType}</span>`;
             statusEl.innerHTML += `<br><span class="text-xs text-gray-600 dark:text-gray-400">Response length: ${text.length} characters</span>`;
-            
+
             if (text.length > 0) {
                 const preview = text.length < 500 ? text : text.substring(0, 500) + '...';
                 statusEl.innerHTML += `<br><div class="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs font-mono overflow-auto max-h-40"><pre>${escapeHtml(preview)}</pre></div>`;
             } else {
                 statusEl.innerHTML += `<br><span class="text-xs text-gray-600 dark:text-gray-400">Response is empty</span>`;
             }
-            
+
             console.error('Non-JSON response details:', {
                 status: response.status,
                 statusText: response.statusText,
@@ -398,7 +398,7 @@ async function handleCsvClientsUpload(input) {
             input.value = '';
             return;
         }
-        
+
         if (response.ok) {
             const skippedMsg = data.summary && data.summary.skipped > 0 ? `, ${data.summary.skipped} skipped` : '';
             const successful = data.summary ? data.summary.successful : 0;
@@ -415,7 +415,7 @@ async function handleCsvClientsUpload(input) {
         statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${error.message}</span>`;
         console.error('Client import error:', error);
     }
-    
+
     input.value = '';
 }
 
@@ -432,23 +432,23 @@ async function submitTogglImport(event) {
     event.preventDefault();
     const form = event.target;
     const formData = new FormData(form);
-    
+
     const data = {
         api_token: formData.get('api_token'),
         workspace_id: formData.get('workspace_id'),
         start_date: formData.get('start_date'),
         end_date: formData.get('end_date')
     };
-    
+
     try {
         const response = await fetch('/api/import/toggl', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(data)
         });
-        
+
         const result = await response.json();
-        
+
         if (response.ok) {
             alert(`Import successful: ${result.summary.successful} records imported`);
             hideTogglImportForm();
@@ -474,23 +474,23 @@ async function submitHarvestImport(event) {
     event.preventDefault();
     const form = event.target;
     const formData = new FormData(form);
-    
+
     const data = {
         account_id: formData.get('account_id'),
         api_token: formData.get('api_token'),
         start_date: formData.get('start_date'),
         end_date: formData.get('end_date')
     };
-    
+
     try {
         const response = await fetch('/api/import/harvest', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(data)
         });
-        
+
         const result = await response.json();
-        
+
         if (response.ok) {
             alert(`Import successful: ${result.summary.successful} records imported`);
             hideHarvestImportForm();
@@ -507,16 +507,16 @@ async function submitHarvestImport(event) {
 async function exportGdpr(format) {
     const statusEl = document.getElementById('gdpr-export-status');
     statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Exporting...</span>';
-    
+
     try {
         const response = await fetch('/api/export/gdpr', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({format})
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok) {
             statusEl.innerHTML = `<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Export ready! <a href="${data.download_url}" class="underline">Download</a></span>`;
             loadExportHistory();
@@ -532,15 +532,15 @@ async function exportGdpr(format) {
 async function createBackup() {
     const statusEl = document.getElementById('backup-create-status');
     statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Creating backup...</span>';
-    
+
     try {
         const response = await fetch('/api/export/backup', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'}
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok) {
             statusEl.innerHTML = `<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Backup ready! <a href="${data.download_url}" class="underline">Download</a></span>`;
             loadExportHistory();
@@ -556,26 +556,26 @@ async function createBackup() {
 async function handleBackupRestore(input) {
     const file = input.files[0];
     if (!file) return;
-    
+
     if (!confirm('Are you sure you want to restore from this backup? This may overwrite existing data.')) {
         input.value = '';
         return;
     }
-    
+
     const statusEl = document.getElementById('backup-restore-status');
     statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>Restoring...</span>';
-    
+
     const formData = new FormData();
     formData.append('file', file);
-    
+
     try {
         const response = await fetch('/api/backup/restore', {
             method: 'POST',
             body: formData
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok) {
             statusEl.innerHTML = '<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>Restore successful</span>';
             loadImportHistory();
@@ -585,23 +585,23 @@ async function handleBackupRestore(input) {
     } catch (error) {
         statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${error.message}</span>`;
     }
-    
+
     input.value = '';
 }
 
 // Load Import History
 async function loadImportHistory() {
     const container = document.getElementById('import-history');
-    
+
     try {
         const response = await fetch('/api/import/history');
         const data = await response.json();
-        
+
         if (data.imports.length === 0) {
             container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm">No import history</p>';
             return;
         }
-        
+
         container.innerHTML = data.imports.map(imp => `
             <div class="border border-gray-200 dark:border-gray-700 rounded p-3">
                 <div class="flex justify-between items-start">
@@ -626,16 +626,16 @@ async function loadImportHistory() {
 // Load Export History
 async function loadExportHistory() {
     const container = document.getElementById('export-history');
-    
+
     try {
         const response = await fetch('/api/export/history');
         const data = await response.json();
-        
+
         if (data.exports.length === 0) {
             container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm">No export history</p>';
             return;
         }
-        
+
         container.innerHTML = data.exports.map(exp => `
             <div class="border border-gray-200 dark:border-gray-700 rounded p-3">
                 <div class="flex justify-between items-start">
@@ -679,11 +679,11 @@ function showFilteredExportForm() {
 document.addEventListener('DOMContentLoaded', function() {
     loadImportHistory();
     loadExportHistory();
-    
+
     // Toggle duplicate detection fields visibility based on skip-duplicates checkbox
     const skipDuplicatesCheckbox = document.getElementById('skip-duplicates');
     const duplicateDetectionFields = document.getElementById('duplicate-detection-fields');
-    
+
     function toggleDuplicateFields() {
         if (skipDuplicatesCheckbox && duplicateDetectionFields) {
             if (skipDuplicatesCheckbox.checked) {
@@ -693,7 +693,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     if (skipDuplicatesCheckbox && duplicateDetectionFields) {
         skipDuplicatesCheckbox.addEventListener('change', toggleDuplicateFields);
         toggleDuplicateFields(); // Initialize on page load
@@ -701,4 +701,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

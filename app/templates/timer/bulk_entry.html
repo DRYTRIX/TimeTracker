@@ -9,9 +9,9 @@
 .bulk-entry .form-label { color: var(--text-primary); }
 .bulk-entry .card { border: 1px solid var(--border-color); }
 .bulk-entry .p-6 .form-input { background: #ffffff; }
-[data-theme="dark"] .bulk-entry .p-6 .form-input { background: #0f172a; color: var(--text-primary); border-color: var(--border-color); }
+.dark .bulk-entry .p-6 .form-input { background: #0f172a; color: var(--text-primary); border-color: var(--border-color); }
 .bulk-entry .form-input::placeholder { color: var(--text-muted); }
-[data-theme="dark"] .bulk-entry .form-input::placeholder { color: #64748b; }
+.dark .bulk-entry .form-input::placeholder { color: #64748b; }
 .bulk-entry .form-check-input { cursor: pointer; }
 
 /* Date range preview */
@@ -347,7 +347,7 @@
     z-index: 1;
 }
 
-[data-theme="dark"] .form-text {
+.dark .form-text {
     color: var(--text-muted) !important;
 }
 
@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set default dates to today
     const today = new Date().toISOString().split('T')[0];
     const now = new Date().toTimeString().slice(0, 5);
-    
+
     if (!document.getElementById('start_date').value) {
         document.getElementById('start_date').value = today;
     }
@@ -406,26 +406,26 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!document.getElementById('end_time').value) {
         document.getElementById('end_time').value = '17:00';
     }
-    
+
     // Mobile-specific improvements
     if (window.innerWidth <= 768) {
         // Add mobile-specific classes
         const form = document.querySelector('form');
         form.classList.add('mobile-form');
-        
+
         // Improve touch targets
         const inputs = document.querySelectorAll('.form-input, .form-input');
         inputs.forEach(input => {
             input.classList.add('touch-target');
         });
-        
+
         // Improve buttons
         const buttons = document.querySelectorAll('.btn');
         buttons.forEach(btn => {
             btn.classList.add('touch-target');
         });
     }
-    
+
     // Handle mobile viewport changes
     window.addEventListener('resize', function() {
         if (window.innerWidth <= 768) {
@@ -440,8 +440,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const clientSelect = document.getElementById('client_id');
     const taskSelect = document.getElementById('task_id');
 
-    const L = { 
-        noTask: i18nTimerBulk.no_task || 'No task', 
+    const L = {
+        noTask: i18nTimerBulk.no_task || 'No task',
         failedLoad: i18nTimerBulk.failed_load || 'Failed to load tasks',
         totalDays: i18nTimerBulk.total_days || 'Total days',
         weekdaysOnly: i18nTimerBulk.weekdays_only || 'Weekdays only',
@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const start = new Date(startDate);
         const end = new Date(endDate);
-        
+
         if (end < start) {
             previewDiv.style.display = 'none';
             return;
@@ -577,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Generate date list
         const dates = [];
         const current = new Date(start);
-        
+
         while (current <= end) {
             if (!skipWeekends || (current.getDay() !== 0 && current.getDay() !== 6)) {
                 dates.push(new Date(current));
@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update stats
         previewStats.innerHTML = '';
-        
+
         const totalDaysStat = document.createElement('span');
         totalDaysStat.className = 'preview-stat';
         totalDaysStat.textContent = `${dates.length} ${L.totalDays}`;
@@ -651,5 +651,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-
-

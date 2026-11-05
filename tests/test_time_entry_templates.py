@@ -8,11 +8,12 @@ This module tests:
 - Integration with time entries
 """
 
-import pytest
 from datetime import datetime
-from app.models import TimeEntryTemplate, User, Project, Task, TimeEntry
-from app import db
 
+import pytest
+
+from app import db
+from app.models import Project, Task, TimeEntry, TimeEntryTemplate, User
 
 # ============================================================================
 # Model Tests
@@ -225,8 +226,9 @@ class TestTimeEntryTemplateRoutes:
         """Test templates list page renders correctly with templates that have usage data"""
         # Create a template with usage data (last_used_at set)
         from datetime import datetime, timezone
-        from app.models import TimeEntryTemplate
+
         from app import db
+        from app.models import TimeEntryTemplate
 
         template = TimeEntryTemplate(
             user_id=user.id,
@@ -530,10 +532,11 @@ class TestTimeEntryTemplateIntegration:
     def test_start_timer_from_template_with_active_timer(self, authenticated_client, user, project):
         """Test that starting timer from template fails when user has active timer"""
         from datetime import datetime
-        from app.models.time_entry import local_now
 
         # Create an active timer
         from factories import TimeEntryFactory
+
+        from app.models.time_entry import local_now
 
         active_timer = TimeEntryFactory(
             user_id=user.id, project_id=project.id, start_time=local_now(), end_time=None, source="auto"

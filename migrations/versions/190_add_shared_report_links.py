@@ -24,7 +24,9 @@ def upgrade():
         "shared_report_links",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("token", sa.String(length=36), nullable=False),
-        sa.Column("saved_view_id", sa.Integer(), sa.ForeignKey("saved_report_views.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "saved_view_id", sa.Integer(), sa.ForeignKey("saved_report_views.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("report_name", sa.String(length=120), nullable=True),
         sa.Column("report_config_snapshot", sa.Text(), nullable=False),
         sa.Column("created_by_id", sa.Integer(), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),

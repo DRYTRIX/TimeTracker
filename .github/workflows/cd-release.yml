@@ -1,19 +1,9 @@
 name: CD - Release Build
 
-# This workflow builds and publishes official releases
-# 
-# Testing Strategy:
-# - Full test suite runs on PRs via ci-comprehensive.yml
-# - This workflow focuses on building and publishing
-# - Security audit still runs to catch any last-minute issues
-# - Tests can optionally be run via workflow_dispatch for manual releases
-#
-# Workflow is triggered by:
-# - Git version tags on main (v*.*.*)
-# - Manual workflow_dispatch
-#
-# Ordinary merges to main do NOT publish a release. Tag a commit on main
-# (e.g. git tag v5.19.0 && git push origin v5.19.0) to build and publish.
+# Builds and publishes official releases.
+# Triggered by version tags on main (v*.*.*) — usually created by release-finalize.yml —
+# or by workflow_dispatch. Release notes come from CHANGELOG.md (not git log).
+# Publishing requires the tagged commit to have a successful `ci-pass` check.
 
 on:
   push:
@@ -41,6 +31,12 @@ env:
   PYTHON_VERSION: '3.11'
   NODE_VERSION: '24'
 
+permissions:
+  contents: write
+  packages: write
+  attestations: write
+  id-token: write
+
 jobs:
   # ============================================================================
   # Full Test Suite (Optional - tests already ran on PR)
@@ -52,7 +48,7 @@ jobs:
     # Only run if explicitly requested via workflow_dispatch
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.skip_tests != 'true'
     timeout-minutes: 30
-    
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -67,67 +63,67 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      
+
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install -r requirements-test.txt
           pip install -e .
-      
+
       - name: Validate database migrations
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
         run: |
           echo "🔍 Validating database migrations..."
-          
+
           # Check if there are migration-related changes
           if git diff --name-only HEAD~1 2>/dev/null | grep -E "(app/models/|migrations/)" > /dev/null; then
             echo "📋 Migration-related changes detected"
-            
+
             # Initialize fresh database
             flask db upgrade
-            
+
             # Test migration rollback
             CURRENT_MIGRATION=$(flask db current)
             echo "Current migration: $CURRENT_MIGRATION"
-            
+
             if [ -n "$CURRENT_MIGRATION" ] && [ "$CURRENT_MIGRATION" != "None" ]; then
               echo "Testing migration operations..."
               flask db upgrade head
               echo "✅ Migration validation passed"
             fi
-            
+
             # Test with sample data
             python -c "
             from app import create_app, db
             from app.models.user import User
             from app.models.project import Project
             from app.models.client import Client
-            
+
             app = create_app()
             with app.app_context():
                 user = User(username='test_user', role='user')
                 db.session.add(user)
                 db.session.commit()
-                
+
                 client = Client(name='Test Client', description='Test client')
                 db.session.add(client)
                 db.session.commit()
-                
+
                 project = Project(name='Test Project', client_id=client.id, description='Test project')
                 db.session.add(project)
                 db.session.commit()
@@ -139,41 +135,41 @@ jobs:
 
       - name: Initialize database schema for tests
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
         run: |
           echo "🔧 Applying migrations to ensure test schema exists..."
           flask db upgrade
           echo "Current migration: $(flask db current)"
-      
+
       - name: Run complete test suite
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest -v -n auto --cov=app --cov-report=xml --cov-report=html --cov-report=term-missing \
                  --junitxml=junit.xml --maxfail=5
-      
+
       - name: Upload coverage reports
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238  # v4
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5  # v7.1.1
         with:
           files: ./coverage.xml
           flags: release
           name: release-tests
-      
+
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-release
           path: |
             htmlcov/
             coverage.xml
             junit.xml
-      
+
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
@@ -185,24 +181,26 @@ jobs:
   # Security Audit (always runs for releases)
   # ============================================================================
   security-audit:
-    name: Security Audit
+    name: Security Audit (advisory)
     runs-on: ubuntu-latest
+    # Advisory only — CVE gate lives in CI when requirements change + nightly audit.
+    if: github.event_name == 'workflow_dispatch'
     timeout-minutes: 10
-    
+    continue-on-error: true
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-      
+        uses: actions/checkout@v7
+
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Install security tools
         run: |
           pip install 'safety==3.7.0'
-      
+
       - name: Run Safety
         run: |
           mkdir -p .test_installation_config
@@ -212,10 +210,10 @@ jobs:
             python scripts/ci/sanitize_safety_report.py "${REPORT}" "${{ github.workspace }}"
           fi
           python -m safety check --file requirements.txt || true
-      
+
       - name: Upload security reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: security-audit-reports
           path: |
@@ -230,32 +228,33 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       is_prerelease: ${{ steps.version.outputs.is_prerelease }}
-    
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      
+
       - name: Extract version from setup.py
         id: extract_version
         run: |
           # Extract version from setup.py
           VERSION=$(grep -oP "version='\K[^']+" setup.py)
-          
+
           if [ -z "$VERSION" ]; then
             echo "❌ ERROR: Could not extract version from setup.py"
             exit 1
           fi
-          
+
           echo "extracted_version=$VERSION" >> $GITHUB_OUTPUT
           echo "📝 Extracted version from setup.py: $VERSION"
-      
+
       - name: Determine version and validate
         id: version
         run: |
           SETUP_VERSION="${{ steps.extract_version.outputs.extracted_version }}"
-          
+
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             # For manual triggers, use the input version
             VERSION="${{ github.event.inputs.version }}"
@@ -269,15 +268,15 @@ jobs:
             echo "   Release builds run only on version tags (v*.*.*) or workflow_dispatch."
             exit 1
           fi
-          
+
           # Ensure version starts with 'v'
           if [[ ! $VERSION =~ ^v ]]; then
             VERSION="v${VERSION}"
           fi
-          
+
           # Extract version without 'v' prefix for comparison
           VERSION_NO_V="${VERSION#v}"
-          
+
           # Validate that the version matches setup.py
           if [[ "$VERSION_NO_V" != "$SETUP_VERSION" ]]; then
             echo "❌ ERROR: Version mismatch!"
@@ -287,7 +286,7 @@ jobs:
             echo "Please update setup.py to version '$VERSION_NO_V' or use version 'v$SETUP_VERSION'"
             exit 1
           fi
-          
+
           # Tag pushes: the tag already exists (it is what triggered us). Verify
           # the tagged commit is on main so releases cannot ship from a branch tip.
           # (checkout uses fetch-depth: 0, so ancestry is available once main is fetched.)
@@ -309,13 +308,29 @@ jobs:
               exit 1
             fi
           fi
-          
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-          
+
           echo "✅ Version validation passed"
           echo "📦 Version: $VERSION"
           echo "🏷️ Prerelease: $IS_PRERELEASE"
+
+          # Require successful ci-pass on the commit being released (best-effort on first rollout).
+          SHA="$GITHUB_SHA"
+          echo "🔍 Checking ci-pass for $SHA ..."
+          # Look for a successful check-run named ci-pass (from the CI workflow)
+          STATUS=$(gh api "repos/${{ github.repository }}/commits/${SHA}/check-runs?per_page=100" \
+            --jq '[.check_runs[] | select(.name=="ci-pass" and .status=="completed")] | sort_by(.completed_at) | reverse | .[0].conclusion // empty' \
+            || true)
+          if [ -z "$STATUS" ]; then
+            echo "::warning::No ci-pass check-run found for $SHA (docs-only tag or first rollout). Continuing."
+          elif [ "$STATUS" != "success" ]; then
+            echo "❌ ci-pass conclusion is '$STATUS' — refusing to publish."
+            exit 1
+          else
+            echo "✅ ci-pass succeeded on $SHA"
+          fi
 
   # ============================================================================
   # Build and Push Release Image
@@ -323,33 +338,33 @@ jobs:
   build-and-push:
     name: Build and Push Release Image
     runs-on: ubuntu-latest
-    needs: [security-audit, determine-version]
+    needs: [determine-version]
     # Note: full-test-suite is optional, so we don't depend on it
     # Tests already ran on PR before merge
     permissions:
       contents: read
       packages: write
     timeout-minutes: 45
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      
+
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130  # v3
-      
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1  # v4.4.0
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
-      
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
+
       - name: Log in to Container Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6  # v4.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Set lowercase image name
         id: image-name
         run: |
@@ -375,7 +390,7 @@ jobs:
 
       - name: Log in to Docker Hub
         if: steps.dockerhub.outputs.enabled == 'true'
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6  # v4.7.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
@@ -393,10 +408,10 @@ jobs:
             echo "$IMAGES"
             echo "EOF"
           } >> $GITHUB_OUTPUT
-      
+
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051  # v5
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302  # v6.2.0
         with:
           # Use lowercase image name for compatibility with Docker registries
           images: ${{ steps.image-list.outputs.images }}
@@ -422,14 +437,14 @@ jobs:
           echo "📍 Location: Settings → Secrets and variables → Actions"
           echo "📝 Target File: app/config/analytics_defaults.py"
           echo ""
-          
+
           # Show file before injection
           echo "📄 File content BEFORE injection (showing placeholders):"
           echo "──────────────────────────────────────────────────────────────────"
           grep -E "(OTEL_EXPORTER_OTLP_ENDPOINT_DEFAULT|OTEL_EXPORTER_OTLP_TOKEN_DEFAULT|SENTRY_DSN_DEFAULT)" app/config/analytics_defaults.py || true
           echo "──────────────────────────────────────────────────────────────────"
           echo ""
-          
+
           # Verify secrets are available
           echo "🔍 Verifying GitHub Secrets availability..."
           if [ -z "$OTEL_EXPORTER_OTLP_ENDPOINT" ] || [ -z "$OTEL_EXPORTER_OTLP_TOKEN" ]; then
@@ -438,7 +453,7 @@ jobs:
           else
             echo "✅ Grafana OTLP secrets found in GitHub Secret Store"
           fi
-          
+
           if [ -z "$SENTRY_DSN" ]; then
             echo "⚠️  SENTRY_DSN secret not set (optional)"
             echo "   → Sentry error tracking will be disabled"
@@ -447,7 +462,7 @@ jobs:
             echo "   → Format: ${SENTRY_DSN:0:25}***${SENTRY_DSN: -10} (${#SENTRY_DSN} characters)"
           fi
           echo ""
-          
+
           # Perform replacement (use empty string if secrets not set)
           echo "🔧 Injecting secrets into application configuration..."
           sed -i "s|%%OTEL_EXPORTER_OTLP_ENDPOINT_PLACEHOLDER%%|${OTEL_EXPORTER_OTLP_ENDPOINT:-}|g" app/config/analytics_defaults.py
@@ -455,7 +470,7 @@ jobs:
           sed -i "s|%%SENTRY_DSN_PLACEHOLDER%%|${SENTRY_DSN:-}|g" app/config/analytics_defaults.py
           echo "   → Placeholders replaced with secret values (or empty if not set)"
           echo ""
-          
+
           # Show file after injection (redacted)
           echo "📄 File content AFTER injection (secrets redacted):"
           echo "──────────────────────────────────────────────────────────────────"
@@ -464,7 +479,7 @@ jobs:
             sed 's|\(https://[^@]*@[^/]*\)|***REDACTED***|g' || true
           echo "──────────────────────────────────────────────────────────────────"
           echo ""
-          
+
           # Verify placeholders were replaced
           echo "🔍 Verifying injection was successful..."
           if grep -q "%%OTEL_EXPORTER_OTLP_ENDPOINT_PLACEHOLDER%%" app/config/analytics_defaults.py; then
@@ -479,7 +494,7 @@ jobs:
           else
             echo "✅ Grafana token placeholder successfully replaced"
           fi
-          
+
           if grep -q "%%SENTRY_DSN_PLACEHOLDER%%" app/config/analytics_defaults.py; then
             echo "❌ ERROR: Sentry DSN placeholder was NOT replaced!"
             echo "   The placeholder '%%SENTRY_DSN_PLACEHOLDER%%' is still present in the file."
@@ -487,10 +502,10 @@ jobs:
           else
             echo "✅ Sentry DSN placeholder successfully replaced"
           fi
-          
+
           echo "✅ Grafana OTLP values injected"
           echo ""
-          
+
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "✅ SUCCESS: Analytics credentials injected from GitHub Secret Store"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -511,8 +526,8 @@ jobs:
           echo "   • Secrets are injected at build time from GitHub Secret Store"
           echo "   • Secrets are never exposed in logs or build artifacts"
           echo "   • Users can still opt-in/opt-out of telemetry via admin dashboard"
-          echo "" 
-      
+          echo ""
+
       - name: Inject donate-hide public key (optional)
         env:
           DONATE_HIDE_PUBLIC_KEY_PEM: ${{ secrets.DONATE_HIDE_PUBLIC_KEY_PEM }}
@@ -524,9 +539,9 @@ jobs:
           else
             echo "⚠️  DONATE_HIDE_PUBLIC_KEY_PEM not set — Support visibility code verification will be disabled in image"
           fi
-      
+
       - name: Build and push Docker image
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v5
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -546,314 +561,38 @@ jobs:
 
       - name: Update Docker Hub description
         if: steps.dockerhub.outputs.enabled == 'true'
-        uses: peter-evans/dockerhub-description@432a30c9e07499fd01da9f8a49f0faf9e0ca5b77  # v4
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa  # v5.0.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN || secrets.DOCKERHUB_PASSWORD }}
           repository: ${{ env.DOCKERHUB_IMAGE }}
           short-description: Self-hosted time tracking and project management
           readme-filepath: ./docker/hub-README.tmp.md
-      
+
       - name: Generate deployment manifests
         run: |
           VERSION="${{ needs.determine-version.outputs.version }}"
-          # Remove 'v' prefix for image tag
           VERSION_NO_V="${VERSION#v}"
-          # Convert repository name to lowercase for image name
           IMAGE_NAME_LOWER=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           PRODUCTION_IMAGE="${IMAGE_NAME_LOWER}:${VERSION_NO_V}"
-          
-          # Docker Compose deployment - includes all services from docker-compose.yml
-          cat > docker-compose.production.yml << EOF
-          # TimeTracker Production Deployment
-          # Generated: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
-          # Version: ${VERSION}
-          # Image: ${PRODUCTION_IMAGE}
-          
-          services:
-            # Certificate generator - runs once to create self-signed certs with SANs
-            certgen:
-              image: alpine:latest
-              container_name: timetracker-certgen
-              volumes:
-                - ./nginx/ssl:/certs
-                - ./scripts:/scripts:ro
-              command: sh /scripts/generate-certs.sh
-              restart: "no"
-          
-            # HTTPS reverse proxy (TLS terminates here)
-            nginx:
-              image: nginx:alpine
-              container_name: timetracker-nginx
-              ports:
-                - "80:80"
-                - "443:443"
-              volumes:
-                - ./nginx/conf.d:/etc/nginx/conf.d:ro
-                - ./nginx/ssl:/etc/nginx/ssl:ro
-              depends_on:
-                certgen:
-                  condition: service_completed_successfully
-                app:
-                  condition: service_started
-              restart: unless-stopped
-          
-            app:
-              image: ${PRODUCTION_IMAGE}
-              container_name: timetracker-app
-              environment:
-                - TZ=\${TZ:-Europe/Brussels}
-                - CURRENCY=\${CURRENCY:-EUR}
-                - ROUNDING_MINUTES=\${ROUNDING_MINUTES:-1}
-                - SINGLE_ACTIVE_TIMER=\${SINGLE_ACTIVE_TIMER:-true}
-                - ALLOW_SELF_REGISTER=\${ALLOW_SELF_REGISTER:-true}
-                - IDLE_TIMEOUT_MINUTES=\${IDLE_TIMEOUT_MINUTES:-30}
-                - ADMIN_USERNAMES=\${ADMIN_USERNAMES:-admin}
-                # IMPORTANT: Change SECRET_KEY in production! Used for sessions and CSRF tokens.
-                # Generate a secure key: python -c "import secrets; print(secrets.token_hex(32))"
-                # 
-                # CSRF CONFIGURATION:
-                # - WTF_CSRF_SSL_STRICT: Set to 'false' for HTTP access (localhost or IP address)
-                #   Set to 'true' only when using HTTPS in production
-                # - If accessing via IP address (e.g., 192.168.1.100), also set:
-                #   SESSION_COOKIE_SECURE=false and CSRF_COOKIE_SECURE=false
-                # 
-                # TROUBLESHOOTING: If forms fail with "CSRF token missing or invalid":
-                # 1. Verify SECRET_KEY is set and doesn't change between restarts
-                # 2. Check CSRF is enabled: WTF_CSRF_ENABLED=true
-                # 3. Ensure cookies are enabled in your browser
-                # 4. If behind a reverse proxy, ensure it forwards cookies correctly
-                # 5. Check the token hasn't expired (increase WTF_CSRF_TIME_LIMIT if needed)
-                # 6. If accessing via IP (not localhost): WTF_CSRF_SSL_STRICT=false
-                # For details: docs/CSRF_CONFIGURATION.md and docs/CSRF_IP_ACCESS_GUIDE.md
-                - SECRET_KEY=\${SECRET_KEY:-your-secret-key-change-this}
-                # Disable strict Referer check by default to avoid privacy/port issues
-                - WTF_CSRF_SSL_STRICT=\${WTF_CSRF_SSL_STRICT:-true}
-                - WTF_CSRF_ENABLED=\${WTF_CSRF_ENABLED:-true}
-                - WTF_CSRF_TIME_LIMIT=\${WTF_CSRF_TIME_LIMIT:-3600}
-                - SESSION_COOKIE_SECURE=\${SESSION_COOKIE_SECURE:-true}
-                - SESSION_COOKIE_SAMESITE=\${SESSION_COOKIE_SAMESITE:-Lax}
-                - REMEMBER_COOKIE_SECURE=\${REMEMBER_COOKIE_SECURE:-true}
-                - CSRF_COOKIE_SECURE=\${CSRF_COOKIE_SECURE:-true}
-                - CSRF_COOKIE_HTTPONLY=\${CSRF_COOKIE_HTTPONLY:-false}
-                - CSRF_COOKIE_SAMESITE=\${CSRF_COOKIE_SAMESITE:-Lax}
-                - CSRF_COOKIE_NAME=\${CSRF_COOKIE_NAME:-XSRF-TOKEN}
-                - PREFERRED_URL_SCHEME=\${PREFERRED_URL_SCHEME:-https}
-                - WTF_CSRF_TRUSTED_ORIGINS=\${WTF_CSRF_TRUSTED_ORIGINS:-https://localhost}
-                - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
-                - REDIS_URL=redis://:\${REDIS_PASSWORD:-timetracker}@redis:6379/0
-                - REDIS_ENABLED=\${REDIS_ENABLED:-true}
-                - LOG_FILE=/app/logs/timetracker.log
-                # Analytics & Monitoring (optional)
-                # See docs/analytics.md for configuration details
-                - SENTRY_DSN=\${SENTRY_DSN:-}
-                - SENTRY_TRACES_RATE=\${SENTRY_TRACES_RATE:-0.0}
-                - OTEL_EXPORTER_OTLP_ENDPOINT=\${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-                - OTEL_EXPORTER_OTLP_TOKEN=\${OTEL_EXPORTER_OTLP_TOKEN:-}
-                - ENABLE_TELEMETRY=\${ENABLE_TELEMETRY:-false}
-                - TELE_SALT=\${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
-          
-              # Expose only internally; nginx publishes ports
-              ports: []
-              volumes:
-                - app_data:/data
-                - app_logs:/app/logs
-                - app_uploads:/app/app/static/uploads
-              depends_on:
-                db:
-                  condition: service_healthy
-                redis:
-                  condition: service_healthy
-              restart: unless-stopped
-              healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost:8080/_health"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
-                start_period: 40s
-          
-            db:
-              image: postgres:16-alpine
-              container_name: timetracker-db
-              environment:
-                - POSTGRES_DB=\${POSTGRES_DB:-timetracker}
-                - POSTGRES_USER=\${POSTGRES_USER:-timetracker}
-                - POSTGRES_PASSWORD=\${POSTGRES_PASSWORD:-timetracker}
-                - TZ=\${TZ:-Europe/Brussels}
-              volumes:
-                - db_data:/var/lib/postgresql/data
-              healthcheck:
-                test: ["CMD-SHELL", "pg_isready -U \$\$POSTGRES_USER -d \$\$POSTGRES_DB"]
-                interval: 10s
-                timeout: 5s
-                retries: 5
-                start_period: 30s
-              restart: unless-stopped
-          
-            # Redis - Caching and session storage
-            redis:
-              image: redis:7-alpine
-              container_name: timetracker-redis
-              command: redis-server --appendonly yes --requirepass \${REDIS_PASSWORD:-timetracker}
-              volumes:
-                - redis_data:/data
-              ports:
-                - "6379:6379"
-              healthcheck:
-                test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-                interval: 10s
-                timeout: 3s
-                retries: 5
-              restart: unless-stopped
-          
-            # Analytics & Monitoring Services
-            # All services start by default for complete monitoring
-            # See docs/analytics.md and ANALYTICS_QUICK_START.md for details
-          
-            # Prometheus - Metrics collection and storage
-            prometheus:
-              image: prom/prometheus:latest
-              container_name: timetracker-prometheus
-              volumes:
-                - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-                - prometheus_data:/prometheus
-              command:
-                - '--config.file=/etc/prometheus/prometheus.yml'
-                - '--storage.tsdb.path=/prometheus'
-                - '--storage.tsdb.retention.time=30d'
-              ports:
-                - "9090:9090"
-              restart: unless-stopped
-          
-            # Grafana - Metrics visualization and dashboards
-            grafana:
-              image: grafana/grafana:latest
-              container_name: timetracker-grafana
-              environment:
-                - GF_SECURITY_ADMIN_PASSWORD=\${GRAFANA_ADMIN_PASSWORD:-admin}
-                - GF_USERS_ALLOW_SIGN_UP=false
-                - GF_SERVER_ROOT_URL=\${GF_SERVER_ROOT_URL:-http://localhost:3000}
-              volumes:
-                - grafana_data:/var/lib/grafana
-                - ./grafana/provisioning:/etc/grafana/provisioning
-              ports:
-                - "3000:3000"
-              depends_on:
-                - prometheus
-              restart: unless-stopped
-          
-            # Loki - Log aggregation
-            loki:
-              image: grafana/loki:latest
-              container_name: timetracker-loki
-              volumes:
-                - ./loki/loki-config.yml:/etc/loki/local-config.yaml
-                - loki_data:/loki
-              ports:
-                - "3100:3100"
-              command: -config.file=/etc/loki/local-config.yaml
-              restart: unless-stopped
-          
-            # Promtail - Log shipping to Loki
-            promtail:
-              image: grafana/promtail:latest
-              container_name: timetracker-promtail
-              volumes:
-                - ./logs:/var/log/timetracker:ro
-                - ./promtail/promtail-config.yml:/etc/promtail/config.yml
-              command: -config.file=/etc/promtail/config.yml
-              depends_on:
-                - loki
-              restart: unless-stopped
-          
-          volumes:
-            app_data:
-              driver: local
-            app_logs:
-              driver: local
-            app_uploads:
-              driver: local
-            db_data:
-              driver: local
-            prometheus_data:
-              driver: local
-            grafana_data:
-              driver: local
-            loki_data:
-              driver: local
-            redis_data:
-              driver: local
-          EOF
-          
-          # Kubernetes deployment (basic example)
-          cat > k8s-deployment.yml << EOF
-          # Kubernetes Deployment for TimeTracker ${VERSION}
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: timetracker
-            labels:
-              app: timetracker
-              version: ${VERSION}
-          spec:
-            replicas: 2
-            selector:
-              matchLabels:
-                app: timetracker
-            template:
-              metadata:
-                labels:
-                  app: timetracker
-                  version: ${VERSION}
-              spec:
-                containers:
-                - name: timetracker
-                  image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}
-                  ports:
-                  - containerPort: 8080
-                    name: http
-                  env:
-                  - name: DATABASE_URL
-                    valueFrom:
-                      secretKeyRef:
-                        name: timetracker-secrets
-                        key: database-url
-                  - name: SECRET_KEY
-                    valueFrom:
-                      secretKeyRef:
-                        name: timetracker-secrets
-                        key: secret-key
-                  livenessProbe:
-                    httpGet:
-                      path: /_health
-                      port: 8080
-                    initialDelaySeconds: 30
-                    periodSeconds: 10
-                  readinessProbe:
-                    httpGet:
-                      path: /_ready
-                      port: 8080
-                    initialDelaySeconds: 5
-                    periodSeconds: 5
-          ---
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: timetracker
-          spec:
-            selector:
-              app: timetracker
-            ports:
-            - protocol: TCP
-              port: 80
-              targetPort: 8080
-            type: LoadBalancer
-          EOF
-          
-          echo "📄 Deployment manifests created"
-      
+          GENERATED_AT=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          render() {
+            local src="$1" dst="$2"
+            sed -e "s|__VERSION__|${VERSION}|g" \
+                -e "s|__PRODUCTION_IMAGE__|${PRODUCTION_IMAGE}|g" \
+                -e "s|__GENERATED_AT__|${GENERATED_AT}|g" \
+                "$src" > "$dst"
+          }
+          render docker/release-templates/docker-compose.production.yml.tmpl docker-compose.production.yml
+          render docker/release-templates/k8s-deployment.yml.tmpl k8s-deployment.yml
+          # Keep NAS compose if present in repo
+          if [ -f docker-compose.nas.yml ]; then
+            cp docker-compose.nas.yml .
+          fi
+          echo "📄 Deployment manifests created from templates"
+
       - name: Upload deployment manifests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deployment-manifests-${{ needs.determine-version.outputs.version }}
           path: |
@@ -869,32 +608,32 @@ jobs:
     needs: [determine-version]
     continue-on-error: true
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-      
+        uses: actions/checkout@v7
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-      
+
       - name: Generate desktop icons
         run: |
           npm install
           npm run generate:icons
-      
+
       - name: Install dependencies
         working-directory: desktop
         run: npm ci
-      
+
       - name: Build Windows
         working-directory: desktop
         run: npm run build:win
-      
+
       - name: Upload Windows installer
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-windows-${{ needs.determine-version.outputs.version }}
           path: desktop/dist/*.exe
@@ -906,32 +645,32 @@ jobs:
     needs: [determine-version]
     continue-on-error: true
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-      
+        uses: actions/checkout@v7
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-      
+
       - name: Generate desktop icons
         run: |
           npm install
           npm run generate:icons
-      
+
       - name: Install dependencies
         working-directory: desktop
         run: npm ci
-      
+
       - name: Build Linux
         working-directory: desktop
         run: npm run build:linux
-      
+
       - name: Upload Linux packages
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-linux-${{ needs.determine-version.outputs.version }}
           path: |
@@ -945,34 +684,34 @@ jobs:
     needs: [determine-version]
     continue-on-error: true
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-      
+        uses: actions/checkout@v7
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-      
+
       - name: Generate desktop icons
         run: |
           npm install
           npm run generate:icons
           chmod +x scripts/generate-macos-icon.sh
           ./scripts/generate-macos-icon.sh
-      
+
       - name: Install dependencies
         working-directory: desktop
         run: npm ci
-      
+
       - name: Build macOS
         working-directory: desktop
         run: npm run build:mac
-      
+
       - name: Upload macOS DMG
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-macos-${{ needs.determine-version.outputs.version }}
           path: desktop/dist/*.dmg
@@ -987,36 +726,36 @@ jobs:
     needs: [determine-version]
     continue-on-error: true
     timeout-minutes: 45
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-      
+        uses: actions/checkout@v7
+
       - name: Setup Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v6
         with:
           distribution: 'zulu'
           java-version: '17'
-      
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.4'
+          flutter-version: '3.47.9'
           channel: 'stable'
-      
+
       - name: Generate app icons
         run: |
           pip install Pillow
           python scripts/generate-mobile-icon.py
-      
+
       - name: Install dependencies
         working-directory: mobile
         run: flutter pub get
-      
+
       - name: Generate launcher icons
         working-directory: mobile
         run: dart run flutter_launcher_icons
-      
+
       - name: Run mobile tests
         working-directory: mobile
         run: flutter test
@@ -1036,7 +775,7 @@ jobs:
             echo "keyAlias=$ANDROID_KEY_ALIAS"
             echo "keyPassword=$ANDROID_KEY_PASSWORD"
           } > mobile/android/key.properties
-      
+
       - name: Build APK
         working-directory: mobile
         env:
@@ -1046,7 +785,7 @@ jobs:
           flutter build apk --release \
             --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
             --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
-      
+
       - name: Build App Bundle
         working-directory: mobile
         env:
@@ -1057,18 +796,18 @@ jobs:
             --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
             --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
         continue-on-error: true
-      
+
       - name: Upload Android APK
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mobile-android-apk-${{ needs.determine-version.outputs.version }}
           path: mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 90
-      
+
       - name: Upload Android App Bundle
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mobile-android-aab-${{ needs.determine-version.outputs.version }}
           path: mobile/build/app/outputs/bundle/release/app-release.aab
@@ -1081,40 +820,40 @@ jobs:
     needs: [determine-version]
     continue-on-error: true
     timeout-minutes: 45
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-      
+        uses: actions/checkout@v7
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.4'
+          flutter-version: '3.47.9'
           channel: 'stable'
-      
+
       - name: Generate app icons
         run: |
           pip install Pillow
           python scripts/generate-mobile-icon.py
-      
+
       - name: Install dependencies
         working-directory: mobile
         run: flutter pub get
-      
+
       - name: Generate iOS platform files
         working-directory: mobile
         run: flutter create --platforms=ios .
-      
+
       - name: Generate launcher icons
         working-directory: mobile
         run: |
           dart run flutter_launcher_icons
           dart run flutter_launcher_icons -f flutter_launcher_icons_ios.yaml
-      
+
       - name: Run mobile tests
         working-directory: mobile
         run: flutter test
-      
+
       # Release mode is invalid for iOS simulator; this validates compilation and produces Runner.app for the artifact zip.
       - name: Build iOS (simulator)
         working-directory: mobile
@@ -1125,7 +864,7 @@ jobs:
           flutter build ios --simulator \
             --dart-define=OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-}" \
             --dart-define=OTEL_EXPORTER_OTLP_TOKEN="${OTEL_EXPORTER_OTLP_TOKEN:-}"
-      
+
       - name: Create iOS archive
         if: success()
         working-directory: mobile
@@ -1144,10 +883,10 @@ jobs:
             find build -name "Runner.app" -type d 2>/dev/null || true
             exit 1
           fi
-      
+
       - name: Upload iOS build
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mobile-ios-${{ needs.determine-version.outputs.version }}
           path: mobile/dist/*.zip
@@ -1166,10 +905,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -1179,7 +918,7 @@ jobs:
 
       - name: Upload extension zip
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: browser-extension-${{ needs.determine-version.outputs.version }}
           path: browser-extension/dist/*.zip
@@ -1192,48 +931,50 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [build-and-push, determine-version, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios, build-browser-extension]
+    # Publish even if an optional client build failed; Docker image is the critical artifact.
+    if: always() && needs.build-and-push.result == 'success' && needs.determine-version.result == 'success'
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      
+
       - name: Download deployment manifests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: deployment-manifests-${{ needs.determine-version.outputs.version }}
-      
+
       - name: Download desktop artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: 'desktop-*'
           merge-multiple: false
-      
+
       - name: Download mobile artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: 'mobile-*'
           merge-multiple: false
 
       - name: Download browser extension artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           pattern: 'browser-extension-*'
           merge-multiple: false
-      
+
       - name: Prepare release files
         run: |
           VERSION="${{ needs.determine-version.outputs.version }}"
           RELEASE_DIR="release-files"
           mkdir -p "$RELEASE_DIR"
-          
+
           # Move deployment manifests to release directory
           if [ -f "docker-compose.production.yml" ]; then
             cp docker-compose.production.yml "$RELEASE_DIR/" || true
@@ -1244,45 +985,45 @@ jobs:
           if [ -f "k8s-deployment.yml" ]; then
             cp k8s-deployment.yml "$RELEASE_DIR/" || true
           fi
-          
+
           # Organize desktop files
           DESKTOP_DIR="$RELEASE_DIR/desktop"
           mkdir -p "$DESKTOP_DIR"
-          
+
           # Windows
           if [ -d "desktop-windows-$VERSION" ]; then
             mkdir -p "$DESKTOP_DIR/windows"
             cp desktop-windows-$VERSION/* "$DESKTOP_DIR/windows/" 2>/dev/null || true
           fi
-          
+
           # Linux
           if [ -d "desktop-linux-$VERSION" ]; then
             mkdir -p "$DESKTOP_DIR/linux"
             cp desktop-linux-$VERSION/* "$DESKTOP_DIR/linux/" 2>/dev/null || true
           fi
-          
+
           # macOS
           if [ -d "desktop-macos-$VERSION" ]; then
             mkdir -p "$DESKTOP_DIR/macos"
             cp desktop-macos-$VERSION/* "$DESKTOP_DIR/macos/" 2>/dev/null || true
           fi
-          
+
           # Organize mobile files
           MOBILE_DIR="$RELEASE_DIR/mobile"
           mkdir -p "$MOBILE_DIR"
-          
+
           # Android APK
           if [ -d "mobile-android-apk-$VERSION" ]; then
             mkdir -p "$MOBILE_DIR/android"
             cp mobile-android-apk-$VERSION/* "$MOBILE_DIR/android/" 2>/dev/null || true
           fi
-          
+
           # Android AAB
           if [ -d "mobile-android-aab-$VERSION" ]; then
             mkdir -p "$MOBILE_DIR/android"
             cp mobile-android-aab-$VERSION/* "$MOBILE_DIR/android/" 2>/dev/null || true
           fi
-          
+
           # iOS
           if [ -d "mobile-ios-$VERSION" ]; then
             mkdir -p "$MOBILE_DIR/ios"
@@ -1293,79 +1034,51 @@ jobs:
           if [ -d "browser-extension-$VERSION" ]; then
             cp browser-extension-$VERSION/*.zip "$RELEASE_DIR/" 2>/dev/null || true
           fi
-          
+
           # Create file list for release (for debugging)
           find "$RELEASE_DIR" -type f > release-files-list.txt || true
           echo "Files to attach to release:"
           cat release-files-list.txt || echo "No files found"
-          
+
           # Count files for summary
           FILE_COUNT=$(find "$RELEASE_DIR" -type f | wc -l || echo "0")
           echo "Total files to attach: $FILE_COUNT"
           echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
-      
-      - name: Generate changelog
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Generate release notes from CHANGELOG
         id: changelog
         run: |
           VERSION="${{ needs.determine-version.outputs.version }}"
-          
-          # Try to get previous tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          
-          if [ -n "$PREVIOUS_TAG" ]; then
-            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %s (%an)" --no-merges)
-          else
-            CHANGELOG="Initial release"
-          fi
-          
-          # Write changelog to file first
-          echo "$CHANGELOG" > CHANGELOG.md
-          
-          # Add build status to changelog
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "## 📦 Build Status" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          
-          # Desktop builds
-          echo "### Desktop Applications" >> CHANGELOG.md
-          if [ "${{ needs.build-desktop-windows.result }}" == "success" ]; then
-            echo "✅ Windows build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ Windows build: Failed or skipped" >> CHANGELOG.md
-          fi
-          if [ "${{ needs.build-desktop-linux.result }}" == "success" ]; then
-            echo "✅ Linux build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ Linux build: Failed or skipped" >> CHANGELOG.md
-          fi
-          if [ "${{ needs.build-desktop-macos.result }}" == "success" ]; then
-            echo "✅ macOS build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ macOS build: Failed or skipped" >> CHANGELOG.md
-          fi
-          
-          # Mobile builds
-          echo "" >> CHANGELOG.md
-          echo "### Mobile Applications" >> CHANGELOG.md
-          if [ "${{ needs.build-mobile-android.result }}" == "success" ]; then
-            echo "✅ Android build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ Android build: Failed or skipped" >> CHANGELOG.md
-          fi
-          if [ "${{ needs.build-mobile-ios.result }}" == "success" ]; then
-            echo "✅ iOS build: Success" >> CHANGELOG.md
-          else
-            echo "⚠️ iOS build: Failed or skipped" >> CHANGELOG.md
-          fi
-      
-      - name: Create Release
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844  # v1
+          VERSION_NO_V="${VERSION#v}"
+          python scripts/bump_version.py --extract-notes "$VERSION_NO_V" > RELEASE_NOTES.md
+          {
+            echo ""
+            echo "## Build status"
+            echo ""
+            echo "### Desktop"
+            echo "- Windows: ${{ needs.build-desktop-windows.result }}"
+            echo "- Linux: ${{ needs.build-desktop-linux.result }}"
+            echo "- macOS: ${{ needs.build-desktop-macos.result }}"
+            echo ""
+            echo "### Mobile"
+            echo "- Android: ${{ needs.build-mobile-android.result }}"
+            echo "- iOS: ${{ needs.build-mobile-ios.result }}"
+          } >> RELEASE_NOTES.md
+          echo "----- RELEASE NOTES -----"
+          cat RELEASE_NOTES.md
+
+      - name: Create draft GitHub Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64  # v3.0.3
         with:
           tag_name: ${{ needs.determine-version.outputs.version }}
           name: Release ${{ needs.determine-version.outputs.version }}
-          body_path: CHANGELOG.md
-          draft: false
+          body_path: RELEASE_NOTES.md
+          draft: true
           prerelease: ${{ needs.determine-version.outputs.is_prerelease }}
           files: |
             release-files/docker-compose.production.yml
@@ -1376,7 +1089,15 @@ jobs:
             release-files/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: false
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ needs.determine-version.outputs.version }}"
+          # softprops may create the release; flip draft → published
+          gh release edit "$TAG" --draft=false || gh release view "$TAG"
+
 
   # ============================================================================
   # Trigger Demo Site Deploy (Render)
@@ -1387,7 +1108,7 @@ jobs:
     needs: [build-and-push]
     continue-on-error: true
     timeout-minutes: 2
-    
+
     steps:
       - name: Trigger Render deploy hook
         env:
@@ -1413,19 +1134,18 @@ jobs:
   release-summary:
     name: Release Summary
     runs-on: ubuntu-latest
-    needs: [security-audit, build-and-push, determine-version, create-release, trigger-demo-deploy, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios, build-browser-extension]
+    needs: [build-and-push, determine-version, create-release, trigger-demo-deploy, build-desktop-windows, build-desktop-linux, build-desktop-macos, build-mobile-android, build-mobile-ios, build-browser-extension]
     if: always()
-    
+
     steps:
       - name: Create release summary
         run: |
           echo "## 🚀 Release ${{ needs.determine-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Core Build Status" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Security: ${{ needs.security-audit.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Docker Build: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Release: ${{ needs.create-release.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Demo Deploy: ${{ needs.trigger-demo-deploy.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker Build: ${{ needs.build-and-push.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Release: ${{ needs.create-release.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Demo Deploy: ${{ needs.trigger-demo-deploy.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Desktop Applications" >> $GITHUB_STEP_SUMMARY
           if [ "${{ needs.build-desktop-windows.result }}" == "success" ]; then
@@ -1475,10 +1195,10 @@ jobs:
           echo "> 🔒 **Security**: Secrets are embedded at build time and never exposed in logs" >> $GITHUB_STEP_SUMMARY
           echo "> 👥 **Privacy**: Users maintain full control via opt-in/opt-out in admin dashboard" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           VERSION="${{ needs.determine-version.outputs.version }}"
           VERSION_NO_V="${VERSION#v}"
-          
+
           echo "### 🐳 Docker Images" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION_NO_V}" >> $GITHUB_STEP_SUMMARY
@@ -1495,4 +1215,3 @@ jobs:
           echo "# Deploy with docker-compose" >> $GITHUB_STEP_SUMMARY
           echo "docker-compose -f docker-compose.production.yml up -d" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-

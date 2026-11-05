@@ -98,7 +98,7 @@
                         {{ badge(log.action, log.get_color()) }}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100" data-label="{{ _('Entity') }}">
-                        <a href="{{ url_for('audit_logs.entity_history', entity_type=log.entity_type, entity_id=log.entity_id) }}" 
+                        <a href="{{ url_for('audit_logs.entity_history', entity_type=log.entity_type, entity_id=log.entity_id) }}"
                            class="text-primary hover:underline">
                             {{ log.entity_type }}#{{ log.entity_id }}
                         </a>
@@ -114,7 +114,7 @@
                             <div><i class="fas fa-building mr-1"></i>{{ _('Client') }}: {{ metadata.client_name }}{% if metadata.client_id %} (ID: {{ metadata.client_id }}){% endif %}</div>
                             {% endif %}
                             {% if metadata.created_at %}
-                            <div><i class="fas fa-calendar-plus mr-1"></i>{{ _('Created') }}: 
+                            <div><i class="fas fa-calendar-plus mr-1"></i>{{ _('Created') }}:
                                 {% if metadata.created_at is string %}
                                     {{ metadata.created_at[:16]|replace('T', ' ') }}
                                 {% else %}
@@ -142,13 +142,13 @@
                             <div class="space-y-1">
                                 {% if log.old_value %}
                                 <div class="text-xs">
-                                    <span class="text-red-600 dark:text-red-400">-</span> 
+                                    <span class="text-red-600 dark:text-red-400">-</span>
                                     <span class="line-through">{{ log.get_old_value() }}</span>
                                 </div>
                                 {% endif %}
                                 {% if log.new_value %}
                                 <div class="text-xs">
-                                    <span class="text-green-600 dark:text-green-400">+</span> 
+                                    <span class="text-green-600 dark:text-green-400">+</span>
                                     {{ log.get_new_value() }}
                                 </div>
                                 {% endif %}
@@ -168,7 +168,7 @@
             </tbody>
         </table>
     </div>
-    
+
     {{ pagination_nav(pagination, 'audit_logs.list_audit_logs', {
         'entity_type': entity_type,
         'entity_id': entity_id,
@@ -188,4 +188,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

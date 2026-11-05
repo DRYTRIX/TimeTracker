@@ -6,12 +6,7 @@ from typing import List, Optional, Tuple
 from flask import current_app
 
 from app import db
-from app.integrations.peppol import (
-    PeppolAttachment,
-    PeppolParty,
-    build_peppol_ubl_invoice_xml,
-    peppol_enabled,
-)
+from app.integrations.peppol import PeppolAttachment, PeppolParty, build_peppol_ubl_invoice_xml, peppol_enabled
 from app.integrations.peppol_transport import (
     GenericTransport,
     NativePeppolTransport,
@@ -46,7 +41,10 @@ class PeppolService:
         chokes on embedded binaries: PEPPOL_EMBED_INVOICE_PDF=false.
         """
         return (os.getenv("PEPPOL_EMBED_INVOICE_PDF", "true") or "").strip().lower() in {
-            "1", "true", "yes", "on",
+            "1",
+            "true",
+            "yes",
+            "on",
         }
 
     def _build_pdf_attachment(self, invoice) -> Optional[PeppolAttachment]:
@@ -66,9 +64,7 @@ class PeppolService:
 
             pdf_bytes = InvoicePDFGenerator(invoice).generate_pdf()
         except Exception:
-            current_app.logger.exception(
-                "Peppol: invoice PDF generation failed; sending UBL without attachment"
-            )
+            current_app.logger.exception("Peppol: invoice PDF generation failed; sending UBL without attachment")
             self.last_pdf_status = "error"
             return None
 
@@ -86,7 +82,8 @@ class PeppolService:
         if len(pdf_bytes) > max_mb * 1024 * 1024:
             current_app.logger.warning(
                 "Peppol: invoice PDF is %.1f MB (cap %.1f MB); sending UBL without attachment",
-                len(pdf_bytes) / 1024 / 1024, max_mb,
+                len(pdf_bytes) / 1024 / 1024,
+                max_mb,
             )
             self.last_pdf_status = "too_large"
             return None
@@ -162,8 +159,11 @@ class PeppolService:
 
     @staticmethod
     def _poll_ap_status(
-        ap_url: str, ap_token: Optional[str], message_id: str,
-        attempts: int = 4, delay_s: float = 4.0,
+        ap_url: str,
+        ap_token: Optional[str],
+        message_id: str,
+        attempts: int = 4,
+        delay_s: float = 4.0,
     ) -> Tuple[Optional[str], List[dict]]:
         """Poll the access-point adapter for the AP-side folder of an outbound message.
 
@@ -210,7 +210,8 @@ class PeppolService:
         settings = Settings.get_settings()
         transport_mode = (
             (getattr(settings, "peppol_transport_mode", None) or os.getenv("PEPPOL_TRANSPORT_MODE") or "generic")
-            .strip().lower()
+            .strip()
+            .lower()
         )
         if transport_mode == "native":
             return {"folder": None, "fatal_rules": []}
@@ -225,9 +226,10 @@ class PeppolService:
         )
         folder, rules = self._poll_ap_status(ap_url, ap_token or None, tx.message_id, attempts=1)
         if folder == "failed" and tx.status != "failed":
-            reasons = "; ".join(
-                f"[{r.get('id')}] {r.get('message')}" for r in (rules or [])[:6]
-            ) or "access point reported delivery failure"
+            reasons = (
+                "; ".join(f"[{r.get('id')}] {r.get('message')}" for r in (rules or [])[:6])
+                or "access point reported delivery failure"
+            )
             tx.mark_failed(f"Access point validation/delivery failed: {reasons}")
             safe_commit("peppol_refresh_mark_failed", {"tx_id": tx.id})
         return {"folder": folder, "fatal_rules": rules}
@@ -243,6 +245,9 @@ class PeppolService:
         try:
             sender = self._get_sender_party()
             recipient_party, recipient_endpoint_id, recipient_scheme_id = self._get_recipient_party(invoice)
+        except ValueError as e:
+            # Pass through specific validation errors (e.g. missing client Peppol endpoint)
+            return False, None, str(e)
         except Exception:
             current_app.logger.exception("Failed to resolve Peppol parties")
             return False, None, "Failed to resolve Peppol sender or recipient"
@@ -339,22 +344,26 @@ class PeppolService:
 
             # The AP accepts synchronously but validates/transmits async — poll briefly
             # so a validation failure doesn't masquerade as a successful send.
-            verify = (os.getenv("PEPPOL_VERIFY_AFTER_SEND", "true").strip().lower()
-                      in {"1", "true", "yes", "on"})
+            verify = os.getenv("PEPPOL_VERIFY_AFTER_SEND", "true").strip().lower() in {"1", "true", "yes", "on"}
             if verify and message_id and transport_mode != "native":
                 folder, fatal_rules = self._poll_ap_status(ap_url, ap_token or None, message_id)
                 if folder == "failed":
-                    reasons = "; ".join(
-                        f"[{r.get('id')}] {r.get('message')}" for r in (fatal_rules or [])[:6]
-                    ) or "access point reported delivery failure"
+                    reasons = (
+                        "; ".join(f"[{r.get('id')}] {r.get('message')}" for r in (fatal_rules or [])[:6])
+                        or "access point reported delivery failure"
+                    )
                     tx.mark_failed(f"Access point validation/delivery failed: {reasons}")
                     safe_commit("peppol_mark_failed", {"invoice_id": invoice.id, "tx_id": tx.id})
                     return False, tx, f"Peppol send FAILED at access point: {reasons}"
                 if folder == "sent":
                     return True, tx, "Invoice sent via Peppol (access point confirmed transmission)"
-                return True, tx, (
-                    "Invoice accepted by access point; async validation/delivery still pending — "
-                    "verify with the peppol-status endpoint before assuming delivery"
+                return (
+                    True,
+                    tx,
+                    (
+                        "Invoice accepted by access point; async validation/delivery still pending — "
+                        "verify with the peppol-status endpoint before assuming delivery"
+                    ),
                 )
 
             return True, tx, "Invoice sent via Peppol"

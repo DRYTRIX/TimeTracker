@@ -21,15 +21,22 @@ from flask_login import current_user, login_required
 
 import app as app_module
 from app import db
-from app.models import Activity, KanbanColumn, Milestone, Project, Task, TaskActivity, TaskChecklistItem, TaskDependency, TimeEntry, User
-from app.services.task_service import (
-    normalize_assignee_ids,
-    task_assigned_to_any_clause,
-    task_assigned_to_user_clause,
+from app.models import (
+    Activity,
+    KanbanColumn,
+    Milestone,
+    Project,
+    Task,
+    TaskActivity,
+    TaskChecklistItem,
+    TaskDependency,
+    TimeEntry,
+    User,
 )
+from app.services.task_service import normalize_assignee_ids, task_assigned_to_any_clause, task_assigned_to_user_clause
 from app.utils.db import safe_commit
-from app.utils.pagination import get_pagination_params
 from app.utils.error_handling import sanitize_log_value
+from app.utils.pagination import get_pagination_params
 from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.timezone import convert_app_datetime_to_user, now_in_app_timezone
 
@@ -40,11 +47,7 @@ ALLOWED_NEXT_PREFIXES = ("/kanban", "/gantt", "/tasks", "/projects")
 
 def _user_can_access_task(task):
     """Admin, any assignee, or creator may view/act on a task."""
-    return (
-        current_user.is_admin
-        or task.is_assigned_to(current_user.id)
-        or task.created_by == current_user.id
-    )
+    return current_user.is_admin or task.is_assigned_to(current_user.id) or task.created_by == current_user.id
 
 
 def _parse_assignee_ids_from_form(form=None):
@@ -165,7 +168,11 @@ def list_tasks():
     kanban_columns = KanbanColumn.get_active_columns(project_id=None) if KanbanColumn else []
     milestones = []
     if len(project_ids) == 1:
-        milestones = Milestone.query.filter_by(project_id=project_ids[0]).order_by(Milestone.due_date.asc().nullslast(), Milestone.name).all()
+        milestones = (
+            Milestone.query.filter_by(project_id=project_ids[0])
+            .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
+            .all()
+        )
 
     # Pre-calculate task counts by status for summary cards (avoid template iteration)
     task_counts = (
@@ -363,10 +370,10 @@ def create_task():
         flash(f'Task "{name}" created successfully', "success")
         next_url = request.form.get("next") or request.args.get("next")
         return safe_redirect(
-                next_url,
-                allowed_prefixes=ALLOWED_NEXT_PREFIXES,
-                fallback=url_for("tasks.view_task", task_id=task.id),
-            )
+            next_url,
+            allowed_prefixes=ALLOWED_NEXT_PREFIXES,
+            fallback=url_for("tasks.view_task", task_id=task.id),
+        )
 
     # Get available projects and users for form
     projects = Project.query.filter_by(status="active").order_by(Project.name).all()
@@ -447,11 +454,7 @@ def view_task(task_id):
     # The replies relationship is now eagerly loaded for direct replies
     # Nested replies beyond the first level will be loaded lazily, but the template depth limit prevents issues
     comments = [c for c in all_comments if c.parent_id is None]
-    sibling_tasks = (
-        Task.query.filter(Task.project_id == task.project_id, Task.id != task.id)
-        .order_by(Task.name)
-        .all()
-    )
+    sibling_tasks = Task.query.filter(Task.project_id == task.project_id, Task.id != task.id).order_by(Task.name).all()
 
     return render_template(
         "tasks/view.html",
@@ -656,7 +659,9 @@ def edit_task(task_id):
                                 task=task,
                                 projects=projects,
                                 users=users,
-                                kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
+                                kanban_columns=KanbanColumn.get_columns_with_global_fallback(
+                                    project_id=task.project_id
+                                ),
                                 milestones=Milestone.query.filter_by(project_id=task.project_id)
                                 .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
                                 .all(),
@@ -769,7 +774,9 @@ def edit_task(task_id):
         projects=projects,
         users=users,
         kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
-        milestones=Milestone.query.filter_by(project_id=task.project_id).order_by(Milestone.due_date.asc().nullslast(), Milestone.name).all(),
+        milestones=Milestone.query.filter_by(project_id=task.project_id)
+        .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
+        .all(),
     )
 
 
@@ -832,9 +839,7 @@ def update_task_status(task_id):
             try:
                 from app.services.gamification_service import GamificationService
 
-                GamificationService().check_and_award_badges(
-                    current_user.id, "task_completed", {"task_id": task.id}
-                )
+                GamificationService().check_and_award_badges(current_user.id, "task_completed", {"task_id": task.id})
             except Exception:
                 current_app.logger.debug("Gamification task hook failed", exc_info=True)
             db.session.add(
@@ -940,9 +945,7 @@ def assign_task(task_id):
 
     task.set_assignees(assignee_ids, commit=True)
     if assignee_ids:
-        names = ", ".join(
-            (User.query.get(uid).username if User.query.get(uid) else str(uid)) for uid in assignee_ids
-        )
+        names = ", ".join((User.query.get(uid).username if User.query.get(uid) else str(uid)) for uid in assignee_ids)
         flash(f"Task assigned to {names}", "success")
     else:
         flash(_("Task unassigned"), "success")
@@ -1507,9 +1510,7 @@ def export_tasks():
     # Permission filter - users without view_all_tasks permission only see their tasks
     has_view_all_tasks = current_user.is_admin or current_user.has_permission("view_all_tasks")
     if not has_view_all_tasks:
-        query = query.filter(
-            db.or_(task_assigned_to_user_clause(current_user.id), Task.created_by == current_user.id)
-        )
+        query = query.filter(db.or_(task_assigned_to_user_clause(current_user.id), Task.created_by == current_user.id))
 
     tasks = query.order_by(Task.priority.desc(), Task.due_date.asc(), Task.created_at.asc()).all()
 
@@ -1613,9 +1614,7 @@ def my_tasks():
     elif task_type == "created":
         query = query.filter(Task.created_by == current_user.id)
     else:
-        query = query.filter(
-            db.or_(task_assigned_to_user_clause(current_user.id), Task.created_by == current_user.id)
-        )
+        query = query.filter(db.or_(task_assigned_to_user_clause(current_user.id), Task.created_by == current_user.id))
 
     # Apply filters
     if status:

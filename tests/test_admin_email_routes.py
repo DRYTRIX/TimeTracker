@@ -2,9 +2,10 @@
 Tests for admin email routes
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from flask import url_for
-from unittest.mock import patch, MagicMock
 
 
 class TestAdminEmailRoutes:
@@ -31,9 +32,7 @@ class TestAdminEmailRoutes:
         """Test that admin can access email support page"""
         # Login as admin
         with client:
-            client.post(
-                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
-            )
+            client.post("/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True)
 
             response = client.get("/admin/email")
             assert response.status_code == 200
@@ -60,9 +59,7 @@ class TestAdminEmailRoutes:
 
         # Login as admin
         with client:
-            client.post(
-                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
-            )
+            client.post("/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True)
 
             response = client.get("/admin/email")
             assert response.status_code == 200
@@ -86,9 +83,7 @@ class TestAdminEmailRoutes:
 
         # Login as admin
         with client:
-            client.post(
-                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
-            )
+            client.post("/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True)
 
             response = client.post(
                 "/admin/email/test", json={"recipient": "test@example.com"}, content_type="application/json"
@@ -106,9 +101,7 @@ class TestAdminEmailRoutes:
 
         # Login as admin
         with client:
-            client.post(
-                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
-            )
+            client.post("/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True)
 
             response = client.post(
                 "/admin/email/test", json={"recipient": "test@example.com"}, content_type="application/json"
@@ -123,9 +116,7 @@ class TestAdminEmailRoutes:
         """Test sending test email without recipient"""
         # Login as admin
         with client:
-            client.post(
-                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
-            )
+            client.post("/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True)
 
             response = client.post("/admin/email/test", json={}, content_type="application/json")
 
@@ -138,9 +129,7 @@ class TestAdminEmailRoutes:
         """Test email configuration status endpoint"""
         # Login as admin
         with client:
-            client.post(
-                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
-            )
+            client.post("/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True)
 
             response = client.get("/admin/email/config-status")
 
@@ -155,9 +144,7 @@ class TestAdminEmailRoutes:
         """Test that test email endpoint has rate limiting"""
         # Login as admin
         with client:
-            client.post(
-                "/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True
-            )
+            client.post("/login", data={"username": admin_user.username, "password": "password"}, follow_redirects=True)
 
             # Send multiple requests rapidly
             for i in range(6):  # Limit is 5 per minute
@@ -174,8 +161,8 @@ class TestAdminEmailRoutes:
 @pytest.fixture
 def regular_user(app):
     """Create a regular user"""
-    from app.models import User
     from app import db
+    from app.models import User
 
     with app.app_context():
         user = User(username="regular_user", role="user")
@@ -190,8 +177,8 @@ def regular_user(app):
 @pytest.fixture
 def admin_user(app):
     """Create an admin user"""
-    from app.models import User
     from app import db
+    from app.models import User
 
     with app.app_context():
         user = User(username="admin", role="admin")

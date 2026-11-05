@@ -108,6 +108,16 @@ class InstallationConfig:
         self._config["initial_data_seeded_at"] = str(datetime.now())
         self._save_config()
 
+    def is_demo_sample_data_seeded(self) -> bool:
+        """Check if DEMO_MODE sample clients/projects/entries were seeded"""
+        return bool(self._config.get("demo_sample_data_seeded", False))
+
+    def mark_demo_sample_data_seeded(self):
+        """Mark that DEMO_MODE sample data has been seeded"""
+        self._config["demo_sample_data_seeded"] = True
+        self._config["demo_sample_data_seeded_at"] = str(datetime.now())
+        self._save_config()
+
     def get_telemetry_preference(self) -> bool:
         """Get user's telemetry preference.
         Uses a local load only; does not overwrite self._config to avoid poisoning

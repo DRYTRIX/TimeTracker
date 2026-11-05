@@ -76,7 +76,9 @@ class GustoConnector(BaseConnector):
             "refresh_token": data.get("refresh_token"),
             "expires_at": expires_at.isoformat(),
             "token_type": data.get("token_type", "Bearer"),
-            "extra_data": {"company_uuid": data.get("company_uuid") or (self.integration.config or {}).get("company_uuid")},
+            "extra_data": {
+                "company_uuid": data.get("company_uuid") or (self.integration.config or {}).get("company_uuid")
+            },
         }
 
     def refresh_access_token(self) -> Dict[str, Any]:

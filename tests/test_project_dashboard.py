@@ -11,11 +11,13 @@ This module tests:
 - Period filtering
 """
 
-import pytest
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+import pytest
+
 from app import create_app, db
-from app.models import User, Project, Client, Task, TimeEntry, Activity, ProjectCost
+from app.models import Activity, Client, Project, ProjectCost, Task, TimeEntry, User
 
 # Skip all tests in this module due to pre-existing model initialization issues
 pytestmark = pytest.mark.skip(reason="Pre-existing issues with Task model initialization - needs refactoring")

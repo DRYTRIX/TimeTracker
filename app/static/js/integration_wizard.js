@@ -26,7 +26,7 @@
         init() {
             this.setupEventListeners();
             this.updateStepUI();
-            
+
             // Call custom initialization if provided
             if (typeof this.options.onInit === 'function') {
                 this.options.onInit.call(this);
@@ -103,7 +103,7 @@
                     isValid = false;
                 } else {
                     this.clearError(field.id || field.name);
-                    
+
                     // Validate URL fields
                     if (field.type === 'url') {
                         try {
@@ -186,7 +186,7 @@
             // Update navigation buttons
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
-            
+
             if (prevBtn) {
                 prevBtn.classList.toggle('hidden', this.currentStep === 1);
             }
@@ -334,7 +334,7 @@
                 });
 
                 const result = await response.json();
-                
+
                 if (result.success) {
                     if (result.redirect_url) {
                         window.location.href = result.redirect_url;
@@ -365,7 +365,7 @@
             if (!element) return;
 
             const text = element.textContent || element.value;
-            
+
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
                     const originalText = button.innerHTML;

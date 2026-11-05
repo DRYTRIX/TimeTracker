@@ -34,3 +34,22 @@ def safe_path_under_or_none(base_dir: str, *parts: str) -> Optional[str]:
         return safe_path_under(base_dir, *parts)
     except (PathEscapeError, OSError, TypeError, ValueError):
         return None
+
+
+def resolve_stored_upload_path(app_root_path: str, stored_relative: str, *, under: str = "..") -> str:
+    """
+    Resolve a DB-stored relative upload path inside a realpath jail.
+
+    ``stored_relative`` is typically ``uploads/...`` relative to the project root
+    (parent of the Flask app package). Absolute paths and ``..`` segments are rejected.
+    """
+    if not stored_relative or not isinstance(stored_relative, str):
+        raise PathEscapeError("path is required")
+    candidate = stored_relative.strip()
+    if not candidate or os.path.isabs(candidate) or candidate.startswith(("~", "\\\\")):
+        raise PathEscapeError("absolute paths are not allowed")
+    parts = [p for p in candidate.replace("\\", "/").split("/") if p and p != "."]
+    if not parts or any(p == ".." for p in parts):
+        raise PathEscapeError("path escapes base directory")
+    base = os.path.realpath(os.path.join(app_root_path, under)) if under else os.path.realpath(app_root_path)
+    return safe_path_under(base, *parts)

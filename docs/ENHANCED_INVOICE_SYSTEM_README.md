@@ -117,7 +117,7 @@ class Settings(db.Model):
     company_name = db.Column(db.String(200))
     company_logo_path = db.Column(db.String(500))
     company_address = db.Column(db.Text)
-    
+
     # Invoice defaults
     invoice_prefix = db.Column(db.String(10))
     invoice_start_number = db.Column(db.Integer)

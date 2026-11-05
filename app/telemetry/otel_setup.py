@@ -428,11 +428,7 @@ def _active_timers_callback(options: Any) -> Any:
 
 
 def _meter_provider_views() -> list:
-    from opentelemetry.sdk.metrics.view import (
-        DropAggregation,
-        ExplicitBucketHistogramAggregation,
-        View,
-    )
+    from opentelemetry.sdk.metrics.view import DropAggregation, ExplicitBucketHistogramAggregation, View
 
     return [
         # Keep Flask/SQLAlchemy *traces*; drop their high-cardinality *metrics*

@@ -1,6 +1,7 @@
 """Additional parameterized tests for time rounding utilities."""
 
 import pytest
+
 from app.utils.time_rounding import round_time_duration
 
 

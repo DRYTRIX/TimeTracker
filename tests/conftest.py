@@ -3,10 +3,11 @@ Pytest configuration and shared fixtures for TimeTracker tests.
 This file contains common fixtures and test configuration used across all test modules.
 """
 
-import pytest
 import os
 import tempfile
 import uuid
+
+import pytest
 
 # Set before app is imported so InstallationConfig uses a writable dir in tests (avoids /data on CI)
 if "INSTALLATION_CONFIG_DIR" not in os.environ:
@@ -14,11 +15,12 @@ if "INSTALLATION_CONFIG_DIR" not in os.environ:
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 
-from app import create_app, db
+from app import create_app, db, limiter
 
 
 # Enable SQLite foreign key enforcement (including ON DELETE CASCADE).
@@ -45,9 +47,7 @@ def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):  # pragma:
 # leads, projects, quotes), so SQLAlchemy can't order DROPs cleanly and any
 # drop_all() call would otherwise fail with "FOREIGN KEY constraint failed".
 @event.listens_for(Engine, "before_cursor_execute")
-def _disable_fk_for_drop(  # pragma: no cover - infra hook
-    conn, cursor, statement, parameters, context, executemany
-):
+def _disable_fk_for_drop(conn, cursor, statement, parameters, context, executemany):  # pragma: no cover - infra hook
     try:
         if not statement:
             return
@@ -61,69 +61,70 @@ def _disable_fk_for_drop(  # pragma: no cover - infra hook
         # Never let this hook break statement execution.
         pass
 
+
 # Import all models to ensure their tables are created by db.create_all()
 from app.models import (
-    User,
-    Project,
-    TimeEntry,
+    Activity,
+    ApiToken,
+    AuditLog,
+    BudgetAlert,
+    CalendarEvent,
     Client,
-    Settings,
-    Invoice,
-    InvoiceItem,
-    Task,
-    TaskActivity,
+    ClientNote,
+    ClientPrepaidConsumption,
     Comment,
+    CreditNote,
+    Currency,
+    DataExport,
+    DataImport,
+    ExchangeRate,
+    Expense,
     ExpenseCategory,
-    Mileage,
-    PerDiem,
-    PerDiemRate,
     ExtraGood,
     FocusSession,
-    RecurringBlock,
-    RateOverride,
-    SavedFilter,
-    ProjectCost,
-    KanbanColumn,
-    TimeEntryTemplate,
-    Activity,
-    UserFavoriteProject,
-    UserSmartNotificationDismissal,
-    UserClient,
-    ClientNote,
-    WeeklyTimeGoal,
-    Expense,
-    Permission,
-    Role,
-    ApiToken,
-    CalendarEvent,
-    BudgetAlert,
-    DataImport,
-    DataExport,
-    InvoicePDFTemplate,
-    ClientPrepaidConsumption,
-    AuditLog,
-    RecurringInvoice,
+    Invoice,
     InvoiceEmail,
+    InvoiceItem,
+    InvoicePDFTemplate,
     InvoicePeppolTransmission,
-    Webhook,
-    WebhookDelivery,
-    InvoiceTemplate,
-    Currency,
-    ExchangeRate,
-    TaxRule,
-    Payment,
-    CreditNote,
     InvoiceReminderSchedule,
-    SavedReportView,
-    ReportEmailSchedule,
-    Warehouse,
-    StockItem,
-    WarehouseStock,
-    StockMovement,
-    StockReservation,
+    InvoiceTemplate,
+    KanbanColumn,
+    Mileage,
+    Payment,
+    PerDiem,
+    PerDiemRate,
+    Permission,
+    Project,
+    ProjectCost,
     ProjectStockAllocation,
     Quote,
     QuoteItem,
+    RateOverride,
+    RecurringBlock,
+    RecurringInvoice,
+    ReportEmailSchedule,
+    Role,
+    SavedFilter,
+    SavedReportView,
+    Settings,
+    StockItem,
+    StockMovement,
+    StockReservation,
+    Task,
+    TaskActivity,
+    TaxRule,
+    TimeEntry,
+    TimeEntryTemplate,
+    User,
+    UserClient,
+    UserFavoriteProject,
+    UserSmartNotificationDismissal,
+    Warehouse,
+    WarehouseStock,
+    Webhook,
+    WebhookDelivery,
+    WeeklyTimeGoal,
 )
 
 
@@ -211,58 +212,58 @@ def app(app_config):
         # This ensures they're registered with SQLAlchemy's metadata
         # Import all models explicitly to ensure their tables are created
         from app.models import (
-            User,
-            Project,
-            TimeEntry,
+            Activity,
+            ApiToken,
+            AuditLog,
+            BudgetAlert,
+            CalendarEvent,
             Client,
-            Settings,
-            Invoice,
-            InvoiceItem,
-            Task,
-            TaskActivity,
+            ClientNote,
+            ClientPrepaidConsumption,
             Comment,
+            CreditNote,
+            Currency,
+            DataExport,
+            DataImport,
+            ExchangeRate,
+            Expense,
             ExpenseCategory,
-            Mileage,
-            PerDiem,
-            PerDiemRate,
             ExtraGood,
             FocusSession,
-            RecurringBlock,
-            RateOverride,
-            SavedFilter,
-            ProjectCost,
-            KanbanColumn,
-            TimeEntryTemplate,
-            Activity,
-            UserFavoriteProject,
-            UserClient,
-            ClientNote,
-            WeeklyTimeGoal,
-            Expense,
-            Permission,
-            Role,
-            ApiToken,
-            CalendarEvent,
-            BudgetAlert,
-            DataImport,
-            DataExport,
-            InvoicePDFTemplate,
-            ClientPrepaidConsumption,
-            AuditLog,
-            RecurringInvoice,
+            Invoice,
             InvoiceEmail,
+            InvoiceItem,
+            InvoicePDFTemplate,
             InvoicePeppolTransmission,
+            InvoiceReminderSchedule,
+            InvoiceTemplate,
+            KanbanColumn,
+            Mileage,
+            Payment,
+            PerDiem,
+            PerDiemRate,
+            Permission,
+            Project,
+            ProjectCost,
+            RateOverride,
+            RecurringBlock,
+            RecurringInvoice,
+            ReportEmailSchedule,
+            Role,
+            SavedFilter,
+            SavedReportView,
+            Settings,
+            Task,
+            TaskActivity,
+            TaxRule,
+            TimeEntry,
+            TimeEntryTemplate,
+            User,
+            UserClient,
+            UserFavoriteProject,
             Webhook,
             WebhookDelivery,
-            InvoiceTemplate,
-            Currency,
-            ExchangeRate,
-            TaxRule,
-            Payment,
-            CreditNote,
-            InvoiceReminderSchedule,
-            SavedReportView,
-            ReportEmailSchedule,
+            WeeklyTimeGoal,
         )
 
         # Ensure any lingering connections are closed to avoid SQLite file locks (Windows)
@@ -771,6 +772,7 @@ def task(app, project, user):
 def invoice(app, user, project, test_client):
     """Create a test invoice."""
     from datetime import date
+
     from factories import InvoiceFactory
 
     invoice = InvoiceFactory(
@@ -1191,6 +1193,79 @@ def installation_config(temp_dir):
 
     # Restore original config directory
     InstallationConfig.CONFIG_DIR = original_config_dir
+
+
+# ============================================================================
+# Rate limiter isolation (Flask-Limiter 4 keeps process-global state)
+# ============================================================================
+
+
+def _clear_limiter_manager_defaults():
+    """Drop limit_manager defaults so the next create_app/init_app starts clean.
+
+    Restoring RuntimeLimit objects from a prior init_app breaks Flask-Limiter 4
+    (`AttributeError: 'RuntimeLimit' object has no attribute 'finalized'`).
+    """
+    try:
+        limiter.limit_manager.set_default_limits([])
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter_after_test():
+    """Clear in-memory rate-limit counters so xdist workers don't leak 429s across tests."""
+    yield
+    _clear_limiter_manager_defaults()
+    try:
+        limiter.reset()
+    except Exception:
+        pass
+
+
+@pytest.fixture
+def force_strict_rate_limit(app):
+    """Temporarily tighten the global default rate limit; restore on teardown.
+
+    Used by health/polling exemption tests that need a low budget to prove
+    exemptions work without poisoning later tests on the same worker.
+    """
+    from flask_limiter import Limit
+
+    previous_config = app.config.get("RATELIMIT_DEFAULT")
+    previous_default_limits = list(getattr(limiter, "_default_limits", []) or [])
+
+    def _apply(limit="5 per hour"):
+        app.config["RATELIMIT_DEFAULT"] = limit
+        limiter._default_limits = [p.strip() for p in limit.replace(",", ";").split(";") if p.strip()]
+        limiter.limit_manager.set_default_limits(
+            [
+                Limit(
+                    limit,
+                    key_function=limiter._key_func,
+                )
+            ]
+        )
+        try:
+            limiter.reset()
+        except Exception:
+            pass
+
+    yield _apply
+
+    # Restore config + string defaults; never put RuntimeLimit objects back.
+    if previous_config is None:
+        app.config.pop("RATELIMIT_DEFAULT", None)
+    else:
+        app.config["RATELIMIT_DEFAULT"] = previous_config
+    limiter._default_limits = [p for p in previous_default_limits if isinstance(p, str)] or [
+        p.strip() for p in str(app.config.get("RATELIMIT_DEFAULT") or "").replace(",", ";").split(";") if p.strip()
+    ]
+    _clear_limiter_manager_defaults()
+    try:
+        limiter.reset()
+    except Exception:
+        pass
 
 
 # ============================================================================

@@ -186,14 +186,14 @@ def get_api_version():
         return 'v1'
     elif request.path.startswith('/api/v2'):
         return 'v2'
-    
+
     # Check Accept header
     accept = request.headers.get('Accept', '')
     if 'vnd.timetracker.v1' in accept:
         return 'v1'
     elif 'vnd.timetracker.v2' in accept:
         return 'v2'
-    
+
     # Default to v1
     return 'v1'
 ```
@@ -209,4 +209,3 @@ def get_api_version():
 **Last Updated:** 2026-04-16  
 **Current Version:** v1  
 **Next Version:** v2 (when needed)
-

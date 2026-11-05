@@ -206,6 +206,20 @@ class Invoice(db.Model):
             if self.payment_status == "partially_paid" and self.status == "paid":
                 self.status = "sent"
 
+    def release_invoiced_costs_and_expenses(self):
+        """Make this invoice's project costs and expenses billable again.
+
+        Call before deleting the invoice. The database only clears their
+        ``invoice_id``; ``invoiced`` would stay True and keep them off every
+        later invoice.
+        """
+        from .project_cost import ProjectCost
+
+        for cost in ProjectCost.query.filter_by(invoice_id=self.id).all():
+            cost.unmark_as_invoiced()
+        for expense in self.expenses.all():
+            expense.unmark_as_invoiced()
+
     def calculate_totals(self):
         """Calculate invoice totals from items, extra goods, and expenses"""
         # Optionally apply tax rules before totals (failures logged inside helper)
@@ -263,9 +277,7 @@ class Invoice(db.Model):
                 try:
                     db.session.rollback()
                 except Exception:
-                    logging.getLogger(__name__).debug(
-                        "Rollback after tax-rule DB error also failed", exc_info=True
-                    )
+                    logging.getLogger(__name__).debug("Rollback after tax-rule DB error also failed", exc_info=True)
 
     def to_dict(self):
         """Convert invoice to dictionary for API responses"""

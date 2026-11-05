@@ -67,7 +67,7 @@ Elements are organized into groups:
 
 ### Add Items Table
 
-1. Click **"Items Table"** 
+1. Click **"Items Table"**
 2. Position in the middle of the page
 3. Resize if needed using handles
 
@@ -285,4 +285,3 @@ Once comfortable with the basics:
 - QR code for payments
 
 Happy designing! 🎨
-

@@ -14,13 +14,13 @@ from app import csrf, db
 from app.models import Integration, IntegrationCredential
 from app.services.integration_service import IntegrationService
 from app.utils.db import safe_commit
-from app.utils.module_helpers import module_enabled
 from app.utils.error_handling import (
-    client_error_response,
-    client_error_payload,
     DEFAULT_CLIENT_ERROR,
+    client_error_payload,
+    client_error_response,
     sanitize_log_value,
 )
+from app.utils.module_helpers import module_enabled
 
 # Import registry to ensure connectors are registered
 try:
@@ -361,7 +361,10 @@ def oauth_callback(provider):
         return redirect(url_for("integrations.manage_integration", provider=provider))
 
     except Exception as e:
-        logger.error("Error in OAuth callback for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
+        # codeql[py/log-injection]
+        logger.error(
+            "Error in OAuth callback for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__)
+        )
         flash(_("Error connecting integration. Please try again."), "error")
         return redirect(url_for("integrations.list_integrations"))
 
@@ -497,7 +500,10 @@ def manage_integration(provider):
                         except AttributeError:
                             logger.warning(f"Settings attribute {secret_attr} does not exist, skipping")
                 else:
-                    logger.warning("Provider %s not in attr_map, cannot save OAuth credentials", sanitize_log_value(provider))
+                    # codeql[py/log-injection]
+                    logger.warning(
+                        "Provider %s not in attr_map, cannot save OAuth credentials", sanitize_log_value(provider)
+                    )
 
                 # Handle special fields (save even if empty to allow clearing)
                 if provider == "outlook_calendar":
@@ -655,7 +661,12 @@ def manage_integration(provider):
                     temp_connector = connector_class(integration_to_update, None)
                     config_schema = temp_connector.get_config_schema()
                 except Exception as e:
-                    logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
+                    # codeql[py/log-injection]
+                    logger.warning(
+                        "Could not get config schema for %s: %s",
+                        sanitize_log_value(provider),
+                        sanitize_log_value(type(e).__name__),
+                    )
 
             # Update config from form
             if not integration_to_update.config:
@@ -816,13 +827,23 @@ def manage_integration(provider):
             try:
                 config_schema = connector.get_config_schema()
             except Exception as e:
-                logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
+                # codeql[py/log-injection]
+                logger.warning(
+                    "Could not get config schema for %s: %s",
+                    sanitize_log_value(provider),
+                    sanitize_log_value(type(e).__name__),
+                )
         elif connector_class and hasattr(connector_class, "get_config_schema"):
             try:
                 temp_connector = connector_class(active_integration, None)
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
-                logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
+                # codeql[py/log-injection]
+                logger.warning(
+                    "Could not get config schema for %s: %s",
+                    sanitize_log_value(provider),
+                    sanitize_log_value(type(e).__name__),
+                )
 
     return render_template(
         "integrations/manage.html",
@@ -1106,26 +1127,23 @@ def caldav_setup():
         if not server_url and not calendar_url:
             errors.append(_("Either server URL or calendar URL is required."))
 
-        # Validate URL format if provided
+        # Validate URL format and block SSRF targets (metadata always; private unless allowed)
+        from flask import current_app
+
+        from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
+
+        allow_private = bool(current_app.config.get("INTEGRATIONS_ALLOW_PRIVATE_URLS", True))
         if server_url:
             try:
-                from urllib.parse import urlparse
-
-                parsed = urlparse(server_url)
-                if not parsed.scheme or not parsed.netloc:
-                    errors.append(_("Server URL must be a valid URL (e.g., https://mail.example.com/dav)."))
-            except Exception:
-                errors.append(_("Server URL format is invalid."))
+                server_url = validate_outbound_url(server_url, allow_private=allow_private)
+            except UnsafeOutboundURL:
+                errors.append(_("Server URL must be a valid http(s) URL and must not target blocked hosts."))
 
         if calendar_url:
             try:
-                from urllib.parse import urlparse
-
-                parsed = urlparse(calendar_url)
-                if not parsed.scheme or not parsed.netloc:
-                    errors.append(_("Calendar URL must be a valid URL."))
-            except Exception:
-                errors.append(_("Calendar URL format is invalid."))
+                calendar_url = validate_outbound_url(calendar_url, allow_private=allow_private)
+            except UnsafeOutboundURL:
+                errors.append(_("Calendar URL must be a valid http(s) URL and must not target blocked hosts."))
 
         # Check if we need to update credentials (username provided or password provided)
         existing_creds = IntegrationCredential.query.filter_by(integration_id=integration.id).first()
@@ -1246,8 +1264,6 @@ def caldav_setup():
 @module_enabled("integrations")
 def activitywatch_setup():
     """Setup ActivityWatch integration (no OAuth, config only)."""
-    from urllib.parse import urlparse
-
     from app.models import Project
 
     service = IntegrationService()
@@ -1284,12 +1300,20 @@ def activitywatch_setup():
         if not server_url:
             errors.append(_("ActivityWatch server URL is required."))
         else:
+            from flask import current_app
+
+            from app.utils.outbound_url import UnsafeOutboundURL, validate_outbound_url
+
+            allow_private = bool(current_app.config.get("INTEGRATIONS_ALLOW_PRIVATE_URLS", True))
             try:
-                parsed = urlparse(server_url)
-                if not parsed.scheme or not parsed.netloc:
-                    errors.append(_("Server URL must be a valid URL (e.g., http://localhost:5600)."))
-            except Exception:
-                errors.append(_("Server URL format is invalid."))
+                server_url = validate_outbound_url(server_url, allow_private=allow_private)
+            except UnsafeOutboundURL:
+                errors.append(
+                    _(
+                        "Server URL must be a valid http(s) URL (e.g., http://localhost:5600) "
+                        "and must not target blocked hosts."
+                    )
+                )
 
         if default_project_id:
             try:
@@ -1493,7 +1517,12 @@ def setup_wizard(provider):
                 temp_connector = connector_class(temp_integration, None)
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
-                logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
+                # codeql[py/log-injection]
+                logger.warning(
+                    "Could not get config schema for %s: %s",
+                    sanitize_log_value(provider),
+                    sanitize_log_value(type(e).__name__),
+                )
 
         # Process form fields based on config schema
         if config_schema and "fields" in config_schema:
@@ -1624,7 +1653,12 @@ def setup_wizard(provider):
             temp_connector = connector_class(temp_integration, None)
             config_schema = temp_connector.get_config_schema()
         except Exception as e:
-            logger.warning("Could not get config schema for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__))
+            # codeql[py/log-injection]
+            logger.warning(
+                "Could not get config schema for %s: %s",
+                sanitize_log_value(provider),
+                sanitize_log_value(type(e).__name__),
+            )
 
     # Determine step labels based on provider
     step_labels_map = {
@@ -1699,7 +1733,13 @@ def test_connection_wizard(provider):
         result = connector.test_connection()
         return jsonify(result)
     except Exception as e:
-        logger.error("Connection test error for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__), exc_info=True)
+        # codeql[py/log-injection]
+        logger.error(
+            "Connection test error for %s: %s",
+            sanitize_log_value(provider),
+            sanitize_log_value(type(e).__name__),
+            exc_info=True,
+        )
         return jsonify({"success": False, **client_error_payload()}), 500
 
 

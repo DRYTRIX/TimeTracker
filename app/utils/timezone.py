@@ -1,8 +1,9 @@
 import os
 from datetime import date, datetime, timezone
 from functools import lru_cache
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+import pytz
 from flask import current_app
 
 # ---- Date/time format preference mappings ----
@@ -138,7 +139,7 @@ def get_user_datetime_format(user=None):
 @lru_cache()
 def get_available_timezones():
     """Return a cached, alphabetically sorted list of common timezones."""
-    return tuple(sorted(available_timezones()))
+    return tuple(sorted(pytz.common_timezones))
 
 
 def _get_authenticated_user(user=None):

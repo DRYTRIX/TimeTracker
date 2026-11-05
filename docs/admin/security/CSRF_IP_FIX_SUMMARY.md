@@ -304,4 +304,3 @@ This fix provides:
 **Tested On:** TimeTracker v1.0+  
 **Issue:** CSRF cookies not created when accessing via IP address  
 **Status:** ✅ Resolved
-

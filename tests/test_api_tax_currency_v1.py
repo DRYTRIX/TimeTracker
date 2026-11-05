@@ -1,14 +1,15 @@
-import pytest
-import uuid
-import tempfile
 import os
+import tempfile
+import uuid
+
+import pytest
 
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import date
 
 from app import create_app, db
-from app.models import User, ApiToken
+from app.models import ApiToken, User
 
 
 @pytest.fixture

@@ -276,23 +276,23 @@ class CalendarEvent(db.Model):
     all_day = Boolean (Default: False)
     location = String(200)
     event_type = String(50) (Default: 'event', Indexed)
-    
+
     # Associations
     project_id = Integer (Foreign Key to projects.id)
     task_id = Integer (Foreign Key to tasks.id)
     client_id = Integer (Foreign Key to clients.id)
-    
+
     # Recurring events
     is_recurring = Boolean (Default: False)
     recurrence_rule = String(200)  # RRULE format
     recurrence_end_date = DateTime
     parent_event_id = Integer (Foreign Key to calendar_events.id)
-    
+
     # Reminders and customization
     reminder_minutes = Integer
     color = String(7)  # Hex color code
     is_private = Boolean (Default: False)
-    
+
     # Timestamps
     created_at = DateTime
     updated_at = DateTime
@@ -450,4 +450,3 @@ For issues or feature requests related to the calendar:
 - [API Documentation](API_DOCUMENTATION.md)
 - [Task Management Guide](TASK_MANAGEMENT.md)
 - [Project Management Guide](PROJECT_MANAGEMENT.md)
-

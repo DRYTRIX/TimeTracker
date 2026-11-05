@@ -12,7 +12,7 @@
             <i class="fas fa-plus me-1"></i>{{ _('Add Comment') }}
         </button>
     </div>
-    
+
     <!-- New comment form (initially hidden) -->
     <div class="new-comment-form d-none mb-4" id="new-comment-form">
         <div class="card">
@@ -48,7 +48,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Comments list -->
     <div class="comments-list">
         {% if comments %}
@@ -98,7 +98,7 @@ function hideNewCommentForm() {
 function editComment(commentId) {
     const content = document.getElementById('comment-content-' + commentId);
     const editForm = document.getElementById('edit-form-' + commentId);
-    
+
     content.classList.add('d-none');
     editForm.classList.remove('d-none');
     editForm.querySelector('textarea').focus();
@@ -107,7 +107,7 @@ function editComment(commentId) {
 function cancelEdit(commentId) {
     const content = document.getElementById('comment-content-' + commentId);
     const editForm = document.getElementById('edit-form-' + commentId);
-    
+
     editForm.classList.add('d-none');
     content.classList.remove('d-none');
 }
@@ -124,19 +124,29 @@ function cancelReply(commentId) {
     replyForm.querySelector('textarea').value = '';
 }
 
-function deleteComment(commentId) {
-    const commentElement = document.getElementById('comment-' + commentId);
-    const commentText = commentElement.querySelector('.comment-text').textContent;
-    
-    // Show preview of comment to be deleted
-    document.getElementById('comment-preview').style.display = 'block';
-    document.getElementById('comment-preview-text').textContent = commentText.substring(0, 100) + (commentText.length > 100 ? '...' : '');
-    
-    // Set form action
-    document.getElementById('deleteCommentForm').action = "{{ url_for('comments.delete_comment', comment_id=0) }}".replace('0', commentId);
-    
-    // Show modal
-    new bootstrap.Modal(document.getElementById('deleteCommentModal')).show();
+async function deleteComment(commentId) {
+    const msg = {{ _('Are you sure you want to delete this comment?')|tojson }};
+    const confirmed = (typeof showConfirm === 'function')
+        ? await showConfirm(msg, {
+            title: {{ _('Delete Comment')|tojson }},
+            confirmText: {{ _('Delete')|tojson }},
+            cancelText: {{ _('Cancel')|tojson }},
+            variant: 'danger'
+          })
+        : window.confirm(msg);
+    if (!confirmed) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{ url_for('comments.delete_comment', comment_id=0) }}".replace('0', String(commentId));
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrf_token';
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    csrf.value = meta ? meta.getAttribute('content') : '';
+    form.appendChild(csrf);
+    document.body.appendChild(form);
+    form.submit();
 }
 
 function toggleAttachmentForm(commentId) {
@@ -159,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.height = (this.scrollHeight) + 'px';
         });
     });
-    
+
     // Add loading state to forms
     const forms = document.querySelectorAll('.comments-section form');
     forms.forEach(function(form) {

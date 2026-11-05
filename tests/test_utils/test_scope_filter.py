@@ -8,20 +8,19 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.utils]
 
+from app import db
+from app.models import Client, Project, Role, Task, User, UserClient
+from app.repositories import TimeEntryRepository
 from app.utils.scope_filter import (
-    get_accessible_project_and_client_ids_for_user,
-    get_allowed_client_ids,
-    get_allowed_project_ids,
     apply_client_scope_to_model,
     apply_project_scope,
     apply_project_scope_to_model,
+    get_accessible_project_and_client_ids_for_user,
+    get_allowed_client_ids,
+    get_allowed_project_ids,
     user_can_access_client,
     user_can_access_project,
 )
-from app.models import User, Project, Task, Client, Role, UserClient
-from app import db
-from app.repositories import TimeEntryRepository
-
 
 # ---------------------------------------------------------------------------
 # get_accessible_project_and_client_ids_for_user (existing)

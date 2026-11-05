@@ -1,14 +1,15 @@
-import pytest
-import uuid
-import tempfile
 import os
+import tempfile
+import uuid
+
+import pytest
 
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import date
 
 from app import create_app, db
-from app.models import User, Client, Project, Invoice, ApiToken
+from app.models import ApiToken, Client, Invoice, Project, User
 
 
 @pytest.fixture
@@ -105,3 +106,21 @@ def test_payments_crud(client, api_token, setup_invoice):
     # delete
     r = client.delete(f"/api/v1/payments/{pid}", headers=_auth(api_token))
     assert r.status_code == 200
+
+
+def test_create_payment_updates_invoice_amount_paid(client, api_token, setup_invoice):
+    inv = setup_invoice
+    inv.total_amount = 10
+    db.session.commit()
+
+    for amount, expected_paid, expected_status in ((1.0, 1.0, "partially_paid"), (5.0, 6.0, "partially_paid")):
+        r = client.post(
+            "/api/v1/payments",
+            headers=_auth(api_token),
+            json={"invoice_id": inv.id, "amount": amount, "method": "bank_transfer"},
+        )
+        assert r.status_code == 201
+        db.session.expire_all()
+        invoice = db.session.get(Invoice, inv.id)
+        assert float(invoice.amount_paid) == expected_paid
+        assert invoice.payment_status == expected_status

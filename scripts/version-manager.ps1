@@ -3,13 +3,13 @@
 param(
     [Parameter(Position=0)]
     [string]$Action,
-    
+
     [Parameter(Position=1)]
     [string]$Version,
-    
+
     [Parameter(Position=2)]
     [string]$Message,
-    
+
     [int]$BuildNumber,
     [switch]$NoPush,
     [string]$Tag

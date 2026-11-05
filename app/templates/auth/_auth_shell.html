@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="{{ current_language_code or 'en' }}"{% if is_rtl is defined and is_rtl %} dir="rtl"{% endif %}>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <meta name="theme-color" content="#4F46E5">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    {# Font Awesome must load BEFORE dist/output.css: its `.fa-solid{display:inline-block}`
+       has the same specificity as Tailwind's `.hidden{display:none}`, so whichever
+       loads last wins. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
+    <script nonce="{{ csp_nonce() }}">
+        // Avoid FOUC: apply .dark from localStorage or system preference
+        (function () {
+            var stored = localStorage.getItem('color-theme');
+            var effective = stored || 'system';
+            if (effective === 'system' || !effective) {
+                effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (effective === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+    <a href="#mainContentAnchor" class="sr-only focus:not-sr-only focus-ring absolute left-2 top-2 z-[1000] px-3 py-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded">{{ _('Skip to content') }}</a>
+    <div id="mainContentAnchor" class="min-h-screen flex items-center justify-center px-4 {% block auth_outer_class %}{% endblock %}">
+        {% block auth_layout %}
+        <div class="{% block auth_card_class %}w-full max-w-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden p-6 sm:p-8{% endblock %}">
+            {% block brand_header %}
+            <div class="flex items-center gap-3 mb-4">
+                <img src="{{ url_for('static', filename='images/timetracker-logo-light.svg') }}" alt="{{ app_name }} Logo" class="w-10 h-10 dark:hidden">
+                <img src="{{ url_for('static', filename='images/timetracker-logo-dark.svg') }}" alt="{{ app_name }} Logo" class="w-10 h-10 hidden dark:block">
+                <span class="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{{ app_name or 'TimeTracker' }}</span>
+            </div>
+            {% endblock %}
+            {% block content %}{% endblock %}
+        </div>
+        {% endblock %}
+    </div>
+
+    <!-- Flash Messages (hidden; converted to toasts) -->
+    <div id="flash-messages-container" class="hidden">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-danger{% elif category == 'warning' %}alert-warning{% else %}alert-info{% endif %}" data-toast-message="{{ message }}" data-toast-type="{{ category }}"></div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <script src="{{ asset_url('toast') }}"></script>
+    <script src="{{ asset_url('errors') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

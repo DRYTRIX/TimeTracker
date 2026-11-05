@@ -41,7 +41,7 @@
             if (this.options.editable) this.enableEditing();
             if (this.options.paginate) this.renderPagination();
             if (this.options.stickyHeader) this.table.classList.add('table-enhanced-sticky');
-            
+
             this.filteredData = [...this.data];
             this.render();
         }
@@ -61,11 +61,11 @@
         createWrapper() {
             const wrapper = document.createElement('div');
             wrapper.className = 'table-enhanced-wrapper';
-            
+
             // Create toolbar
             const toolbar = this.createToolbar();
             wrapper.appendChild(toolbar);
-            
+
             // Wrap table
             const tableContainer = document.createElement('div');
             tableContainer.className = 'table-responsive';
@@ -73,13 +73,13 @@
             this.table.parentNode.insertBefore(wrapper, this.table);
             tableContainer.appendChild(this.table);
             wrapper.appendChild(tableContainer);
-            
+
             // Create bulk actions bar
             if (this.options.selectable) {
                 const bulkActions = this.createBulkActionsBar();
                 wrapper.insertBefore(bulkActions, tableContainer);
             }
-            
+
             this.wrapper = wrapper;
             this.tableContainer = tableContainer;
         }
@@ -87,7 +87,7 @@
         createToolbar() {
             const toolbar = document.createElement('div');
             toolbar.className = 'table-toolbar';
-            
+
             toolbar.innerHTML = `
                 <div class="table-toolbar-left">
                     ${this.options.filterable ? `
@@ -135,7 +135,7 @@
                     ` : ''}
                 </div>
             `;
-            
+
             this.bindToolbarEvents(toolbar);
             return toolbar;
         }
@@ -148,7 +148,7 @@
                     this.handleSearch(e.target.value);
                 });
             }
-            
+
             // Columns visibility
             const columnsBtn = toolbar.querySelector('.table-columns-btn');
             if (columnsBtn) {
@@ -157,7 +157,7 @@
                     this.toggleColumnsDropdown();
                 });
             }
-            
+
             // Export
             const exportBtn = toolbar.querySelector('.table-export-btn');
             if (exportBtn) {
@@ -165,7 +165,7 @@
                     e.stopPropagation();
                     this.toggleExportMenu();
                 });
-                
+
                 const exportOptions = toolbar.querySelectorAll('.table-export-option');
                 exportOptions.forEach(option => {
                     option.addEventListener('click', () => {
@@ -174,7 +174,7 @@
                     });
                 });
             }
-            
+
             // Close dropdowns on outside click
             document.addEventListener('click', () => {
                 const columnsDropdown = toolbar.querySelector('.table-columns-dropdown');
@@ -200,7 +200,7 @@
                     </button>
                 </div>
             `;
-            
+
             this.bulkActionsBar = bar;
             return bar;
         }
@@ -209,7 +209,7 @@
             const headers = this.table.querySelectorAll('thead th');
             headers.forEach((header, index) => {
                 if (header.classList.contains('no-sort')) return;
-                
+
                 header.classList.add('sortable');
                 header.addEventListener('click', () => {
                     this.sort(index);
@@ -220,7 +220,7 @@
         sort(columnIndex) {
             const headers = Array.from(this.table.querySelectorAll('thead th'));
             const header = headers[columnIndex];
-            
+
             // Toggle sort direction
             if (this.sortColumn === columnIndex) {
                 this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -228,32 +228,32 @@
                 this.sortColumn = columnIndex;
                 this.sortDirection = 'asc';
             }
-            
+
             // Update header classes
             headers.forEach(h => {
                 h.classList.remove('sort-asc', 'sort-desc');
             });
             header.classList.add(`sort-${this.sortDirection}`);
-            
+
             // Sort data
             this.filteredData.sort((a, b) => {
                 const aVal = a.values[columnIndex];
                 const bVal = b.values[columnIndex];
-                
+
                 // Try numeric sort first
                 const aNum = parseFloat(aVal);
                 const bNum = parseFloat(bVal);
-                
+
                 let comparison;
                 if (!isNaN(aNum) && !isNaN(bNum)) {
                     comparison = aNum - bNum;
                 } else {
                     comparison = aVal.localeCompare(bVal);
                 }
-                
+
                 return this.sortDirection === 'asc' ? comparison : -comparison;
             });
-            
+
             this.render();
         }
 
@@ -263,12 +263,12 @@
             } else {
                 const lowerQuery = query.toLowerCase();
                 this.filteredData = this.data.filter(row => {
-                    return row.values.some(val => 
+                    return row.values.some(val =>
                         val.toLowerCase().includes(lowerQuery)
                     );
                 });
             }
-            
+
             this.currentPage = 1;
             this.render();
         }
@@ -277,31 +277,31 @@
             const headers = this.table.querySelectorAll('thead th');
             headers.forEach((header, index) => {
                 if (header.classList.contains('no-resize')) return;
-                
+
                 header.classList.add('resizable');
                 const resizer = document.createElement('div');
                 resizer.className = 'column-resizer';
                 header.appendChild(resizer);
-                
+
                 let startX, startWidth;
-                
+
                 resizer.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     startX = e.pageX;
                     startWidth = header.offsetWidth;
                     resizer.classList.add('resizing');
-                    
+
                     const onMouseMove = (e) => {
                         const diff = e.pageX - startX;
                         header.style.width = `${startWidth + diff}px`;
                     };
-                    
+
                     const onMouseUp = () => {
                         resizer.classList.remove('resizing');
                         document.removeEventListener('mousemove', onMouseMove);
                         document.removeEventListener('mouseup', onMouseUp);
                     };
-                    
+
                     document.addEventListener('mousemove', onMouseMove);
                     document.addEventListener('mouseup', onMouseUp);
                 });
@@ -312,13 +312,13 @@
             // Add checkbox column
             const thead = this.table.querySelector('thead tr');
             const tbody = this.table.querySelector('tbody');
-            
+
             // Header checkbox
             const headerCheckbox = document.createElement('th');
             headerCheckbox.className = 'table-checkbox-cell';
             headerCheckbox.innerHTML = '<input type="checkbox" class="table-checkbox table-checkbox-all">';
             thead.insertBefore(headerCheckbox, thead.firstChild);
-            
+
             // Row checkboxes
             this.data.forEach(row => {
                 const checkbox = document.createElement('td');
@@ -326,7 +326,7 @@
                 checkbox.innerHTML = '<input type="checkbox" class="table-checkbox table-checkbox-row">';
                 row.element.insertBefore(checkbox, row.element.firstChild);
             });
-            
+
             // Bind events
             const selectAll = this.table.querySelector('.table-checkbox-all');
             selectAll.addEventListener('change', (e) => {
@@ -344,7 +344,7 @@
                 });
                 this.updateBulkActions();
             });
-            
+
             const rowCheckboxes = this.table.querySelectorAll('.table-checkbox-row');
             rowCheckboxes.forEach(checkbox => {
                 checkbox.addEventListener('change', (e) => {
@@ -363,11 +363,11 @@
 
         updateBulkActions() {
             if (!this.bulkActionsBar) return;
-            
+
             const count = this.selectedRows.size;
             const countSpan = this.bulkActionsBar.querySelector('.selected-count');
             countSpan.textContent = count;
-            
+
             if (count > 0) {
                 this.bulkActionsBar.classList.add('show');
             } else {
@@ -387,12 +387,12 @@
 
         editCell(cell) {
             if (cell.classList.contains('table-cell-editing')) return;
-            
+
             const originalValue = cell.textContent.trim();
             const inputType = cell.getAttribute('data-edit-type') || 'text';
-            
+
             cell.classList.add('table-cell-editing');
-            
+
             let input;
             if (inputType === 'textarea') {
                 input = document.createElement('textarea');
@@ -410,28 +410,28 @@
                 input = document.createElement('input');
                 input.type = inputType;
             }
-            
+
             input.value = originalValue;
             cell.textContent = '';
             cell.appendChild(input);
             input.focus();
             if (inputType === 'text') input.select();
-            
+
             const saveEdit = () => {
                 const newValue = input.value;
                 cell.textContent = newValue;
                 cell.classList.remove('table-cell-editing');
-                
+
                 if (newValue !== originalValue) {
                     this.onCellEdit(cell, originalValue, newValue);
                 }
             };
-            
+
             const cancelEdit = () => {
                 cell.textContent = originalValue;
                 cell.classList.remove('table-cell-editing');
             };
-            
+
             input.addEventListener('blur', saveEdit);
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && inputType !== 'textarea') {
@@ -460,24 +460,24 @@
 
         render() {
             const tbody = this.table.querySelector('tbody');
-            
+
             // Clear tbody
             Array.from(tbody.children).forEach(row => {
                 row.style.display = 'none';
             });
-            
+
             // Calculate pagination
             const start = (this.currentPage - 1) * this.options.pageSize;
             const end = start + this.options.pageSize;
-            const pageData = this.options.paginate ? 
-                this.filteredData.slice(start, end) : 
+            const pageData = this.options.paginate ?
+                this.filteredData.slice(start, end) :
                 this.filteredData;
-            
+
             // Show relevant rows
             pageData.forEach(row => {
                 row.element.style.display = '';
             });
-            
+
             // Update pagination
             if (this.options.paginate) {
                 this.updatePagination();
@@ -491,23 +491,23 @@
                 <div class="table-pagination-info"></div>
                 <div class="table-pagination-controls"></div>
             `;
-            
+
             this.wrapper.appendChild(pagination);
             this.pagination = pagination;
         }
 
         updatePagination() {
             if (!this.pagination) return;
-            
+
             const total = this.filteredData.length;
             const start = (this.currentPage - 1) * this.options.pageSize + 1;
             const end = Math.min(start + this.options.pageSize - 1, total);
             const totalPages = Math.ceil(total / this.options.pageSize);
-            
+
             // Update info
             const info = this.pagination.querySelector('.table-pagination-info');
             info.textContent = `Showing ${start}-${end} of ${total}`;
-            
+
             // Update controls
             const controls = this.pagination.querySelector('.table-pagination-controls');
             controls.innerHTML = `
@@ -519,7 +519,7 @@
                     <i class="fas fa-chevron-right"></i>
                 </button>
             `;
-            
+
             // Bind events
             controls.querySelectorAll('.table-pagination-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -540,11 +540,11 @@
             const maxButtons = 5;
             let start = Math.max(1, this.currentPage - Math.floor(maxButtons / 2));
             let end = Math.min(totalPages, start + maxButtons - 1);
-            
+
             if (end - start < maxButtons - 1) {
                 start = Math.max(1, end - maxButtons + 1);
             }
-            
+
             for (let i = start; i <= end; i++) {
                 buttons += `
                     <button class="table-pagination-btn ${i === this.currentPage ? 'active' : ''}" data-page="${i}">
@@ -552,14 +552,14 @@
                     </button>
                 `;
             }
-            
+
             return buttons;
         }
 
         goToPage(page) {
             const totalPages = Math.ceil(this.filteredData.length / this.options.pageSize);
             if (page < 1 || page > totalPages) return;
-            
+
             this.currentPage = page;
             this.render();
         }
@@ -567,7 +567,7 @@
         toggleColumnsDropdown() {
             const dropdown = this.wrapper.querySelector('.table-columns-dropdown');
             dropdown.classList.toggle('show');
-            
+
             if (dropdown.innerHTML === '') {
                 this.renderColumnsDropdown(dropdown);
             }
@@ -598,7 +598,7 @@
         toggleColumn(index, show) {
             const headers = this.table.querySelectorAll('thead th');
             const rows = this.table.querySelectorAll('tbody tr');
-            
+
             headers[index].style.display = show ? '' : 'none';
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
@@ -627,14 +627,14 @@
             const headers = Array.from(this.table.querySelectorAll('thead th'))
                 .filter(th => !th.classList.contains('table-checkbox-cell'))
                 .map(th => th.textContent.trim());
-            
+
             let csv = headers.join(',') + '\n';
-            
+
             this.filteredData.forEach(row => {
                 const values = row.values.map(v => `"${v.replace(/"/g, '""')}"`);
                 csv += values.join(',') + '\n';
             });
-            
+
             this.downloadFile(csv, 'table-export.csv', 'text/csv');
         }
 
@@ -642,7 +642,7 @@
             const headers = Array.from(this.table.querySelectorAll('thead th'))
                 .filter(th => !th.classList.contains('table-checkbox-cell'))
                 .map(th => th.textContent.trim());
-            
+
             const data = this.filteredData.map(row => {
                 const obj = {};
                 headers.forEach((header, index) => {
@@ -650,7 +650,7 @@
                 });
                 return obj;
             });
-            
+
             this.downloadFile(JSON.stringify(data, null, 2), 'table-export.json', 'application/json');
         }
 
@@ -680,4 +680,3 @@
     window.EnhancedTable = EnhancedTable;
 
 })();
-

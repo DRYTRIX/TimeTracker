@@ -6,8 +6,8 @@ Create Date: 2026-02-16
 
 Resolves multiple heads so 'alembic upgrade head' / 'flask db upgrade' can run.
 """
-from alembic import op
 
+from alembic import op
 
 revision = "129_merge_118_128_heads"
 down_revision = ("118_add_role_hidden_module_ids", "128_add_invoices_zugferd_pdf")

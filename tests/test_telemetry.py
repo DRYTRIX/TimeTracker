@@ -2,21 +2,23 @@
 Tests for telemetry functionality
 """
 
-import pytest
-import os
 import json
+import os
 import tempfile
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from app.utils.telemetry import (
+    check_and_send_telemetry,
     get_telemetry_fingerprint,
     is_telemetry_enabled,
-    send_telemetry_ping,
-    send_install_ping,
-    send_update_ping,
-    send_health_ping,
-    should_send_telemetry,
     mark_telemetry_sent,
-    check_and_send_telemetry,
+    send_health_ping,
+    send_install_ping,
+    send_telemetry_ping,
+    send_update_ping,
+    should_send_telemetry,
 )
 
 

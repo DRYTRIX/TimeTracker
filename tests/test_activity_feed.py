@@ -1,9 +1,11 @@
 """Tests for Activity Feed functionality"""
 
-import pytest
 from datetime import datetime, timedelta
-from app.models import Activity, User, Project, Task, TimeEntry, Client
+
+import pytest
+
 from app import db
+from app.models import Activity, Client, Project, Task, TimeEntry, User
 
 
 class TestActivityModel:

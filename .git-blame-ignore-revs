@@ -1,0 +1,10 @@
+# Commits to ignore in git blame (enable with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# ).
+# Add the SHA of the one-off black/isort formatting commit below after it lands.
+
+# isort after fixing pre-commit exclude (2026-11-05)
+21c8f4fd9f164b333165e65a195b4df333fdee00
+
+# trailing-whitespace sweep after exclude fix (2026-11-05)
+55102f36963a3b4ce1ae9e3b28f16c4a8f204b64

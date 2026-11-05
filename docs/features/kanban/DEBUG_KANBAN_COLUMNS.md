@@ -28,7 +28,7 @@ docker exec -it timetracker_db_1 psql -U timetracker -d timetracker -c "SELECT i
 
 **Expected output:**
 ```
- id |     key     |    label     
+ id |     key     |    label
 ----+-------------+--------------
   1 | todo        | To Do
   2 | in_progress | In Progress
@@ -78,7 +78,7 @@ docker logs -f timetracker_app_1
 ```
 
 Look for errors like:
-- `NameError: name 'KanbanColumn' is not defined` 
+- `NameError: name 'KanbanColumn' is not defined`
 - `ImportError: cannot import name 'KanbanColumn'`
 - `ProgrammingError: relation "kanban_columns" does not exist`
 - `AttributeError: 'NoneType' object has no attribute`
@@ -113,7 +113,7 @@ with app.app_context():
     # Test if model works
     columns = KanbanColumn.query.all()
     print(f"Found {len(columns)} columns")
-    
+
     # Try to create a test column
     test_col = KanbanColumn(
         key='testing',
@@ -127,7 +127,7 @@ with app.app_context():
     db.session.add(test_col)
     db.session.commit()
     print("Test column created successfully!")
-    
+
     # Clean up
     db.session.delete(test_col)
     db.session.commit()
@@ -322,4 +322,3 @@ If none of the above works, provide:
 5. Last 100 lines of Docker logs
 
 This will help diagnose the specific issue with your setup.
-

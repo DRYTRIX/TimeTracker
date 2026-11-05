@@ -76,8 +76,8 @@ New methods added to `app/models/user.py`:
 
 New relationship:
 ```python
-favorite_projects = db.relationship('Project', 
-                                   secondary='user_favorite_projects', 
+favorite_projects = db.relationship('Project',
+                                   secondary='user_favorite_projects',
                                    lazy='dynamic',
                                    backref=db.backref('favorited_by', lazy='dynamic'))
 ```
@@ -157,7 +157,7 @@ List projects filtered by favorites.
 
 **Authentication**: Required  
 **Method**: GET  
-**Parameters**: 
+**Parameters**:
 - `favorites`: "true" to show only favorites
 - `status`: Filter by status (active/inactive/archived)
 - `client`: Filter by client name
@@ -306,7 +306,7 @@ Potential improvements for future versions:
 
 **Symptom**: Star icon column is missing in project list
 
-**Solution**: 
+**Solution**:
 - Clear browser cache and reload
 - Verify template file is up to date
 - Check browser console for JavaScript errors
@@ -362,4 +362,3 @@ For issues or questions about this feature:
 - CSRF protection on all favorite endpoints
 - User authentication required
 - Per-user favorite isolation
-

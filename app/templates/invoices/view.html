@@ -77,7 +77,7 @@
             <p><strong>Due Date:</strong> {{ invoice.due_date|format_date }}</p>
             <p><strong>Status:</strong> {{ invoice.status }}</p>
             {% if invoice.payment_reference %}
-            <p><strong>{{ _('Payment Reference') }}:</strong> 
+            <p><strong>{{ _('Payment Reference') }}:</strong>
                 {% set link_template = link_templates_by_field.get('payment_reference') if link_templates_by_field else None %}
                 {% if link_template %}
                     {% set rendered_url = link_template.render_url(invoice.payment_reference) %}
@@ -107,7 +107,7 @@
             {% if invoice.approvals %}
             {% set latest_approval = invoice.approvals|sort(attribute='created_at', reverse=true)|first %}
             {% if latest_approval %}
-            <p><strong>{{ _('Approval Status') }}:</strong> 
+            <p><strong>{{ _('Approval Status') }}:</strong>
                 <span class="px-2 py-1 text-xs rounded
                     {% if latest_approval.status == 'approved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                     {% elif latest_approval.status == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
@@ -130,7 +130,7 @@
         </ul>
     </div>
     {% endif %}
-    
+
     {% if invoice.status == 'draft' and (current_user.is_admin or has_permission('create_invoices')) %}
     <div class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <div class="flex justify-between items-center">
@@ -433,7 +433,7 @@
                     </td>
                     <td class="p-2 text-sm">{{ email.subject }}</td>
                     <td class="p-2 text-sm">
-                        <button onclick="resendInvoiceEmail({{ invoice.id }}, {{ email.id }}, '{{ email.recipient_email }}')" 
+                        <button onclick="resendInvoiceEmail({{ invoice.id }}, {{ email.id }}, '{{ email.recipient_email }}')"
                                 class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
                             <i class="fas fa-redo mr-1"></i>Resend
                         </button>
@@ -541,13 +541,13 @@ function sendInvoiceEmail(event) {
   event.preventDefault();
   const form = event.target;
   const formData = new FormData(form);
-  
+
   // Show loading state
   const submitBtn = form.querySelector('button[type="submit"]');
   const originalText = submitBtn.textContent;
   submitBtn.disabled = true;
   submitBtn.textContent = 'Sending...';
-  
+
   fetch("{{ url_for('invoices.send_invoice_email_route', invoice_id=invoice.id) }}", {
     method: 'POST',
     body: formData
@@ -556,7 +556,7 @@ function sendInvoiceEmail(event) {
     // Check content type to determine how to parse
     const contentType = response.headers.get('content-type') || '';
     const isJson = contentType.includes('application/json');
-    
+
     // Always try JSON first if content-type suggests it, otherwise read as text
     if (isJson) {
       const data = await response.json();
@@ -628,14 +628,14 @@ async function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
   if (!(await ttConfirm(`Resend invoice email to ${recipientEmail}?`, { confirmText: 'Resend' }))) {
     return;
   }
-  
+
   // Show the send email modal with pre-filled recipient
   const modal = document.getElementById('sendEmailModal');
   const recipientInput = document.getElementById('recipient_email');
   if (modal && recipientInput) {
     recipientInput.value = recipientEmail;
     modal.classList.remove('hidden');
-    
+
     // Override form submission to use resend endpoint
     const form = document.getElementById('sendEmailForm');
     if (form) {
@@ -643,13 +643,13 @@ async function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
       form.onsubmit = function(event) {
         event.preventDefault();
         const formData = new FormData(form);
-        
+
         // Show loading state
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.textContent = 'Resending...';
-        
+
         fetch(`/invoices/${invoiceId}/resend-email/${emailId}`, {
           method: 'POST',
           body: formData
@@ -657,7 +657,7 @@ async function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
         .then(async response => {
           const contentType = response.headers.get('content-type') || '';
           const isJson = contentType.includes('application/json');
-          
+
           if (isJson) {
             const data = await response.json();
             if (!response.ok) {
@@ -704,7 +704,7 @@ async function resendInvoiceEmail(invoiceId, emailId, recipientEmail) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
         });
-        
+
         // Restore original handler after use
         setTimeout(() => {
           form.onsubmit = originalOnSubmit;

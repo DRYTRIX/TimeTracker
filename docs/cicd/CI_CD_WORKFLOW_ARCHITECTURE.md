@@ -13,7 +13,7 @@ graph TB
         B[Create Pull Request]
         C[Create Release/Tag]
     end
-    
+
     subgraph "Workflows"
         D[🔵 Development CD]
         E[🟢 Release CD]
@@ -21,7 +21,7 @@ graph TB
         G[🟠 Migration Check]
         H[🟣 GitHub Pages]
     end
-    
+
     subgraph "Outputs"
         I[Dev Docker Image]
         J[Release Docker Image]
@@ -29,19 +29,19 @@ graph TB
         L[Migration Validation]
         M[Documentation Site]
     end
-    
+
     A -->|push to develop| D
     B -->|PR to main/develop| F
     B -->|PR with model changes| G
     C -->|push to main/tags| E
     C -->|release published| H
-    
+
     D --> I
     E --> J
     F --> K
     G --> L
     H --> M
-    
+
     style D fill:#0066ff,stroke:#003d99,color:#fff
     style E fill:#00cc66,stroke:#009944,color:#fff
     style F fill:#ffcc00,stroke:#cc9900,color:#000
@@ -68,13 +68,13 @@ graph LR
     B -->|Fail| D{Force Build?}
     D -->|Yes| C
     D -->|No| E[Stop]
-    
+
     C --> F[Login to GHCR]
     F --> G[Build Docker Image]
     G --> H[Tag: develop]
     H --> I[Push to Registry]
     I --> J[Create Dev Release]
-    
+
     style B fill:#ffd700
     style C fill:#4CAF50
     style J fill:#FF9800
@@ -153,7 +153,7 @@ graph TD
     B -->|Yes| D[Build & Push]
     C -->|Pass| D
     C -->|Fail| E[Stop]
-    
+
     D --> F[Determine Version]
     F --> G[Build Multi-Platform]
     G --> H[Security Scan]
@@ -161,10 +161,10 @@ graph TD
     I --> J{Has Tag?}
     J -->|Yes| K[Create Release]
     J -->|No| L[Skip Release]
-    
+
     K --> M[Generate Manifests]
     M --> N[Upload Artifacts]
-    
+
     style C fill:#ffd700
     style D fill:#4CAF50
     style H fill:#ff5722
@@ -273,30 +273,30 @@ Job 4: None (manifest generation)
 ```mermaid
 graph TD
     A[PR Opened/Updated] --> B[Smoke Tests]
-    
+
     B -->|Pass| C1[Unit: models]
     B -->|Pass| C2[Unit: routes]
     B -->|Pass| C3[API Tests]
-    
+
     C1 --> D1[Integration Tests]
     C2 --> D1
     C3 --> D1
-    
+
     D1 --> E[Database Tests]
-    
+
     E --> F[Security Tests]
     F --> G[Code Quality]
-    
+
     G --> H1[Flake8 Lint]
     G --> H2[Bandit Security]
     G --> H3[Safety Check]
-    
+
     H1 --> I[Coverage Report]
     H2 --> I
     H3 --> I
-    
+
     I --> J[Comment on PR]
-    
+
     style B fill:#ffd700
     style E fill:#2196F3
     style F fill:#ff5722
@@ -382,16 +382,16 @@ graph LR
     B --> C{Migration Exists?}
     C -->|Yes| D[Validate Migration]
     C -->|No| E[Warning Comment]
-    
+
     D --> F[Apply Migration]
     F --> G{Success?}
     G -->|Yes| H[Test Rollback]
     G -->|No| I[Error Comment]
-    
+
     H --> J{Rollback OK?}
     J -->|Yes| K[Success Comment]
     J -->|No| L[Warning Comment]
-    
+
     style D fill:#4CAF50
     style F fill:#2196F3
     style H fill:#FF9800
@@ -438,7 +438,7 @@ Runs: Only on PRs
 ### **Permissions:**
 ```yaml
 Job 1: None (validation only)
-Job 2: 
+Job 2:
   contents: read
   pull-requests: write
   issues: write
@@ -461,7 +461,7 @@ graph LR
     B --> C[Upload Artifact]
     C --> D[Deploy to Pages]
     D --> E[Live Documentation]
-    
+
     style B fill:#4CAF50
     style E fill:#9933ff
 ```
@@ -513,33 +513,33 @@ sequenceDiagram
     participant CD as CD Workflows
     participant GHCR as Container Registry
     participant Pages as GitHub Pages
-    
+
     Dev->>Repo: 1. Create feature branch
     Dev->>Repo: 2. Make changes
     Dev->>Repo: 3. Push commits
     Dev->>Repo: 4. Open PR to develop
-    
+
     Repo->>CI: Trigger CI Pipeline
     CI->>CI: Run comprehensive tests
     CI->>CI: Check migrations (if models changed)
     CI->>Repo: Comment results on PR
-    
+
     Dev->>Repo: 5. Merge PR to develop
-    
+
     Repo->>CD: Trigger Development CD
     CD->>CD: Quick smoke tests
     CD->>CD: Validate database migrations
     CD->>CD: Build Docker image
     CD->>GHCR: Push dev image
     CD->>Repo: Create dev release
-    
+
     Dev->>Repo: 6. Create PR: develop → main
-    
+
     Repo->>CI: Trigger CI Pipeline (again)
     CI->>CI: Full test validation
-    
+
     Dev->>Repo: 7. Merge PR to main
-    
+
     Repo->>CD: Trigger Release CD
     CD->>CD: Validate database migrations
     CD->>CD: Full test suite
@@ -548,7 +548,7 @@ sequenceDiagram
     CD->>GHCR: Push release image
     CD->>Repo: Create production release
     CD->>Repo: Upload deployment manifests
-    
+
     Repo->>Pages: Trigger Pages Deploy
     Pages->>Pages: Build & deploy docs
 ```
@@ -733,4 +733,3 @@ Actions → Select workflow run → Select job → View logs
 **Version:** 1.1.0  
 **Status:** ✅ All workflows operational  
 **Recent Changes:** Integrated database migration validation into CD workflows
-

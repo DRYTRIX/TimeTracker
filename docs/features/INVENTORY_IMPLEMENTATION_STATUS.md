@@ -3,7 +3,7 @@
 ## ✅ Completed Features
 
 ### 1. Stock Transfers ✅
-- **Routes**: 
+- **Routes**:
   - `GET /inventory/transfers` - List all stock transfers
   - `GET /inventory/transfers/new` - Create new transfer form
   - `POST /inventory/transfers` - Create transfer (creates dual movements)

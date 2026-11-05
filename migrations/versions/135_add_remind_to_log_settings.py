@@ -6,9 +6,9 @@ Create Date: 2026-03-11
 
 Adds user settings for optional end-of-day reminder to log time.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "135_remind_to_log"
 down_revision = "134_overtime_weekly"

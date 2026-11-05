@@ -99,8 +99,7 @@ def create_project():
         data = schema.load(request.get_json())
     except ValidationError as err:
         return validation_error_response(err.messages)
-    
+
     # Create project...
     return created_response(project.to_dict())
 ```
-

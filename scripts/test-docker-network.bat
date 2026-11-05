@@ -53,7 +53,7 @@ if errorlevel 1 (
     ) else (
         echo     ✓ Container can reach host.docker.internal
     )
-    
+
     REM Get container IP
     for /f "tokens=1" %%i in ('docker exec timetracker-app hostname -I') do (
         echo     - Container IP: %%i

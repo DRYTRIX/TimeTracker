@@ -86,10 +86,10 @@ function generateInvoice(recurringId) {
     if (!confirm('Generate an invoice from this recurring template now?')) {
         return;
     }
-    
+
     // Get CSRF token from meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-    
+
     fetch(`/recurring-invoices/${recurringId}/generate`, {
         method: 'POST',
         headers: {
@@ -116,4 +116,3 @@ function generateInvoice(recurringId) {
 }
 </script>
 {% endblock %}
-

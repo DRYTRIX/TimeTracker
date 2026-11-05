@@ -7,10 +7,10 @@ Create Date: 2026-02-02
 Adds roles.hidden_module_ids (JSON array) which stores module IDs hidden for a role.
 Empty/NULL means no modules are hidden (all visible unless disabled globally).
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
-
 
 # revision identifiers, used by Alembic.
 revision = "118_add_role_hidden_module_ids"
@@ -59,4 +59,3 @@ def downgrade():
             batch_op.drop_column("hidden_module_ids")
     else:
         op.drop_column("roles", "hidden_module_ids")
-

@@ -125,7 +125,7 @@ class DashboardWidgetManager {
         const el = document.createElement('div');
         el.className = `widget-card ${this.getSizeClass(widget.size)} bg-card-light dark:bg-card-dark rounded-lg shadow-sm hover:shadow-md transition-shadow p-6 relative`;
         el.dataset.widgetId = widget.id;
-        
+
         if (this.editMode) {
             el.classList.add('edit-mode');
             el.draggable = true;
@@ -267,11 +267,11 @@ class DashboardWidgetManager {
 
     toggleEditMode() {
         this.editMode = !this.editMode;
-        
+
         if (this.editMode) {
             this.showWidgetSelector();
         }
-        
+
         this.renderWidgets();
     }
 
@@ -325,7 +325,7 @@ class DashboardWidgetManager {
 
     getDragAfterElement(container, y) {
         const draggableElements = [...container.querySelectorAll('.widget-card:not(.dragging)')];
-        
+
         return draggableElements.reduce((closest, child) => {
             const box = child.getBoundingClientRect();
             const offset = y - box.top - box.height / 2;
@@ -343,7 +343,7 @@ class DashboardWidgetManager {
         localStorage.setItem('dashboard_layout', JSON.stringify(widgets));
         this.editMode = false;
         this.renderWidgets();
-        
+
         if (window.toastManager) {
             window.toastManager.success('Dashboard layout saved!');
         }
@@ -365,4 +365,3 @@ window.addEventListener('DOMContentLoaded', () => {
         window.widgetManager = new DashboardWidgetManager();
     }
 });
-

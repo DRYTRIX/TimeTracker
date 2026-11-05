@@ -19,19 +19,19 @@ class EnhancedErrorHandler {
     init() {
         // Setup feature fallbacks first (before other initialization)
         this.setupFeatureFallbacks();
-        
+
         // Setup network status monitoring
         this.setupNetworkMonitoring();
-        
+
         // Setup fetch interceptors
         this.setupFetchInterceptor();
-        
+
         // Setup global error handlers
         this.setupGlobalErrorHandlers();
-        
+
         // Setup offline queue processor
         this.setupOfflineQueue();
-        
+
         // Setup graceful degradation
         this.setupGracefulDegradation();
     }
@@ -230,10 +230,10 @@ class EnhancedErrorHandler {
         this.showOnlineIndicator();
 
         this.dismissConnectivityErrors();
-        
+
         // Process offline queue
         this.processOfflineQueue();
-        
+
         // Retry failed operations
         this.retryFailedOperations();
     }
@@ -292,11 +292,11 @@ class EnhancedErrorHandler {
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
                 animation: slideDown 0.3s ease-out;
             }
-            
+
             .dark .offline-indicator {
                 background: #d97706;
             }
-            
+
             .offline-indicator-content {
                 display: flex;
                 align-items: center;
@@ -304,12 +304,12 @@ class EnhancedErrorHandler {
                 gap: 8px;
                 font-size: 0.875rem;
             }
-            
+
             .offline-queue-count {
                 margin-left: 8px;
                 font-weight: 600;
             }
-            
+
             @keyframes slideDown {
                 from {
                     transform: translateY(-100%);
@@ -318,7 +318,7 @@ class EnhancedErrorHandler {
                     transform: translateY(0);
                 }
             }
-            
+
             .error-retry-container {
                 margin-top: 12px;
                 padding-top: 12px;
@@ -327,12 +327,12 @@ class EnhancedErrorHandler {
                 flex-direction: column;
                 gap: 8px;
             }
-            
+
             .error-retry-btn {
                 padding: 8px 16px;
-                background: rgba(255, 255, 255, 0.2);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.3);
+                background: rgba(148, 163, 184, 0.18);
+                color: inherit;
+                border: 1px solid rgba(148, 163, 184, 0.35);
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 0.875rem;
@@ -340,40 +340,40 @@ class EnhancedErrorHandler {
                 transition: all 0.2s;
                 align-self: flex-start;
             }
-            
+
             .error-retry-btn:hover {
-                background: rgba(255, 255, 255, 0.3);
+                background: rgba(148, 163, 184, 0.28);
             }
-            
+
             .error-retry-btn:disabled {
                 opacity: 0.5;
                 cursor: not-allowed;
             }
-            
+
             .error-message-friendly {
                 margin-bottom: 8px;
             }
-            
+
             .error-recovery-options {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 8px;
                 margin-top: 4px;
             }
-            
+
             .error-recovery-btn {
                 padding: 6px 12px;
-                background: rgba(255, 255, 255, 0.15);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.25);
+                background: rgba(148, 163, 184, 0.15);
+                color: inherit;
+                border: 1px solid rgba(148, 163, 184, 0.35);
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 0.875rem;
                 transition: all 0.2s;
             }
-            
+
             .error-recovery-btn:hover {
-                background: rgba(255, 255, 255, 0.25);
+                background: rgba(148, 163, 184, 0.25);
             }
         `;
         document.head.appendChild(style);
@@ -385,18 +385,18 @@ class EnhancedErrorHandler {
     setupFetchInterceptor() {
         const originalFetch = window.fetch.bind(window);
         this._originalFetch = originalFetch;
-        
+
         window.fetch = async (...args) => {
             const [url, options = {}] = args;
             const quiet = Boolean(options && options.__ttQuiet) || this.isQuietHealthUrl(url);
-            
+
             try {
                 const fetchOptions = options && typeof options === 'object' ? { ...options } : options;
                 if (fetchOptions && fetchOptions.__ttQuiet) {
                     delete fetchOptions.__ttQuiet;
                 }
                 const response = await originalFetch(url, fetchOptions);
-                
+
                 // Handle non-ok responses (skip toast for health / quiet probes)
                 if (!response.ok) {
                     if (quiet) {
@@ -404,7 +404,7 @@ class EnhancedErrorHandler {
                     }
                     return this.handleFetchError(response, url, fetchOptions || {});
                 }
-                
+
                 return response;
             } catch (error) {
                 if (quiet) {
@@ -427,12 +427,12 @@ class EnhancedErrorHandler {
         const clonedResponse = response.clone();
         const errorData = await clonedResponse.json().catch(() => ({ error: 'Unknown error' }));
         const userFriendlyMessage = this.getUserFriendlyMessage(response.status, errorData);
-        
+
         // Show error notification with retry option
         const errorId = this.showErrorWithRetry(userFriendlyMessage, response.status, () => {
             return this.retryFetch(url, options);
         });
-        
+
         // Queue for offline processing if offline
         if (!this.isOnline) {
             await this.queueForOffline(url, options, errorId);
@@ -443,15 +443,18 @@ class EnhancedErrorHandler {
     }
 
     async handleFetchException(error, url, options) {
-        // Network error.
-        // The Response constructor only accepts statuses in [200, 599] — a status
-        // of 0 throws RangeError. Report 503 so callers get a non-ok Response
-        // (same contract as handleFetchError) instead of the handler crashing.
+        // Network error — Response status must be 200–599; use 503 + marker header.
+        // (status 0 throws RangeError). Callers get a non-ok Response instead of
+        // the handler crashing.
         if (!this.isOnline) {
             await this.queueForOffline(url, options);
             return new Response(JSON.stringify({ error: 'Offline' }), {
                 status: 503,
-                statusText: 'Offline'
+                statusText: 'Offline',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-TT-Network-Error': '1'
+                }
             });
         }
 
@@ -462,25 +465,33 @@ class EnhancedErrorHandler {
             console.debug('Suppressed network error during tab-resume grace window:', url);
             return new Response(JSON.stringify({ error: 'Reconnecting' }), {
                 status: 503,
-                statusText: 'Reconnecting'
+                statusText: 'Reconnecting',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-TT-Network-Error': '1'
+                }
             });
         }
 
-        const userFriendlyMessage = this.getUserFriendlyMessage(0, error);
-        const errorId = this.showErrorWithRetry(userFriendlyMessage, 0, () => {
+        const userFriendlyMessage = this.getUserFriendlyMessage(503, error);
+        const errorId = this.showErrorWithRetry(userFriendlyMessage, 503, () => {
             return this.retryFetch(url, options);
         });
 
         return new Response(JSON.stringify({ error: userFriendlyMessage }), {
             status: 503,
-            statusText: 'Network Error'
+            statusText: 'Network Error',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-TT-Network-Error': '1'
+            }
         });
     }
 
     async retryFetch(url, options) {
         const retryKey = `${url}-${JSON.stringify(options)}`;
         const attempts = this.retryAttempts.get(retryKey) || 0;
-        
+
         if (attempts >= this.maxRetries) {
             this.showError(
                 'Maximum retry attempts reached. Please try again later or contact support.',
@@ -488,9 +499,9 @@ class EnhancedErrorHandler {
             );
             return null;
         }
-        
+
         this.retryAttempts.set(retryKey, attempts + 1);
-        
+
         try {
             const response = await fetch(url, options);
             if (response.ok) {
@@ -513,7 +524,7 @@ class EnhancedErrorHandler {
      */
     getUserFriendlyMessage(status, errorData) {
         const errorMessage = errorData?.error || errorData?.message || 'An error occurred';
-        
+
         const messages = {
             0: 'Unable to connect to the server. Please check your internet connection.',
             400: 'Invalid request. Please check your input and try again.',
@@ -528,12 +539,12 @@ class EnhancedErrorHandler {
             503: 'Service temporarily unavailable. Please try again in a few moments.',
             504: 'Request timeout. Please try again.'
         };
-        
+
         // Try to get specific message from server
         if (typeof errorData === 'object' && errorData.message) {
             return errorData.message;
         }
-        
+
         // Fallback to status-based message
         return messages[status] || `An error occurred (${status}). ${errorMessage}`;
     }
@@ -551,22 +562,22 @@ class EnhancedErrorHandler {
         }
 
         const recoveryOptions = this.getRecoveryOptions(status);
-        
+
         // Create error toast with retry
         if (window.toastManager) {
             const toastId = window.toastManager.error(message, 'Error', 0);
-            
+
             // Find toast element by ID
             const toastElement = window.toastManager.container.querySelector(
                 `[data-toast-id="${toastId}"]`
             ) || Array.from(window.toastManager.container.children).find(
                 el => el.getAttribute('data-toast-id') === String(toastId)
             );
-            
+
             if (toastElement) {
                 const retryContainer = document.createElement('div');
                 retryContainer.className = 'error-retry-container';
-                
+
                 const retryBtn = document.createElement('button');
                 retryBtn.className = 'error-retry-btn';
                 retryBtn.type = 'button';
@@ -575,7 +586,7 @@ class EnhancedErrorHandler {
                 retryBtn.onclick = async () => {
                     retryBtn.disabled = true;
                     retryBtn.textContent = 'Retrying...';
-                    
+
                     try {
                         await retryCallback();
                         window.toastManager.dismiss(toastId);
@@ -589,9 +600,9 @@ class EnhancedErrorHandler {
                         );
                     }
                 };
-                
+
                 retryContainer.appendChild(retryBtn);
-                
+
                 // Add recovery options if available
                 if (recoveryOptions.length > 0) {
                     const recoveryDiv = document.createElement('div');
@@ -605,13 +616,13 @@ class EnhancedErrorHandler {
                     });
                     retryContainer.appendChild(recoveryDiv);
                 }
-                
+
                 toastElement.appendChild(retryContainer);
             }
-            
+
             return toastId;
         }
-        
+
         // Fallback to console
         console.error('Error:', message);
         return null;
@@ -632,28 +643,28 @@ class EnhancedErrorHandler {
             console.error(title + ':', message);
         }
     }
-    
+
     /**
      * Check if an error message was recently shown (deduplication)
      */
     isDuplicateError(message) {
         const now = Date.now();
         const lastShown = this.recentErrors.get(message);
-        
+
         if (lastShown && (now - lastShown) < this.errorDeduplicationWindow) {
             return true; // This error was shown recently
         }
-        
+
         // Update the timestamp for this error
         this.recentErrors.set(message, now);
-        
+
         // Clean up old entries (older than deduplication window)
         for (const [msg, timestamp] of this.recentErrors.entries()) {
             if (now - timestamp >= this.errorDeduplicationWindow) {
                 this.recentErrors.delete(msg);
             }
         }
-        
+
         return false;
     }
 
@@ -662,7 +673,7 @@ class EnhancedErrorHandler {
      */
     getRecoveryOptions(status) {
         const options = [];
-        
+
         switch (status) {
             case 0:
                 // Connection errors - offer refresh option
@@ -715,7 +726,7 @@ class EnhancedErrorHandler {
                 });
                 break;
         }
-        
+
         return options;
     }
 
@@ -844,7 +855,7 @@ class EnhancedErrorHandler {
     setupOfflineQueue() {
         // Load existing queue on init
         this.loadOfflineQueue();
-        
+
         // Process queue when online
         if (this.isOnline && this.offlineQueue.length > 0) {
             this.processOfflineQueue();
@@ -859,7 +870,7 @@ class EnhancedErrorHandler {
         window.addEventListener('error', (event) => {
             this.handleJavaScriptError(event.error, event.message, event.filename, event.lineno);
         });
-        
+
         // Unhandled promise rejections
         window.addEventListener('unhandledrejection', (event) => {
             this.handleUnhandledRejection(event.reason);
@@ -872,7 +883,7 @@ class EnhancedErrorHandler {
         }
 
         const userFriendlyMessage = 'An unexpected error occurred. Please refresh the page or contact support if the problem persists.';
-        
+
         // Check if we've shown this error recently
         if (this.isDuplicateError(userFriendlyMessage)) {
             // Log to console but don't show duplicate toast
@@ -884,9 +895,9 @@ class EnhancedErrorHandler {
             });
             return;
         }
-        
+
         this.showError(userFriendlyMessage, 'Application Error');
-        
+
         // Log to console for debugging
         console.error('JavaScript Error:', {
             error,
@@ -902,16 +913,16 @@ class EnhancedErrorHandler {
         }
 
         const userFriendlyMessage = 'An operation failed unexpectedly. Please try again or contact support if the problem persists.';
-        
+
         // Check if we've shown this error recently
         if (this.isDuplicateError(userFriendlyMessage)) {
             // Log to console but don't show duplicate toast
             console.error('Unhandled Rejection (duplicate suppressed):', reason);
             return;
         }
-        
+
         this.showError(userFriendlyMessage, 'Operation Failed');
-        
+
         // Log to console for debugging
         console.error('Unhandled Rejection:', reason);
     }
@@ -922,7 +933,7 @@ class EnhancedErrorHandler {
     setupGracefulDegradation() {
         // Check for required features
         this.checkRequiredFeatures();
-        
+
         // Setup feature fallbacks
         this.setupFeatureFallbacks();
     }
@@ -934,11 +945,11 @@ class EnhancedErrorHandler {
             'localStorage': typeof Storage !== 'undefined',
             'fetch': typeof fetch !== 'undefined'
         };
-        
+
         const missing = Object.entries(features)
             .filter(([_, available]) => !available)
             .map(([name]) => name);
-        
+
         if (missing.length > 0) {
             console.warn('Missing features:', missing);
             this.showError(
@@ -946,7 +957,7 @@ class EnhancedErrorHandler {
                 'Browser Compatibility'
             );
         }
-        
+
         // Log serviceWorker availability for debugging (but don't show warning)
         if (!('serviceWorker' in navigator)) {
             const isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -964,7 +975,7 @@ class EnhancedErrorHandler {
             console.warn('Fetch API not available, using XMLHttpRequest fallback');
             this.polyfillFetch();
         }
-        
+
         // Fallback for localStorage
         if (typeof Storage === 'undefined' || typeof localStorage === 'undefined') {
             console.warn('LocalStorage not available, using memory storage');
@@ -979,14 +990,14 @@ class EnhancedErrorHandler {
                 const xhr = new XMLHttpRequest();
                 const method = options.method || 'GET';
                 const headers = options.headers || {};
-                
+
                 xhr.open(method, url, true);
-                
+
                 // Set headers
                 Object.keys(headers).forEach(key => {
                     xhr.setRequestHeader(key, headers[key]);
                 });
-                
+
                 // Handle response
                 xhr.onload = function() {
                     const response = {
@@ -1015,27 +1026,27 @@ class EnhancedErrorHandler {
                             return Promise.resolve(xhr.response);
                         }
                     };
-                    
+
                     if (xhr.status >= 200 && xhr.status < 300) {
                         resolve(response);
                     } else {
                         reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
                     }
                 };
-                
+
                 xhr.onerror = function() {
                     reject(new Error('Network request failed'));
                 };
-                
+
                 xhr.ontimeout = function() {
                     reject(new Error('Request timeout'));
                 };
-                
+
                 // Set timeout if specified
                 if (options.timeout) {
                     xhr.timeout = options.timeout;
                 }
-                
+
                 // Send request
                 if (options.body) {
                     if (typeof options.body === 'string') {
@@ -1055,7 +1066,7 @@ class EnhancedErrorHandler {
     polyfillLocalStorage() {
         // In-memory storage fallback
         const memoryStorage = {};
-        
+
         window.localStorage = {
             getItem: function(key) {
                 return memoryStorage[key] || null;
@@ -1095,7 +1106,7 @@ class EnhancedErrorHandler {
                 return keys[index] || null;
             }
         };
-        
+
         // Also polyfill sessionStorage with same in-memory implementation
         if (typeof sessionStorage === 'undefined') {
             window.sessionStorage = Object.create(window.localStorage);
@@ -1106,7 +1117,7 @@ class EnhancedErrorHandler {
         // Retry operations from retry queue
         const queue = [...this.retryQueue];
         this.retryQueue = [];
-        
+
         queue.forEach(operation => {
             try {
                 operation();
@@ -1142,4 +1153,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
-

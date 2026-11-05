@@ -2,12 +2,14 @@
 Tests for time entry resume functionality.
 """
 
-import pytest
 from datetime import datetime, timedelta
-from app import db
-from app.models import User, Project, TimeEntry, Task
-from app.models.time_entry import local_now
+
+import pytest
 from factories import TimeEntryFactory
+
+from app import db
+from app.models import Project, Task, TimeEntry, User
+from app.models.time_entry import local_now
 
 
 @pytest.mark.unit

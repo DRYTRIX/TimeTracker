@@ -265,11 +265,7 @@ class TimeEntry(db.Model):
         # look up by user_id so rounding still applies.
         user = self._resolve_rounding_user()
 
-        from app.utils.time_rounding import (
-            apply_user_rounding,
-            get_user_rounding_settings,
-            round_entry_boundaries,
-        )
+        from app.utils.time_rounding import apply_user_rounding, get_user_rounding_settings, round_entry_boundaries
 
         settings = get_user_rounding_settings(user)
         if settings["enabled"] and settings["method"] == "boundary" and settings["minutes"] > 1:

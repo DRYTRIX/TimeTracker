@@ -13,7 +13,7 @@
                     <li class="breadcrumb-item active">{{ _('Add Cost') }}</li>
                 </ol>
             </nav>
-            
+
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white py-3">
                     <h5 class="m-0 font-weight-bold text-primary">
@@ -25,11 +25,11 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-4">
                             <label for="description" class="form-label">{{ _('Description') }} <span class="text-danger">*</span></label>
-                            <input type="text" class="form-input" id="description" name="description" required 
+                            <input type="text" class="form-input" id="description" name="description" required
                                    placeholder="{{ _('e.g., Travel expenses to client site') }}">
                             <small class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 block">{{ _('Brief description of the cost') }}</small>
                         </div>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label for="category" class="form-label">{{ _('Category') }} <span class="text-danger">*</span></label>
@@ -43,21 +43,21 @@
                                     <option value="other">{{ _('Other') }}</option>
                                 </select>
                             </div>
-                            
+
                             <div>
                                 <label for="cost_date" class="form-label">{{ _('Date') }} <span class="text-danger">*</span></label>
-                                <input type="date" class="form-input" id="cost_date" name="cost_date" 
+                                <input type="date" class="form-input" id="cost_date" name="cost_date"
                                        value="{{ today if today else '' }}" required>
                             </div>
                         </div>
-                        
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label for="amount" class="form-label">{{ _('Amount') }} <span class="text-danger">*</span></label>
-                                <input type="number" class="form-input" id="amount" name="amount" step="0.01" min="0.01" required 
+                                <input type="number" class="form-input" id="amount" name="amount" step="0.01" min="0.01" required
                                        placeholder="0.00">
                             </div>
-                            
+
                             <div>
                                 <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
                                 <select class="form-input" id="currency_code" name="currency_code">
@@ -68,13 +68,13 @@
                                 </select>
                             </div>
                         </div>
-                        
+
                         <div class="mb-4">
                             <label for="notes" class="form-label">{{ _('Notes') }}</label>
-                            <textarea class="form-input" id="notes" name="notes" rows="3" 
+                            <textarea class="form-input" id="notes" name="notes" rows="3"
                                       placeholder="{{ _('Additional details about this cost') }}"></textarea>
                         </div>
-                        
+
                         <div class="mb-4">
                             <label class="inline-flex items-start gap-2 cursor-pointer">
                                 <input class="rounded border-gray-300 text-primary focus:ring-primary" type="checkbox" id="billable" name="billable" checked>
@@ -86,7 +86,7 @@
                                 </span>
                             </label>
                         </div>
-                        
+
                         <div class="d-flex justify-content-end gap-2 mt-4">
                             <a href="{{ url_for('projects.view_project', project_id=project.id) }}" class="btn btn-secondary">
                                 <i class="fas fa-times me-1"></i> {{ _('Cancel') }}
@@ -113,4 +113,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

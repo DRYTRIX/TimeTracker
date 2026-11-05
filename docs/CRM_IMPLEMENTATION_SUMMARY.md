@@ -250,4 +250,3 @@ This will create all the new CRM tables.
 ---
 
 **Last Updated:** 2025-01-27
-

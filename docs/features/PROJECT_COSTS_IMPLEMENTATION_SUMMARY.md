@@ -378,4 +378,3 @@ For any questions about the implementation or issues during deployment, refer to
 2. Code comments in model and route files
 3. Migration scripts for database details
 4. This summary for technical overview
-

@@ -18,7 +18,7 @@
             </h1>
             <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Project Dashboard & Analytics') }}</p>
         </div>
-        
+
         <!-- Actions and Time Period Filter -->
         <div class="mt-4 md:mt-0 flex gap-3 flex-wrap">
             <a href="{{ url_for('projects.project_time_entries_overview', project_id=project.id) }}"
@@ -27,7 +27,7 @@
                 {{ _('Entries Overview') }}
             </a>
             {% if project.budget_amount %}
-            <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" 
+            <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}"
                class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-lg">
                 <i class="fas fa-wallet"></i>
                 {{ _('Budget Analysis') }}
@@ -63,7 +63,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Budget Consumed -->
     <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
@@ -81,7 +81,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Task Completion -->
     <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
@@ -97,7 +97,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Team Size -->
     <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
@@ -146,7 +146,7 @@
         </div>
         {% endif %}
     </div>
-    
+
     <!-- Task Status Distribution -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
@@ -211,7 +211,7 @@
         </div>
         {% endif %}
     </div>
-    
+
     <!-- Time Tracking Timeline -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
@@ -269,7 +269,7 @@
         </div>
         {% endif %}
     </div>
-    
+
     <!-- Team Member Details -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h2 class="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const isDark = document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#E5E7EB' : '#1F2937';
     const gridColor = isDark ? '#374151' : '#E5E7EB';
-    
+
     // Common chart options
     const commonOptions = {
         responsive: true,
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     };
-    
+
     {% if budget_data.budget_amount > 0 %}
     // Budget Chart
     const budgetCtx = document.getElementById('budgetChart').getContext('2d');
@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     {% endif %}
-    
+
     {% if task_stats.total > 0 %}
     // Task Status Chart
     const taskStatusCtx = document.getElementById('taskStatusChart').getContext('2d');
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     {% endif %}
-    
+
     {% if team_contributions %}
     // Team Contributions Chart
     const teamCtx = document.getElementById('teamChart').getContext('2d');
@@ -472,7 +472,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     {% endif %}
-    
+
     {% if timeline_data %}
     // Timeline Chart
     const timelineCtx = document.getElementById('timelineChart').getContext('2d');
@@ -510,4 +510,3 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endautoescape %}
 </script>
 {% endblock %}
-

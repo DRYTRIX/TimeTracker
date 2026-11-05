@@ -27,14 +27,14 @@
                     <label class="form-label">Name</label>
                     <p class="text-text-light dark:text-text-dark">{{ template.name }}</p>
                 </div>
-                
+
                 {% if template.description %}
                 <div class="md:col-span-2">
                     <label class="form-label">Description</label>
                     <p class="text-text-light dark:text-text-dark">{{ template.description }}</p>
                 </div>
                 {% endif %}
-                
+
                 {% if template.project %}
                 <div>
                     <label class="form-label">Project</label>
@@ -43,7 +43,7 @@
                     </p>
                 </div>
                 {% endif %}
-                
+
                 {% if template.task %}
                 <div>
                     <label class="form-label">Task</label>
@@ -52,7 +52,7 @@
                     </p>
                 </div>
                 {% endif %}
-                
+
                 {% if template.default_duration %}
                 <div>
                     <label class="form-label">Default Duration</label>
@@ -61,7 +61,7 @@
                     </p>
                 </div>
                 {% endif %}
-                
+
                 {% if template.tags %}
                 <div>
                     <label class="form-label">Tags</label>
@@ -70,7 +70,7 @@
                     </p>
                 </div>
                 {% endif %}
-                
+
                 <div>
                     <label class="form-label">Billable</label>
                     <p class="text-text-light dark:text-text-dark">
@@ -82,7 +82,7 @@
                     </p>
                 </div>
             </div>
-            
+
             {% if template.default_notes %}
             <div class="mt-4">
                 <label class="form-label">Default Notes</label>
@@ -90,7 +90,7 @@
             </div>
             {% endif %}
         </div>
-        
+
         <!-- Usage Statistics -->
         <div class="border-t border-border-light dark:border-border-dark pt-6">
             <h2 class="text-lg font-semibold mb-4">{{ _('Usage Statistics') }}</h2>
@@ -101,7 +101,7 @@
                         <i class="fas fa-chart-line mr-2"></i>{{ template.usage_count }}
                     </p>
                 </div>
-                
+
                 {% if template.last_used_at %}
                 <div>
                     <label class="form-label">Last Used</label>
@@ -113,14 +113,14 @@
                     </p>
                 </div>
                 {% endif %}
-                
+
                 <div>
                     <label class="form-label">Created</label>
                     <p class="text-text-light dark:text-text-dark">
                         <i class="fas fa-calendar mr-2"></i>{{ template.created_at|user_datetime }}
                     </p>
                 </div>
-                
+
                 <div>
                     <label class="form-label">Last Updated</label>
                     <p class="text-text-light dark:text-text-dark">
@@ -129,17 +129,17 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Actions -->
         <div class="border-t border-border-light dark:border-border-dark pt-6 flex flex-wrap gap-3">
             <button onclick="useTemplate({{ template.id }})" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-play mr-2"></i>Use Template
             </button>
-            <a href="{{ url_for('time_entry_templates.edit_template', template_id=template.id) }}" 
+            <a href="{{ url_for('time_entry_templates.edit_template', template_id=template.id) }}"
                class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
                 <i class="fas fa-edit mr-2"></i>Edit
             </a>
-            <form method="POST" 
+            <form method="POST"
                   action="{{ url_for('time_entry_templates.delete_template', template_id=template.id) }}"
                   onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this template?') }}', { title: '{{ _('Delete Template') }}', confirmText: '{{ _('Delete') }}', variant: 'danger' }).then(ok=>{ if(ok) this.submit(); });"
                   class="inline">
@@ -160,7 +160,7 @@ function useTemplate(templateId) {
         .then(template => {
             // Store template data in sessionStorage
             sessionStorage.setItem('activeTemplate', JSON.stringify(template));
-            
+
             // Mark template as used
             fetch(`/api/templates/${templateId}/use`, {
                 method: 'POST',
@@ -169,7 +169,7 @@ function useTemplate(templateId) {
                     'X-CSRFToken': '{{ csrf_token() }}'
                 }
             });
-            
+
             // Redirect to manual entry (timer)
             window.location.href = '{{ url_for("timer.manual_entry") }}?template=' + templateId;
         })
@@ -180,4 +180,3 @@ function useTemplate(templateId) {
 }
 </script>
 {% endblock %}
-

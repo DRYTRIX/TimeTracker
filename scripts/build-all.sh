@@ -63,9 +63,9 @@ check_npm() {
 # Build functions
 build_mobile() {
     print_header "Building Mobile App (Flutter)"
-    
+
     cd "$PROJECT_ROOT"
-    
+
     # Sync version from setup.py to mobile app
     print_header "Syncing version from setup.py"
     python3 "$SCRIPT_DIR/sync-mobile-version.py"
@@ -75,12 +75,12 @@ build_mobile() {
     fi
     print_success "Version synced"
     echo ""
-    
+
     cd "$PROJECT_ROOT/mobile"
-    
+
     # Check if Flutter is available
     check_flutter
-    
+
     # Get dependencies
     print_header "Installing Flutter dependencies"
     flutter pub get
@@ -94,30 +94,30 @@ build_mobile() {
         print_error "Failed to generate launcher icons"
         exit 1
     fi
-    
+
     # Analyze code
     print_header "Analyzing Flutter code"
     flutter analyze || print_warning "Code analysis found issues (continuing anyway)"
-    
+
     # Run tests
     print_header "Running Flutter tests"
     flutter test || print_warning "Some tests failed (continuing anyway)"
-    
+
     # Build Android
     if [ "$BUILD_ANDROID" = "true" ] || [ "$1" = "android" ] || [ "$1" = "all" ] || [ -z "$1" ]; then
         print_header "Building Android APK"
         flutter build apk --release
-        
+
         if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
             print_success "Android APK built successfully"
             echo "  Location: $PROJECT_ROOT/mobile/build/app/outputs/flutter-apk/app-release.apk"
         else
             print_error "Android APK build failed"
         fi
-        
+
         print_header "Building Android App Bundle"
         flutter build appbundle --release
-        
+
         if [ -f "build/app/outputs/bundle/release/app-release.aab" ]; then
             print_success "Android App Bundle built successfully"
             echo "  Location: $PROJECT_ROOT/mobile/build/app/outputs/bundle/release/app-release.aab"
@@ -125,13 +125,13 @@ build_mobile() {
             print_error "Android App Bundle build failed"
         fi
     fi
-    
+
     # Build iOS
     if [ "$(uname)" = "Darwin" ]; then
         if [ "$BUILD_IOS" = "true" ] || [ "$1" = "ios" ] || [ "$1" = "all" ] || [ -z "$1" ]; then
             print_header "Building iOS"
             flutter build ios --release --no-codesign
-            
+
             if [ -d "build/ios/iphoneos/Runner.app" ]; then
                 print_success "iOS app built successfully"
                 echo "  Location: $PROJECT_ROOT/mobile/build/ios/iphoneos/Runner.app"
@@ -148,9 +148,9 @@ build_mobile() {
 
 build_desktop() {
     print_header "Building Desktop App (Electron)"
-    
+
     cd "$PROJECT_ROOT"
-    
+
     # Sync version from setup.py to package.json
     print_header "Syncing version from setup.py"
     python3 "$SCRIPT_DIR/sync-desktop-version.py"
@@ -160,9 +160,9 @@ build_desktop() {
     fi
     print_success "Version synced"
     echo ""
-    
+
     cd "$PROJECT_ROOT/desktop"
-    
+
     # Prepare assets (logo, icons) - only once
     ASSETS_CHECK_FILE="$PROJECT_ROOT/desktop/.assets_prepared"
     if [ ! -f "$ASSETS_CHECK_FILE" ]; then
@@ -173,14 +173,14 @@ build_desktop() {
         touch "$ASSETS_CHECK_FILE"
         echo ""
     fi
-    
+
     # Check prerequisites
     check_node
     check_npm
-    
+
     # Install dependencies
     print_header "Installing npm dependencies"
-    
+
     # Check if node_modules is valid
     NODE_MODULES_VALID=false
     if [ -d "node_modules" ] && [ -f "node_modules/.package-lock.json" ] || [ -f "package-lock.json" ]; then
@@ -189,7 +189,7 @@ build_desktop() {
             print_success "node_modules appears valid, skipping install"
         fi
     fi
-    
+
     if [ "$NODE_MODULES_VALID" = false ]; then
         # Detect Windows/OneDrive
         IS_WINDOWS=false
@@ -200,7 +200,7 @@ build_desktop() {
         if [[ "$PROJECT_ROOT" == *"OneDrive"* ]]; then
             IS_ONEDRIVE=true
         fi
-        
+
         if [ ! -d "node_modules" ]; then
             npm install --prefer-offline --no-audit --loglevel=warn || {
                 if [ "$IS_WINDOWS" = true ] || [ "$IS_ONEDRIVE" = true ]; then
@@ -226,16 +226,16 @@ build_desktop() {
             }
         fi
     fi
-    
+
     # Run tests (if available)
     if [ -f "package.json" ] && grep -q '"test"' package.json; then
         print_header "Running tests"
         npm test || print_warning "Some tests failed (continuing anyway)"
     fi
-    
+
     # Build based on platform
     PLATFORM=$(uname -s)
-    
+
     # Check if building for all platforms
     if [ "$1" = "all-platforms" ] || [ "$1" = "all-desktop" ]; then
         print_header "Building for all supported platforms"
@@ -243,7 +243,7 @@ build_desktop() {
         npx electron-builder --win --mac --linux
         return 0
     fi
-    
+
     # Detect platform more accurately
     detect_platform() {
         local os=$(uname -s)
@@ -257,15 +257,15 @@ build_desktop() {
             echo "unknown"
         fi
     }
-    
+
     DETECTED_PLATFORM=$(detect_platform)
-    
+
     case "$DETECTED_PLATFORM" in
         win32)
             if [ "$BUILD_LINUX" = "true" ] || [ "$1" = "linux" ] || [ "$1" = "all" ] || [ -z "$1" ]; then
                 print_header "Building Windows installer"
                 npx electron-builder --win
-                
+
                 if [ -d "dist" ] && [ "$(ls -A dist/*.exe dist/*.nsis 2>/dev/null)" ]; then
                     print_success "Windows installer built successfully"
                     echo "  Location: $PROJECT_ROOT/desktop/dist/"
@@ -279,7 +279,7 @@ build_desktop() {
             if [ "$BUILD_LINUX" = "true" ] || [ "$1" = "linux" ] || [ "$1" = "all" ] || [ -z "$1" ]; then
                 print_header "Building Linux packages"
                 npx electron-builder --linux
-                
+
                 if [ -d "dist" ] && [ "$(ls -A dist/*.AppImage dist/*.deb 2>/dev/null)" ]; then
                     print_success "Linux packages built successfully"
                     echo "  Location: $PROJECT_ROOT/desktop/dist/"
@@ -293,7 +293,7 @@ build_desktop() {
             if [ "$BUILD_MACOS" = "true" ] || [ "$1" = "macos" ] || [ "$1" = "all" ] || [ -z "$1" ]; then
                 print_header "Building macOS DMG"
                 npx electron-builder --mac
-                
+
                 if [ -d "dist" ] && [ -f "dist"/*.dmg ]; then
                     print_success "macOS DMG built successfully"
                     echo "  Location: $PROJECT_ROOT/desktop/dist/"
@@ -315,12 +315,12 @@ build_desktop() {
 main() {
     print_header "TimeTracker - Build All Script"
     echo ""
-    
+
     # Parse arguments
     BUILD_MOBILE=false
     BUILD_DESKTOP=false
     PLATFORM_ARG=""
-    
+
     while [[ $# -gt 0 ]]; do
         case $1 in
             --mobile-only)
@@ -372,25 +372,25 @@ main() {
                 ;;
         esac
     done
-    
+
     # Default: build both if no flags specified
     if [ "$BUILD_MOBILE" = "false" ] && [ "$BUILD_DESKTOP" = "false" ]; then
         BUILD_MOBILE=true
         BUILD_DESKTOP=true
     fi
-    
+
     # Build mobile
     if [ "$BUILD_MOBILE" = "true" ]; then
         build_mobile "$PLATFORM_ARG"
         echo ""
     fi
-    
+
     # Build desktop
     if [ "$BUILD_DESKTOP" = "true" ]; then
         build_desktop "$PLATFORM_ARG"
         echo ""
     fi
-    
+
     print_header "Build Complete!"
     echo ""
     echo "Build outputs:"

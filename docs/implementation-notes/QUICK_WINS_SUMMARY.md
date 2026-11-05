@@ -186,7 +186,7 @@ TimeTrackerUI.createLoadingOverlay(text);  // Create overlay
 // Show loading on button
 button.addEventListener('click', function() {
     TimeTrackerUI.addLoadingState(this);
-    
+
     fetch('/api/data')
         .then(() => TimeTrackerUI.removeLoadingState(button));
 });
@@ -230,7 +230,7 @@ button.addEventListener('click', function() {
     {% set actions %}
         <a href="/create" class="btn btn-primary">Create</a>
     {% endset %}
-    
+
     {{ empty_state(
         'fas fa-folder-open',
         'No Items',
@@ -415,4 +415,3 @@ Your TimeTracker now has a **polished, professional, modern interface** with smo
 **Questions?** Check `UX_QUICK_WINS_IMPLEMENTATION.md` for detailed documentation.
 
 **Want to see it in action?** Open `UX_IMPROVEMENTS_SHOWCASE.html` in your browser.
-

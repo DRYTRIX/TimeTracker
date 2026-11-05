@@ -1,4 +1,5 @@
 """Tests for PEPPOL participant identifier validation."""
+
 import pytest
 
 from app.integrations.peppol_identifiers import (
@@ -41,9 +42,7 @@ def test_validate_endpoint_id_rejects_empty():
 
 @pytest.mark.unit
 def test_validate_participant_identifiers_roundtrip():
-    (s_ep, s_sch), (r_ep, r_sch) = validate_participant_identifiers(
-        "9915:BE111", "9915", "0088:1234567890123", "0088"
-    )
+    (s_ep, s_sch), (r_ep, r_sch) = validate_participant_identifiers("9915:BE111", "9915", "0088:1234567890123", "0088")
     assert s_ep == "9915:BE111"
     assert s_sch == "9915"
     assert r_ep == "0088:1234567890123"

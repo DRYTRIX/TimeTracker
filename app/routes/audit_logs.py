@@ -9,8 +9,8 @@ from app import db
 from app.models import User
 from app.models.audit_log import AuditLog
 from app.utils.audit import check_audit_table_exists, reset_audit_table_cache
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.permissions import admin_or_permission_required
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 audit_logs_bp = Blueprint("audit_logs", __name__)
 

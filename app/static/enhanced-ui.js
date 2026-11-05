@@ -33,40 +33,40 @@ class EnhancedTable {
     sortColumn(columnIndex, header) {
         const tbody = this.table.querySelector('tbody');
         const rows = Array.from(tbody.querySelectorAll('tr'));
-        
+
         // Determine sort direction
         let direction = 'asc';
         if (header.classList.contains('sorted-asc')) {
             direction = 'desc';
         }
-        
+
         // Clear all sort indicators
         this.table.querySelectorAll('th').forEach(th => {
             th.classList.remove('sorted-asc', 'sorted-desc');
         });
-        
+
         // Add sort indicator
         header.classList.add(`sorted-${direction}`);
-        
+
         // Sort rows
         rows.sort((a, b) => {
             const aValue = a.cells[columnIndex]?.textContent.trim() || '';
             const bValue = b.cells[columnIndex]?.textContent.trim() || '';
-            
+
             // Try numeric comparison first
             const aNum = parseFloat(aValue.replace(/[^0-9.-]/g, ''));
             const bNum = parseFloat(bValue.replace(/[^0-9.-]/g, ''));
-            
+
             if (!isNaN(aNum) && !isNaN(bNum)) {
                 return direction === 'asc' ? aNum - bNum : bNum - aNum;
             }
-            
+
             // String comparison
-            return direction === 'asc' 
+            return direction === 'asc'
                 ? aValue.localeCompare(bValue)
                 : bValue.localeCompare(aValue);
         });
-        
+
         // Reorder rows
         rows.forEach(row => tbody.appendChild(row));
     }
@@ -74,14 +74,14 @@ class EnhancedTable {
     initBulkSelect() {
         const tbody = this.table.querySelector('tbody');
         if (!tbody) return;
-        
+
         // Add bulk select checkbox to header
         const thead = this.table.querySelector('thead tr');
         const selectAllTh = document.createElement('th');
         selectAllTh.className = 'px-4 py-3 w-12';
         selectAllTh.innerHTML = '<input type="checkbox" class="select-all-checkbox rounded" />';
         thead.insertBefore(selectAllTh, thead.firstChild);
-        
+
         // Add checkboxes to each row
         tbody.querySelectorAll('tr').forEach((row, index) => {
             const selectTd = document.createElement('td');
@@ -89,7 +89,7 @@ class EnhancedTable {
             selectTd.innerHTML = `<input type="checkbox" class="row-checkbox rounded" data-row-index="${index}" />`;
             row.insertBefore(selectTd, row.firstChild);
         });
-        
+
         // Select all functionality
         const selectAllCheckbox = thead.querySelector('.select-all-checkbox');
         selectAllCheckbox?.addEventListener('change', (e) => {
@@ -100,7 +100,7 @@ class EnhancedTable {
             });
             this.updateBulkActionsBar();
         });
-        
+
         // Individual row selection
         tbody.querySelectorAll('.row-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
@@ -123,7 +123,7 @@ class EnhancedTable {
     updateBulkActionsBar() {
         const count = this.selectedRows.size;
         let bar = document.querySelector('.bulk-actions-bar');
-        
+
         if (count > 0) {
             if (!bar) {
                 bar = this.createBulkActionsBar();
@@ -161,14 +161,14 @@ class EnhancedTable {
         const headers = this.table.querySelectorAll('thead th');
         headers.forEach((header, index) => {
             if (index === headers.length - 1) return; // Skip last column
-            
+
             const resizer = document.createElement('div');
             resizer.className = 'column-resizer';
             header.style.position = 'relative';
             header.appendChild(resizer);
-            
+
             let startX, startWidth;
-            
+
             resizer.addEventListener('mousedown', (e) => {
                 startX = e.pageX;
                 startWidth = header.offsetWidth;
@@ -177,12 +177,12 @@ class EnhancedTable {
                 document.addEventListener('mouseup', stopResize);
                 e.preventDefault();
             });
-            
+
             const resize = (e) => {
                 const width = startWidth + (e.pageX - startX);
                 header.style.width = width + 'px';
             };
-            
+
             const stopResize = () => {
                 resizer.classList.remove('resizing');
                 document.removeEventListener('mousemove', resize);
@@ -204,12 +204,12 @@ class EnhancedTable {
         input.type = 'text';
         input.value = value;
         input.className = 'inline-edit-input';
-        
+
         cell.textContent = '';
         cell.appendChild(input);
         input.focus();
         input.select();
-        
+
         const save = () => {
             const newValue = input.value;
             cell.textContent = newValue;
@@ -219,7 +219,7 @@ class EnhancedTable {
             });
             this.table.dispatchEvent(event);
         };
-        
+
         input.addEventListener('blur', save);
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') save();
@@ -259,36 +259,36 @@ class LiveSearch {
         container.className = 'search-container relative';
         this.input.parentNode.insertBefore(container, this.input);
         container.appendChild(this.input);
-        
+
         // Add search icon
         const icon = document.createElement('i');
         icon.className = 'fas fa-search search-icon absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400';
         container.appendChild(icon);
-        
+
         // Add clear button
         const clearBtn = document.createElement('i');
         clearBtn.className = 'fas fa-times search-clear absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer';
         container.appendChild(clearBtn);
-        
+
         // Add input padding
         this.input.classList.add('search-input', 'pl-10', 'pr-10');
-        
+
         // Create results dropdown
         if (this.options.showResults) {
             this.resultsDropdown = document.createElement('div');
             this.resultsDropdown.className = 'search-results-dropdown';
             container.appendChild(this.resultsDropdown);
         }
-        
+
         // Event listeners
         this.input.addEventListener('input', (e) => this.handleInput(e));
         clearBtn.addEventListener('click', () => this.clear());
-        
+
         // Show/hide clear button
         this.input.addEventListener('input', () => {
             clearBtn.classList.toggle('show', this.input.value.length > 0);
         });
-        
+
         // Close dropdown on outside click
         document.addEventListener('click', (e) => {
             if (!container.contains(e.target) && this.resultsDropdown) {
@@ -299,16 +299,16 @@ class LiveSearch {
 
     handleInput(e) {
         clearTimeout(this.debounceTimer);
-        
+
         const query = e.target.value.trim();
-        
+
         if (query.length < this.options.minChars) {
             if (this.resultsDropdown) {
                 this.resultsDropdown.classList.remove('show');
             }
             return;
         }
-        
+
         this.debounceTimer = setTimeout(() => {
             if (this.options.onSearch) {
                 this.options.onSearch(query, (results) => {
@@ -322,7 +322,7 @@ class LiveSearch {
 
     displayResults(results) {
         if (!this.resultsDropdown) return;
-        
+
         if (results.length === 0) {
             this.resultsDropdown.innerHTML = '<div class="p-4 text-center text-gray-500">No results found</div>';
         } else {
@@ -333,7 +333,7 @@ class LiveSearch {
                 </a>
             `).join('');
         }
-        
+
         this.resultsDropdown.classList.add('show');
     }
 
@@ -366,7 +366,7 @@ class FilterManager {
         this.chipsContainer = document.createElement('div');
         this.chipsContainer.className = 'filter-chips-container';
         this.form.parentNode.insertBefore(this.chipsContainer, this.form.nextSibling);
-        
+
         // Monitor form changes - auto-submit on dropdown changes
         this.form.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', () => {
@@ -375,29 +375,29 @@ class FilterManager {
                 this.submitForm();
             });
         });
-        
+
         // Monitor text input fields (search fields) - auto-submit with debouncing
         this.inputTimeouts = new Map();
         this.form.querySelectorAll('input[type="text"], input[type="search"]').forEach(input => {
             input.addEventListener('input', (e) => {
                 // Update filter chips immediately for visual feedback
                 this.updateFilters();
-                
+
                 // Debounce the actual form submission
                 const timeoutKey = input.name || input.id;
                 if (this.inputTimeouts.has(timeoutKey)) {
                     clearTimeout(this.inputTimeouts.get(timeoutKey));
                 }
-                
+
                 // Submit after user stops typing (500ms delay)
                 const timeout = setTimeout(() => {
                     this.submitForm();
                     this.inputTimeouts.delete(timeoutKey);
                 }, 500);
-                
+
                 this.inputTimeouts.set(timeoutKey, timeout);
             });
-            
+
             // Also submit on Enter key
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -413,7 +413,7 @@ class FilterManager {
                 }
             });
         });
-        
+
         // Listen to form submit - prevent default and use AJAX instead
         this.form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -421,10 +421,10 @@ class FilterManager {
             this.updateFilters();
             this.submitForm();
         });
-        
+
         // Add quick filters
         this.addQuickFilters();
-        
+
         // Initial render
         this.updateFilters();
     }
@@ -432,11 +432,11 @@ class FilterManager {
     addQuickFilters() {
         const quickFilters = this.form.dataset.quickFilters;
         if (!quickFilters) return;
-        
+
         const filters = JSON.parse(quickFilters);
         const quickFiltersDiv = document.createElement('div');
         quickFiltersDiv.className = 'quick-filters';
-        
+
         filters.forEach(filter => {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -445,7 +445,7 @@ class FilterManager {
             btn.addEventListener('click', () => this.applyQuickFilter(filter));
             quickFiltersDiv.appendChild(btn);
         });
-        
+
         this.form.parentNode.insertBefore(quickFiltersDiv, this.form);
     }
 
@@ -466,7 +466,7 @@ class FilterManager {
     updateFilters() {
         this.activeFilters.clear();
         const formData = new FormData(this.form);
-        
+
         for (const [key, value] of formData.entries()) {
             if (value && value !== 'all' && value !== '') {
                 const input = this.form.querySelector(`[name="${key}"]`);
@@ -474,20 +474,20 @@ class FilterManager {
                 this.activeFilters.set(key, { label, value });
             }
         }
-        
+
         this.renderChips();
     }
 
     renderChips() {
         this.chipsContainer.innerHTML = '';
-        
+
         if (this.activeFilters.size === 0) {
             this.chipsContainer.style.display = 'none';
             return;
         }
-        
+
         this.chipsContainer.style.display = 'flex';
-        
+
         this.activeFilters.forEach((filter, key) => {
             const chip = document.createElement('span');
             chip.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary/10 dark:bg-primary/20 text-primary border border-primary/20 dark:border-primary/30';
@@ -500,7 +500,7 @@ class FilterManager {
             `;
             this.chipsContainer.appendChild(chip);
         });
-        
+
         // Add clear all button
         if (this.activeFilters.size > 0) {
             const clearAll = document.createElement('button');
@@ -510,7 +510,7 @@ class FilterManager {
             clearAll.addEventListener('click', () => this.clearAll());
             this.chipsContainer.appendChild(clearAll);
         }
-        
+
         // Add remove listeners
         this.chipsContainer.querySelectorAll('[data-remove-filter]').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -544,30 +544,30 @@ class FilterManager {
     clearAll() {
         // Reset all form fields
         this.form.reset();
-        
+
         // For select elements, ensure they're set to their default (first option)
         this.form.querySelectorAll('select').forEach(select => {
             if (select.options.length > 0) {
                 select.value = select.options[0].value;
             }
         });
-        
+
         // Explicitly set status to "all" to show all projects
         const statusSelect = this.form.querySelector('[name="status"]');
         if (statusSelect) {
             statusSelect.value = 'all';
         }
-        
+
         // Clear all text inputs
         this.form.querySelectorAll('input[type="text"], input[type="search"]').forEach(input => {
             input.value = '';
         });
-        
+
         // Update filters and submit
         this.updateFilters();
         this.submitForm();
     }
-    
+
     submitForm() {
         // Ensure the form can be submitted (remove any disabled state from submit button)
         const submitButton = this.form.querySelector('button[type="submit"]');
@@ -577,7 +577,7 @@ class FilterManager {
             submitButton.style.visibility = '';
             submitButton.style.opacity = '';
         }
-        
+
         // For GET forms (filter forms), use AJAX to avoid page reload
         if (this.form.method.toUpperCase() === 'GET') {
             // Use a small delay to prevent rapid-fire submissions
@@ -592,15 +592,15 @@ class FilterManager {
             this.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
         }
     }
-    
+
     submitViaAjax() {
         // Build query string from form data
         const formData = new FormData(this.form);
         const params = new URLSearchParams();
-        
+
         // Check if this is the time entries form - handle it differently
         const isTimeEntriesForm = this.form.id === 'timeEntriesFilterForm';
-        
+
         // Always include status - default to "all" if not set or empty (for projects page)
         const statusSelect = this.form.querySelector('[name="status"]');
         let statusValue = statusSelect ? statusSelect.value : null;
@@ -611,7 +611,7 @@ class FilterManager {
         if (statusValue && statusValue !== '') {
             params.append('status', statusValue);
         }
-        
+
         // Process other form fields
         for (const [key, value] of formData.entries()) {
             // Skip status as we already handled it
@@ -630,7 +630,7 @@ class FilterManager {
                 params.append(key, String(value).trim());
             }
         }
-        
+
         // Get the form action or current URL
         const url = this.form.action || window.location.pathname;
         const queryString = params.toString();
@@ -643,23 +643,23 @@ class FilterManager {
         } else {
             fullUrl = url;
         }
-        
+
         // Update URL without page reload
         if (window.history && window.history.pushState) {
             window.history.pushState({}, '', fullUrl);
         }
-        
+
         // Detect container type - check for time entries first, then projects
         const timeEntriesContainer = document.getElementById('timeEntriesListContainer');
         const projectsContainer = document.getElementById('projectsListContainer');
         const projectsWrapper = document.getElementById('projectsContainer');
         const container = timeEntriesContainer || projectsContainer || projectsWrapper;
-        
+
         if (container) {
             container.style.opacity = '0.5';
             container.style.pointerEvents = 'none';
         }
-        
+
         // Fetch filtered results via AJAX
         fetch(fullUrl, {
             method: 'GET',
@@ -681,9 +681,9 @@ class FilterManager {
                 const trimmedHtml = html.trim();
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = trimmedHtml;
-                
+
                 const newContainer = tempDiv.querySelector('#timeEntriesListContainer');
-                
+
                 if (newContainer) {
                     timeEntriesContainer.innerHTML = newContainer.innerHTML;
                 } else {
@@ -695,21 +695,21 @@ class FilterManager {
                         timeEntriesContainer.innerHTML = html;
                     }
                 }
-                
+
                 // Re-initialize bulk actions after content update
                 if (typeof updateBulkActions === 'function') {
                     updateBulkActions();
                 }
-                
+
                 // Update filter chips after content update
                 this.updateFilters();
                 return;
             }
-            
+
             // Handle projects container (original logic)
             // Update the projects list container
             let targetContainer = projectsContainer;
-            
+
             if (!targetContainer && projectsWrapper) {
                 // If we don't have the inner container, try to find or create it
                 let innerContainer = projectsWrapper.querySelector('#projectsListContainer');
@@ -722,20 +722,20 @@ class FilterManager {
                     targetContainer = innerContainer;
                 }
             }
-            
+
             if (targetContainer) {
                 const trimmedHtml = html.trim();
-                
+
                 // The partial template returns: <div id="projectsListContainer">...</div>
                 // Extract the innerHTML from this div using a simple approach
-                
+
                 // Create a temporary container and parse the HTML
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = trimmedHtml;
-                
+
                 // Find the projectsListContainer in the parsed HTML
                 const responseContainer = tempDiv.querySelector('#projectsListContainer');
-                
+
                 if (responseContainer) {
                     // Use the innerHTML directly
                     targetContainer.innerHTML = responseContainer.innerHTML;
@@ -759,13 +759,13 @@ class FilterManager {
                         }
                     }
                 }
-                
+
                 // Re-initialize any scripts that need to run after content update
                 if (window.setViewMode) {
                     const savedMode = localStorage.getItem('projectsViewMode') || 'list';
                     setViewMode(savedMode);
                 }
-                
+
                 // Update filter chips after content update
                 this.updateFilters();
             } else {
@@ -815,14 +815,14 @@ class ToastManager {
     show(message, type = 'info', duration = 5000) {
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        
+
         const icons = {
             success: 'fa-check',
             error: 'fa-times',
             warning: 'fa-exclamation',
             info: 'fa-info'
         };
-        
+
         toast.innerHTML = `
             <div class="toast-icon">
                 <i class="fas ${icons[type]}"></i>
@@ -834,17 +834,17 @@ class ToastManager {
                 <i class="fas fa-times"></i>
             </button>
         `;
-        
+
         this.container.appendChild(toast);
-        
+
         // Close button
         toast.querySelector('button').addEventListener('click', () => this.remove(toast));
-        
+
         // Auto remove
         if (duration > 0) {
             setTimeout(() => this.remove(toast), duration);
         }
-        
+
         return toast;
     }
 
@@ -883,19 +883,19 @@ class UndoManager {
         this.history = this.history.slice(0, this.currentIndex + 1);
         this.history.push({ action, undoFn, data, timestamp: Date.now() });
         this.currentIndex++;
-        
+
         this.showUndoBar(action);
     }
 
     undo() {
         if (this.currentIndex < 0) return;
-        
+
         const item = this.history[this.currentIndex];
         if (item.undoFn) {
             item.undoFn(item.data);
         }
         this.currentIndex--;
-        
+
         window.toastManager?.success('Action undone');
     }
 
@@ -912,10 +912,10 @@ class UndoManager {
             `;
             document.body.appendChild(bar);
         }
-        
+
         bar.querySelector('.undo-message').textContent = action;
         bar.classList.add('show');
-        
+
         setTimeout(() => {
             bar.classList.remove('show');
         }, 5000);
@@ -969,10 +969,10 @@ class FormAutoSave {
                 font-size: 14px;
             `;
             document.body.appendChild(this.indicator);
-            
+
             // Load saved data
             this.load();
-            
+
             // Monitor form changes with proper error handling
             const scheduleSave = () => {
                 try {
@@ -981,10 +981,10 @@ class FormAutoSave {
                     console.error('[FormAutoSave] Error scheduling save:', error);
                 }
             };
-            
+
             this.form.addEventListener('input', scheduleSave, { passive: true });
             this.form.addEventListener('change', scheduleSave, { passive: true });
-            
+
             // Clear saved data on successful submit
             this.form.addEventListener('submit', () => {
                 try {
@@ -998,7 +998,7 @@ class FormAutoSave {
                     console.error('[FormAutoSave] Error clearing on submit:', error);
                 }
             }, { passive: true });
-            
+
             // Handle page unload - save current state
             window.addEventListener('beforeunload', () => {
                 try {
@@ -1028,10 +1028,10 @@ class FormAutoSave {
             }
 
             this.showIndicator('saving');
-            
+
             const formData = new FormData(this.form);
             const data = Object.fromEntries(formData.entries());
-            
+
             // Save to localStorage if storage key provided
             if (this.options.storageKey) {
                 try {
@@ -1052,7 +1052,7 @@ class FormAutoSave {
                     }
                 }
             }
-            
+
             // Call custom save handler if provided
             if (this.options.onSave) {
                 try {
@@ -1077,10 +1077,10 @@ class FormAutoSave {
 
     load() {
         if (!this.options.storageKey) return;
-        
+
         const saved = localStorage.getItem(this.options.storageKey);
         if (!saved) return;
-        
+
         try {
             const data = JSON.parse(saved);
             Object.entries(data).forEach(([key, value]) => {
@@ -1101,7 +1101,7 @@ class FormAutoSave {
     showIndicator(state) {
         try {
             if (!this.indicator) return;
-            
+
             this.indicator.className = 'autosave-indicator show ' + state;
             const textElement = this.indicator.querySelector('.autosave-text');
             if (textElement) {
@@ -1112,7 +1112,7 @@ class FormAutoSave {
                 };
                 textElement.textContent = messages[state] || 'Saving...';
             }
-            
+
             // Update icon based on state
             const iconElement = this.indicator.querySelector('i');
             if (iconElement) {
@@ -1126,10 +1126,10 @@ class FormAutoSave {
                     iconElement.className = 'fas fa-circle-notch fa-spin';
                 }
             }
-            
+
             // Show indicator
             this.indicator.style.display = 'flex';
-            
+
             // Auto-hide after delay (longer for errors)
             const delay = state === 'error' ? 5000 : 2000;
             setTimeout(() => {
@@ -1161,19 +1161,19 @@ class RecentlyViewedTracker {
 
     track(item) {
         let items = this.getItems();
-        
+
         // Remove if exists
         items = items.filter(i => i.url !== item.url);
-        
+
         // Add to beginning
         items.unshift({
             ...item,
             timestamp: Date.now()
         });
-        
+
         // Limit size
         items = items.slice(0, this.maxItems);
-        
+
         localStorage.setItem(this.storageKey, JSON.stringify(items));
     }
 
@@ -1201,7 +1201,7 @@ class FavoritesManager {
     toggle(item) {
         let favorites = this.getFavorites();
         const index = favorites.findIndex(f => f.id === item.id && f.type === item.type);
-        
+
         if (index >= 0) {
             favorites.splice(index, 1);
             this.save(favorites);
@@ -1246,7 +1246,7 @@ class DragDropManager {
 
     init() {
         const items = this.container.querySelectorAll('[draggable="true"]');
-        
+
         items.forEach(item => {
             item.addEventListener('dragstart', (e) => this.handleDragStart(e));
             item.addEventListener('dragend', (e) => this.handleDragEnd(e));
@@ -1270,16 +1270,16 @@ class DragDropManager {
             e.preventDefault();
         }
         e.dataTransfer.dropEffect = 'move';
-        
+
         const dragging = this.container.querySelector('.dragging');
         const afterElement = this.getDragAfterElement(e.clientY);
-        
+
         if (afterElement == null) {
             this.container.appendChild(dragging);
         } else {
             this.container.insertBefore(dragging, afterElement);
         }
-        
+
         return false;
     }
 
@@ -1287,27 +1287,27 @@ class DragDropManager {
         if (e.stopPropagation) {
             e.stopPropagation();
         }
-        
+
         if (this.options.onDrop) {
             this.options.onDrop(e);
         }
-        
+
         if (this.options.onReorder) {
             const items = Array.from(this.container.querySelectorAll('[draggable="true"]'));
             const order = items.map((item, index) => ({ element: item, index }));
             this.options.onReorder(order);
         }
-        
+
         return false;
     }
 
     getDragAfterElement(y) {
         const draggableElements = [...this.container.querySelectorAll('[draggable="true"]:not(.dragging)')];
-        
+
         return draggableElements.reduce((closest, child) => {
             const box = child.getBoundingClientRect();
             const offset = y - box.top - box.height / 2;
-            
+
             if (offset < 0 && offset > closest.offset) {
                 return { offset: offset, element: child };
             } else {
@@ -1330,12 +1330,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.undoManager = new UndoManager();
     window.recentlyViewed = new RecentlyViewedTracker();
     window.favoritesManager = new FavoritesManager();
-    
+
     // Initialize enhanced tables
     document.querySelectorAll('table[data-enhanced]').forEach(table => {
         new EnhancedTable(table);
     });
-    
+
     // Initialize live search
     document.querySelectorAll('input[data-live-search]').forEach(input => {
         new LiveSearch(input, {
@@ -1348,14 +1348,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-    
+
     // Initialize filter managers (skip forms that have custom handlers)
     document.querySelectorAll('form[data-filter-form]').forEach(form => {
         // Skip forms that have custom AJAX handlers
         if (form.dataset.filterHandler === 'custom' ||
-            form.id === 'projectsFilterForm' || 
-            form.id === 'tasksFilterForm' || 
-            form.id === 'clientsFilterForm' || 
+            form.id === 'projectsFilterForm' ||
+            form.id === 'tasksFilterForm' ||
+            form.id === 'clientsFilterForm' ||
             form.id === 'invoicesFilterForm' ||
             form.id === 'quotesFilterForm' ||
             form.id === 'timeEntriesFilterForm') {
@@ -1363,7 +1363,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         new FilterManager(form);
     });
-    
+
     // Initialize auto-save forms
     document.querySelectorAll('form[data-auto-save]').forEach(form => {
         try {
@@ -1371,7 +1371,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (form.dataset.autoSaveInitialized === 'true') {
                 return;
             }
-            
+
             const storageKey = form.dataset.autoSaveKey || `autosave_${form.id || form.name || Date.now()}`;
             const autoSave = new FormAutoSave(form, {
                 storageKey: storageKey,
@@ -1380,11 +1380,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Custom save implementation
                     const formAction = form.action || window.location.pathname;
                     const formMethod = form.method || 'POST';
-                    
+
                     // Get CSRF token
                     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
                                      document.querySelector('input[name="csrf_token"]')?.value;
-                    
+
                     fetch(formAction, {
                         method: formMethod,
                         headers: {
@@ -1411,23 +1411,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             });
-            
+
             // Mark as initialized
             form.dataset.autoSaveInitialized = 'true';
-            
+
             // Store reference for potential cleanup
             form._autoSaveInstance = autoSave;
         } catch (error) {
             console.error('[EnhancedUI] Error initializing form auto-save:', error);
         }
     });
-    
+
     // Count-up animations
     document.querySelectorAll('[data-count-up]').forEach(el => {
         const target = parseFloat(el.dataset.countUp);
         const duration = parseInt(el.dataset.duration || '1000');
         const decimals = parseInt(el.dataset.decimals || '0');
-        
+
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -1436,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-        
+
         observer.observe(el);
     });
 
@@ -1447,19 +1447,19 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================
 function animateCount(element, start, end, duration, decimals = 0) {
     const startTime = performance.now();
-    
+
     function update(currentTime) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
+
         const current = start + (end - start) * easeOutQuad(progress);
         element.textContent = current.toFixed(decimals);
-        
+
         if (progress < 1) {
             requestAnimationFrame(update);
         }
     }
-    
+
     requestAnimationFrame(update);
 }
 
@@ -1523,4 +1523,3 @@ function clearSelection() {
         cb.dispatchEvent(new Event('change'));
     });
 }
-

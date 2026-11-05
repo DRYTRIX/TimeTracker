@@ -107,9 +107,9 @@
                     <label for="color" class="form-label">{{ _('Gantt color') }}</label>
                     <div class="gantt-color-picker flex items-center gap-3 mt-1">
                         <div class="gantt-color-picker-swatch rounded border border-gray-300 dark:border-gray-600 overflow-hidden flex-shrink-0" style="width:2.5rem;height:2.5rem;min-width:2.5rem;min-height:2.5rem;"></div>
-                        <input type="text" name="color" id="color" value="{{ request.form.get('color', '#3b82f6') }}" class="form-input w-28 font-mono text-sm" maxlength="7" placeholder="#3b82f6" data-color-input>
+                        <input type="text" name="color" id="color" value="{{ request.form.get('color', '#4F46E5') }}" class="form-input w-28 font-mono text-sm" maxlength="7" placeholder="#4F46E5" data-color-input>
                     </div>
-                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Color for this project on the Gantt chart. Pick or enter a hex code (e.g. #3b82f6).') }}</p>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Color for this project on the Gantt chart. Pick or enter a hex code (e.g. #4F46E5).') }}</p>
                 </div>
 
                 {% if custom_field_definitions %}
@@ -125,12 +125,12 @@
                                 {{ definition.label }}
                                 {% if definition.is_mandatory %}<span class="text-red-600 dark:text-red-400">*</span>{% endif %}
                             </label>
-                            <input 
-                                type="text" 
-                                id="custom_field_{{ definition.field_key }}" 
-                                name="custom_field_{{ definition.field_key }}" 
-                                value="{{ request.form.get('custom_field_' + definition.field_key, '') }}" 
-                                placeholder="{{ definition.description or _('Enter value') }}" 
+                            <input
+                                type="text"
+                                id="custom_field_{{ definition.field_key }}"
+                                name="custom_field_{{ definition.field_key }}"
+                                value="{{ request.form.get('custom_field_' + definition.field_key, '') }}"
+                                placeholder="{{ definition.description or _('Enter value') }}"
                                 class="form-input w-full"
                                 {% if definition.is_mandatory %}required{% endif %}
                             >
@@ -236,15 +236,15 @@
     .card-header {
         padding: 1rem 1rem 0.75rem 1rem;
     }
-    
+
     .p-6 {
         padding: 0.75rem 1rem;
     }
-    
+
     .tip-item:hover {
         transform: none;
     }
-    
+
     .billing-guide-item:hover,
     .management-item:hover {
         background-color: transparent;
@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('createProjectForm');
     const nameInput = document.getElementById('name');
     const descriptionInput = document.getElementById('description');
-    
+
     function applyClientDefaultRate() {
         let defaultRate = null;
         if (clientSelect.tagName === 'INPUT' && clientSelect.type === 'hidden') {
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     clientSelect.addEventListener('change', applyClientDefaultRate);
     applyClientDefaultRate();
-    
+
     billableCheckbox.addEventListener('change', function() {
         if (this.checked) {
             hourlyRateInput.removeAttribute('disabled');
@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
             hourlyRateInput.value = '';
         }
     });
-    
+
     let mdEditor = null;
     if (descriptionInput && window.toastui && window.toastui.Editor) {
         const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', function(e) {
         const name = nameInput.value.trim();
         const clientId = clientSelect.value;
-        
+
         if (!name || !clientId) {
             e.preventDefault();
             if (!name) {
@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return false;
         }
-        
+
         if (mdEditor && descriptionInput) {
             try { descriptionInput.value = mdEditor.getMarkdown(); } catch (err) {}
         }
@@ -384,13 +384,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>{{ _('Creating...') }}';
         submitBtn.disabled = true;
-        
+
         setTimeout(() => {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }, 5000);
     });
-    
+
     nameInput.addEventListener('input', function() {
         if (this.value.trim()) {
             this.classList.remove('is-invalid');
@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.remove('is-valid');
         }
     });
-    
+
     clientSelect.addEventListener('change', function() {
         if (this.value) {
             this.classList.remove('is-invalid');
@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.remove('is-valid');
         }
     });
-    
+
     if (billableCheckbox.checked) {
         hourlyRateInput.removeAttribute('disabled');
     } else {
@@ -418,5 +418,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-
-

@@ -5,7 +5,7 @@
     <div class="flex items-center justify-center min-h-screen px-4">
         <!-- Backdrop -->
         <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onclick="closeKeyboardShortcutsModal()"></div>
-        
+
         <!-- Modal Content -->
         <div class="relative bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <!-- Header -->
@@ -14,7 +14,7 @@
                     <i class="fas fa-keyboard mr-2 text-blue-600"></i>
                     Keyboard Shortcuts
                 </h2>
-                <button onclick="closeKeyboardShortcutsModal()" 
+                <button onclick="closeKeyboardShortcutsModal()"
                         class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                     <i class="fas fa-times text-xl"></i>
                 </button>
@@ -218,7 +218,7 @@
 
             <!-- Footer -->
             <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
-                <button onclick="closeKeyboardShortcutsModal()" 
+                <button onclick="closeKeyboardShortcutsModal()"
                         class="w-full btn btn-primary">
                     Close <kbd class="ml-2 px-2 py-0.5 bg-card-light dark:bg-card-dark rounded text-xs">Esc</kbd>
                 </button>
@@ -230,7 +230,7 @@
 <script nonce="{{ csp_nonce() }}">
 function openKeyboardShortcutsModal() {
     document.getElementById('keyboardShortcutsModal').classList.remove('hidden');
-    
+
     // Update platform-specific key labels
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     document.querySelectorAll('.platform-key').forEach(el => {
@@ -254,11 +254,10 @@ document.addEventListener('keydown', function(e) {
         e.preventDefault();
         openKeyboardShortcutsModal();
     }
-    
+
     // Close on Escape
     if (e.key === 'Escape') {
         closeKeyboardShortcutsModal();
     }
 });
 </script>
-

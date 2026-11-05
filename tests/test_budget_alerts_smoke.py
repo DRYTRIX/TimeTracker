@@ -1,11 +1,13 @@
 """Smoke tests for budget alerts and forecasting feature"""
 
-import pytest
-from decimal import Decimal
 from datetime import datetime, timedelta
-from app import db
-from app.models import Project, User, TimeEntry, BudgetAlert, Client
+from decimal import Decimal
+
+import pytest
 from factories import TimeEntryFactory
+
+from app import db
+from app.models import BudgetAlert, Client, Project, TimeEntry, User
 
 
 @pytest.fixture
@@ -365,12 +367,12 @@ def test_scheduled_task_integration(app, project_with_budget, regular_user):
 def test_budget_forecasting_utilities_integration(app, project_with_budget, regular_user):
     """Test integration of all budget forecasting utilities"""
     from app.utils.budget_forecasting import (
-        calculate_burn_rate,
-        estimate_completion_date,
-        analyze_resource_allocation,
         analyze_cost_trends,
-        get_budget_status,
+        analyze_resource_allocation,
+        calculate_burn_rate,
         check_budget_alerts,
+        estimate_completion_date,
+        get_budget_status,
     )
 
     # Add some time entries

@@ -173,4 +173,3 @@ echo "=================================================="
 echo "For detailed documentation, see:"
 echo "  docs/CSRF_CONFIGURATION.md"
 echo "=================================================="
-

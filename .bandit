@@ -1,4 +1,3 @@
 [bandit]
 exclude_dirs = tests,migrations,venv,.venv,htmlcov
 skips = B101,B601
-

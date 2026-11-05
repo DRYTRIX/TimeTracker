@@ -23,21 +23,21 @@
         <dl class="space-y-2">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Project</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.project.name if recurring.project else 'N/A' }}</dd>
-            
+
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Client</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.client_name }}</dd>
-            
+
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Frequency</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">Every {{ recurring.interval }} {{ recurring.frequency }}{{ 's' if recurring.interval > 1 else '' }}</dd>
-            
+
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Next Run Date</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.next_run_date|format_date if recurring.next_run_date else 'N/A' }}</dd>
-            
+
             {% if recurring.end_date %}
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">End Date</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.end_date|format_date }}</dd>
             {% endif %}
-            
+
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
             <dd class="text-sm">
                 {% if recurring.is_active %}
@@ -48,19 +48,19 @@
             </dd>
         </dl>
     </div>
-    
+
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="text-lg font-semibold mb-4">{{ _('Invoice Settings') }}</h3>
         <dl class="space-y-2">
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Due Date (Days)</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.due_date_days }} days from issue date</dd>
-            
+
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Tax Rate</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.tax_rate }}%</dd>
-            
+
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Currency</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.currency_code }}</dd>
-            
+
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Auto Send</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">
                 {% if recurring.auto_send %}
@@ -69,7 +69,7 @@
                 <span class="text-gray-500">No</span>
                 {% endif %}
             </dd>
-            
+
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Auto Include Time Entries</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">
                 {% if recurring.auto_include_time_entries %}
@@ -78,7 +78,7 @@
                 <span class="text-gray-500">No</span>
                 {% endif %}
             </dd>
-            
+
             {% if recurring.last_generated_at %}
             <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Generated</dt>
             <dd class="text-sm text-gray-900 dark:text-gray-100">{{ recurring.last_generated_at.strftime('%Y-%m-%d %H:%M') }}</dd>
@@ -126,10 +126,10 @@ function generateInvoice(recurringId) {
     if (!confirm('Generate an invoice from this recurring template now?')) {
         return;
     }
-    
+
     // Get CSRF token from meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-    
+
     fetch(`/recurring-invoices/${recurringId}/generate`, {
         method: 'POST',
         headers: {
@@ -156,4 +156,3 @@ function generateInvoice(recurringId) {
 }
 </script>
 {% endblock %}
-

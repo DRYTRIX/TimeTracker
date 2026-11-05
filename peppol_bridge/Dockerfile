@@ -10,7 +10,10 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY peppol_bridge /app/peppol_bridge
 
+RUN useradd -m -u 1000 peppol \
+    && chown -R peppol:peppol /app
+USER peppol
+
 EXPOSE 8088
 
 CMD ["gunicorn","-w","2","-b","0.0.0.0:8088","peppol_bridge.wsgi:app"]
-

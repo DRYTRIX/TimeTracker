@@ -52,9 +52,7 @@ def test_end_workday_with_leave_time_for_overnight_session(authenticated_client,
         start = svc.start_workday(user.id, source="manual")
         assert start["success"] is True
         session = start["session"]
-        yesterday_start = (local_now() - timedelta(days=1)).replace(
-            hour=9, minute=0, second=0, microsecond=0
-        )
+        yesterday_start = (local_now() - timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
         session.start_time = yesterday_start
         period = AttendanceWorkPeriod.query.filter_by(workday_session_id=session.id).first()
         period.start_time = yesterday_start
@@ -87,9 +85,7 @@ def test_dashboard_shows_overnight_clock_out_modal(authenticated_client, app, us
         start = svc.start_workday(user.id, source="manual")
         assert start["success"] is True
         session = start["session"]
-        yesterday_start = (local_now() - timedelta(days=1)).replace(
-            hour=9, minute=0, second=0, microsecond=0
-        )
+        yesterday_start = (local_now() - timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
         session.start_time = yesterday_start
         period = AttendanceWorkPeriod.query.filter_by(workday_session_id=session.id).first()
         period.start_time = yesterday_start

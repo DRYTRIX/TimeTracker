@@ -6,7 +6,7 @@ import pytest
 
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
-from app.models import Quote, ApiToken, Client
+from app.models import ApiToken, Client, Quote
 
 
 class TestAPIQuotesRefactored:

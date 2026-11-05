@@ -5,7 +5,7 @@
    rendered as a separate template, so a child template's override cannot reach a
    block declared here -- page titles and per-page CSS would silently fall back to
    the defaults. All such declarations stay in base.html. #}
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
@@ -17,13 +17,13 @@
     Telemetry Privacy Protection:
     Add the CSS class 'ph-no-capture' to any element containing sensitive data
     to prevent capture in opt-in telemetry instrumentation.
-    
+
     Examples:
     - Project names: <span class="ph-no-capture">Project ABC</span>
     - Client names: <div class="ph-no-capture">Client XYZ</div>
     - Time entry notes: <textarea class="ph-no-capture" name="notes"></textarea>
     - User emails: <span class="ph-no-capture">user@example.com</span>
-    
+
     Telemetry instrumentation should avoid these elements by design.
     -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
@@ -72,7 +72,7 @@
         var fpDark = document.getElementById('flatpickr-dark-theme');
         if (fpDark) fpDark.media = document.documentElement.classList.contains('dark') ? 'all' : 'none';
     </script>
-    
+
     <!-- i18n translations for JavaScript (use tojson to avoid syntax errors from quotes/ampersands in translations) -->
     <script nonce="{{ csp_nonce() }}">
         window.i18n = {
@@ -201,4 +201,3 @@
             };
         };
     </script>
-    

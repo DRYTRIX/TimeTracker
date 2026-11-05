@@ -47,7 +47,7 @@ if url.startswith("postgresql"):
     try:
         engine = create_engine(url, pool_pre_ping=True)
         inspector = inspect(engine)
-        
+
         if 'tasks' not in inspector.get_table_names():
             print("Creating tasks table...")
             create_tasks_sql = """
@@ -75,7 +75,7 @@ if url.startswith("postgresql"):
             print("✓ Tasks table created successfully")
         else:
             print("✓ Tasks table already exists")
-            
+
     except Exception as e:
         print(f"Error creating tasks table: {e}")
         sys.exit(1)
@@ -96,12 +96,12 @@ if url.startswith("postgresql"):
     try:
         engine = create_engine(url, pool_pre_ping=True)
         inspector = inspect(engine)
-        
+
         if 'time_entries' in inspector.get_table_names():
             columns = inspector.get_columns("time_entries")
             column_names = [col['name'] for col in columns]
             print(f"Current columns in time_entries: {column_names}")
-            
+
             if 'task_id' not in column_names:
                 print("Adding task_id column...")
                 with engine.connect() as conn:
@@ -112,7 +112,7 @@ if url.startswith("postgresql"):
                 print("✓ task_id column already exists")
         else:
             print("⚠ Warning: time_entries table does not exist")
-            
+
     except Exception as e:
         print(f"Error adding task_id column: {e}")
         sys.exit(1)
@@ -133,20 +133,20 @@ if url.startswith("postgresql"):
     try:
         engine = create_engine(url, pool_pre_ping=True)
         inspector = inspect(engine)
-        
+
         if 'tasks' in inspector.get_table_names():
             columns = inspector.get_columns("tasks")
             column_names = [col['name'] for col in columns]
             print(f"Current columns in tasks: {column_names}")
-            
+
             # Check for missing columns
             missing_columns = []
             required_columns = ['started_at', 'completed_at']
-            
+
             for col in required_columns:
                 if col not in column_names:
                     missing_columns.append(col)
-            
+
             if missing_columns:
                 print(f"Adding missing columns to tasks table: {missing_columns}")
                 with engine.connect() as conn:
@@ -161,7 +161,7 @@ if url.startswith("postgresql"):
                 print("✓ tasks table has all required columns")
         else:
             print("⚠ Warning: tasks table does not exist")
-            
+
     except Exception as e:
         print(f"Error adding missing columns to tasks: {e}")
         sys.exit(1)

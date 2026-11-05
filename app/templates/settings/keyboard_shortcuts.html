@@ -34,7 +34,7 @@
                         class="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <i class="fas fa-list mr-2"></i>View All Shortcuts
                 </button>
-                <button type="button" onclick="resetToDefaults()" 
+                <button type="button" onclick="resetToDefaults()"
                         class="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <i class="fas fa-undo mr-2"></i>Reset to Defaults
                 </button>
@@ -97,17 +97,17 @@
     <div class="mb-6">
         <div class="border-b border-border-light dark:border-border-dark">
             <nav class="flex space-x-8" aria-label="Tabs">
-                <button type="button" onclick="window.keyboardShortcutsSwitchTab('general')" 
+                <button type="button" onclick="window.keyboardShortcutsSwitchTab('general')"
                         data-tab="general"
                         class="tab-button border-b-2 border-primary text-primary py-3 px-1 font-medium">
                     <i class="fas fa-cog mr-2"></i>General Settings
                 </button>
-                <button onclick="switchTab('customization')" 
+                <button onclick="switchTab('customization')"
                         data-tab="customization"
                         class="tab-button border-b-2 border-transparent text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark py-3 px-1 font-medium">
                     <i class="fas fa-edit mr-2"></i>Customize Shortcuts
                 </button>
-                <button type="button" onclick="window.keyboardShortcutsSwitchTab('statistics')" 
+                <button type="button" onclick="window.keyboardShortcutsSwitchTab('statistics')"
                         data-tab="statistics"
                         class="tab-button border-b-2 border-transparent text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark py-3 px-1 font-medium">
                     <i class="fas fa-chart-bar mr-2"></i>Usage Statistics
@@ -167,7 +167,7 @@
                     Time to wait between key presses in a sequence (e.g., 'g d')
                 </p>
                 <div class="flex items-center gap-4">
-                    <input type="range" id="sequence-timeout" min="500" max="3000" step="100" value="1000" 
+                    <input type="range" id="sequence-timeout" min="500" max="3000" step="100" value="1000"
                            class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
                     <span id="timeout-value" class="text-sm font-semibold text-text-light dark:text-text-dark w-16 text-right">1000ms</span>
                 </div>
@@ -230,9 +230,9 @@
                     </p>
                 </div>
                 <div class="flex gap-2">
-                    <input type="text" 
-                           id="customization-search" 
-                           placeholder="{{ _('Search shortcuts...') }}" 
+                    <input type="text"
+                           id="customization-search"
+                           placeholder="{{ _('Search shortcuts...') }}"
                            class="px-4 py-2 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
                 </div>
             </div>
@@ -538,4 +538,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

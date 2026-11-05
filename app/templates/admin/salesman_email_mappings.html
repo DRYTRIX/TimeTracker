@@ -65,15 +65,15 @@
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
-        
+
         <form id="mappingForm" onsubmit="saveMapping(event)">
             <input type="hidden" id="mappingId">
-            
+
             <div class="mb-4">
                 <label for="salesmanInitial" class="form-label">
                     {{ _('Salesman Initial') }} <span class="text-red-500">*</span>
                 </label>
-                <input type="text" id="salesmanInitial" required 
+                <input type="text" id="salesmanInitial" required
                        class="form-input" placeholder="MM, PB, etc."
                        pattern="[A-Za-z]{1,20}" title="{{ _('1-20 letters only') }}">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -91,8 +91,8 @@
                             <input type="radio" name="emailType" value="direct" checked class="form-radio mr-2" onchange="updateEmailType()">
                             <span class="text-sm">{{ _('Direct Email Address') }}</span>
                         </label>
-                        <input type="email" id="emailAddress" 
-                               class="form-input mt-2" 
+                        <input type="email" id="emailAddress"
+                               class="form-input mt-2"
                                placeholder="salesman@example.com">
                     </div>
                     <div>
@@ -100,8 +100,8 @@
                             <input type="radio" name="emailType" value="pattern" class="form-radio mr-2" onchange="updateEmailType()">
                             <span class="text-sm">{{ _('Pattern (e.g., {value}@test.de)') }}</span>
                         </label>
-                        <input type="text" id="emailPattern" 
-                               class="form-input mt-2 hidden" 
+                        <input type="text" id="emailPattern"
+                               class="form-input mt-2 hidden"
                                placeholder="{value}@test.de">
                     </div>
                     <div>
@@ -109,8 +109,8 @@
                             <input type="radio" name="emailType" value="domain" class="form-radio mr-2" onchange="updateEmailType()">
                             <span class="text-sm">{{ _('Domain (e.g., test.de)') }}</span>
                         </label>
-                        <input type="text" id="emailDomain" 
-                               class="form-input mt-2 hidden" 
+                        <input type="text" id="emailDomain"
+                               class="form-input mt-2 hidden"
                                placeholder="test.de">
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {{ _('Will generate: {initial}@domain') }}
@@ -123,7 +123,7 @@
                 <label for="notes" class="form-label">
                     {{ _('Notes') }} ({{ _('optional') }})
                 </label>
-                <textarea id="notes" rows="2" class="form-input" 
+                <textarea id="notes" rows="2" class="form-input"
                           placeholder="{{ _('Additional notes about this mapping') }}"></textarea>
             </div>
 
@@ -140,7 +140,7 @@
             </div>
 
             <div class="flex justify-end gap-4">
-                <button type="button" onclick="closeModal()" 
+                <button type="button" onclick="closeModal()"
                         class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
                     {{ _('Cancel') }}
                 </button>
@@ -158,7 +158,7 @@ let mappings = [];
 // Load mappings on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadMappings();
-    
+
     // Add preview on input change
     document.getElementById('salesmanInitial')?.addEventListener('input', updatePreview);
     document.getElementById('emailAddress')?.addEventListener('input', updatePreview);
@@ -177,14 +177,14 @@ function loadMappings() {
         })
         .catch(error => {
             console.error('Error loading mappings:', error);
-            document.getElementById('mappingsTableBody').innerHTML = 
+            document.getElementById('mappingsTableBody').innerHTML =
                 '<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Error loading mappings</td></tr>';
         });
 }
 
 function renderMappings() {
     const tbody = document.getElementById('mappingsTableBody');
-    
+
     if (mappings.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -195,7 +195,7 @@ function renderMappings() {
         `;
         return;
     }
-    
+
     tbody.innerHTML = mappings.map(m => `
         <tr>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium mobile-card-header" data-label="{{ _('Salesman Initial') }}">
@@ -210,7 +210,7 @@ function renderMappings() {
                 ${m.email_pattern || m.domain || m.email_address || '-'}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="{{ _('Status') }}">
-                ${m.is_active 
+                ${m.is_active
                     ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>'
                     : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Inactive</span>'}
             </td>
@@ -238,13 +238,13 @@ function openCreateModal() {
 function editMapping(id) {
     const mapping = mappings.find(m => m.id === id);
     if (!mapping) return;
-    
+
     document.getElementById('modalTitle').textContent = '{{ _("Edit Email Mapping") }}';
     document.getElementById('mappingId').value = mapping.id;
     document.getElementById('salesmanInitial').value = mapping.salesman_initial;
     document.getElementById('notes').value = mapping.notes || '';
     document.getElementById('isActive').checked = mapping.is_active;
-    
+
     // Set email type
     if (mapping.email_address) {
         document.querySelector('input[name="emailType"][value="direct"]').checked = true;
@@ -256,7 +256,7 @@ function editMapping(id) {
         document.querySelector('input[name="emailType"][value="domain"]').checked = true;
         document.getElementById('emailDomain').value = mapping.domain;
     }
-    
+
     updateEmailType();
     updatePreview();
     document.getElementById('mappingModal').classList.remove('hidden');
@@ -269,11 +269,11 @@ function closeModal() {
 
 function updateEmailType() {
     const emailType = document.querySelector('input[name="emailType"]:checked').value;
-    
+
     document.getElementById('emailAddress').classList.add('hidden');
     document.getElementById('emailPattern').classList.add('hidden');
     document.getElementById('emailDomain').classList.add('hidden');
-    
+
     if (emailType === 'direct') {
         document.getElementById('emailAddress').classList.remove('hidden');
         document.getElementById('emailAddress').required = true;
@@ -284,7 +284,7 @@ function updateEmailType() {
         document.getElementById('emailDomain').classList.remove('hidden');
         document.getElementById('emailDomain').required = true;
     }
-    
+
     updatePreview();
 }
 
@@ -293,12 +293,12 @@ function updatePreview() {
     const emailType = document.querySelector('input[name="emailType"]:checked')?.value;
     const previewDiv = document.getElementById('emailPreview');
     const previewEmail = document.getElementById('previewEmail');
-    
+
     if (!initial) {
         previewDiv.classList.add('hidden');
         return;
     }
-    
+
     let email = '';
     if (emailType === 'direct') {
         email = document.getElementById('emailAddress').value;
@@ -309,7 +309,7 @@ function updatePreview() {
         const domain = document.getElementById('emailDomain').value;
         email = `${initial}@${domain}`;
     }
-    
+
     if (email) {
         previewEmail.textContent = email;
         previewDiv.classList.remove('hidden');
@@ -320,19 +320,19 @@ function updatePreview() {
 
 function saveMapping(event) {
     event.preventDefault();
-    
+
     const id = document.getElementById('mappingId').value;
     const salesmanInitial = document.getElementById('salesmanInitial').value.toUpperCase().trim();
     const emailType = document.querySelector('input[name="emailType"]:checked').value;
     const isActive = document.getElementById('isActive').checked;
     const notes = document.getElementById('notes').value;
-    
+
     const data = {
         salesman_initial: salesmanInitial,
         is_active: isActive,
         notes: notes
     };
-    
+
     if (emailType === 'direct') {
         data.email_address = document.getElementById('emailAddress').value;
     } else if (emailType === 'pattern') {
@@ -340,14 +340,14 @@ function saveMapping(event) {
     } else if (emailType === 'domain') {
         data.domain = document.getElementById('emailDomain').value;
     }
-    
-    const url = id 
+
+    const url = id
         ? `{{ url_for('salesman_reports.update_email_mapping', mapping_id=0) }}`.replace('0', id)
         : '{{ url_for("salesman_reports.create_email_mapping") }}';
     const method = id ? 'PUT' : 'POST';
-    
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-    
+
     fetch(url, {
         method: method,
         headers: {
@@ -375,10 +375,10 @@ function deleteMapping(id) {
     if (!confirm('{{ _("Are you sure you want to delete this mapping?") }}')) {
         return;
     }
-    
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
     const url = `{{ url_for('salesman_reports.delete_email_mapping', mapping_id=0) }}`.replace('0', id);
-    
+
     fetch(url, {
         method: 'DELETE',
         headers: {
@@ -400,4 +400,3 @@ function deleteMapping(id) {
 }
 </script>
 {% endblock %}
-

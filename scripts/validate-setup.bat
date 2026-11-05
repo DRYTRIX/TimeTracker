@@ -18,4 +18,3 @@ if errorlevel 1 (
 REM Run the validation script
 python scripts\validate-setup.py
 exit /b %ERRORLEVEL%
-

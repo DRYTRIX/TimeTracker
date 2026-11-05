@@ -5,9 +5,9 @@ Revises: 091
 Create Date: 2025-01-27 12:00:00
 
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision = "092_missing_module_flags"
@@ -25,14 +25,14 @@ def upgrade():
 
     # Determine database dialect for proper default values
     dialect_name = bind.dialect.name if bind else "generic"
-    
+
     # Set appropriate boolean defaults based on database
-    if dialect_name == 'sqlite':
-        bool_true_default = '1'
-    elif dialect_name == 'postgresql':
-        bool_true_default = 'true'
+    if dialect_name == "sqlite":
+        bool_true_default = "1"
+    elif dialect_name == "postgresql":
+        bool_true_default = "true"
     else:  # MySQL/MariaDB and others
-        bool_true_default = '1'
+        bool_true_default = "1"
 
     # Helper to add a boolean column with server default true
     def _add_bool_column(table_name: str, column_name: str):
@@ -42,15 +42,15 @@ def upgrade():
             if table_name not in table_names:
                 print(f"⚠ {table_name} table does not exist, skipping {column_name} column")
                 return
-            
+
             # Check if column already exists
-            current_cols = {c['name'] for c in inspector.get_columns(table_name)}
+            current_cols = {c["name"] for c in inspector.get_columns(table_name)}
             if column_name in current_cols:
                 print(f"✓ Column {column_name} already exists in {table_name} table")
                 return
         except Exception as e:
             print(f"⚠ Warning checking for {column_name} column: {e}")
-        
+
         try:
             op.add_column(
                 table_name,
@@ -59,7 +59,7 @@ def upgrade():
             print(f"✓ Added {column_name} column to {table_name} table")
         except Exception as e:
             error_msg = str(e)
-            if 'already exists' in error_msg.lower() or 'duplicate' in error_msg.lower():
+            if "already exists" in error_msg.lower() or "duplicate" in error_msg.lower():
                 print(f"✓ Column {column_name} already exists in {table_name} table (detected via error)")
             else:
                 print(f"✗ Error adding {column_name} column to {table_name} table: {e}")
@@ -172,4 +172,3 @@ def downgrade():
             print(f"✓ Dropped {name} column from users table")
         except Exception as e:
             print(f"⚠ Warning dropping {name} column from users table: {e}")
-

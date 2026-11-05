@@ -1,6 +1,7 @@
 """Tests for API v1 inventory transfers (list, create, get by reference_id)."""
 
 import json
+
 import pytest
 
 pytestmark = [pytest.mark.api, pytest.mark.integration]
@@ -8,14 +9,7 @@ pytestmark = [pytest.mark.api, pytest.mark.integration]
 from decimal import Decimal
 
 from app import db
-from app.models import (
-    User,
-    ApiToken,
-    Warehouse,
-    StockItem,
-    WarehouseStock,
-    StockMovement,
-)
+from app.models import ApiToken, StockItem, StockMovement, User, Warehouse, WarehouseStock
 
 
 @pytest.fixture
@@ -252,9 +246,7 @@ class TestCreateTransferAPI:
             data = response.get_json()
             assert data is not None
 
-    def test_create_transfer_same_warehouse(
-        self, client, api_token, stock_item_trackable, warehouse_from, test_user
-    ):
+    def test_create_transfer_same_warehouse(self, client, api_token, stock_item_trackable, warehouse_from, test_user):
         """POST with from_warehouse_id == to_warehouse_id returns 400."""
         StockMovement.record_movement(
             movement_type="purchase",

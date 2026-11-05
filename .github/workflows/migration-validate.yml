@@ -1,0 +1,454 @@
+name: Database Migration Validation
+
+# Reusable workflow — called from ci.yml when models/migrations change.
+on:
+  workflow_call:
+    outputs:
+      migration_changes:
+        description: Whether migration-related paths changed
+        value: ${{ jobs.validate-migrations.outputs.migration_changes }}
+
+jobs:
+  validate-migrations:
+    runs-on: ubuntu-latest
+    outputs:
+      migration_changes: ${{ steps.migration_check.outputs.migration_changes }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python env
+        uses: ./.github/actions/setup-python-env
+        with:
+          install-dev: 'false'
+
+      - name: Ensure single Alembic head
+        env:
+          FLASK_APP: app.py
+          FLASK_ENV: testing
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
+        run: |
+          set -e
+          echo "🔍 Checking for a single Alembic migration head..."
+          # Do not discard stderr: app-load failures (e.g. missing DB driver) must
+          # surface instead of being misreported as "0 heads".
+          HEADS_OUTPUT=$(flask db heads)
+          echo "$HEADS_OUTPUT"
+          HEADS=$(echo "$HEADS_OUTPUT" | sed '/^$/d' | wc -l)
+          echo "Alembic heads found: $HEADS"
+          if [ "$HEADS" -ne 1 ]; then
+            echo "❌ Expected exactly one Alembic head, found $HEADS"
+            echo "Create a merge migration before merging this PR."
+            exit 1
+          fi
+          echo "✅ Single Alembic head confirmed"
+
+      - name: Check for migration changes
+        id: migration_check
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # Compare against the PR base (not HEAD~1) so multi-commit PRs are covered
+          if [ -z "$BASE_SHA" ]; then
+            echo "⚠️ No PR base SHA; falling back to HEAD~1"
+            DIFF_RANGE="HEAD~1"
+          else
+            DIFF_RANGE="${BASE_SHA}...HEAD"
+          fi
+          echo "Diff range: $DIFF_RANGE"
+          if git diff --name-only "$DIFF_RANGE" | grep -E "(app/models/|migrations/)" > /dev/null; then
+            echo "migration_changes=true" >> $GITHUB_OUTPUT
+            echo "📋 Migration-related changes detected"
+            git diff --name-only "$DIFF_RANGE" | grep -E "(app/models/|migrations/)" || true
+          else
+            echo "migration_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No migration-related changes detected"
+          fi
+
+      - name: Validate migration consistency
+        if: steps.migration_check.outputs.migration_changes == 'true'
+        env:
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
+          FLASK_APP: app.py
+          FLASK_ENV: testing
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          echo "🔍 Validating migration consistency..."
+          echo "Current directory: $(pwd)"
+          echo "Migration files:"
+          ls -la migrations/versions/ | tail -5
+
+          # Ensure PR base commit is available for checkout (fork PRs / shallow edges)
+          if [ -n "${BASE_SHA:-}" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null || git fetch --no-tags origin "$BASE_SHA" || true
+          fi
+
+          reset_db() {
+            echo "♻️ Resetting PostgreSQL schema..."
+            python <<'PY'
+          import os
+          from sqlalchemy import create_engine, text
+          engine = create_engine(os.environ["DATABASE_URL"])
+          with engine.connect() as conn:
+              conn = conn.execution_options(isolation_level="AUTOCOMMIT")
+              conn.execute(text("DROP SCHEMA public CASCADE"))
+              conn.execute(text("CREATE SCHEMA public"))
+              conn.execute(text("GRANT ALL ON SCHEMA public TO test_user"))
+              conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+          print("Schema reset complete")
+          PY
+          }
+
+          # Normalize autogenerate ops for stable comparison (ignore rev ids / timestamps)
+          extract_ops() {
+            local file="$1"
+            local out="$2"
+            if [ ! -f "$file" ]; then
+              : > "$out"
+              return
+            fi
+            # Prefer upgrade() body ops; fall back to any op./batch_op. lines
+            python - "$file" "$out" <<'PY'
+          import re, sys
+          src = open(sys.argv[1], encoding="utf-8").read()
+          m = re.search(r"def upgrade\(\).*?:\n(.*?)(?:\ndef downgrade\(|\Z)", src, re.S)
+          body = m.group(1) if m else src
+          ops = []
+          for line in body.splitlines():
+              s = line.strip()
+              if re.search(r"\b(op|batch_op)\.", s):
+                  # Normalize Alembic naming helpers so dep-skew does not look like drift.
+                  s = re.sub(r"\b(?:batch_)?op\.f\((['\"])(.*?)\1\)", r"\1\2\1", s)
+                  ops.append(s)
+          open(sys.argv[2], "w", encoding="utf-8").write("\n".join(ops) + ("\n" if ops else ""))
+          PY
+          }
+
+          capture_autogenerate() {
+            local rev_id="$1"
+            local ops_out="$2"
+
+            echo "Running flask db upgrade..."
+            if ! flask db upgrade; then
+              echo ""
+              echo "❌ Migration failed!"
+              flask db current || true
+              flask db history | tail -10 || true
+              exit 1
+            fi
+            echo "✅ Migrations completed successfully"
+
+            echo "Generating test migration ($rev_id)..."
+            # migrate may exit non-zero even when a file is written; continue and inspect
+            flask db migrate -m "Test migration consistency" --rev-id "$rev_id" || true
+
+            local migration_file
+            migration_file=$(find migrations/versions -name "*${rev_id}*.py" 2>/dev/null | head -1)
+            if [ -n "$migration_file" ] && [ -f "$migration_file" ]; then
+              echo "Generated: $migration_file"
+              extract_ops "$migration_file" "$ops_out"
+              rm -f "$migration_file"
+            else
+              echo "No migration file generated for $rev_id"
+              : > "$ops_out"
+            fi
+            # Always clean stray test consistency files
+            find migrations/versions -name '*test_consistency*.py' -delete 2>/dev/null || true
+          }
+
+          PR_OPS=/tmp/drift_ops_pr.txt
+          BASE_OPS=/tmp/drift_ops_base.txt
+          PR_SHA=$(git rev-parse HEAD)
+
+          echo ""
+          echo "=== Autogenerate on PR head ($PR_SHA) ==="
+          reset_db
+          capture_autogenerate "test_consistency_pr" "$PR_OPS"
+          echo "PR op count: $(grep -c . "$PR_OPS" || true)"
+
+          if [ -z "${BASE_SHA:-}" ]; then
+            echo "⚠️ No PR base SHA available; failing on any PR drift (legacy behavior)"
+            if grep -q . "$PR_OPS"; then
+              echo "❌ Migration inconsistency detected (no base to compare)."
+              cat "$PR_OPS"
+              echo "Fix: generate and commit a real Alembic migration, or open this as a pull_request event."
+              exit 1
+            fi
+            echo "✅ Migration consistency validated - no schema drift detected"
+            exit 0
+          fi
+
+          echo ""
+          echo "=== Autogenerate on PR base ($BASE_SHA) ==="
+          # Swap app + migrations + requirements to the base tree. Base migrations
+          # (esp. Postgres enums) need the base dependency set to apply cleanly.
+          # extract_ops normalizes op.f() naming so Alembic helper skew is not drift.
+          git checkout "$BASE_SHA" -- app migrations requirements.txt
+          echo "Reinstalling base requirements for comparison..."
+          pip install -q -r requirements.txt
+          reset_db
+          capture_autogenerate "test_consistency_base" "$BASE_OPS"
+          echo "Base op count: $(grep -c . "$BASE_OPS" || true)"
+
+          # Restore PR tree and re-apply PR migrations for subsequent workflow steps
+          git checkout "$PR_SHA" -- app migrations requirements.txt
+          echo "Reinstalling PR requirements after base comparison..."
+          pip install -q -r requirements.txt
+          reset_db
+          echo "Re-applying PR migrations after base comparison..."
+          if ! flask db upgrade; then
+            echo "❌ Failed to re-upgrade PR migrations after base comparison"
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Comparing PR drift vs base drift ==="
+          # Fail only on *new* drift (ops in PR that base does not have).
+          # Model alignments that shrink baseline drift are allowed.
+          NEW_DRIFT=$(comm -13 <(sort -u "$BASE_OPS") <(sort -u "$PR_OPS") || true)
+          RESOLVED=$(comm -23 <(sort -u "$BASE_OPS") <(sort -u "$PR_OPS") || true)
+
+          # Constraint/index rename noise (SQLAlchemy naming helpers / reflected names)
+          # is not actionable schema drift for release gates into main.
+          STRUCTURAL_NEW=$(echo "$NEW_DRIFT" | grep -E '\b(create_table|drop_table|add_column|drop_column|alter_column)\b' || true)
+
+          if [ -z "$STRUCTURAL_NEW" ]; then
+            if [ -n "$NEW_DRIFT" ]; then
+              echo "⚠️ Non-structural drift only (constraint/index naming); treating as OK:"
+              echo "$NEW_DRIFT"
+            elif grep -q . "$PR_OPS"; then
+              echo "⚠️ Baseline schema drift still exists ($(grep -c . "$PR_OPS" || true) ops), but this PR adds none."
+            else
+              echo "✅ No schema drift on PR head."
+            fi
+            if [ -n "$RESOLVED" ]; then
+              echo "ℹ️ PR reduces baseline drift ($(echo "$RESOLVED" | grep -c . || true) ops resolved vs base)."
+            fi
+            echo "✅ Migration consistency validated - no *new* structural schema drift vs base"
+            exit 0
+          fi
+
+          echo "❌ Migration inconsistency detected: PR introduces new structural schema drift vs base."
+          echo ""
+          echo "--- Structural ops only on PR ---"
+          echo "$STRUCTURAL_NEW"
+          echo ""
+          echo "--- All ops only on PR (new drift) ---"
+          echo "$NEW_DRIFT"
+          if [ -n "$RESOLVED" ]; then
+            echo ""
+            echo "--- Ops only on base (resolved by PR) ---"
+            echo "$RESOLVED"
+          fi
+          echo ""
+          echo "Fix: add a curated Alembic migration for real model changes, or align models with the migrated schema."
+          exit 1
+
+      - name: Test migration rollback safety
+        if: steps.migration_check.outputs.migration_changes == 'true'
+        env:
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
+          FLASK_APP: app.py
+          FLASK_ENV: testing
+        run: |
+          set -e
+          echo "🔄 Testing migration rollback safety..."
+
+          # Get current migration (trim whitespace and optional "(head)" suffix)
+          CURRENT_MIGRATION=$(flask db current | sed 's/ (head)$//' | tr -d '[:space:]')
+          echo "Current migration: $CURRENT_MIGRATION"
+
+          if [ -z "$CURRENT_MIGRATION" ] || [ "$CURRENT_MIGRATION" = "None" ]; then
+            echo "ℹ️ No migrations to test rollback on"
+            exit 0
+          fi
+
+          # Resolve parent revision via Alembic (avoids ambiguous "downgrade -1" with merge revisions)
+          ROLLBACK_RESULT=$(python <<'PYEOF'
+          import os
+          import sys
+          from app import create_app, db
+          from alembic.config import Config
+          from alembic.script import ScriptDirectory
+
+          app = create_app()
+          with app.app_context():
+              r = db.session.execute(db.text("SELECT version_num FROM alembic_version"))
+              rows = r.fetchall()
+              if not rows:
+                  print("SKIP")
+                  sys.exit(0)
+              current_rev = rows[0][0]
+              config = Config(os.path.join(os.getcwd(), "migrations", "alembic.ini"))
+              script = ScriptDirectory.from_config(config)
+              rev = script.get_revision(current_rev)
+              if rev is None:
+                  print("SKIP")
+                  sys.exit(0)
+              down = rev.down_revision
+              if down is None:
+                  print("SKIP")
+              elif isinstance(down, tuple):
+                  print("SKIP")
+              else:
+                  print("PARENT:" + down)
+          PYEOF
+          )
+
+          if [ "$ROLLBACK_RESULT" = "SKIP" ]; then
+            echo "ℹ️ At base or merge revision — skipping downgrade, verifying upgrade head..."
+            if ! flask db upgrade head; then
+              echo "❌ Rollback test failed: upgrade head failed after skip"
+              exit 1
+            fi
+            echo "✅ Migration rollback test passed (downgrade skipped, upgrade head OK)"
+            exit 0
+          fi
+
+          PARENT_REV="${ROLLBACK_RESULT#PARENT:}"
+          if [ -z "$PARENT_REV" ]; then
+            echo "❌ Rollback test failed: could not resolve parent revision"
+            exit 1
+          fi
+
+          echo "Testing migration rollback (downgrade to $PARENT_REV, then upgrade head)..."
+          if ! flask db downgrade "$PARENT_REV"; then
+            echo "❌ Rollback test failed: downgrade to $PARENT_REV failed"
+            exit 1
+          fi
+          if ! flask db upgrade head; then
+            echo "❌ Rollback test failed: upgrade head failed after downgrade"
+            exit 1
+          fi
+          echo "✅ Migration rollback test passed"
+
+      - name: Test migration with sample data
+        if: steps.migration_check.outputs.migration_changes == 'true'
+        env:
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
+          FLASK_APP: app.py
+          FLASK_ENV: testing
+        run: |
+          echo "📊 Testing migration with sample data..."
+
+          # Create sample data script
+          python <<'EOF'
+          from app import create_app, db
+          from app.models.user import User
+          from app.models.project import Project
+          from app.models.client import Client
+          import datetime
+
+          app = create_app()
+          with app.app_context():
+              # Create test user
+              user = User(
+                  username='test_user',
+                  role='user'
+              )
+              db.session.add(user)
+              db.session.commit()  # Commit to get user ID
+
+              # Create test client
+              client = Client(
+                  name='Test Client',
+                  description='Test client for migration validation'
+              )
+              db.session.add(client)
+              db.session.commit()  # Commit to get client ID
+
+              # Create test project
+              project = Project(
+                  name='Test Project',
+                  client_id=client.id,
+                  description='Test project for migration validation'
+              )
+              db.session.add(project)
+
+              db.session.commit()
+              print('✅ Sample data created successfully')
+          EOF
+
+          # Verify data integrity after migration
+          python <<'EOF'
+          from app import create_app, db
+          from app.models.user import User
+          from app.models.project import Project
+          from app.models.client import Client
+
+          app = create_app()
+          with app.app_context():
+              user_count = User.query.count()
+              project_count = Project.query.count()
+              client_count = Client.query.count()
+              print(f'Users: {user_count}, Projects: {project_count}, Clients: {client_count}')
+
+              if user_count > 0 and project_count > 0 and client_count > 0:
+                  print('✅ Data integrity verified after migration')
+              else:
+                  print('❌ Data integrity check failed')
+                  exit(1)
+          EOF
+
+      - name: Generate migration report
+        if: steps.migration_check.outputs.migration_changes == 'true'
+        env:
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
+          FLASK_APP: app.py
+          FLASK_ENV: testing
+        run: |
+          echo "📋 Generating migration report..."
+
+          # Get migration history
+          echo "## Migration History" > migration_report.md
+          echo "" >> migration_report.md
+          flask db history --verbose >> migration_report.md
+
+          # Get current schema info
+          echo "" >> migration_report.md
+          echo "## Current Schema" >> migration_report.md
+          echo "" >> migration_report.md
+
+          python <<'EOF' >> migration_report.md
+          from app import create_app, db
+          from sqlalchemy import inspect
+
+          app = create_app()
+          with app.app_context():
+              inspector = inspect(db.engine)
+              tables = inspector.get_table_names()
+              print('### Tables:')
+              for table in sorted(tables):
+                  print(f'- {table}')
+                  columns = inspector.get_columns(table)
+                  for column in columns:
+                      print(f'  - {column["name"]}: {column["type"]}')
+          EOF
+
+          cat migration_report.md
+
+      - name: Upload migration report
+        if: steps.migration_check.outputs.migration_changes == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: migration-report
+          path: migration_report.md

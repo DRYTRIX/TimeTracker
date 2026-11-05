@@ -14,7 +14,7 @@ body {
 .splash-container {
   width: 100vw;
   height: 100vh;
-  background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%);
+  background: linear-gradient(135deg, #4F46E5 0%, #50E3C2 100%);
   display: flex;
   align-items: center;
   justify-content: center;

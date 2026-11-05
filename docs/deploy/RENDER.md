@@ -41,6 +41,11 @@ The blueprint sets:
 - **AUTH_METHOD**: `local` (default), or `none` | `oidc` | `ldap` | `both` | `all` — see `env.example` and [LDAP Setup](../admin/configuration/LDAP_SETUP.md) / [OIDC Setup](../admin/configuration/OIDC_SETUP.md)
 - **REDIS_ENABLED**: `false` (rate limiting uses in-memory storage; no Redis required for demo)
 
+Optional (usually leave unset on Render):
+
+- **GUNICORN_MAX_REQUESTS**: Worker recycle after N requests. Defaults to **`0` (disabled)** when `PORT` is set. A single eventlet worker cannot recycle without a brief no-listener window; leave disabled unless you need recycle for memory hygiene.
+- **GUNICORN_MAX_REQUESTS_JITTER**: Jitter added to max-requests when recycle is enabled (default `100`).
+
 ## Demo mode (single-user demo)
 
 To run a **demo** instance where only one user can log in and the credentials are shown on the login page:
@@ -58,7 +63,11 @@ In demo mode:
 - The login page shows the demo username and password.
 - Self-registration and admin user creation are disabled; OIDC cannot create new users.
 - The demo user is created automatically on first run if it does not exist.
+- The first-run `/setup` wizard is skipped; setup is marked complete automatically.
+- On first boot (empty DB), sample clients, projects, and time entries are seeded so the dashboard is browseable.
 - The demo account has the standard **user** role only (not an administrator), so settings, PDF layout editing, and similar admin routes are unavailable on the demo login.
+
+**Public demo (this project):** [https://timetracker-demo.drytrix.com](https://timetracker-demo.drytrix.com) — username `test`, password `test123!`.
 
 **Security:** Use a strong **DEMO_PASSWORD** for any public demo. Do not use `DEMO_MODE=true` for production multi-user deployments.
 
@@ -81,3 +90,7 @@ If you prefer to create the database and web service manually:
 - **Migrations**: The pre-deploy command runs `flask db upgrade`. If it fails, check that **FLASK_APP** is set to `app:create_app()` and that **DATABASE_URL** is set and reachable from Render.
 - **Image**: The Blueprint uses the pre-built image `ghcr.io/drytrix/timetracker:latest`. Ensure that image exists (trigger a build by pushing to `main` or running the release workflow). If the image is private, add GitHub Container Registry credentials in Render Dashboard → Settings → Registry.
 - **Database URL**: Render’s PostgreSQL URL is usually in `postgres://` form; the app uses `postgresql+psycopg2`. If you see connection errors, try setting **DATABASE_URL** to the same URL with the scheme changed to `postgresql://` (Render may also provide a direct URL in the database dashboard).
+- **Server failure / `connection refused` on `/_health`**: This is **not** rate limiting. Rate limits return HTTP **429**; `dial tcp … connection refused` means nothing was listening (process restarting, recycling, OOM-killed, or free-tier spin-down). Confirm:
+  - Health Check Path is **`/_health`** (liveness only; do not use `/_ready` as Render’s kill/replace probe — DB blips would restart the instance).
+  - The running image includes health-probe rate-limit exemptions (`/_health`, `/_ready`, `/api/health`, `/api/v1/health`).
+  - Worker recycle is off by default on Render (`PORT` is set → `GUNICORN_MAX_REQUESTS` defaults to `0`). Set `GUNICORN_MAX_REQUESTS=1000` (and optionally `GUNICORN_MAX_REQUESTS_JITTER`) only if you explicitly want Gunicorn to recycle workers; with a single eventlet worker that can briefly refuse connections and trip this alert.

@@ -143,7 +143,7 @@ class ModuleDefinition:
     settings_flag: Optional[str] = None  # Settings.ui_allow_* field name
     user_flag: Optional[str] = None  # User.ui_show_* field name
     routes: List[str] = None  # Route endpoints
-    
+
     def __post_init__(self):
         if self.dependencies is None:
             self.dependencies = []
@@ -152,45 +152,45 @@ class ModuleDefinition:
 
 class ModuleRegistry:
     _modules: Dict[str, ModuleDefinition] = {}
-    
+
     @classmethod
     def register(cls, module: ModuleDefinition):
         cls._modules[module.id] = module
-    
+
     @classmethod
     def get(cls, module_id: str) -> Optional[ModuleDefinition]:
         return cls._modules.get(module_id)
-    
+
     @classmethod
     def get_all(cls) -> Dict[str, ModuleDefinition]:
         return cls._modules.copy()
-    
+
     @classmethod
     def get_by_category(cls, category: ModuleCategory) -> List[ModuleDefinition]:
         return [m for m in cls._modules.values() if m.category == category]
-    
+
     @classmethod
     def is_enabled(cls, module_id: str, settings, user) -> bool:
         """Check if a module is enabled for a user"""
         module = cls.get(module_id)
         if not module:
             return False
-        
+
         # Check system-wide setting
         if module.settings_flag:
             if not getattr(settings, module.settings_flag, True):
                 return False
-        
+
         # Check user-specific setting
         if module.user_flag:
             if not getattr(user, module.user_flag, True):
                 return False
-        
+
         # Check dependencies
         for dep_id in module.dependencies:
             if not cls.is_enabled(dep_id, settings, user):
                 return False
-        
+
         return True
 ```
 
@@ -321,7 +321,7 @@ def build_navigation_menu(settings, user):
         "tools": {"enabled": False, "items": []},
         "admin": {"enabled": False, "items": []},
     }
-    
+
     # Populate menu from module registry
     for module in ModuleRegistry.get_all().values():
         if ModuleRegistry.is_enabled(module.id, settings, user):
@@ -333,7 +333,7 @@ def build_navigation_menu(settings, user):
                     "name": module.name,
                     "url": url_for(f"{module.blueprint_name}.index") if hasattr(module, "index_route") else None,
                 })
-    
+
     return menu
 ```
 
@@ -350,24 +350,24 @@ Create admin interface to manage module visibility.
 def manage_modules():
     """Manage module visibility settings"""
     settings = Settings.get_settings()
-    
+
     if request.method == "POST":
         # Update module flags
         for module_id in ModuleRegistry.get_all().keys():
             flag_name = f"ui_allow_{module_id}"
             if hasattr(settings, flag_name):
                 setattr(settings, flag_name, request.form.get(flag_name) == "on")
-        
+
         db.session.commit()
         flash("Module settings updated successfully", "success")
         return redirect(url_for("admin.manage_modules"))
-    
+
     # Group modules by category
     modules_by_category = {}
     for category in ModuleCategory:
         modules_by_category[category] = ModuleRegistry.get_by_category(category)
-    
-    return render_template("admin/modules.html", 
+
+    return render_template("admin/modules.html",
                          modules_by_category=modules_by_category,
                          settings=settings)
 ```
@@ -391,7 +391,7 @@ def upgrade():
     op.add_column('settings', sa.Column('ui_allow_contacts', sa.Boolean(), nullable=False, server_default='true'))
     op.add_column('settings', sa.Column('ui_allow_deals', sa.Boolean(), nullable=False, server_default='true'))
     # ... etc
-    
+
     # Add User columns
     op.add_column('users', sa.Column('ui_show_contacts', sa.Boolean(), nullable=False, server_default='true'))
     op.add_column('users', sa.Column('ui_show_deals', sa.Boolean(), nullable=False, server_default='true'))
@@ -486,7 +486,7 @@ def upgrade():
 ## Risks & Mitigation
 
 ### Risk 1: Breaking Existing Functionality
-**Mitigation:** 
+**Mitigation:**
 - Comprehensive testing
 - Gradual rollout
 - Feature flags for new system
@@ -550,4 +550,3 @@ def upgrade():
 1. Review and approve this plan
 2. Create module registry implementation
 3. Begin Phase 1 implementation
-

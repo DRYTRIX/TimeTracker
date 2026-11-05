@@ -383,4 +383,3 @@ This feature is part of the TimeTracker application and follows the same license
 
 **Last Updated**: October 2025
 **Version**: 2.0
-

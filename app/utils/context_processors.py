@@ -229,9 +229,7 @@ def register_context_processors(app):
                 if layout_support_prompt:
                     v = layout_support_prompt.get("variant")
                     if v == SupportPromptService.VARIANT_AFTER_REPORT:
-                        lp_message = _(
-                            "Report exported — if TimeTracker saves you time, a coffee goes a long way."
-                        )
+                        lp_message = _("Report exported — if TimeTracker saves you time, a coffee goes a long way.")
                     elif v == SupportPromptService.VARIANT_FIRST_INVOICE:
                         lp_message = _(
                             "You just sent your first invoice with TimeTracker — if the app is helping your "

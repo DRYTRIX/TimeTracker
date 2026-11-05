@@ -6,9 +6,11 @@ import pytest
 
 pytestmark = [pytest.mark.unit, pytest.mark.utils]
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from flask import current_app
-from app.utils.email import send_email, check_email_configuration, send_test_email, init_mail
+
+from app.utils.email import check_email_configuration, init_mail, send_email, send_test_email
 
 
 class TestEmailConfiguration:
@@ -245,9 +247,9 @@ class TestDatabaseEmailConfiguration:
     def test_init_mail_uses_database_config(self, app):
         """Test that init_mail uses database settings when available"""
         with app.app_context():
+            from app import db
             from app.models import Settings
             from app.utils.email import init_mail
-            from app import db
 
             settings = Settings.get_settings()
             settings.mail_enabled = True
@@ -264,9 +266,9 @@ class TestDatabaseEmailConfiguration:
     def test_reload_mail_config(self, app):
         """Test reloading email configuration"""
         with app.app_context():
+            from app import db
             from app.models import Settings
             from app.utils.email import reload_mail_config
-            from app import db
 
             # Set up database config
             settings = Settings.get_settings()
@@ -283,9 +285,9 @@ class TestDatabaseEmailConfiguration:
     def test_check_email_configuration_shows_source(self, app):
         """Test that configuration status shows source (database or environment)"""
         with app.app_context():
+            from app import db
             from app.models import Settings
             from app.utils.email import check_email_configuration
-            from app import db
 
             # Test with database config
             settings = Settings.get_settings()

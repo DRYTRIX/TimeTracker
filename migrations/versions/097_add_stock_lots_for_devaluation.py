@@ -15,7 +15,6 @@ using StockItem.default_cost (or 0) as unit_cost.
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
 revision = "097_add_stock_lots_for_devaluation"
 down_revision = "20250127_000001"
@@ -94,13 +93,19 @@ def upgrade():
         ("ix_stock_lot_allocations_move_lot", ["stock_movement_id", "stock_lot_id"], False),
     ]:
         try:
-            if _has_table(inspector, "stock_lot_allocations") and not _has_index(inspector, "stock_lot_allocations", idx_name):
+            if _has_table(inspector, "stock_lot_allocations") and not _has_index(
+                inspector, "stock_lot_allocations", idx_name
+            ):
                 op.create_index(idx_name, "stock_lot_allocations", cols, unique=unique)
         except Exception:
             pass
 
     # Seed legacy lots from current warehouse_stock (best-effort)
-    if not (_has_table(inspector, "warehouse_stock") and _has_table(inspector, "stock_items") and _has_table(inspector, "stock_lots")):
+    if not (
+        _has_table(inspector, "warehouse_stock")
+        and _has_table(inspector, "stock_items")
+        and _has_table(inspector, "stock_lots")
+    ):
         return
 
     # We only seed when there are no lots yet.
@@ -115,9 +120,7 @@ def upgrade():
     # Use SQL to seed quickly across dialects.
     # created_at is set to current_timestamp (SQLite/Postgres compatible).
     try:
-        bind.execute(
-            sa.text(
-                """
+        bind.execute(sa.text("""
                 INSERT INTO stock_lots (stock_item_id, warehouse_id, lot_type, unit_cost, quantity_on_hand, created_at, created_by, source_movement_id, notes)
                 SELECT
                     ws.stock_item_id,
@@ -132,9 +135,7 @@ def upgrade():
                 FROM warehouse_stock ws
                 JOIN stock_items si ON si.id = ws.stock_item_id
                 WHERE ws.quantity_on_hand > 0
-                """
-            )
-        )
+                """))
     except Exception:
         # Best-effort; if it fails, runtime will auto-create legacy lots when needed.
         pass
@@ -181,4 +182,3 @@ def downgrade():
             op.drop_table("stock_lots")
         except Exception:
             pass
-

@@ -35,15 +35,16 @@ def upgrade():
         )
 
     if not _has_column(inspector, "timesheet_periods", "secondary_approved_by"):
-        op.add_column("timesheet_periods", sa.Column("secondary_approved_by", sa.Integer(), nullable=True))
-        op.create_foreign_key(
-            "fk_timesheet_periods_secondary_approved_by_users",
-            "timesheet_periods",
-            "users",
-            ["secondary_approved_by"],
-            ["id"],
-            ondelete="SET NULL",
-        )
+        # SQLite cannot ALTER to add FK constraints; use batch copy-and-move.
+        with op.batch_alter_table("timesheet_periods", schema=None) as batch_op:
+            batch_op.add_column(sa.Column("secondary_approved_by", sa.Integer(), nullable=True))
+            batch_op.create_foreign_key(
+                "fk_timesheet_periods_secondary_approved_by_users",
+                "users",
+                ["secondary_approved_by"],
+                ["id"],
+                ondelete="SET NULL",
+            )
     if not _has_column(inspector, "timesheet_periods", "secondary_approved_at"):
         op.add_column("timesheet_periods", sa.Column("secondary_approved_at", sa.DateTime(), nullable=True))
 
@@ -55,13 +56,14 @@ def downgrade():
     if _has_column(inspector, "timesheet_periods", "secondary_approved_at"):
         op.drop_column("timesheet_periods", "secondary_approved_at")
     if _has_column(inspector, "timesheet_periods", "secondary_approved_by"):
-        try:
-            op.drop_constraint(
-                "fk_timesheet_periods_secondary_approved_by_users", "timesheet_periods", type_="foreignkey"
-            )
-        except Exception:
-            pass
-        op.drop_column("timesheet_periods", "secondary_approved_by")
+        with op.batch_alter_table("timesheet_periods", schema=None) as batch_op:
+            try:
+                batch_op.drop_constraint(
+                    "fk_timesheet_periods_secondary_approved_by_users", type_="foreignkey"
+                )
+            except Exception:
+                pass
+            batch_op.drop_column("secondary_approved_by")
     if _has_column(inspector, "custom_field_definitions", "entity_type"):
         op.drop_column("custom_field_definitions", "entity_type")
     if _has_column(inspector, "users", "anonymized_at"):

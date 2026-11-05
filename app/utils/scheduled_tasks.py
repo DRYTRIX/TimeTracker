@@ -87,9 +87,7 @@ def check_overdue_invoices():
 
         # Calendar "today" in app timezone (not UTC / host local)
         today = now_in_app_timezone().date()
-        overdue_invoices = Invoice.query.filter(
-            Invoice.due_date < today, Invoice.status.in_(["draft", "sent"])
-        ).all()
+        overdue_invoices = Invoice.query.filter(Invoice.due_date < today, Invoice.status.in_(["draft", "sent"])).all()
 
         logger.info(f"Found {len(overdue_invoices)} overdue invoices")
 
@@ -159,9 +157,7 @@ def send_weekly_summaries():
         logger.info("Sending weekly summaries...")
 
         # Get users who want weekly summaries
-        users = User.query.filter_by(
-            is_active=True, email_notifications=True, notification_weekly_summary=True
-        ).all()
+        users = User.query.filter_by(is_active=True, email_notifications=True, notification_weekly_summary=True).all()
 
         from app.utils.timezone import now_in_app_timezone
 
@@ -522,7 +518,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 return check_overdue_invoices()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=check_overdue_invoices_with_app,
             trigger="cron",
             hour=9,
@@ -545,7 +542,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 return send_weekly_summaries()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=send_weekly_summaries_with_app,
             trigger="cron",
             day_of_week="mon",
@@ -571,7 +569,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 return check_project_budget_alerts()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=check_project_budget_alerts_with_app,
             trigger="cron",
             hour="*/6",
@@ -593,7 +592,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 return check_task_deadline_approaching()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=check_task_deadline_approaching_with_app,
             trigger="cron",
             hour=8,
@@ -619,7 +619,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 generate_recurring_invoices()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=generate_recurring_invoices_with_app,
             trigger="cron",
             hour=8,
@@ -641,7 +642,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 generate_recurring_project_costs()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=generate_recurring_project_costs_with_app,
             trigger="cron",
             hour=8,
@@ -665,7 +667,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 send_monthly_unpaid_hours_reports()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=send_monthly_unpaid_hours_reports_with_app,
             trigger="cron",
             day=1,
@@ -699,7 +702,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 retry_failed_webhooks()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=retry_failed_webhooks_with_app,
             trigger="cron",
             minute="*/5",
@@ -724,7 +728,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 check_expiring_quotes()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=check_expiring_quotes_with_app,
             trigger="cron",
             hour=9,
@@ -749,7 +754,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 sync_integrations()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=sync_integrations_with_app,
             trigger="cron",
             minute=0,  # Every hour at minute 0
@@ -774,7 +780,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 process_scheduled_reports()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=process_scheduled_reports_with_app,
             trigger="cron",
             minute=0,
@@ -796,7 +803,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 process_remind_to_log()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=process_remind_to_log_with_app,
             trigger="cron",
             minute=0,
@@ -817,7 +825,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 process_missed_clock_in()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=process_missed_clock_in_with_app,
             trigger="cron",
             minute=0,
@@ -842,7 +851,8 @@ def register_scheduled_tasks(scheduler, app=None):
                 except Exception as e:
                     logger.warning("Smart reminder push job failed: %s", e)
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=send_smart_reminder_push_with_app,
             trigger="interval",
             minutes=15,
@@ -867,7 +877,8 @@ def register_scheduled_tasks(scheduler, app=None):
                 except Exception as e:
                     logger.warning("Idle timer check job failed: %s", e)
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=check_idle_timers_with_app,
             trigger="interval",
             minutes=5,
@@ -888,7 +899,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 check_working_time_limits()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=check_working_time_limits_with_app,
             trigger="interval",
             minutes=15,
@@ -914,7 +926,8 @@ def register_scheduled_tasks(scheduler, app=None):
                 except Exception:
                     logger.debug("Base telemetry heartbeat failed", exc_info=True)
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=send_base_telemetry_heartbeat_with_app,
             trigger="cron",
             hour=3,
@@ -938,7 +951,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 sync_google_calendar_for_all_users()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=sync_google_calendar_for_all_users_with_app,
             trigger="interval",
             minutes=30,
@@ -959,7 +973,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 sync_email_threads()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=sync_email_threads_with_app,
             trigger="interval",
             minutes=30,
@@ -982,7 +997,8 @@ def register_scheduled_tasks(scheduler, app=None):
             with external_url_context(app_instance):
                 post_slack_daily_summaries()
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=post_slack_daily_summaries_with_app,
             trigger="interval",
             minutes=30,
@@ -1014,7 +1030,8 @@ def register_scheduled_tasks(scheduler, app=None):
                 except Exception:
                     logger.debug("Gamification leaderboard job failed", exc_info=True)
 
-        _add_job(scheduler,
+        _add_job(
+            scheduler,
             func=recalculate_gamification_leaderboards_with_app,
             trigger="cron",
             hour=3,
@@ -1130,23 +1147,20 @@ def check_idle_timers():
         now = local_now()
         cutoff = now - threshold
 
-        stale = (
-            TimeEntry.query.filter(
-                TimeEntry.end_time.is_(None),
-                # A paused timer is intentionally accumulating no time, so the idle
-                # sweep must never notify or auto-stop it. ``paused_at`` was added
-                # with the pause/resume feature but not wired into this query.
-                TimeEntry.paused_at.is_(None),
-                db.or_(
-                    TimeEntry.last_heartbeat_at < cutoff,
-                    db.and_(
-                        TimeEntry.last_heartbeat_at.is_(None),
-                        TimeEntry.start_time < cutoff,
-                    ),
+        stale = TimeEntry.query.filter(
+            TimeEntry.end_time.is_(None),
+            # A paused timer is intentionally accumulating no time, so the idle
+            # sweep must never notify or auto-stop it. ``paused_at`` was added
+            # with the pause/resume feature but not wired into this query.
+            TimeEntry.paused_at.is_(None),
+            db.or_(
+                TimeEntry.last_heartbeat_at < cutoff,
+                db.and_(
+                    TimeEntry.last_heartbeat_at.is_(None),
+                    TimeEntry.start_time < cutoff,
                 ),
-            )
-            .all()
-        )
+            ),
+        ).all()
 
         if not stale:
             return 0
@@ -1242,9 +1256,7 @@ def check_idle_timers():
                             {
                                 "user_id": entry.user_id,
                                 "timer_id": entry.id,
-                                "notified_at": (
-                                    entry.idle_notified_at.isoformat() if entry.idle_notified_at else None
-                                ),
+                                "notified_at": (entry.idle_notified_at.isoformat() if entry.idle_notified_at else None),
                                 "answer": "timeout",
                                 "stopped": False,
                             },
@@ -1364,9 +1376,7 @@ def _send_idle_push(entry, unanswered_action="review"):
             "will be stopped and the idle time kept."
         )
     else:
-        message = (
-            "Your timer has been idle. Confirm you are still working or it will be flagged for review."
-        )
+        message = "Your timer has been idle. Confirm you are still working or it will be flagged for review."
 
     note = {
         "kind": "idle_timeout",
@@ -1733,7 +1743,6 @@ def check_working_time_limits():
 
         if getattr(settings, "compliance_enabled", False):
             from app.services.attendance_compliance_service import AttendanceComplianceService
-
             from app.utils.timezone import now_in_app_timezone
 
             svc = AttendanceComplianceService()

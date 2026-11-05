@@ -119,7 +119,7 @@ git push origin v3.2.4
 ### On Pull Request → `main` or `develop`
 
 ```
-Smoke Tests (5 min) 
+Smoke Tests (5 min)
     ↓
 Parallel:
 ├─ Unit Tests (10 min)
@@ -406,4 +406,3 @@ git push origin :refs/tags/v3.2.4  # Delete remote tag
 
 **Last Updated:** October 2025  
 **Version:** 3.2.x
-

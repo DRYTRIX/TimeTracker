@@ -336,4 +336,3 @@ With these enhancements, you now have:
 **Documentation:** ✅ Complete  
 
 **You're now getting the MOST out of PostHog!** 🎉
-

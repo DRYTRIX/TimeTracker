@@ -1281,4 +1281,3 @@ Docker, database support, HTTPS, monitoring, i18n, PWA, responsive design, real-
 ---
 
 **Note:** This document is maintained to reflect all current features. For the most up-to-date feature list, refer to the main [README.md](../README.md) and individual feature documentation files.
-

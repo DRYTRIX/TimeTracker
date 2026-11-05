@@ -19,7 +19,7 @@ Navigation: **Settings → Custom theme**.
 
 | Name            | Accent  | Notes                                                  |
 |-----------------|---------|--------------------------------------------------------|
-| `default`       | #3b82f6 | The classic TimeTracker look — no overrides applied.   |
+| `default`       | #4F46E5 | The classic TimeTracker look — brand indigo.           |
 | `ocean`         | #0ea5e9 | Deep blue sidebar with sky accents.                    |
 | `forest`        | #16a34a | Calm greens.                                           |
 | `sunset`        | #ea580c | Warm oranges and reds.                                 |
@@ -123,12 +123,12 @@ GET /api/user/theme
       "name": "default",
       "label": "Default",
       "description": "The classic TimeTracker look — …",
-      "accent": "#3b82f6",
-      "preview_colors": ["#3b82f6", "#1f2937", "#f9fafb"]
+      "accent": "#4F46E5",
+      "preview_colors": ["#4F46E5", "#1f2937", "#f9fafb"]
     }
     // …
   ],
-  "accent_presets": ["#3b82f6", "#0ea5e9", "#06b6d4", "…"],
+  "accent_presets": ["#4F46E5", "#3b82f6", "#0ea5e9", "…"],
   "css": "<style id=\"tt-theme-vars\">…</style>"
 }
 ```

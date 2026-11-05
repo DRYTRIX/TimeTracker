@@ -9,7 +9,6 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-
 revision = "143_add_task_custom_fields"
 down_revision = "142_add_mail_test_recipient"
 branch_labels = None

@@ -16,7 +16,7 @@
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
         <form method="POST" action="{{ url_for('payments.edit_payment', payment_id=payment.id) }}" novalidate data-validate-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
             <!-- Invoice Info (Read-only) -->
             <div class="mb-6 p-4 bg-background-light dark:bg-background-dark rounded-lg">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Invoice</h3>
@@ -24,7 +24,7 @@
                     {{ payment.invoice.invoice_number }} - {{ payment.invoice.client_name }}
                 </a>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Amount -->
                 <div>
@@ -129,4 +129,3 @@
     </div>
 </div>
 {% endblock %}
-

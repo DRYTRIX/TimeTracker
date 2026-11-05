@@ -9,11 +9,13 @@ These tests cover:
 - Smoke tests for critical user deletion workflows
 """
 
-import pytest
-from flask import url_for
-from app.models import User, TimeEntry, Project, Client, Role
 from datetime import datetime, timedelta
 from decimal import Decimal
+
+import pytest
+from flask import url_for
+
+from app.models import Client, Project, Role, TimeEntry, User
 
 
 class TestAdminUserList:
@@ -218,6 +220,7 @@ class TestAdminUserPasswordReset:
             # Set an initial password for the user
             user.set_password("oldpassword123")
             from app import db
+
             db.session.commit()
             user_id = user.id
 
@@ -251,6 +254,7 @@ class TestAdminUserPasswordReset:
         """Test password reset with force password change flag."""
         with app.app_context():
             from app import db
+
             user_id = user.id
 
         with client:
@@ -402,8 +406,9 @@ class TestAdminUserDeletion:
         """Test that deleting a user with time entries fails."""
         with app.app_context():
             # Create a time entry for the user
-            from app import db
             from factories import TimeEntryFactory
+
+            from app import db
 
             TimeEntryFactory(
                 user_id=user.id,
@@ -550,9 +555,10 @@ class TestAdminUserDeletionCascading:
         """Test that deleting a user cascades to project costs."""
         with app.app_context():
             # Create a project cost for the user
-            from app.models import ProjectCost
-            from app import db
             from datetime import date
+
+            from app import db
+            from app.models import ProjectCost
 
             project_cost = ProjectCost(
                 project_id=test_project.id,
@@ -651,8 +657,9 @@ class TestUserDeletionSmokeTests:
         """SMOKE: System prevents deletion of user with time entries."""
         with app.app_context():
             # Create time entry
-            from app import db
             from factories import TimeEntryFactory
+
+            from app import db
 
             TimeEntryFactory(
                 user_id=user.id,

@@ -9,46 +9,53 @@ Usage:
 
 import os
 import sys
+
 import psycopg2
 from psycopg2 import sql
+
 
 def get_db_connection():
     """Get database connection from environment variables"""
     return psycopg2.connect(
-        host=os.getenv('DB_HOST', 'localhost'),
-        port=os.getenv('DB_PORT', '5432'),
-        database=os.getenv('DB_NAME', 'timetracker'),
-        user=os.getenv('DB_USER', 'timetracker'),
-        password=os.getenv('DB_PASSWORD', 'timetracker')
+        host=os.getenv("DB_HOST", "localhost"),
+        port=os.getenv("DB_PORT", "5432"),
+        database=os.getenv("DB_NAME", "timetracker"),
+        user=os.getenv("DB_USER", "timetracker"),
+        password=os.getenv("DB_PASSWORD", "timetracker"),
     )
+
 
 def table_exists(cursor, table_name):
     """Check if a table exists"""
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
+            SELECT FROM information_schema.tables
+            WHERE table_schema = 'public'
             AND table_name = %s
         );
-    """, (table_name,))
+    """,
+        (table_name,),
+    )
     return cursor.fetchone()[0]
+
 
 def migrate():
     """Run the migration"""
     print("Starting project_costs migration...")
-    
+
     try:
         conn = get_db_connection()
         conn.autocommit = False
         cursor = conn.cursor()
-        
+
         # Check if table already exists
-        if table_exists(cursor, 'project_costs'):
+        if table_exists(cursor, "project_costs"):
             print("✓ Table 'project_costs' already exists. Skipping migration.")
             return True
-        
+
         print("Creating project_costs table...")
-        
+
         # Create table
         cursor.execute("""
             CREATE TABLE project_costs (
@@ -70,7 +77,7 @@ def migrate():
             );
         """)
         print("✓ Created project_costs table")
-        
+
         # Create indexes
         print("Creating indexes...")
         cursor.execute("CREATE INDEX ix_project_costs_project_id ON project_costs(project_id);")
@@ -78,35 +85,35 @@ def migrate():
         cursor.execute("CREATE INDEX ix_project_costs_cost_date ON project_costs(cost_date);")
         cursor.execute("CREATE INDEX ix_project_costs_invoice_id ON project_costs(invoice_id);")
         print("✓ Created indexes")
-        
+
         # Add comments
         print("Adding table comments...")
         cursor.execute("""
-            COMMENT ON TABLE project_costs IS 
+            COMMENT ON TABLE project_costs IS
             'Tracks project expenses beyond hourly work (travel, materials, services, etc.)';
         """)
         cursor.execute("""
-            COMMENT ON COLUMN project_costs.category IS 
+            COMMENT ON COLUMN project_costs.category IS
             'Category of cost: travel, materials, services, equipment, software, other';
         """)
         cursor.execute("""
-            COMMENT ON COLUMN project_costs.billable IS 
+            COMMENT ON COLUMN project_costs.billable IS
             'Whether this cost should be billed to the client';
         """)
         cursor.execute("""
-            COMMENT ON COLUMN project_costs.invoiced IS 
+            COMMENT ON COLUMN project_costs.invoiced IS
             'Whether this cost has been included in an invoice';
         """)
         print("✓ Added comments")
-        
+
         # Commit the transaction
         conn.commit()
         print("✓ Migration completed successfully!")
-        
+
         cursor.close()
         conn.close()
         return True
-        
+
     except psycopg2.Error as e:
         print(f"✗ Database error: {e}")
         if conn:
@@ -118,7 +125,7 @@ def migrate():
             conn.rollback()
         return False
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     success = migrate()
     sys.exit(0 if success else 1)
-

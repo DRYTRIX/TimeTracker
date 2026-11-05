@@ -45,7 +45,7 @@ Fixed hardcoded strings in templates:
 
 Enhanced the language switcher in the navigation bar:
 
-**Position**: 
+**Position**:
 - Located between command palette and user profile
 - Visible on all screen sizes (responsive)
 - Icon-only on mobile, label shown on desktop
@@ -104,7 +104,7 @@ Includes:
 
 ### Translation Workflow
 
-1. **Automatic Compilation**: 
+1. **Automatic Compilation**:
    - Translation files (`.po`) are automatically compiled to binary files (`.mo`) on application startup
    - Handled by `app/utils/i18n.py`
    - No manual compilation needed
@@ -244,4 +244,3 @@ The application is now fully internationalized and ready for users in 6 differen
 **Date**: October 7, 2025
 **Completed by**: AI Assistant
 **Status**: ✅ Complete and Tested
-

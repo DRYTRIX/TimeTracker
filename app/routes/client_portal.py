@@ -16,6 +16,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     send_from_directory,
     session,
     url_for,
@@ -24,7 +25,6 @@ from flask_babel import gettext as _
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
-from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.models import (
     DEFAULT_WIDGET_ORDER,
     VALID_WIDGET_IDS,
@@ -47,6 +47,7 @@ from app.services.client_notification_service import ClientNotificationService
 from app.services.payment_gateway_service import PaymentGatewayService
 from app.utils.backup import is_database_restore_in_progress
 from app.utils.db import safe_commit
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 
 client_portal_bp = Blueprint("client_portal", __name__)
 
@@ -443,10 +444,10 @@ def login():
     # Redirect to intended page or dashboard
     next_page = request.form.get("next") or request.args.get("next")
     return safe_redirect(
-            next_page,
-            allowed_prefixes=("/client-portal",),
-            fallback=url_for("client_portal.dashboard"),
-        )
+        next_page,
+        allowed_prefixes=("/client-portal",),
+        fallback=url_for("client_portal.dashboard"),
+    )
 
 
 @client_portal_bp.route("/client-portal/logout")
@@ -1547,34 +1548,39 @@ def download_attachment(attachment_id):
         flash(_("Invalid attachment type."), "error")
         return redirect(url_for("client_portal.documents"))
 
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path, safe_path_under
+
+    def _portal_attachment_path(stored: str) -> str:
+        if stored.startswith("uploads/"):
+            return safe_path_under(
+                os.path.join(current_app.root_path, "static", "uploads"),
+                os.path.basename(stored),
+            )
+        # Paths under app/static (e.g. uploads/... stored without leading convention)
+        return resolve_stored_upload_path(current_app.root_path, stored, under="static")
+
     if attachment_type == "client":
         attachment = ClientAttachment.query.get(attachment_id)
         if attachment and attachment.client_id == client.id and attachment.is_visible_to_client:
-            if attachment.file_path.startswith("uploads/"):
-                file_dir = os.path.join(current_app.root_path, "..", "app/static/uploads")
-                filename = os.path.basename(attachment.file_path)
-            else:
-                file_dir = os.path.join(current_app.root_path, "static", os.path.dirname(attachment.file_path))
-                filename = os.path.basename(attachment.file_path)
-
-            return send_from_directory(
-                file_dir, filename, as_attachment=True, download_name=attachment.original_filename
-            )
+            try:
+                file_path = _portal_attachment_path(attachment.file_path)
+            except PathEscapeError:
+                flash(_("Attachment not found or access denied."), "error")
+                return redirect(url_for("client_portal.documents"))
+            if os.path.isfile(file_path):
+                return send_file(file_path, as_attachment=True, download_name=attachment.original_filename)
     else:
         attachment = ProjectAttachment.query.get(attachment_id)
         if attachment:
             project = Project.query.get(attachment.project_id)
             if project and project.client_id == client.id and attachment.is_visible_to_client:
-                if attachment.file_path.startswith("uploads/"):
-                    file_dir = os.path.join(current_app.root_path, "..", "app/static/uploads")
-                    filename = os.path.basename(attachment.file_path)
-                else:
-                    file_dir = os.path.join(current_app.root_path, "static", os.path.dirname(attachment.file_path))
-                    filename = os.path.basename(attachment.file_path)
-
-                return send_from_directory(
-                    file_dir, filename, as_attachment=True, download_name=attachment.original_filename
-                )
+                try:
+                    file_path = _portal_attachment_path(attachment.file_path)
+                except PathEscapeError:
+                    flash(_("Attachment not found or access denied."), "error")
+                    return redirect(url_for("client_portal.documents"))
+                if os.path.isfile(file_path):
+                    return send_file(file_path, as_attachment=True, download_name=attachment.original_filename)
 
     flash(_("Attachment not found or access denied."), "error")
     return redirect(url_for("client_portal.documents"))
@@ -1711,7 +1717,6 @@ def survey_response(token):
     return render_template("client_portal/survey.html", survey=survey, client=client or Client(name="Client"))
 
 
-
 @client_portal_bp.route("/client-portal/messages")
 def portal_messages():
     """Client portal communication hub."""
@@ -1786,7 +1791,7 @@ def portal_messages_stream():
     def generate():
         service = ClientMessageService()
         last_id = request.args.get("after_id", type=int) or 0
-        for _ in range(60):
+        for _tick in range(60):
             messages = service.list_messages(client.id, after_id=last_id, limit=50)
             if messages:
                 last_id = messages[-1].id

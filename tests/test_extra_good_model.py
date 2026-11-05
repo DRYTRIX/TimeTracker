@@ -2,11 +2,13 @@
 Tests for ExtraGood model
 """
 
-import pytest
-from decimal import Decimal
 from datetime import datetime
-from app.models import ExtraGood, Project, User, Client, Invoice
+from decimal import Decimal
+
+import pytest
 from factories import InvoiceFactory
+
+from app.models import Client, ExtraGood, Invoice, Project, User
 
 
 class TestExtraGoodModel:

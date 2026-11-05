@@ -301,4 +301,3 @@ All existing flash messages and `showToast()` calls will automatically use the n
 ## Support
 
 For issues or feature requests, please contact the development team.
-

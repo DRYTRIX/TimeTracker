@@ -1,0 +1,185 @@
+# TimeTracker Production Deployment
+# Generated: __GENERATED_AT__
+# Version: __VERSION__
+# Image: __PRODUCTION_IMAGE__
+
+services:
+  certgen:
+    image: alpine:latest
+    container_name: timetracker-certgen
+    volumes:
+      - ./nginx/ssl:/certs
+      - ./scripts:/scripts:ro
+    command: sh /scripts/generate-certs.sh
+    restart: "no"
+
+  nginx:
+    image: nginx:alpine
+    container_name: timetracker-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      certgen:
+        condition: service_completed_successfully
+      app:
+        condition: service_started
+    restart: unless-stopped
+
+  app:
+    image: __PRODUCTION_IMAGE__
+    container_name: timetracker-app
+    environment:
+      - TZ=${TZ:-Europe/Brussels}
+      - CURRENCY=${CURRENCY:-EUR}
+      - ROUNDING_MINUTES=${ROUNDING_MINUTES:-1}
+      - SINGLE_ACTIVE_TIMER=${SINGLE_ACTIVE_TIMER:-true}
+      - ALLOW_SELF_REGISTER=${ALLOW_SELF_REGISTER:-true}
+      - IDLE_TIMEOUT_MINUTES=${IDLE_TIMEOUT_MINUTES:-30}
+      - ADMIN_USERNAMES=${ADMIN_USERNAMES:-admin}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
+      - WTF_CSRF_SSL_STRICT=${WTF_CSRF_SSL_STRICT:-true}
+      - WTF_CSRF_ENABLED=${WTF_CSRF_ENABLED:-true}
+      - WTF_CSRF_TIME_LIMIT=${WTF_CSRF_TIME_LIMIT:-3600}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-true}
+      - SESSION_COOKIE_SAMESITE=${SESSION_COOKIE_SAMESITE:-Lax}
+      - REMEMBER_COOKIE_SECURE=${REMEMBER_COOKIE_SECURE:-true}
+      - CSRF_COOKIE_SECURE=${CSRF_COOKIE_SECURE:-true}
+      - CSRF_COOKIE_HTTPONLY=${CSRF_COOKIE_HTTPONLY:-false}
+      - CSRF_COOKIE_SAMESITE=${CSRF_COOKIE_SAMESITE:-Lax}
+      - CSRF_COOKIE_NAME=${CSRF_COOKIE_NAME:-XSRF-TOKEN}
+      - PREFERRED_URL_SCHEME=${PREFERRED_URL_SCHEME:-https}
+      - WTF_CSRF_TRUSTED_ORIGINS=${WTF_CSRF_TRUSTED_ORIGINS:-https://localhost}
+      - DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-timetracker}@redis:6379/0
+      - REDIS_ENABLED=${REDIS_ENABLED:-true}
+      - LOG_FILE=/app/logs/timetracker.log
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_TRACES_RATE=${SENTRY_TRACES_RATE:-0.0}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_TOKEN=${OTEL_EXPORTER_OTLP_TOKEN:-}
+      - ENABLE_TELEMETRY=${ENABLE_TELEMETRY:-false}
+      - TELE_SALT=${TELE_SALT:-8f4a7b2e9c1d6f3a5e8b4c7d2a9f6e3b1c8d5a7f2e9b4c6d3a8f5e1b7c4d9a2f}
+    ports: []
+    volumes:
+      - app_data:/data
+      - app_logs:/app/logs
+      - app_uploads:/app/app/static/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:16-alpine
+    container_name: timetracker-db
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-timetracker}
+      - POSTGRES_USER=${POSTGRES_USER:-timetracker}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-timetracker}
+      - TZ=${TZ:-Europe/Brussels}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: timetracker-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-timetracker}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: timetracker-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: timetracker-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost:3000}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:latest
+    container_name: timetracker-loki
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: timetracker-promtail
+    volumes:
+      - ./logs:/var/log/timetracker:ro
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+volumes:
+  app_data:
+    driver: local
+  app_logs:
+    driver: local
+  app_uploads:
+    driver: local
+  db_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+  redis_data:
+    driver: local

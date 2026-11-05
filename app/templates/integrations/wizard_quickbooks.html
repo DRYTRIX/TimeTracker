@@ -12,7 +12,7 @@
                     {{ _('Configure OAuth credentials from Intuit Developer Dashboard.') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="quickbooks_client_id" class="block text-sm font-medium mb-2">
                     {{ _('QuickBooks OAuth Client ID') }} <span class="text-red-500">*</span>
@@ -21,7 +21,7 @@
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                        placeholder="{{ _('Enter OAuth Client ID') }}" required>
             </div>
-            
+
             <div>
                 <label for="quickbooks_client_secret" class="block text-sm font-medium mb-2">
                     {{ _('QuickBooks OAuth Client Secret') }} <span class="text-red-500">*</span>
@@ -31,7 +31,7 @@
                        placeholder="{{ _('Enter OAuth Client Secret') }}" required>
             </div>
             {% endif %}
-            
+
             <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                 <p class="text-sm text-yellow-800 dark:text-yellow-200">
                     <i class="fas fa-exclamation-triangle mr-2"></i>
@@ -57,7 +57,7 @@
                     {{ _('Find your company ID (realm ID) in QuickBooks after connecting via OAuth.') }}
                 </p>
             </div>
-            
+
             <div class="flex items-center">
                 <input type="checkbox" name="use_sandbox" id="use_sandbox" value="1"
                        {% if current_config.get('use_sandbox', True) %}checked{% endif %}
@@ -89,7 +89,7 @@
                     </option>
                 </select>
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium mb-2">{{ _('Items to Sync') }}</label>
                 <div class="space-y-2">
@@ -120,7 +120,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div>
                 <label for="sync_interval" class="block text-sm font-medium mb-2">{{ _('Sync Schedule') }}</label>
                 <select id="sync_interval" name="sync_interval"
@@ -130,7 +130,7 @@
                     <option value="daily" {% if current_config.get('sync_interval') == 'daily' %}selected{% endif %}>{{ _('Daily') }}</option>
                 </select>
             </div>
-            
+
             <div class="flex items-center">
                 <input type="checkbox" name="auto_sync" id="auto_sync" value="1"
                        {% if current_config.get('auto_sync', False) %}checked{% endif %}
@@ -156,7 +156,7 @@
                     {{ _('QuickBooks account ID to use for expenses when no mapping is configured') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="customer_mappings" class="block text-sm font-medium mb-2">
                     {{ _('Customer Mappings') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs font-normal">({{ _('JSON') }})</span>
@@ -168,7 +168,7 @@
                     {{ _('Map TimeTracker client IDs to QuickBooks customer IDs (JSON format)') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="account_mappings" class="block text-sm font-medium mb-2">
                     {{ _('Account Mappings') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs font-normal">({{ _('JSON') }})</span>
@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const syncDirection = document.getElementById('sync_direction')?.selectedOptions[0]?.text || '';
                     const syncItems = Array.from(document.querySelectorAll('input[name="sync_items"]:checked'))
                         .map(cb => cb.nextElementSibling.textContent).join(', ') || '{{ _("None") }}';
-                    
+
                     document.getElementById('review-realm-id').textContent = realmId;
                     document.getElementById('review-sync-direction').textContent = syncDirection;
                     document.getElementById('review-sync-items').textContent = syncItems;

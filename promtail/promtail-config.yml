@@ -20,7 +20,7 @@ scrape_configs:
         labels:
           job: timetracker
           __path__: /var/log/timetracker/app.jsonl
-    
+
     # Parse JSON logs
     pipeline_stages:
       - json:
@@ -30,12 +30,11 @@ scrape_configs:
             logger: name
             message: message
             request_id: request_id
-      
+
       - labels:
           level:
           logger:
-      
+
       - timestamp:
           source: timestamp
           format: RFC3339
-

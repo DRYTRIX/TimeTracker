@@ -1,53 +1,54 @@
 name: timetracker_mobile
 description: TimeTracker mobile app for Android and iOS
 publish_to: 'none'
-version: 5.18.5+1
+version: 5.19.0+2
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.10.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # State Management
-  flutter_riverpod: ^2.4.9
-  
+  # Stay on Riverpod 2 until providers are migrated off StateNotifier (removed in 3.x).
+  flutter_riverpod: ">=2.6.1 <3.0.0"
+
   # HTTP Client
-  dio: ^5.4.0
-  
+  dio: ^5.11.1
+
   # Local Database
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  path_provider: ^2.1.1
-  
+  path_provider: ^2.1.6
+
   # Secure Storage
-  flutter_secure_storage: ^9.0.0
-  
+  flutter_secure_storage: ^11.2.0
+
   # Background Tasks
-  workmanager: ^0.9.0+3
-  flutter_foreground_task: ^8.17.0
-  
+  workmanager: ^0.10.10
+  flutter_foreground_task: ^11.0.3
+
   # Notifications
-  flutter_local_notifications: ^17.2.1
-  permission_handler: ^11.1.0
+  flutter_local_notifications: ^22.3.3
+  permission_handler: ^13.0.2
   # Optional FCM for idle "Still working?" wake-up (Issue #722). Requires
   # google-services.json / GoogleService-Info.plist when building with Firebase.
-  firebase_core: ^3.8.1
-  firebase_messaging: ^15.1.6
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
 
   # UI Components
-  intl: ^0.18.1
+  intl: ^0.20.3
   table_calendar: ^3.0.9
-  
+
   # Utilities
-  shared_preferences: ^2.2.2
-  connectivity_plus: ^5.0.2
+  shared_preferences: ^2.5.6
+  connectivity_plus: ^7.3.2
   timeago: ^3.6.1
-  package_info_plus: ^8.0.0
-  google_fonts: ^8.0.0
-  share_plus: ^10.0.0
-  geolocator: ^13.0.2
+  package_info_plus: ^10.2.2
+  google_fonts: ^9.0.0
+  share_plus: ^13.3.1
+  geolocator: ^14.0.1
 
   # OpenTelemetry OTLP/HTTP traces (same env names as server: OTEL_EXPORTER_OTLP_* via --dart-define)
   opentelemetry: ^0.18.11
@@ -55,7 +56,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.7
   flutter_launcher_icons: ^0.14.0
@@ -72,5 +73,5 @@ flutter_launcher_icons:
   # because the iOS project files (Runner.xcodeproj) may not exist on Windows.
   ios: false
   image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#4A90E2"
+  adaptive_icon_background: "#4F46E5"
   adaptive_icon_foreground: "assets/icon/app_icon.png"

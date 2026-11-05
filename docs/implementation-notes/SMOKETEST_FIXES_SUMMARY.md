@@ -31,7 +31,7 @@
 
 ### 2. PDF Generation Compatibility (1 Failure)
 
-**Problem**: 
+**Problem**:
 ```
 TypeError: PDF.__init__() takes 1 positional argument but 3 were given
 ```
@@ -47,7 +47,7 @@ This was caused by an incompatibility between WeasyPrint 60.2 and the latest ver
 
 ### 3. Test Logic Error (1 Failure)
 
-**Problem**: 
+**Problem**:
 `test_api_get_goal_stats` was failing because it was setting goal statuses directly but the API endpoint calls `update_status()` which recalculates status based on actual hours and dates.
 
 **Solution**:
@@ -92,4 +92,3 @@ pytest -vs -m smoke tests/test_weekly_goals.py tests/test_permissions_routes.py
 ## Notes
 
 All fixture-related errors have been completely resolved. The PDF generation test may fail on Windows due to missing system libraries but should pass on Linux CI where the required libraries are typically installed.
-

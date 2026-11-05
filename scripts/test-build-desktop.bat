@@ -25,7 +25,7 @@ if errorlevel 1 (
     echo [ERROR] Node.js not found
     exit /b 1
 ) else (
-    echo [OK] Node.js found: 
+    echo [OK] Node.js found:
     node --version
 )
 
@@ -64,7 +64,7 @@ if exist "node_modules" (
     ) else (
         echo [WARNING] electron-builder not found in node_modules
     )
-    
+
     REM Test if electron can be required
     echo.
     echo Testing electron require...

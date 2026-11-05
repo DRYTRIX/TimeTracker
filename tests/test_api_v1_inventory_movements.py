@@ -1,22 +1,17 @@
 """Tests for API v1 inventory movements (including return/waste with devaluation)."""
 
 import json
+
 import pytest
 
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from decimal import Decimal
+
 from flask import url_for
+
 from app import db
-from app.models import (
-    User,
-    ApiToken,
-    Warehouse,
-    StockItem,
-    WarehouseStock,
-    StockMovement,
-    StockLot,
-)
+from app.models import ApiToken, StockItem, StockLot, StockMovement, User, Warehouse, WarehouseStock
 
 
 @pytest.fixture

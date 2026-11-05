@@ -61,7 +61,7 @@
             <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ _('Existing Backups') }}</h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Backups stored on the server</p>
         </div>
-        
+
         {% if backups %}
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 responsive-cards">
@@ -89,15 +89,15 @@
                             {{ backup.size_mb }} MB
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium mobile-actions" data-label="Actions">
-                            <a href="{{ url_for('admin.download_backup', filename=backup.filename) }}" 
+                            <a href="{{ url_for('admin.download_backup', filename=backup.filename) }}"
                                class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 mr-3">
                                 <i class="fas fa-download mr-1"></i>Download
                             </a>
-                            <button onclick="confirmRestore('{{ backup.filename }}')" 
+                            <button onclick="confirmRestore('{{ backup.filename }}')"
                                     class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-200 mr-3">
                                 <i class="fas fa-undo-alt mr-1"></i>Restore
                             </button>
-                            <button onclick="confirmDelete('{{ backup.filename }}')" 
+                            <button onclick="confirmDelete('{{ backup.filename }}')"
                                     class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200">
                                 <i class="fas fa-trash mr-1"></i>Delete
                             </button>
@@ -155,13 +155,13 @@
             </div>
         </div>
         <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-            <button onclick="hideRestoreModal()" 
+            <button onclick="hideRestoreModal()"
                     class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
                 Cancel
             </button>
             <form id="restoreForm" method="POST" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" 
+                <button type="submit"
                         class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md">
                     <i class="fas fa-undo-alt mr-1"></i>Restore Database
                 </button>
@@ -187,13 +187,13 @@
             </p>
         </div>
         <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-            <button onclick="hideDeleteModal()" 
+            <button onclick="hideDeleteModal()"
                     class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600">
                 Cancel
             </button>
             <form id="deleteForm" method="POST" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" 
+                <button type="submit"
                         class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md">
                     Delete Backup
                 </button>
@@ -239,4 +239,3 @@ document.getElementById('restoreForm').addEventListener('submit', function(e) {
 });
 </script>
 {% endblock %}
-

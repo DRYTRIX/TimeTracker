@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 def test_task_report_returns_correct_hours_and_entries(client, app, admin_user, user, project, task):
     """Task report shows tasks with time entries in range and correct hours/entry count."""
     from app import db
-    from app.models import TimeEntry, Settings
+    from app.models import Settings, TimeEntry
 
     with app.app_context():
         settings = Settings.get_settings()
@@ -67,10 +67,12 @@ def test_task_report_returns_correct_hours_and_entries(client, app, admin_user, 
 
 def test_task_report_excel_export_returns_correct_hours(client, app, admin_user, user, project, task):
     """Task report Excel export has correct task and hours."""
-    from app import db
-    from app.models import TimeEntry, Settings
-    from openpyxl import load_workbook
     import io
+
+    from openpyxl import load_workbook
+
+    from app import db
+    from app.models import Settings, TimeEntry
 
     with app.app_context():
         settings = Settings.get_settings()

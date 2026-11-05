@@ -24,10 +24,10 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div>
                 <label for="name" class="form-label">{{ _('Role Name') }}</label>
-                <input type="text" 
-                       id="name" 
-                       name="name" 
-                       value="{{ role.name if role else '' }}" 
+                <input type="text"
+                       id="name"
+                       name="name"
+                       value="{{ role.name if role else '' }}"
                        required
                        {% if role and role.is_system_role %}readonly{% endif %}
                        autocomplete="off"
@@ -45,8 +45,8 @@
 
             <div>
                 <label for="description" class="form-label">{{ _('Description') }}</label>
-                <textarea id="description" 
-                          name="description" 
+                <textarea id="description"
+                          name="description"
                           rows="3"
                           autocomplete="off"
                           spellcheck="true"
@@ -58,7 +58,7 @@
             <div>
                 <h3 class="text-lg font-semibold mb-4 text-text-light dark:text-text-dark">{{ _('Permissions') }}</h3>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Select the permissions this role should have:') }}</p>
-                
+
                 {% set categories = {} %}
                 {% for permission in all_permissions %}
                     {% if permission.category not in categories %}
@@ -171,4 +171,3 @@ function toggleCategoryModules(button) {
 }
 </script>
 {% endblock %}
-

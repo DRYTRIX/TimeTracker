@@ -270,9 +270,7 @@ class InvoiceService:
             try:
                 db.session.rollback()
             except Exception:
-                logging.getLogger(__name__).debug(
-                    "Rollback after invoice create failure also failed", exc_info=True
-                )
+                logging.getLogger(__name__).debug("Rollback after invoice create failure also failed", exc_info=True)
             return {
                 "success": False,
                 "message": "Could not create invoice due to a database error",
@@ -496,7 +494,8 @@ class InvoiceService:
             invoice.tax_rate = Decimal(str(kwargs["tax_rate"]))
         if "currency_code" in kwargs:
             invoice.currency_code = kwargs["currency_code"]
-        if "status" in kwargs:
+        # status transitions only when explicitly allowed (e.g. cancel soft-delete)
+        if "status" in kwargs and kwargs.get("_allow_status"):
             invoice.status = kwargs["status"]
 
         if not safe_commit("update_invoice", {"invoice_id": invoice_id, "user_id": user_id}):
@@ -527,6 +526,7 @@ class InvoiceService:
                 "error": "invalid_status",
             }
 
+        invoice.release_invoiced_costs_and_expenses()
         db.session.delete(invoice)
 
         if not safe_commit("delete_invoice", {"invoice_id": invoice_id, "user_id": user_id}):

@@ -1,9 +1,11 @@
 """Smoke tests for audit trail feature"""
 
-import pytest
 from datetime import datetime
-from app.models import AuditLog, Project, User, Task
+
+import pytest
+
 from app import db
+from app.models import AuditLog, Project, Task, User
 
 
 @pytest.mark.smoke
@@ -136,7 +138,9 @@ class TestAuditTrailSmoke:
             assert len(created_logs) >= 1
             assert created_logs[0].action == "created"
             # Our created log is for this project
-            our_created = [log for log in created_logs if log.entity_type == "Project" and log.entity_id == test_project.id]
+            our_created = [
+                log for log in created_logs if log.entity_type == "Project" and log.entity_id == test_project.id
+            ]
             assert len(our_created) == 1
 
             # Filter by entity type

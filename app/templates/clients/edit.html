@@ -102,12 +102,12 @@
                                 {{ definition.label }}
                                 {% if definition.is_mandatory %}<span class="text-red-600 dark:text-red-400">*</span>{% endif %}
                             </label>
-                            <input 
-                                type="text" 
-                                id="custom_field_{{ definition.field_key }}" 
-                                name="custom_field_{{ definition.field_key }}" 
-                                value="{{ request.form.get('custom_field_' + definition.field_key, client.get_custom_field(definition.field_key, '') if client.custom_fields else '') }}" 
-                                placeholder="{{ definition.description or _('Enter value') }}" 
+                            <input
+                                type="text"
+                                id="custom_field_{{ definition.field_key }}"
+                                name="custom_field_{{ definition.field_key }}"
+                                value="{{ request.form.get('custom_field_' + definition.field_key, client.get_custom_field(definition.field_key, '') if client.custom_fields else '') }}"
+                                placeholder="{{ definition.description or _('Enter value') }}"
                                 class="form-input w-full"
                                 {% if definition.is_mandatory %}required{% endif %}
                             >
@@ -174,7 +174,7 @@
                     <button type="submit" class="btn btn-primary">{{ _('Update Client') }}</button>
                 </div>
             </form>
-            
+
             {% if client.portal_enabled and client.portal_username and client.email %}
             <div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
                 <form method="POST" action="{{ url_for('clients.send_portal_password_email', client_id=client.id) }}" id="send-email-form">

@@ -48,7 +48,7 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="space-y-8">
             <!-- General Settings -->
             <div id="section-general" class="border-b border-border-light dark:border-border-dark pb-6">
@@ -882,7 +882,7 @@
 <!-- Company Logo Upload - Separate Section -->
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">{{ _('Company Logo') }}</h2>
-    
+
     <!-- Current Logo Display -->
     {% if settings.has_logo() %}
     <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-green-500 dark:border-green-600">
@@ -916,7 +916,7 @@
         </div>
     </div>
     {% endif %}
-    
+
     <!-- Upload Form -->
     <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
         <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-3">{{ _('Upload New Logo') }}</h3>
@@ -928,7 +928,7 @@
                            class="block w-full text-sm text-gray-900 dark:text-gray-300 bg-card-light dark:bg-card-dark border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
                            onchange="previewLogoBeforeUpload(this)">
                 </div>
-                
+
                 <!-- Preview of selected file before upload -->
                 <div id="logoPreview" class="hidden bg-white dark:bg-gray-900 p-4 rounded border border-gray-200 dark:border-gray-700">
                     <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Preview:</p>
@@ -936,7 +936,7 @@
                         <img id="logoPreviewImage" src="" alt="{{ _('Logo Preview') }}" class="max-h-24 max-w-full object-contain">
                     </div>
                 </div>
-                
+
                 <div class="flex items-center gap-3">
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
                         <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -944,7 +944,7 @@
                         </svg>
                         Upload Logo
                     </button>
-                    <button type="button" onclick="document.getElementById('logoFileInput').value = ''; document.getElementById('logoPreview').classList.add('hidden');" 
+                    <button type="button" onclick="document.getElementById('logoFileInput').value = ''; document.getElementById('logoPreview').classList.add('hidden');"
                             class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 px-4 py-2 text-sm">
                         Clear
                     </button>
@@ -965,15 +965,15 @@
 function previewLogoBeforeUpload(input) {
     const preview = document.getElementById('logoPreview');
     const previewImage = document.getElementById('logoPreviewImage');
-    
+
     if (input.files && input.files[0]) {
         const reader = new FileReader();
-        
+
         reader.onload = function(e) {
             previewImage.src = e.target.result;
             preview.classList.remove('hidden');
         };
-        
+
         reader.readAsDataURL(input.files[0]);
     } else {
         preview.classList.add('hidden');

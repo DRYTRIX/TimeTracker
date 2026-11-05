@@ -35,18 +35,12 @@ repos:
       - id: isort
         args: [--profile=black, --line-length=120]
 
-  # Python linting
+  # Python linting — config lives in .flake8 (single source of truth)
   - repo: https://github.com/PyCQA/flake8
     rev: 6.1.0
     hooks:
       - id: flake8
-        args: [
-          --max-line-length=120,
-          --extend-ignore=E203,E501,W503,
-          --exclude=migrations,
-        ]
         additional_dependencies: [
-          flake8-docstrings,
           flake8-bugbear,
         ]
 
@@ -88,7 +82,7 @@ repos:
 default_language_version:
   python: python3.11
 
-# Skip certain files/directories
+# Skip certain files/directories (prefix match — do not anchor with $)
 exclude: |
   (?x)^(
     migrations/|
@@ -98,6 +92,6 @@ exclude: |
     venv/|
     \.git/|
     \.pytest_cache/|
-    __pycache__/
-  )$
-
+    __pycache__/|
+    mobile/.*/ephemeral/
+  )

@@ -258,4 +258,3 @@ For issues or questions:
 2. Verify custom field values exist in client records
 3. Check that email mappings are set up correctly (if using mapping mode)
 4. Ensure saved report views have valid JSON configurations
-

@@ -14,9 +14,9 @@ from app.models import Client, Expense, Invoice, Project, SavedReportView, Share
 from app.services.shared_report_service import SharedReportService
 from app.services.unpaid_hours_service import UnpaidHoursService
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_helpers import module_enabled
 from app.utils.support_report_generation import record_report_generation_for_current_user
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 custom_reports_bp = Blueprint("custom_reports", __name__)
 
@@ -646,8 +646,7 @@ def list_saved_views():
     )
     shared_service = SharedReportService()
     shared_links_by_view = {
-        view.id: [link.to_dict() for link in shared_service.list_active_links_for_view(view.id)]
-        for view in saved_views
+        view.id: [link.to_dict() for link in shared_service.list_active_links_for_view(view.id)] for view in saved_views
     }
     return render_template(
         "reports/saved_views_list.html",
@@ -768,14 +767,17 @@ def create_shared_report_link(view_id):
     if not safe_commit("create_shared_report_link", {"view_id": view_id}):
         return jsonify({"error": "Failed to create share link"}), 500
 
-    return jsonify(
-        {
-            "success": True,
-            "message": _("Share link created successfully"),
-            "link": link.to_dict(include_url=True),
-            "url": service.get_public_url(link),
-        }
-    ), 201
+    return (
+        jsonify(
+            {
+                "success": True,
+                "message": _("Share link created successfully"),
+                "link": link.to_dict(include_url=True),
+                "url": service.get_public_url(link),
+            }
+        ),
+        201,
+    )
 
 
 @custom_reports_bp.route("/reports/builder/<int:view_id>/share/<token>", methods=["DELETE"])

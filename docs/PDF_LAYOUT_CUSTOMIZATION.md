@@ -186,13 +186,13 @@ For invoice items only (time-based billing):
         <h1 class="company-name">{{ settings.company_name }}</h1>
         <div class="invoice-title">INVOICE</div>
     </div>
-    
+
     <div class="meta">
         <p><strong>Invoice #:</strong> {{ invoice.invoice_number }}</p>
         <p><strong>Date:</strong> {{ format_date(invoice.issue_date) }}</p>
         <p><strong>Due:</strong> {{ format_date(invoice.due_date) }}</p>
     </div>
-    
+
     <div class="client-info">
         <h3>Bill To:</h3>
         <p><strong>{{ invoice.client_name }}</strong></p>
@@ -200,7 +200,7 @@ For invoice items only (time-based billing):
         <p>{{ invoice.client_email }}</p>
         {% endif %}
     </div>
-    
+
     <table>
         <thead>
             <tr>
@@ -237,7 +237,7 @@ For invoice items only (time-based billing):
             </tr>
         </tfoot>
     </table>
-    
+
     <div class="footer">
         <p><strong>{{ _('Terms & Conditions:') }}</strong> {{ settings.invoice_terms }}</p>
     </div>
@@ -639,4 +639,3 @@ Control element stacking order:
 - System-wide template storage
 - Jinja2 template variables
 - Rate limiting and security features
-

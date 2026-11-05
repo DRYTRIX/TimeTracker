@@ -125,7 +125,7 @@ python app.py
 > - `ldap`: LDAP directory only
 > - `both`: OIDC and local password (no LDAP)
 > - `all`: Local + OIDC + LDAP
-> 
+>
 > See [OIDC Setup Guide](admin/configuration/OIDC_SETUP.md#5-authentication-methods) and [LDAP Setup](admin/configuration/LDAP_SETUP.md) for details.
 
 ---
@@ -404,7 +404,7 @@ Ready to deploy for real use?
    ```bash
    # Generate a random key
    SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')
-   
+
    # Set admin usernames (comma-separated)
    ADMIN_USERNAMES=admin,yourusername
    ```
@@ -530,4 +530,3 @@ TimeTracker is a web application that works great on mobile browsers. A Progress
 [← Back to Main README](../README.md) | [View All Documentation](README.md)
 
 </div>
-

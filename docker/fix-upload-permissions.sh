@@ -20,7 +20,7 @@ fix_directory() {
     if [ -d "$dir" ]; then
         echo "Fixing permissions for: $dir"
         chmod 755 "$dir"
-        
+
         # Test write permissions
         local test_file="$dir/test_permissions.tmp"
         if echo "test" > "$test_file" 2>/dev/null; then

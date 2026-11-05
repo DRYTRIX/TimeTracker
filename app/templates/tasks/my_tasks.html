@@ -115,13 +115,13 @@
                     <label for="my-tasks-filter-search" class="form-label">{{ _('Search') }}</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted-light dark:text-text-muted-dark pointer-events-none"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-input pl-10" id="my-tasks-filter-search" name="search" 
+                        <input type="text" class="form-input pl-10" id="my-tasks-filter-search" name="search"
                                value="{{ search }}" placeholder="{{ _('Task name or description') }}">
                     </div>
                 </div>
                 <div>
                     <label for="tags" class="form-label">{{ _('Tags') }}</label>
-                    <input type="text" class="form-input" id="tags" name="tags" 
+                    <input type="text" class="form-input" id="tags" name="tags"
                            value="{{ tags }}" placeholder="{{ _('e.g. bug, frontend') }}">
                 </div>
                 <div>
@@ -224,13 +224,13 @@
                             {{ task.name }}
                         </a>
                     </h5>
-                    
+
                     {% if task.description %}
                     <p class="card-text text-muted small mb-3">
                         {{ task.description[:120] }}{% if task.description|length > 120 %}...{% endif %}
                     </p>
                     {% endif %}
-                    
+
                     {% if task.tag_list %}
                     <div class="d-flex flex-wrap gap-1 mb-3">
                         {% for tag in task.tag_list %}
@@ -238,7 +238,7 @@
                         {% endfor %}
                     </div>
                     {% endif %}
-                    
+
                     <!-- Project Info -->
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
@@ -257,7 +257,7 @@
                             <span class="text-muted small">{{ task.assignees|map(attribute='display_name')|join(', ') }}</span>
                         </div>
                         {% endif %}
-                        
+
                         {% if task.due_date %}
                         <div class="d-flex align-items-center mb-2">
                             <div class="bg-{% if task.is_overdue %}danger{% else %}secondary{% endif %} bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px;">
@@ -269,7 +269,7 @@
                             </span>
                         </div>
                         {% endif %}
-                        
+
                         {% if task.estimated_hours %}
                         <div class="d-flex align-items-center mb-2">
                             <div class="bg-warning bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px;">
@@ -278,7 +278,7 @@
                             <span class="text-muted small">Est: {{ task.estimated_hours }}h</span>
                         </div>
                         {% endif %}
-                        
+
                         {% if task.total_hours > 0 %}
                         <div class="d-flex align-items-center mb-2">
                             <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px;">
@@ -287,7 +287,7 @@
                             <span class="text-muted small">Actual: {{ task.total_hours }}h</span>
                         </div>
                         {% endif %}
-                        
+
                         <!-- Task Type Indicator -->
                         <div class="d-flex align-items-center mb-2">
                             <div class="bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 20px; height: 20px;">
@@ -302,7 +302,7 @@
                             </span>
                         </div>
                     </div>
-                    
+
                     <!-- Progress Bar -->
                     {% if task.estimated_hours and task.total_hours > 0 %}
                     <div class="mb-3">
@@ -311,9 +311,9 @@
                             <small class="text-muted fw-bold">{{ task.progress_percentage }}%</small>
                         </div>
                         <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-primary" role="progressbar" 
+                            <div class="progress-bar bg-primary" role="progressbar"
                                  style="width: {{ task.progress_percentage }}%"
-                                 aria-valuenow="{{ task.progress_percentage }}" 
+                                 aria-valuenow="{{ task.progress_percentage }}"
                                  aria-valuemin="0" aria-valuemax="100">
                             </div>
                         </div>
@@ -354,7 +354,7 @@
                 <i class="fas fa-chevron-left"></i> {{ _('Previous') }}
             </a>
             {% endif %}
-            
+
             {% for page_num in pagination.iter_pages() %}
                 {% if page_num %}
                     {% if page_num != pagination.page %}
@@ -366,7 +366,7 @@
                 <span class="px-3 py-1.5 text-text-muted-light dark:text-text-muted-dark">...</span>
                 {% endif %}
             {% endfor %}
-            
+
             {% if pagination.has_next %}
             <a class="btn btn-secondary btn-sm" href="{{ url_for('tasks.my_tasks', page=pagination.next_num, **request.args) }}">
                 {{ _('Next') }} <i class="fas fa-chevron-right"></i>
@@ -523,19 +523,19 @@
     .task-card {
         margin-bottom: 1rem;
     }
-    
+
     .card-header {
         padding: 1rem 1rem 0.5rem 1rem;
     }
-    
+
     .task-card .p-6 {
         padding: 0.75rem 1rem;
     }
-    
+
     .card-footer {
         padding: 0.75rem 1rem 1rem 1rem;
     }
-    
+
     .status-badge, .priority-badge {
         font-size: 0.7rem;
         padding: 0.2rem 0.6rem;
@@ -583,9 +583,9 @@ function toggleFilterVisibility() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
-    
+
     const isCollapsed = filterBody.classList.contains('filter-collapsed');
-    
+
     if (isCollapsed) {
         // Show filters
         filterBody.classList.remove('filter-collapsed');
@@ -608,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterBody = document.getElementById('filterBody');
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
-    
+
     // Check if user previously hid filters
     const filtersVisible = localStorage.getItem('myTaskFiltersVisible');
     if (filtersVisible === 'false') {
@@ -623,7 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleIcon.classList.add('fa-chevron-up');
         toggleButton.title = '{{ _('Hide Filters') }}';
     }
-    
+
     // Add transition class after initial setup
     setTimeout(() => {
         filterBody.classList.add('filter-toggle-transition');

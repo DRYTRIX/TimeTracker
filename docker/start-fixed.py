@@ -5,15 +5,90 @@ This script ensures proper database initialization order and handles errors grac
 """
 
 import os
+import subprocess
 import sys
 import time
-import subprocess
 import traceback
-import psycopg2
 from urllib.parse import urlparse
+
+import psycopg2
+
 
 def _truthy(v: str) -> bool:
     return str(v or "").strip().lower() in ("1", "true", "yes", "y", "on")
+
+
+def resolve_gunicorn_max_requests(environ=None) -> int:
+    """Resolve GUNICORN_MAX_REQUESTS for worker recycling.
+
+    When PORT is set (Render/Railway/etc.), default to 0 (disabled): a single
+    eventlet worker cannot recycle without a no-listener window that trips
+    platform health probes. Local/docker-compose (PORT unset) keeps 1000 for
+    memory hygiene. Explicit GUNICORN_MAX_REQUESTS always wins.
+    """
+    env = environ if environ is not None else os.environ
+    raw = (env.get("GUNICORN_MAX_REQUESTS") or "").strip()
+    if raw != "":
+        try:
+            return max(0, int(raw))
+        except ValueError:
+            return 0
+    # PaaS typically injects PORT; avoid routine recycle there.
+    if (env.get("PORT") or "").strip():
+        return 0
+    return 1000
+
+
+def resolve_gunicorn_max_requests_jitter(environ=None, max_requests: int = 0) -> int:
+    """Jitter for max-requests; ignored when max_requests is 0."""
+    if max_requests <= 0:
+        return 0
+    env = environ if environ is not None else os.environ
+    raw = (env.get("GUNICORN_MAX_REQUESTS_JITTER") or "").strip()
+    if raw != "":
+        try:
+            return max(0, int(raw))
+        except ValueError:
+            return 100
+    return 100
+
+
+def build_gunicorn_argv(port: str, max_requests: int = 0, max_requests_jitter: int = 100) -> list:
+    """Build gunicorn argv (including argv[0]). Omits max-requests when disabled."""
+    argv = [
+        "gunicorn",
+        "--bind",
+        "0.0.0.0:%s" % port,
+        "--worker-class",
+        "eventlet",
+        "--workers",
+        "1",
+        "--timeout",
+        "120",
+    ]
+    if max_requests > 0:
+        argv.extend(
+            [
+                "--max-requests",
+                str(max_requests),
+                "--max-requests-jitter",
+                str(max(0, max_requests_jitter)),
+            ]
+        )
+    argv.extend(
+        [
+            "--graceful-timeout",
+            "30",
+            "--access-logfile",
+            "-",
+            "--error-logfile",
+            "-",
+            "--log-level",
+            "info",
+            "app:create_app()",
+        ]
+    )
+    return argv
 
 
 def _sqlite_path_from_url(db_url: str):
@@ -24,10 +99,10 @@ def _sqlite_path_from_url(db_url: str):
     prefix_three = "sqlite:///"
     if db_url.startswith("sqlite:////"):
         # sqlite:////absolute/path -> /absolute/path
-        rest = db_url[len("sqlite:////"):].lstrip("/")
+        rest = db_url[len("sqlite:////") :].lstrip("/")
         return "/" + rest if rest else None
     if db_url.startswith("sqlite:///"):
-        raw = db_url[len("sqlite:///"):]
+        raw = db_url[len("sqlite:///") :]
         if raw.startswith("/"):
             return raw
         return os.path.abspath(os.path.join(os.getcwd(), raw))
@@ -39,16 +114,17 @@ def _sqlite_path_from_url(db_url: str):
 def wait_for_database():
     """Wait for database to be ready with proper connection testing"""
     # Logging is handled by main()
-    
+
     # Get database URL from environment
-    db_url = os.getenv('DATABASE_URL', 'postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker')
+    db_url = os.getenv("DATABASE_URL", "postgresql+psycopg2://timetracker:timetracker@db:5432/timetracker")
 
     # If using SQLite, ensure the database directory exists and return immediately.
     # Resolve path the same way the app will: absolute stays absolute, relative is
     # resolved against current working directory (so it matches gunicorn's CWD).
-    if db_url.startswith('sqlite:'):
+    if db_url.startswith("sqlite:"):
         try:
             import sqlite3 as _sqlite3
+
             db_path = _sqlite_path_from_url(db_url)
             if db_path is None:
                 return True  # :memory: or similar
@@ -61,38 +137,33 @@ def wait_for_database():
         except Exception as e:
             print(f"SQLite path/setup check failed: {e}")
             return False
-    
+
     # Parse the URL to get connection details (PostgreSQL)
     # Handle both postgresql:// and postgresql+psycopg2:// schemes
-    if db_url.startswith('postgresql'):
-        if db_url.startswith('postgresql+psycopg2://'):
-            parsed_url = urlparse(db_url.replace('postgresql+psycopg2://', 'postgresql://'))
+    if db_url.startswith("postgresql"):
+        if db_url.startswith("postgresql+psycopg2://"):
+            parsed_url = urlparse(db_url.replace("postgresql+psycopg2://", "postgresql://"))
         else:
             parsed_url = urlparse(db_url)
-        
+
         # Extract connection parameters
-        user = parsed_url.username or 'timetracker'
-        password = parsed_url.password or 'timetracker'
-        host = parsed_url.hostname or 'db'
+        user = parsed_url.username or "timetracker"
+        password = parsed_url.password or "timetracker"
+        host = parsed_url.hostname or "db"
         port = parsed_url.port or 5432
         # Remove leading slash from path to get database name
-        database = parsed_url.path.lstrip('/') or 'timetracker'
+        database = parsed_url.path.lstrip("/") or "timetracker"
     else:
         # Fallback for other formats
-        host, port, database, user, password = 'db', '5432', 'timetracker', 'timetracker', 'timetracker'
-    
+        host, port, database, user, password = "db", "5432", "timetracker", "timetracker", "timetracker"
+
     max_attempts = 30
     attempt = 0
-    
+
     while attempt < max_attempts:
         try:
             conn = psycopg2.connect(
-                host=host,
-                port=port,
-                database=database,
-                user=user,
-                password=password,
-                connect_timeout=5
+                host=host, port=port, database=database, user=user, password=password, connect_timeout=5
             )
             conn.close()
             return True
@@ -100,69 +171,76 @@ def wait_for_database():
             attempt += 1
             if attempt < max_attempts:
                 time.sleep(2)
-    
+
     return False
+
 
 def detect_corrupted_database_state(app):
     """Detect if database is in a corrupted/inconsistent state.
-    
+
     Returns: (is_corrupted: bool, reason: str)
     """
     try:
-        from app import db
         from sqlalchemy import text
-        
+
+        from app import db
+
         with app.app_context():
             # Check PostgreSQL
             if os.getenv("DATABASE_URL", "").startswith("postgresql"):
                 # Get all tables
                 all_tables_result = db.session.execute(
-                    text("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name")
+                    text(
+                        "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name"
+                    )
                 )
                 all_tables = [row[0] for row in all_tables_result]
-                
+
                 # Check for alembic_version
-                has_alembic_version = 'alembic_version' in all_tables
-                
+                has_alembic_version = "alembic_version" in all_tables
+
                 # Check for core tables
-                core_tables = ['users', 'projects', 'time_entries', 'settings', 'clients']
+                core_tables = ["users", "projects", "time_entries", "settings", "clients"]
                 has_core_tables = any(t in all_tables for t in core_tables)
-                
+
                 # Database is corrupted if:
                 # 1. Has tables but no alembic_version (migrations were never applied)
                 # 2. Has tables but no core tables (partial/corrupted state)
                 # 3. Has alembic_version but no core tables (migrations failed)
-                
+
                 if len(all_tables) > 0 and not has_alembic_version and not has_core_tables:
                     # Has tables but they're not our tables - likely test/manual tables
-                    return True, f"Database has {len(all_tables)} table(s) but no alembic_version or core tables. Tables: {all_tables}"
-                
+                    return (
+                        True,
+                        f"Database has {len(all_tables)} table(s) but no alembic_version or core tables. Tables: {all_tables}",
+                    )
+
                 if has_alembic_version and not has_core_tables:
                     return True, "alembic_version exists but core tables are missing - migrations may have failed"
-                    
+
                 if len(all_tables) > 0 and has_core_tables and not has_alembic_version:
                     return True, "Core tables exist but alembic_version is missing - database state is inconsistent"
-                    
+
             # SQLite
             else:
                 all_tables_result = db.session.execute(
                     text("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
                 )
                 all_tables = [row[0] for row in all_tables_result]
-                
-                has_alembic_version = 'alembic_version' in all_tables
-                core_tables = ['users', 'projects', 'time_entries', 'settings', 'clients']
+
+                has_alembic_version = "alembic_version" in all_tables
+                core_tables = ["users", "projects", "time_entries", "settings", "clients"]
                 has_core_tables = any(t in all_tables for t in core_tables)
-                
+
                 if len(all_tables) > 0 and not has_alembic_version and not has_core_tables:
                     return True, f"Database has {len(all_tables)} table(s) but no alembic_version or core tables"
-                    
+
                 if has_alembic_version and not has_core_tables:
                     return True, "alembic_version exists but core tables are missing"
-                    
+
                 if len(all_tables) > 0 and has_core_tables and not has_alembic_version:
                     return True, "Core tables exist but alembic_version is missing"
-                    
+
             return False, ""
     except Exception as e:
         # Can't determine - assume not corrupted
@@ -183,14 +261,17 @@ def cleanup_corrupted_database_state(app):
     db_url = os.getenv("DATABASE_URL", "")
 
     try:
-        from app import db
         from sqlalchemy import text
+
+        from app import db
 
         with app.app_context():
             if db_url.startswith("postgresql"):
                 # PostgreSQL: drop unexpected tables only when safe
                 all_tables_result = db.session.execute(
-                    text("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name")
+                    text(
+                        "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name"
+                    )
                 )
                 all_tables = [row[0] for row in all_tables_result]
                 has_alembic_version = "alembic_version" in all_tables
@@ -226,9 +307,8 @@ def cleanup_corrupted_database_state(app):
                 has_alembic_version = "alembic_version" in all_tables
                 core_tables = ["users", "projects", "time_entries", "settings", "clients"]
                 has_core_tables = any(t in all_tables for t in core_tables)
-                is_corrupted = (
-                    (has_alembic_version and not has_core_tables)
-                    or (len(all_tables) > 0 and not has_alembic_version and not has_core_tables)
+                is_corrupted = (has_alembic_version and not has_core_tables) or (
+                    len(all_tables) > 0 and not has_alembic_version and not has_core_tables
                 )
                 if not is_corrupted:
                     return False
@@ -264,6 +344,7 @@ def run_migrations():
 
     try:
         from flask_migrate import upgrade
+
         from app import create_app
 
         app = create_app()
@@ -290,8 +371,9 @@ def run_migrations():
                 # Postgres: one replica runs upgrade; others block on the lock then
                 # re-check (upgrade is idempotent). SQLite / non-Postgres: no lock.
                 if _is_pg:
-                    from app import db as _db
                     from sqlalchemy import text as _text
+
+                    from app import db as _db
 
                     migration_lock_conn = _db.engine.connect()
                     log(
@@ -320,8 +402,9 @@ def run_migrations():
 
                 # Sanity: show which DB we're connected to before migrating
                 try:
-                    from app import db as _db
                     from sqlalchemy import text as _text
+
+                    from app import db as _db
 
                     if _is_pg:
                         cur_db = _db.session.execute(_text("select current_database()")).scalar()
@@ -330,9 +413,10 @@ def run_migrations():
                         ).scalar()
                     else:
                         cur_db = "sqlite"
-                        table_count = _db.session.execute(
-                            _text("SELECT count(*) FROM sqlite_master WHERE type='table'")
-                        ).scalar() or 0
+                        table_count = (
+                            _db.session.execute(_text("SELECT count(*) FROM sqlite_master WHERE type='table'")).scalar()
+                            or 0
+                        )
                     log(f"Pre-migration DB: {cur_db} (public tables={table_count})", "INFO")
                 except Exception as e:
                     log(f"Pre-migration DB probe failed: {e}", "WARNING")
@@ -342,8 +426,9 @@ def run_migrations():
 
                 # CRITICAL: Verify migrations actually created tables (detect transaction rollback issues)
                 try:
-                    from app import db as _db
                     from sqlalchemy import text as _text
+
+                    from app import db as _db
 
                     if _is_pg:
                         cur_db = _db.session.execute(_text("select current_database()")).scalar()
@@ -351,30 +436,35 @@ def run_migrations():
                             _text("select count(1) from information_schema.tables where table_schema='public'")
                         ).scalar()
                         alembic_exists = _db.session.execute(
-                            _text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')")
+                            _text(
+                                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')"
+                            )
                         ).scalar()
-                        core_tables_check = _db.session.execute(
-                            _text("""
+                        core_tables_check = _db.session.execute(_text("""
                                 SELECT COUNT(*)
                                 FROM information_schema.tables
                                 WHERE table_schema='public'
                                 AND table_name IN ('users', 'projects', 'time_entries', 'settings', 'clients')
-                            """)
-                        ).scalar()
+                            """)).scalar()
                     else:
                         cur_db = "sqlite"
-                        table_count = _db.session.execute(
-                            _text("SELECT count(*) FROM sqlite_master WHERE type='table'")
-                        ).scalar() or 0
+                        table_count = (
+                            _db.session.execute(_text("SELECT count(*) FROM sqlite_master WHERE type='table'")).scalar()
+                            or 0
+                        )
                         alembic_exists = (
                             _db.session.execute(
-                                _text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='alembic_version'")
+                                _text(
+                                    "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='alembic_version'"
+                                )
                             ).scalar()
                             or 0
                         ) > 0
                         core_tables_check = (
                             _db.session.execute(
-                                _text("SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('users','projects','time_entries','settings','clients')")
+                                _text(
+                                    "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('users','projects','time_entries','settings','clients')"
+                                )
                             ).scalar()
                             or 0
                         )
@@ -440,62 +530,69 @@ def verify_core_tables(app):
     """Verify core application tables exist after migrations (fail-fast)."""
     log("Verifying core database tables exist...", "INFO")
     try:
-        from app import db
         from sqlalchemy import text
+
+        from app import db
 
         with app.app_context():
             # Core tables required for the app to function
-            core_tables = ['users', 'projects', 'time_entries', 'settings', 'clients']
-            
+            core_tables = ["users", "projects", "time_entries", "settings", "clients"]
+
             # Check PostgreSQL
             if os.getenv("DATABASE_URL", "").startswith("postgresql"):
                 # First, list ALL tables for debugging
                 try:
-                    all_tables_query = text("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name")
+                    all_tables_query = text(
+                        "SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name"
+                    )
                     all_tables_result = db.session.execute(all_tables_query)
                     all_tables = [row[0] for row in all_tables_result]
                     log(f"All tables in database: {all_tables}", "INFO")
                 except Exception as e:
                     log(f"Could not list all tables: {e}", "WARNING")
-                
+
                 # Use IN clause with proper parameter binding for PostgreSQL
                 placeholders = ",".join([f":table_{i}" for i in range(len(core_tables))])
                 query = text(f"""
-                    SELECT table_name 
-                    FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
+                    SELECT table_name
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
                     AND table_name IN ({placeholders})
                 """)
                 params = {f"table_{i}": table for i, table in enumerate(core_tables)}
                 result = db.session.execute(query, params)
                 found_tables = [row[0] for row in result]
                 missing = set(core_tables) - set(found_tables)
-                
+
                 if missing:
                     log(f"✗ Core tables missing: {sorted(missing)}", "ERROR")
                     log(f"Found core tables: {sorted(found_tables)}", "ERROR")
                     log("Database migrations may have failed silently.", "ERROR")
                     log("Try: docker compose down -v && docker compose up -d", "ERROR")
                     return False
-                
+
                 # Also verify alembic_version exists (migrations were applied)
                 alembic_check = db.session.execute(
-                    text("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')")
+                    text(
+                        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema='public' AND table_name='alembic_version')"
+                    )
                 ).scalar()
                 if not alembic_check:
                     log("✗ alembic_version table missing - migrations may not have been applied", "ERROR")
                     return False
-                
+
                 log(f"✓ Core tables verified: {sorted(found_tables)}", "SUCCESS")
                 return True
-            
+
             # SQLite: same checks as PostgreSQL — list all tables, then verify required core tables exist
             else:
                 sqlite_path = _sqlite_path_from_url(os.getenv("DATABASE_URL", ""))
                 # List ALL tables for debugging (parity with PostgreSQL)
                 try:
                     all_tables_result = db.session.execute(
-                        text("SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('sqlite_sequence') ORDER BY name")
+                        text(
+                            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('sqlite_sequence') ORDER BY name"
+                        )
                     )
                     all_tables = [row[0] for row in all_tables_result]
                     log(f"All tables in database: {all_tables}", "INFO")
@@ -513,7 +610,10 @@ def verify_core_tables(app):
                     if sqlite_path:
                         log(f"Database file: {sqlite_path}", "ERROR")
                     log("Database migrations may have failed silently.", "ERROR")
-                    log("Try removing the database file and restarting, or run: docker compose down -v && docker compose up -d", "ERROR")
+                    log(
+                        "Try removing the database file and restarting, or run: docker compose down -v && docker compose up -d",
+                        "ERROR",
+                    )
                     return False
 
                 if "alembic_version" not in all_tables:
@@ -524,7 +624,7 @@ def verify_core_tables(app):
 
                 log(f"✓ Core tables verified: {sorted(found_tables)}", "SUCCESS")
                 return True
-                
+
     except Exception as e:
         log(f"✗ Core table verification failed: {e}", "ERROR")
         traceback.print_exc()
@@ -537,6 +637,7 @@ def ensure_default_data(app):
     try:
         from app import db
         from app.models import Settings, User
+
         with app.app_context():
             # Settings
             try:
@@ -578,8 +679,17 @@ def ensure_default_data(app):
                     if changed:
                         log(f"Updated demo user privileges: {demo_username}", "INFO")
                 db.session.commit()
+                try:
+                    from app.utils.seed_demo_data import seed_demo_sample_data
+
+                    if seed_demo_sample_data(app):
+                        log("DEMO_MODE sample data ready", "INFO")
+                except Exception as seed_err:
+                    log(f"Demo sample data seed skipped: {seed_err}", "WARNING")
             else:
-                admin_usernames = [u.strip().lower() for u in os.getenv("ADMIN_USERNAMES", "admin").split(",") if u.strip()]
+                admin_usernames = [
+                    u.strip().lower() for u in os.getenv("ADMIN_USERNAMES", "admin").split(",") if u.strip()
+                ]
                 for username in admin_usernames[:5]:  # safety cap
                     existing = User.query.filter_by(username=username).first()
                     if not existing:
@@ -607,6 +717,7 @@ def ensure_default_data(app):
         log(f"Default data initialization failed (continuing): {e}", "WARNING")
         return False
 
+
 def display_network_info():
     """Display network information for debugging"""
     print("=== Network Information ===")
@@ -614,46 +725,45 @@ def display_network_info():
         print(f"Hostname: {os.uname().nodename}")
     except:
         print("Hostname: N/A (Windows)")
-    
+
     try:
         import socket
+
         hostname = socket.gethostname()
         local_ip = socket.gethostbyname(hostname)
         print(f"Local IP: {local_ip}")
     except:
         print("Local IP: N/A")
-    
+
     print(f"Environment: {os.environ.get('FLASK_APP', 'N/A')}")
     print(f"Working Directory: {os.getcwd()}")
     print("==========================")
 
+
 def log(message, level="INFO"):
     """Log message with timestamp and level"""
     from datetime import datetime
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    prefix = {
-        "INFO": "ℹ",
-        "SUCCESS": "✓",
-        "WARNING": "⚠",
-        "ERROR": "✗"
-    }.get(level, "•")
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    prefix = {"INFO": "ℹ", "SUCCESS": "✓", "WARNING": "⚠", "ERROR": "✗"}.get(level, "•")
     print(f"[{timestamp}] {prefix} {message}")
+
 
 def main():
     log("=" * 60, "INFO")
     log("Starting TimeTracker Application", "INFO")
     log("=" * 60, "INFO")
-    
+
     # Set environment
-    os.environ['FLASK_APP'] = 'app'
-    os.chdir('/app')
-    
+    os.environ["FLASK_APP"] = "app"
+    os.chdir("/app")
+
     # Wait for database
     log("Waiting for database connection...", "INFO")
     if not wait_for_database():
         log("Database is not available, exiting...", "ERROR")
         sys.exit(1)
-    
+
     # Migrations (single source of truth)
     migration_app = run_migrations()
     if not migration_app:
@@ -676,21 +786,17 @@ def main():
     # Start gunicorn with access logs (bind to PORT when set, e.g. by Render; default 8080 for docker-compose).
     # eventlet is limited to a single worker: do not raise --workers above 1 without
     # switching worker class (multi-worker eventlet is unsupported / unsafe).
-    port = os.environ.get('PORT', '8080')
-    os.execv('/usr/local/bin/gunicorn', [
-        'gunicorn',
-        '--bind', '0.0.0.0:%s' % port,
-        '--worker-class', 'eventlet',
-        '--workers', '1',
-        '--timeout', '120',
-        '--max-requests', '1000',
-        '--max-requests-jitter', '100',
-        '--graceful-timeout', '30',
-        '--access-logfile', '-',
-        '--error-logfile', '-',
-        '--log-level', 'info',
-        'app:create_app()'
-    ])
+    # When PORT is set, max-requests defaults to 0 so recycle does not cause connection-refused
+    # health blips; override with GUNICORN_MAX_REQUESTS / GUNICORN_MAX_REQUESTS_JITTER.
+    port = os.environ.get("PORT", "8080")
+    max_requests = resolve_gunicorn_max_requests()
+    jitter = resolve_gunicorn_max_requests_jitter(max_requests=max_requests)
+    if max_requests > 0:
+        log("Gunicorn max-requests=%s (jitter=%s)" % (max_requests, jitter), "INFO")
+    else:
+        log("Gunicorn max-requests disabled (set GUNICORN_MAX_REQUESTS to enable recycle)", "INFO")
+    os.execv("/usr/local/bin/gunicorn", build_gunicorn_argv(port, max_requests, jitter))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

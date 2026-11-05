@@ -213,7 +213,7 @@ You can add custom operations in your migrations:
 def upgrade():
     # Custom data migration
     op.execute("UPDATE users SET role = 'user' WHERE role IS NULL")
-    
+
     # Custom table operations
     op.create_index('custom_idx', 'table_name', ['column_name'])
 ```

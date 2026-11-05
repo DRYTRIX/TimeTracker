@@ -300,4 +300,3 @@ The migration includes:
   - Invoice integration
   - Report integration
   - CRUD operations
-

@@ -9,7 +9,7 @@
                 <p class="text-2xl font-bold mb-1">{{ pending_approvals_count }} {{ _('Pending Approvals') }}</p>
                 <p class="text-sm text-blue-100/80">{{ _('Time entries awaiting your review') }}</p>
             </div>
-            <a href="{{ url_for('client_portal.time_entry_approvals') }}" 
+            <a href="{{ url_for('client_portal.time_entry_approvals') }}"
                class="inline-flex items-center px-5 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors shadow-md">
                 <i class="fas fa-check-circle mr-2"></i>{{ _('Review Now') }}
             </a>
@@ -24,7 +24,7 @@
                 <p class="text-2xl font-bold mb-1">{{ unread_notifications_count }} {{ _('Unread') }}</p>
                 <p class="text-sm text-green-100/80">{{ _('Notifications waiting for you') }}</p>
             </div>
-            <a href="{{ url_for('client_portal.notifications') }}" 
+            <a href="{{ url_for('client_portal.notifications') }}"
                class="inline-flex items-center px-5 py-3 bg-white text-green-600 font-semibold rounded-lg hover:bg-green-50 transition-colors shadow-md">
                 <i class="fas fa-bell mr-2"></i>{{ _('View All') }}
             </a>

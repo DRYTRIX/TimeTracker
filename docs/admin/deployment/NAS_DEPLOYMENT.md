@@ -20,23 +20,25 @@ This guide explains how to install TimeTracker on a NAS or homelab server using 
 - Port **8080** available (or choose another port — see [Port conflicts](#port-conflicts))
 - Outbound internet access so Docker can pull images from GitHub Container Registry
 
-## Before you start: generate a SECRET_KEY
+## Before you start: generate secrets
 
-TimeTracker requires a `SECRET_KEY` (32+ characters) for sessions and CSRF protection. You only need to set this once.
+TimeTracker requires a `SECRET_KEY` (32+ characters) for sessions and CSRF protection, and a strong `POSTGRES_PASSWORD` (no default — the stack will not start without it). Generate both once:
 
 **On your computer (any OS with OpenSSL):**
 
 ```bash
-openssl rand -hex 32
+openssl rand -hex 32   # SECRET_KEY
+openssl rand -hex 24   # POSTGRES_PASSWORD
 ```
 
 **On QNAP or Synology via SSH:**
 
 ```bash
 openssl rand -hex 32
+openssl rand -hex 24
 ```
 
-Copy the output — you will paste it as the `SECRET_KEY` environment variable when deploying the stack.
+Copy the outputs — paste them as `SECRET_KEY` and `POSTGRES_PASSWORD` when deploying the stack.
 
 > **Alternative (if you have Python):** `python -c "import secrets; print(secrets.token_hex(32))"`
 
@@ -52,6 +54,7 @@ QNAP models with Intel/AMD (x86) or ARM64 processors are supported. The publishe
 4. Copy the full contents of [`docker-compose.nas.yml`](../../../docker-compose.nas.yml) from the [GitHub repository](https://github.com/drytrix/TimeTracker/blob/main/docker-compose.nas.yml) and paste into the editor.
 5. Add environment variables (look for **Environment**, **Advanced settings**, or **.env** in Container Station):
    - `SECRET_KEY` = *(paste the value from openssl above)*
+   - `POSTGRES_PASSWORD` = *(paste the second openssl value)*
    - Optional: `TZ` = your timezone (e.g. `Europe/Brussels`, `America/New_York`)
    - Optional: `HTTP_PORT` = `8080` (change if 8080 is already in use)
 6. Click **Create** / **Deploy**.
@@ -73,6 +76,7 @@ Works on DSM 7.2+ with Container Manager (formerly Docker package). Supports bot
 5. In the environment / `.env` section, add:
    ```bash
    SECRET_KEY=paste-your-generated-key-here
+   POSTGRES_PASSWORD=paste-your-generated-db-password-here
    TZ=Europe/Brussels
    HTTP_PORT=8080
    ```
@@ -94,6 +98,7 @@ Portainer is common on Unraid and other homelab setups. For **web editor** deplo
 4. Paste the contents of [`docker-compose.nas.yml`](../../../docker-compose.nas.yml).
 5. Scroll to **Environment variables** and add:
    - `SECRET_KEY` = your generated key
+   - `POSTGRES_PASSWORD` = your generated database password
    - `TZ`, `CURRENCY`, `HTTP_PORT` as needed
 6. Click **Deploy the stack**.
 7. Open **`http://<host-ip>:8080`**.
@@ -114,6 +119,7 @@ curl -fsSL -o docker-compose.nas.yml \
 # Create a minimal .env file
 cat > .env <<EOF
 SECRET_KEY=$(openssl rand -hex 32)
+POSTGRES_PASSWORD=$(openssl rand -hex 24)
 TZ=Europe/Brussels
 HTTP_PORT=8080
 EOF
@@ -133,6 +139,7 @@ Open **`http://<server-ip>:8080`**.
 | Variable | Description |
 |----------|-------------|
 | `SECRET_KEY` | Random string, 32+ characters. Generate with `openssl rand -hex 32`. |
+| `POSTGRES_PASSWORD` | Strong database password (required; no default). Generate with `openssl rand -hex 24`. |
 
 ### Recommended
 
@@ -149,7 +156,6 @@ Open **`http://<server-ip>:8080`**.
 |----------|---------|-------------|
 | `POSTGRES_DB` | `timetracker` | Database name |
 | `POSTGRES_USER` | `timetracker` | Database user |
-| `POSTGRES_PASSWORD` | `timetracker` | Database password — change for shared networks |
 
 ---
 
@@ -239,6 +245,7 @@ To keep NAS installs simple, `docker-compose.nas.yml` intentionally omits:
 | Problem | What to do |
 |---------|------------|
 | Stack fails immediately with SECRET_KEY error | Set `SECRET_KEY` in environment variables |
+| Stack fails with POSTGRES_PASSWORD error | Set `POSTGRES_PASSWORD` (required; no default) |
 | App stays unhealthy > 3 min | Check logs: `docker logs timetracker-app` |
 | Can't log in / CSRF errors | Ensure you're using HTTP (not HTTPS) unless reverse proxy vars are set |
 | Port already allocated | Change `HTTP_PORT` to e.g. `8180` |

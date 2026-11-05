@@ -13,8 +13,8 @@
                     <i class="fas fa-th"></i>
                 </button>
             </div>
-            <a href="{{ url_for('projects.export_projects', status=request.args.get('status', 'active'), client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}" 
-               class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn" 
+            <a href="{{ url_for('projects.export_projects', status=request.args.get('status', 'active'), client=request.args.get('client', ''), search=request.args.get('search', ''), favorites=request.args.get('favorites', '')) }}"
+               class="px-3 py-1.5 text-sm bg-background-light dark:bg-background-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors inline-flex items-center export-btn"
                title="{{ _('Export to CSV') }}"
                onclick="showExportLoading(this); return true;">
                 <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>
@@ -35,7 +35,7 @@
             {% endif %}
         </div>
     </div>
-    
+
     <!-- List View -->
     <div id="listView" class="view-container">
     <div class="overflow-x-auto">
@@ -67,8 +67,8 @@
                 {% endif %}
                 <td class="p-4 text-center">
                     {% set is_fav = favorite_project_ids and project.id in favorite_project_ids %}
-                    <button type="button" 
-                            class="favorite-btn text-xl hover:scale-110 transition-transform" 
+                    <button type="button"
+                            class="favorite-btn text-xl hover:scale-110 transition-transform"
                             data-project-id="{{ project.id }}"
                             data-is-favorited="{{ 'true' if is_fav else 'false' }}"
                             onclick="toggleFavorite({{ project.id }}, this)"
@@ -134,7 +134,7 @@
     </table>
     </div>
     </div>
-    
+
     <!-- Grid View -->
     <div id="gridView" class="view-container hidden">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -143,20 +143,20 @@
                 <!-- Quick Actions on Hover -->
                 <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <div class="flex gap-1">
-                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
-                           class="p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" 
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}"
+                           class="p-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
                            title="{{ _('View Project') }}">
                             <i class="fas fa-eye text-xs"></i>
                         </a>
                         {% if current_user.is_admin or has_permission('edit_projects') %}
-                        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}" 
-                           class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" 
+                        <a href="{{ url_for('projects.edit_project', project_id=project.id) }}"
+                           class="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                            title="{{ _('Edit Project') }}">
                             <i class="fas fa-edit text-xs"></i>
                         </a>
                         {% endif %}
-                        <button type="button" 
-                                class="favorite-btn p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors" 
+                        <button type="button"
+                                class="favorite-btn p-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
                                 data-project-id="{{ project.id }}"
                                 data-is-favorited="{{ 'true' if (favorite_project_ids and project.id in favorite_project_ids) else 'false' }}"
                                 onclick="toggleFavorite({{ project.id }}, this)"
@@ -165,7 +165,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Project Header -->
                 <div class="p-6 pb-4">
                     <div class="flex items-start justify-between mb-2">
@@ -184,20 +184,20 @@
                             {{ project.status|title }}
                         </span>
                     </div>
-                    
+
                     {% if project.client %}
                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3">
                         <i class="fas fa-building mr-1"></i>{{ project.client }}
                     </p>
                     {% endif %}
-                    
+
                     {% if project.description %}
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4 line-clamp-2 prose prose-sm dark:prose-invert max-w-none">
                         {{ project.description | markdown | safe }}
                     </div>
                     {% endif %}
                 </div>
-                
+
                 <!-- Progress Indicators -->
                 <div class="px-6 pb-4 space-y-3">
                     {% if project.budget_amount %}
@@ -207,7 +207,7 @@
                         <div>
                             <div class="flex justify-between items-center mb-1">
                                 <span class="text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Budget</span>
-                                <span class="text-xs font-semibold 
+                                <span class="text-xs font-semibold
                                     {% if pct >= 90 %}text-red-600
                                     {% elif pct >= 70 %}text-amber-600
                                     {% else %}text-green-600{% endif %}">
@@ -218,7 +218,7 @@
                                 <div class="h-full rounded-full transition-all duration-300
                                     {% if pct >= 90 %}bg-red-500
                                     {% elif pct >= 70 %}bg-amber-500
-                                    {% else %}bg-green-500{% endif %}" 
+                                    {% else %}bg-green-500{% endif %}"
                                     style="width: {{ [pct,100]|min }}%">
                                 </div>
                             </div>
@@ -227,7 +227,7 @@
                             </div>
                         </div>
                     {% endif %}
-                    
+
                     <!-- Hours Progress -->
                     <div>
                         <div class="flex justify-between items-center mb-1">
@@ -239,7 +239,7 @@
                         {% if project.estimated_hours %}
                             {% set hours_pct = (project.total_hours / project.estimated_hours * 100) if project.estimated_hours > 0 else 0 %}
                             <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div class="h-full bg-primary rounded-full transition-all duration-300" 
+                                <div class="h-full bg-primary rounded-full transition-all duration-300"
                                     style="width: {{ [hours_pct,100]|min }}%">
                                 </div>
                             </div>
@@ -249,7 +249,7 @@
                         {% endif %}
                     </div>
                 </div>
-                
+
                 <!-- Project Footer -->
                 <div class="px-6 py-4 border-t border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
                     <div class="flex items-center justify-between">
@@ -265,7 +265,7 @@
                             </span>
                             {% endif %}
                         </div>
-                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
+                        <a href="{{ url_for('projects.view_project', project_id=project.id) }}"
                            class="text-primary hover:text-primary/80 text-sm font-medium">
                             View <i class="fas fa-arrow-right ml-1"></i>
                         </a>
@@ -275,23 +275,23 @@
             {% endfor %}
         </div>
     </div>
-    
+
     {% if not projects %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
-        {% if current_user.is_admin %}
+        {% if current_user.is_admin or has_permission('create_projects') %}
         <a href="{{ url_for('projects.create_project') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-            <i class="fas fa-plus mr-2"></i>Create Your First Project
+            <i class="fas fa-plus mr-2"></i>{{ _('Create your first project') }}
         </a>
         {% endif %}
-        <a href="{{ url_for('main.help') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-            <i class="fas fa-question-circle mr-2"></i>Learn More
+        <a href="{{ url_for('clients.list_clients') }}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+            <i class="fas fa-user-tie mr-2"></i>{{ _('Add a client first') }}
         </a>
     {% endset %}
     {% if request.args.get('search') or request.args.get('client') or request.args.get('status') != 'all' %}
-        {{ empty_state('fas fa-search', 'No Projects Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new project that matches your criteria.', actions, type='no-results') }}
+        {{ empty_state('fas fa-search', _('No projects match your filters'), _('Try adjusting your filters to see more results, or create a project that matches your criteria.'), actions, type='no-results') }}
     {% else %}
-        {{ empty_state('fas fa-folder-open', 'No Projects Yet', 'Projects help you organize your work and track time efficiently. Create your first project to get started!', actions, type='no-data') }}
+        {{ empty_state('fas fa-folder-open', _('No projects yet'), _('Organize work by client and project, then track time against them. Create your first project to get started.'), actions, type='no-data') }}
     {% endif %}
     {% endif %}
 </div>

@@ -311,10 +311,10 @@ if (tbody) {
     handle: '.fa-grip-vertical',
     animation: 150,
     onEnd: async function(evt) {
-      const columnIds = Array.from(tbody.querySelectorAll('tr')).map(row => 
+      const columnIds = Array.from(tbody.querySelectorAll('tr')).map(row =>
         parseInt(row.dataset.columnId)
       );
-      
+
       try {
         const response = await fetch('/api/kanban/columns/reorder', {
           method: 'POST',
@@ -325,11 +325,11 @@ if (tbody) {
           },
           body: JSON.stringify({ column_ids: columnIds, project_id: {% if project_id %}{{ project_id }}{% else %}null{% endif %} })
         });
-        
+
         if (!response.ok) {
           throw new Error('Failed to reorder columns');
         }
-        
+
         const data = await response.json();
         if (data.success) {
           // Use global toast, no hard reload required; Kanban board will live-refresh via socket
@@ -362,4 +362,3 @@ if (tbody) {
 }
 </script>
 {% endblock %}
-

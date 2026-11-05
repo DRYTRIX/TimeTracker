@@ -462,4 +462,3 @@ Tap Area:      Full card    ✓ (entire toast hoverable)
 **Note**: This visual guide uses ASCII art for illustration. Actual implementation uses modern CSS with smooth gradients, shadows, and animations.
 
 For live examples, open: `docs/TOAST_NOTIFICATION_DEMO.html`
-

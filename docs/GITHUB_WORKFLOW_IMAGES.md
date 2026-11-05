@@ -16,7 +16,7 @@ The GitHub workflows build Docker images that include:
 - **Image**: `ghcr.io/drytrix/timetracker-externaldb`
 - **Uses**: `Dockerfile` (copied to `Dockerfile.final`)
 - **Purpose**: For deployments with external PostgreSQL databases
-- **Features**: 
+- **Features**:
   - Waits for external database to be ready
   - Checks if database is initialized
   - Auto-initializes missing tables
@@ -79,12 +79,12 @@ if url.startswith('postgresql'):
     try:
         engine = create_engine(url, pool_pre_ping=True)
         inspector = inspect(engine)
-        
+
         existing_tables = inspector.get_table_names()
         required_tables = ['users', 'projects', 'time_entries', 'settings']
-        
+
         missing_tables = [table for table in required_tables if table not in existing_tables]
-        
+
         if missing_tables:
             print(f'Database not fully initialized. Missing tables: {missing_tables}')
             sys.exit(1)  # Trigger initialization

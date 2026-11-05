@@ -6,21 +6,21 @@
     <title>{% block title %}{{ _('Client Portal') }} - {{ app_name }}{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Client Portal - View your projects, invoices, and time entries">
-    <meta name="theme-color" content="#4A90E2">
-    
+    <meta name="theme-color" content="#4F46E5">
+
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="{% block og_title %}{{ _('Client Portal') }} - {{ app_name }}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}Client Portal - View your projects, invoices, and time entries{% endblock %}">
     <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='images/og-image.png', _external=True) }}{% endblock %}">
     <meta property="og:url" content="{{ request.url }}">
-    
+
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{% block twitter_title %}{{ _('Client Portal') }} - {{ app_name }}{% endblock %}">
     <meta name="twitter:description" content="{% block twitter_description %}Client Portal - View your projects, invoices, and time entries{% endblock %}">
     <meta name="twitter:image" content="{% block twitter_image %}{{ url_for('static', filename='images/og-image.png', _external=True) }}{% endblock %}">
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
@@ -35,7 +35,6 @@
     <link href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}?v={{ app_version }}-toastfix1">
     <style>
         /* Prevent main app sidebar from appearing */
         #sidebar,
@@ -45,12 +44,12 @@
         #mainContent {
             display: none !important;
         }
-        
+
         /* Client portal specific styles */
         .client-portal-nav {
             transition: all 0.3s ease;
         }
-        
+
         .client-portal-nav-item {
             position: relative;
             padding: 0.625rem 1.25rem;
@@ -61,19 +60,19 @@
             display: inline-flex;
             align-items: center;
         }
-        
+
         .client-portal-nav-item:hover {
-            background-color: rgba(74, 144, 226, 0.12);
+            background-color: color-mix(in srgb, var(--color-primary, #4F46E5) 12%, transparent);
             transform: translateY(-1px);
         }
-        
+
         .client-portal-nav-item.active {
-            background-color: rgba(74, 144, 226, 0.2);
-            color: #4A90E2;
+            background-color: color-mix(in srgb, var(--color-primary, #4F46E5) 20%, transparent);
+            color: var(--color-primary, #4F46E5);
             font-weight: 600;
-            box-shadow: 0 2px 4px rgba(74, 144, 226, 0.2);
+            box-shadow: 0 2px 4px color-mix(in srgb, var(--color-primary, #4F46E5) 20%, transparent);
         }
-        
+
         .client-portal-nav-item.active::before {
             content: '';
             position: absolute;
@@ -82,10 +81,10 @@
             transform: translateX(-50%);
             width: 60%;
             height: 2px;
-            background-color: #4A90E2;
+            background-color: var(--color-primary, #4F46E5);
             border-radius: 2px 2px 0 0;
         }
-        
+
         .mobile-menu-overlay {
             display: none;
             position: fixed;
@@ -93,11 +92,11 @@
             background-color: rgba(0, 0, 0, 0.5);
             z-index: 40;
         }
-        
+
         .mobile-menu-overlay.active {
             display: block;
         }
-        
+
         .mobile-menu {
             position: fixed;
             top: 0;
@@ -111,15 +110,15 @@
             z-index: 50;
             overflow-y: auto;
         }
-        
+
         .dark .mobile-menu {
             background-color: var(--card-bg-dark, #1f2937);
         }
-        
+
         .mobile-menu.active {
             transform: translateX(0);
         }
-        
+
         .badge-count {
             position: absolute;
             top: -0.375rem;
@@ -139,7 +138,7 @@
             border: 2px solid rgba(255, 255, 255, 0.9);
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-        
+
         @keyframes pulse {
             0%, 100% {
                 opacity: 1;
@@ -148,24 +147,24 @@
                 opacity: .8;
             }
         }
-        
+
         /* Smooth transitions for all interactive elements */
         * {
             transition-property: color, background-color, border-color, transform, opacity;
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
             transition-duration: 150ms;
         }
-        
+
         /* Enhanced card hover effects */
         .hover-lift {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        
+
         .hover-lift:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
-        
+
         /* Line clamp utility */
         .line-clamp-2 {
             display: -webkit-box;
@@ -173,7 +172,7 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
-        
+
         /* Loading skeleton animation */
         @keyframes shimmer {
             0% {
@@ -183,26 +182,33 @@
                 background-position: 1000px 0;
             }
         }
-        
+
         .skeleton {
             animation: shimmer 2s infinite linear;
             background: linear-gradient(to right, #f0f0f0 8%, #e0e0e0 18%, #f0f0f0 33%);
             background-size: 1000px 100%;
         }
-        
+
         .dark .skeleton {
             background: linear-gradient(to right, #374151 8%, #4b5563 18%, #374151 33%);
             background-size: 1000px 100%;
         }
     </style>
     <script nonce="{{ csp_nonce() }}">
-        // Theme init
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        
+        // Avoid FOUC: apply .dark from localStorage or system preference
+        (function () {
+            var stored = localStorage.getItem('color-theme');
+            var effective = stored || 'system';
+            if (effective === 'system' || !effective) {
+                effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (effective === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+
         // Mobile menu toggle
         function toggleMobileMenu() {
             const overlay = document.getElementById('mobile-menu-overlay');
@@ -210,14 +216,14 @@
             overlay.classList.toggle('active');
             menu.classList.toggle('active');
         }
-        
+
         function closeMobileMenu() {
             const overlay = document.getElementById('mobile-menu-overlay');
             const menu = document.getElementById('mobile-menu');
             overlay.classList.remove('active');
             menu.classList.remove('active');
         }
-        
+
         // Close mobile menu when clicking overlay
         document.addEventListener('DOMContentLoaded', function() {
             const overlay = document.getElementById('mobile-menu-overlay');
@@ -230,7 +236,7 @@
 <body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
     {% set current_client = get_current_client() %}
     {% set current_endpoint = request.endpoint or '' %}
-    
+
     <!-- Enhanced header for client portal -->
     <header class="bg-card-light/95 dark:bg-card-dark/95 backdrop-blur-md border-b border-border-light dark:border-border-dark shadow-lg sticky top-0 z-30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -238,7 +244,8 @@
                 <!-- Logo and Client Name -->
                 <div class="flex items-center space-x-4">
                     <a href="{{ url_for('client_portal.dashboard') }}" class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                        <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="Logo" class="h-8 w-8">
+                        <img src="{{ url_for('static', filename='images/timetracker-logo-light.svg') }}" alt="Logo" class="h-8 w-8 dark:hidden">
+                        <img src="{{ url_for('static', filename='images/timetracker-logo-dark.svg') }}" alt="Logo" class="h-8 w-8 hidden dark:block">
                         <h1 class="text-xl font-bold text-primary hidden sm:block">{{ _('Client Portal') }}</h1>
                     </a>
                     {% if current_client %}
@@ -248,7 +255,7 @@
                     </div>
                     {% endif %}
                 </div>
-                
+
                 <!-- Desktop Navigation -->
                 {% if current_client %}
                 <nav class="hidden lg:flex items-center space-x-0.5">
@@ -310,7 +317,7 @@
                         <i class="fas fa-sign-out-alt mr-2"></i>{{ _('Logout') }}
                     </a>
                 </nav>
-                
+
                 <!-- Mobile Menu Button -->
                 <button onclick="toggleMobileMenu()" class="lg:hidden p-2.5 rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-all duration-200 hover:scale-105 active:scale-95" aria-label="{{ _('Toggle menu') }}">
                     <i class="fas fa-bars text-xl text-text-light dark:text-text-dark"></i>
@@ -322,7 +329,7 @@
 
     <!-- Mobile Menu Overlay -->
     <div id="mobile-menu-overlay" class="mobile-menu-overlay"></div>
-    
+
     <!-- Mobile Menu -->
     <div id="mobile-menu" class="mobile-menu">
         <div class="p-5 border-b border-border-light dark:border-border-dark bg-gradient-to-r from-primary/5 to-transparent">
@@ -463,5 +470,6 @@
         window.portalSocket = socket;
     })();
     </script>
+    {% block scripts_extra %}{% endblock %}
 </body>
 </html>

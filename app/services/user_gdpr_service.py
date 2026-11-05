@@ -10,7 +10,6 @@ from app.models import ApiToken, AuditLog, User
 from app.utils.db import safe_commit
 from app.utils.deleted_usernames import reserve_deleted_username
 
-
 ANONYMOUS_USERNAME_PREFIX = "deleted_user_"
 ANONYMOUS_DISPLAY_SUFFIX = " (anonymized)"
 

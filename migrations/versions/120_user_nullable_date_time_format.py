@@ -7,9 +7,9 @@ Create Date: 2026-02-07
 Makes users.date_format and users.time_format nullable so users can choose
 "Use system default"; when null, resolution uses system settings.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "120_user_nullable_date_time_format"
 down_revision = "119_add_settings_date_time_format"

@@ -4,20 +4,20 @@ import datetime as dt
 from decimal import Decimal
 
 import pytest
+from factories import (
+    ClientFactory,
+    ExpenseCategoryFactory,
+    ExpenseFactory,
+    InvoiceFactory,
+    InvoiceItemFactory,
+    PaymentFactory,
+    ProjectFactory,
+    TimeEntryFactory,
+    UserFactory,
+)
 
 from app import db
 from app.models import TimeEntry
-from factories import (
-    UserFactory,
-    ClientFactory,
-    ProjectFactory,
-    TimeEntryFactory,
-    InvoiceFactory,
-    InvoiceItemFactory,
-    ExpenseFactory,
-    PaymentFactory,
-    ExpenseCategoryFactory,
-)
 
 
 @pytest.mark.unit

@@ -122,4 +122,3 @@ All events listed above are tracked only when:
 - ✅ Only internal numeric IDs and event types
 
 For more information, see [Privacy Policy](./privacy.md) and [Analytics Documentation](./analytics.md).
-

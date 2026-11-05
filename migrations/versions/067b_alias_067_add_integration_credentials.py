@@ -28,4 +28,3 @@ def upgrade():
 def downgrade():
     # No-op alias revision
     pass
-

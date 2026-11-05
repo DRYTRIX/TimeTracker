@@ -9,8 +9,8 @@ from flask_login import current_user, login_required
 from app import db, log_event
 from app.models import Client, Invoice, Project, RecurringInvoice, Settings
 from app.utils.db import safe_commit
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_helpers import module_enabled
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
 
 recurring_invoices_bp = Blueprint("recurring_invoices", __name__)
 logger = logging.getLogger(__name__)

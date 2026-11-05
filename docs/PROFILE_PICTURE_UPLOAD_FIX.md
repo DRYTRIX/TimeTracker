@@ -44,17 +44,17 @@ Added preview functionality with the following features:
 ```javascript
 function previewAvatar(input) {
     const preview = document.getElementById('avatar-preview');
-    
+
     if (input.files && input.files[0]) {
         const file = input.files[0];
-        
+
         // Validate file size (5MB limit)
         if (file.size > 5 * 1024 * 1024) {
             alert('File size must be less than 5MB');
             input.value = '';
             return;
         }
-        
+
         // Validate file type
         const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
         if (!allowedTypes.includes(file.type)) {
@@ -62,7 +62,7 @@ function previewAvatar(input) {
             input.value = '';
             return;
         }
-        
+
         // Read and display the image
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -169,4 +169,3 @@ This covers all modern browsers and provides graceful degradation for older brow
 - All docker-compose configurations use the same nginx config directory (`./nginx/conf.d`), so this fix applies to all deployment scenarios
 - The 10MB nginx limit also benefits company logo uploads (which use the same 5MB limit)
 - Preview validation matches server-side validation to provide immediate user feedback
-

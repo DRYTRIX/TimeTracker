@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     operationsSection.style.display = 'block';
                 }
             }
-            
+
             // Clear any item display when switching to scan
             if (targetTab === 'scan') {
                 const itemSection = document.getElementById('item-section');
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (targetContent) {
                 targetContent.style.display = 'block';
             }
-            
+
             // Update navigation menu active state - use data-tab attribute
             const navItems = document.querySelectorAll('nav a.nav-link');
             navItems.forEach(item => {
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Add default inactive state
                 item.classList.add('text-gray-700', 'dark:text-gray-300', 'border-transparent');
             });
-            
+
             // Find and activate the corresponding nav item by data-tab attribute
             const navItem = Array.from(navItems).find(item => {
                 const tabAttr = item.getAttribute('data-tab');
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Activate first tab by default
     if (tabs.length > 0) {
         tabs[0].click();
@@ -142,7 +142,7 @@ function toggleFullscreen() {
 async function initAutoLogout() {
     let inactivityTimeout;
     let timeoutMinutes = 15; // Default fallback
-    
+
     // Fetch timeout from settings
     try {
         const response = await fetch('/api/kiosk/settings', { credentials: 'same-origin' });
@@ -153,14 +153,14 @@ async function initAutoLogout() {
     } catch (e) {
         console.warn('Could not fetch auto-logout settings, using default:', e);
     }
-    
+
     const timeoutMs = timeoutMinutes * 60 * 1000;
     let warningShown = false;
 
     function resetInactivityTimer() {
         clearTimeout(inactivityTimeout);
         warningShown = false;
-        
+
         // Show warning at 80% of timeout
         const warningTimeout = setTimeout(() => {
             if (!warningShown) {
@@ -171,7 +171,7 @@ async function initAutoLogout() {
                 }
             }
         }, timeoutMs * 0.8);
-        
+
         inactivityTimeout = setTimeout(async () => {
             clearTimeout(warningTimeout);
             if (window.showConfirm) {
@@ -222,12 +222,12 @@ function initKeyboardShortcuts() {
             }
             return;
         }
-        
+
         // Escape: Clear barcode input or close camera scanner
         if (e.key === 'Escape') {
             const barcodeInput = document.getElementById('barcode-input');
             const cameraContainer = document.getElementById('camera-scanner-container');
-            
+
             if (cameraContainer && !cameraContainer.classList.contains('hidden')) {
                 if (window.stopCameraScanner) {
                     window.stopCameraScanner();
@@ -235,7 +235,7 @@ function initKeyboardShortcuts() {
                 e.preventDefault();
                 return;
             }
-            
+
             if (barcodeInput && document.activeElement === barcodeInput) {
                 barcodeInput.value = '';
                 barcodeInput.blur();
@@ -243,7 +243,7 @@ function initKeyboardShortcuts() {
                 return;
             }
         }
-        
+
         // Number keys 1-3: Switch tabs (when not typing in input)
         if (e.key >= '1' && e.key <= '3' && !e.ctrlKey && !e.metaKey) {
             const activeElement = document.activeElement;
@@ -256,7 +256,7 @@ function initKeyboardShortcuts() {
                 }
             }
         }
-        
+
         // Ctrl+Enter or Cmd+Enter: Submit active form
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             const activeElement = document.activeElement;
@@ -268,7 +268,7 @@ function initKeyboardShortcuts() {
                 }
             }
         }
-        
+
         // ?: Show keyboard shortcuts help
         if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
             const activeElement = document.activeElement;
@@ -288,4 +288,3 @@ function initKeyboardShortcuts() {
  */
 window.toggleFullscreen = toggleFullscreen;
 window.initKeyboardShortcuts = initKeyboardShortcuts;
-

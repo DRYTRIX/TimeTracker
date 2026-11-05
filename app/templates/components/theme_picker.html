@@ -46,8 +46,8 @@
                     <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">{{ _('Accent colour') }}</label>
                     <div id="tt-accent-presets" class="flex flex-wrap items-center gap-2 mb-2" role="radiogroup" aria-label="{{ _('Accent colour presets') }}"></div>
                     <div class="flex items-center gap-2">
-                        <input type="color" id="tt-accent-input" class="h-8 w-12 rounded border border-gray-300 dark:border-gray-600 cursor-pointer bg-transparent p-0" value="#3b82f6" aria-label="{{ _('Custom accent colour') }}">
-                        <input type="text" id="tt-accent-hex" maxlength="7" placeholder="#3b82f6"
+                        <input type="color" id="tt-accent-input" class="h-8 w-12 rounded border border-gray-300 dark:border-gray-600 cursor-pointer bg-transparent p-0" value="#4F46E5" aria-label="{{ _('Custom accent colour') }}">
+                        <input type="text" id="tt-accent-hex" maxlength="7" placeholder="#4F46E5"
                                class="w-28 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:bg-gray-700 dark:text-white font-mono">
                         <button type="button" id="tt-accent-clear" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Use theme default') }}</button>
                     </div>
@@ -96,7 +96,7 @@
                     <i class="fas fa-rotate-left mr-1"></i>{{ _('Reset to default') }}
                 </button>
                 <button type="button" id="tt-theme-save"
-                        class="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50">
+                        class="btn btn-primary px-4 py-1.5 text-sm disabled:opacity-50">
                     <i class="fas fa-check mr-1"></i>{{ _('Save theme') }}
                 </button>
             </div>
@@ -122,7 +122,7 @@
     }
     .tt-swatch:hover { transform: scale(1.05); }
     .tt-swatch.is-selected {
-        border-color: #3b82f6;
+        border-color: #4F46E5;
         box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     }
     .tt-swatch__strips {
@@ -153,7 +153,7 @@
         width: 18px;
         height: 18px;
         border-radius: 9999px;
-        background: #3b82f6;
+        background: #4F46E5;
         color: #fff;
         display: none;
         align-items: center;
@@ -171,9 +171,9 @@
     .tt-accent-preset.is-selected { border-color: #111827; }
     .dark .tt-accent-preset.is-selected { border-color: #f3f4f6; }
     .tt-pill.is-selected {
-        background-color: #3b82f6 !important;
+        background-color: #4F46E5 !important;
         color: #fff !important;
-        border-color: #3b82f6 !important;
+        border-color: #4F46E5 !important;
         z-index: 1;
     }
     #tt-theme-customise[open] [data-tt-rot] { transform: rotate(90deg); }
@@ -280,7 +280,7 @@
             while (strips.childElementCount < 3) {
                 const strip = document.createElement('div');
                 strip.className = 'tt-swatch__strip';
-                strip.style.background = theme.accent || '#3b82f6';
+                strip.style.background = theme.accent || '#4F46E5';
                 strips.appendChild(strip);
             }
             sw.appendChild(strips);
@@ -358,7 +358,7 @@
         } else {
             // Fallback to current theme accent for the colour picker UI.
             const theme = state.themes.find(function (t) { return t.name === state.pending.theme_name; });
-            try { accentInput.value = (theme && theme.accent) || '#3b82f6'; } catch (_) { /* noop */ }
+            try { accentInput.value = (theme && theme.accent) || '#4F46E5'; } catch (_) { /* noop */ }
             accentHex.value = '';
         }
     }

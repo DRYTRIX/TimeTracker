@@ -13,7 +13,6 @@
        loads last wins. #}
     <link href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}?v={{ app_version }}-toastfix1">
     <script nonce="{{ csp_nonce() }}">
         // On page load or when changing themes, best to add inline in `head` to avoid FOUC
         if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -94,14 +93,14 @@
                         <!-- Login Form -->
                         <form method="POST" action="{{ url_for('kiosk.kiosk_login') }}" class="space-y-6">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
+
                             <!-- User Selection Grid -->
                             {% if users %}
                             <div>
                                 <label class="block mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ _('Select User') }}</label>
                                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     {% for user in users %}
-                                        <button type="button" 
+                                        <button type="button"
                                                 class="bg-gray-50 dark:bg-gray-900/50 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all hover:shadow-md min-h-[100px] flex flex-col items-center justify-center gap-3 group"
                                                 onclick="selectUser('{{ user.username }}')">
                                             <div class="w-12 h-12 rounded-full bg-primary/10 group-hover:bg-primary/20 flex items-center justify-center transition-colors">
@@ -121,9 +120,9 @@
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <i class="fa-solid fa-user text-gray-400"></i>
                                     </div>
-                                    <input type="text" 
-                                           id="username" 
-                                           name="username" 
+                                    <input type="text"
+                                           id="username"
+                                           name="username"
                                            autocomplete="username"
                                            class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all"
                                            placeholder="{{ _('your-username') }}"
@@ -141,9 +140,9 @@
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <i class="fa-solid fa-lock text-gray-400"></i>
                                     </div>
-                                    <input type="password" 
-                                           id="password" 
-                                           name="password" 
+                                    <input type="password"
+                                           id="password"
+                                           name="password"
                                            autocomplete="current-password"
                                            class="w-full pl-10 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all"
                                            placeholder="{{ _('Password') }}"
@@ -199,7 +198,7 @@
             // toggle icons inside button
             const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
             const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
-            
+
             if (themeToggleDarkIcon && themeToggleLightIcon) {
                 themeToggleDarkIcon.classList.toggle('hidden');
                 themeToggleLightIcon.classList.toggle('hidden');
@@ -246,16 +245,16 @@
                 themeToggleLightIcon.classList.add('hidden');
 
                 // Show the correct icon based on current theme
-                const isDark = localStorage.getItem('color-theme') === 'dark' || 
+                const isDark = localStorage.getItem('color-theme') === 'dark' ||
                               (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-                
+
                 if (isDark) {
                     themeToggleLightIcon.classList.remove('hidden');
                 } else {
                     themeToggleDarkIcon.classList.remove('hidden');
                 }
             }
-            
+
             // Run immediately and also on DOM ready
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', initThemeIcons);

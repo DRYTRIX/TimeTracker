@@ -47,27 +47,27 @@ fi
 # Check if migrations directory exists
 if [ -d "migrations" ]; then
     echo "✓ Migrations directory already exists"
-    
+
     # Check if it's properly initialized
     if [ -f "migrations/env.py" ] && [ -f "migrations/alembic.ini" ]; then
         echo "✓ Flask-Migrate is already initialized"
-        
+
         # Show current status
         echo ""
         echo "Current migration status:"
         flask db current || echo "No migrations applied yet"
-        
+
         echo ""
         echo "Migration history:"
         flask db history || echo "No migration history"
-        
+
         echo ""
         echo "To create a new migration:"
         echo "  flask db migrate -m 'Description of changes'"
         echo ""
         echo "To apply pending migrations:"
         echo "  flask db upgrade"
-        
+
         exit 0
     else
         echo "⚠ Migrations directory exists but appears incomplete"
@@ -116,14 +116,14 @@ echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Applying migration..."
     flask db upgrade
-    
+
     if [ $? -eq 0 ]; then
         echo "✓ Migration applied successfully"
-        
+
         echo ""
         echo "Current migration status:"
         flask db current
-        
+
         echo ""
         echo "Migration history:"
         flask db history

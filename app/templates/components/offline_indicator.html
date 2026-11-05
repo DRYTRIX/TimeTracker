@@ -35,30 +35,30 @@
 // Enhanced offline indicator functionality - queue panel
 (function() {
     const queuePanel = document.getElementById('offline-sync-queue-panel');
-    
+
     // Make updateOfflineQueuePanel globally available
     window.updateOfflineQueuePanel = async function() {
         if (!window.offlineSyncManager || !queuePanel) return;
-        
+
         const content = document.getElementById('offline-sync-queue-content');
         if (!content) return;
-        
+
         try {
             const timeEntries = await window.offlineSyncManager.getOfflineTimeEntries();
             const tasks = await window.offlineSyncManager.getOfflineTasks();
             const projects = await window.offlineSyncManager.getOfflineProjects();
-            
+
             const unsyncedTimeEntries = timeEntries.filter(e => !e.synced);
             const unsyncedTasks = tasks.filter(t => !t.synced);
             const unsyncedProjects = projects.filter(p => !p.synced);
-            
+
             if (unsyncedTimeEntries.length === 0 && unsyncedTasks.length === 0 && unsyncedProjects.length === 0) {
                 content.innerHTML = '<p class="text-sm text-text-muted-light dark:text-text-muted-dark text-center">{{ _("No pending items") }}</p>';
                 return;
             }
-            
+
             let html = '<div class="space-y-2">';
-            
+
             if (unsyncedTimeEntries.length > 0) {
                 html += '<div class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-2">{{ _("Time Entries") }}</div>';
                 unsyncedTimeEntries.slice(0, 5).forEach(entry => {
@@ -70,7 +70,7 @@
                     html += `<div class="text-xs text-text-muted-light dark:text-text-muted-dark">+${unsyncedTimeEntries.length - 5} more</div>`;
                 }
             }
-            
+
             if (unsyncedTasks.length > 0) {
                 html += '<div class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-2 mt-4">{{ _("Tasks") }}</div>';
                 unsyncedTasks.slice(0, 3).forEach(task => {
@@ -79,7 +79,7 @@
                     </div>`;
                 });
             }
-            
+
             if (unsyncedProjects.length > 0) {
                 html += '<div class="text-xs font-semibold text-text-muted-light dark:text-text-muted-dark uppercase mb-2 mt-4">{{ _("Projects") }}</div>';
                 unsyncedProjects.slice(0, 3).forEach(project => {
@@ -88,7 +88,7 @@
                     </div>`;
                 });
             }
-            
+
             html += '</div>';
             content.innerHTML = html;
         } catch (error) {

@@ -196,9 +196,7 @@ class WorkdaySessionService:
             return hours
         return WorkdaySession.get_total_hours_for_period(user_id, start_date, end_date)
 
-    def get_unconfirmed_auto_closed_session(
-        self, user_id: int, lookback_days: int = 7
-    ) -> Optional[WorkdaySession]:
+    def get_unconfirmed_auto_closed_session(self, user_id: int, lookback_days: int = 7) -> Optional[WorkdaySession]:
         """Most recent auto-closed session the user has not yet confirmed or corrected."""
         cutoff = local_now() - timedelta(days=lookback_days)
         return (

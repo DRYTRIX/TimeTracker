@@ -2,7 +2,7 @@
 
 ## What's New?
 
-Your TimeTracker application now supports **fully customizable kanban board columns**! You're no longer limited to just "To Do", "In Progress", "Review", and "Done". 
+Your TimeTracker application now supports **fully customizable kanban board columns**! You're no longer limited to just "To Do", "In Progress", "Review", and "Done".
 
 ## Quick Start
 
@@ -196,4 +196,3 @@ Then restart the application.
 ## Enjoy Your Custom Workflow! 🎉
 
 You now have a flexible kanban board that adapts to YOUR workflow, not the other way around!
-

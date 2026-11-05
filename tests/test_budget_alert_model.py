@@ -1,10 +1,12 @@
 """Model tests for BudgetAlert"""
 
-import pytest
 from datetime import datetime, timedelta
 from decimal import Decimal
+
+import pytest
+
 from app import db
-from app.models import BudgetAlert, Project, User, Client
+from app.models import BudgetAlert, Client, Project, User
 
 
 @pytest.fixture

@@ -80,13 +80,13 @@ function confirmDeleteUser(userId, username, timeEntriesCount) {
     // Check if user has time entries
     if (timeEntriesCount > 0) {
         // Show warning dialog (cannot delete)
-        showConfirm('Cannot delete user...', { 
+        showConfirm('Cannot delete user...', {
             variant: 'warning',
             showCancel: false
         });
         return false;
     }
-    
+
     // Show confirmation dialog
     showConfirm('Are you sure...', {
         variant: 'danger'
@@ -250,10 +250,10 @@ pytest tests/test_models_comprehensive.py::test_user_deletion -v
 
 ### When Deletion Fails
 
-1. **Time Entries Present**: 
+1. **Time Entries Present**:
    - Option 1: Keep the user as inactive instead of deleting
    - Option 2: Archive time entries if appropriate
-   
+
 2. **Last Admin**:
    - Promote another user to admin role first
    - Then delete the admin if still needed
@@ -297,7 +297,7 @@ Potential improvements for this feature:
 
 **Cause**: User has time entries or is the last admin
 
-**Solution**: 
+**Solution**:
 1. Check error message for specific reason
 2. For time entries: Consider deactivating instead
 3. For last admin: Create another admin first
@@ -343,4 +343,3 @@ Potential improvements for this feature:
 - ✅ Safety checks for admin and data protection
 - ✅ Comprehensive test coverage
 - ✅ Documentation completed
-

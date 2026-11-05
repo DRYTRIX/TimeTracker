@@ -12,7 +12,7 @@
             padding: 20px;
         }
         .header {
-            background-color: #3b82f6;
+            background-color: #4F46E5;
             color: white;
             padding: 20px;
             text-align: center;
@@ -28,7 +28,7 @@
             background-color: white;
             padding: 15px;
             margin: 15px 0;
-            border-left: 4px solid #3b82f6;
+            border-left: 4px solid #4F46E5;
         }
         .quote-details table {
             width: 100%;
@@ -62,12 +62,12 @@
     <div class="header">
         <h1>{{ _('Quote') }} {{ quote.quote_number }}</h1>
     </div>
-    
+
     <div class="content">
         <p>Hello,</p>
-        
+
         <p>Please find attached quote <strong>{{ quote.quote_number }}</strong> for your review.</p>
-        
+
         <div class="quote-details">
             <table>
                 <tr>
@@ -94,19 +94,19 @@
                 </tr>
             </table>
         </div>
-        
+
         {% if custom_message %}
         <div class="custom-message">
             <p><strong>Message:</strong></p>
             <p>{{ custom_message }}</p>
         </div>
         {% endif %}
-        
+
         <p>Please review the attached quote and let us know if you have any questions.</p>
-        
+
         <p>Thank you for your interest!</p>
     </div>
-    
+
     <div class="footer">
         <p><strong>{{ company_name }}</strong></p>
         <p>TimeTracker - Time Tracking & Project Management</p>
@@ -114,4 +114,3 @@
     </div>
 </body>
 </html>
-

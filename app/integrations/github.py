@@ -128,7 +128,8 @@ class GitHubConnector(BaseConnector):
 
         try:
             response = requests.get(
-                api_url, headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
+                api_url,
+                headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
                 timeout=(5, 30),
             )
 

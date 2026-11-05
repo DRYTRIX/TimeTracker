@@ -19,15 +19,15 @@ class EnhancedOnboardingManager {
     init() {
         // Initialize tooltip system
         this.initTooltips();
-        
+
         // Initialize contextual help buttons
         this.initContextualHelp();
-        
+
         // Initialize feature discovery
         if (this.featureDiscoveryEnabled) {
             this.initFeatureDiscovery();
         }
-        
+
         // Check for first-time user
         this.checkFirstTimeUser();
     }
@@ -65,23 +65,23 @@ class EnhancedOnboardingManager {
                 z-index: 10000;
                 pointer-events: none;
             }
-            
+
             .tooltip-element {
                 position: relative;
                 display: inline-block;
             }
-            
+
             .tooltip-trigger {
                 cursor: help;
-                color: #3b82f6;
+                color: #4F46E5;
                 margin-left: 4px;
                 font-size: 0.875rem;
             }
-            
+
             .dark .tooltip-trigger {
                 color: #60a5fa;
             }
-            
+
             .tooltip-popup {
                 position: absolute;
                 background: #1e293b;
@@ -101,12 +101,12 @@ class EnhancedOnboardingManager {
                 left: 50%;
                 transform: translateX(-50%) translateY(-8px);
             }
-            
+
             .tooltip-popup.show {
                 opacity: 1;
                 transform: translateX(-50%) translateY(0);
             }
-            
+
             .tooltip-popup::after {
                 content: '';
                 position: absolute;
@@ -116,16 +116,16 @@ class EnhancedOnboardingManager {
                 border: 6px solid transparent;
                 border-top-color: #1e293b;
             }
-            
+
             .dark .tooltip-popup {
                 background: #0f172a;
                 color: #f1f5f9;
             }
-            
+
             .dark .tooltip-popup::after {
                 border-top-color: #0f172a;
             }
-            
+
             .contextual-help-btn {
                 position: absolute;
                 top: 8px;
@@ -133,7 +133,7 @@ class EnhancedOnboardingManager {
                 width: 24px;
                 height: 24px;
                 border-radius: 50%;
-                background: #3b82f6;
+                background: #4F46E5;
                 color: white;
                 border: none;
                 cursor: pointer;
@@ -145,12 +145,12 @@ class EnhancedOnboardingManager {
                 transition: all 0.2s;
                 z-index: 10;
             }
-            
+
             .contextual-help-btn:hover {
                 background: #2563eb;
                 transform: scale(1.1);
             }
-            
+
             .feature-discovery-badge {
                 position: absolute;
                 top: -8px;
@@ -168,7 +168,7 @@ class EnhancedOnboardingManager {
                 animation: pulse 2s infinite;
                 z-index: 100;
             }
-            
+
             @keyframes pulse {
                 0%, 100% { transform: scale(1); }
                 50% { transform: scale(1.1); }
@@ -182,37 +182,37 @@ class EnhancedOnboardingManager {
         const elements = document.querySelectorAll('[data-tooltip]');
         elements.forEach(element => {
             if (element.dataset.tooltipAttached === 'true') return;
-            
+
             const tooltipText = element.dataset.tooltip;
             const tooltipElement = document.createElement('span');
             tooltipElement.className = 'tooltip-element';
-            
+
             // Create trigger icon
             const trigger = document.createElement('span');
             trigger.className = 'tooltip-trigger';
             trigger.innerHTML = '<i class="fas fa-question-circle"></i>';
             trigger.setAttribute('aria-label', 'Help');
-            
+
             // Create popup
             const popup = document.createElement('div');
             popup.className = 'tooltip-popup';
             popup.textContent = tooltipText;
-            
+
             // Wrap element
             element.parentNode.insertBefore(tooltipElement, element);
             tooltipElement.appendChild(element);
             tooltipElement.appendChild(trigger);
             tooltipElement.appendChild(popup);
-            
+
             // Event listeners
             trigger.addEventListener('mouseenter', () => {
                 popup.classList.add('show');
             });
-            
+
             trigger.addEventListener('mouseleave', () => {
                 popup.classList.remove('show');
             });
-            
+
             element.dataset.tooltipAttached = 'true';
         });
     }
@@ -429,7 +429,7 @@ class EnhancedOnboardingManager {
         badge.className = 'feature-discovery-badge';
         badge.innerHTML = '!';
         badge.title = feature.description;
-        
+
         // Make parent relative if needed
         const computedStyle = window.getComputedStyle(element);
         if (computedStyle.position === 'static') {
@@ -464,7 +464,7 @@ class EnhancedOnboardingManager {
             <div class="font-semibold mb-1">${feature.name}</div>
             <div>${feature.description}</div>
         `;
-        
+
         badge.appendChild(tooltip);
 
         badge.addEventListener('mouseleave', () => {
@@ -644,4 +644,3 @@ window.restartOnboarding = function() {
         window.onboardingManager.init(window.enhancedOnboarding.getEnhancedTourSteps());
     }
 };
-

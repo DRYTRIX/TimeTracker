@@ -1,11 +1,11 @@
-import pytest
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+import pytest
+from factories import InvoiceFactory, TimeEntryFactory
+
 from app import db
-from app.models import Client, Project, TimeEntry, Invoice, ClientPrepaidConsumption
-from factories import InvoiceFactory
-from factories import TimeEntryFactory
+from app.models import Client, ClientPrepaidConsumption, Invoice, Project, TimeEntry
 from app.utils.prepaid_hours import PrepaidHoursAllocator
 
 

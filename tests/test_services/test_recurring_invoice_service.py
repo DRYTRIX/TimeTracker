@@ -2,8 +2,9 @@
 Tests for RecurringInvoiceService.
 """
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 pytestmark = [pytest.mark.unit]
 

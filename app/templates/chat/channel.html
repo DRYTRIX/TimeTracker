@@ -73,7 +73,7 @@
     <!-- Channel Info Sidebar -->
     <div class="lg:col-span-1 bg-card-light dark:bg-card-dark p-4 rounded-lg shadow">
         <h3 class="text-lg font-semibold mb-4">{{ _('Channel Info') }}</h3>
-        
+
         {% if channel.description %}
         <div class="mb-4">
             <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ channel.description }}</p>
@@ -142,11 +142,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // WebSocket for real-time messages
 if (typeof io !== 'undefined') {
     const socket = io();
-    
+
     socket.on('connect', function() {
         socket.emit('join_channel', { channel_id: {{ channel.id }} });
     });
-    
+
     socket.on('new_message', function(data) {
         if (data.channel_id === {{ channel.id }}) {
             // Reload messages or append new message
@@ -160,7 +160,7 @@ document.getElementById('messageForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const form = this;
     const formData = new FormData(form);
-    
+
     fetch(form.action, {
         method: 'POST',
         body: formData,
@@ -228,11 +228,11 @@ function insertEmoji(emoji) {
     const cursorPos = messageInput.selectionStart;
     const textBefore = messageInput.value.substring(0, cursorPos);
     const textAfter = messageInput.value.substring(cursorPos);
-    
+
     messageInput.value = textBefore + emoji + textAfter;
     messageInput.focus();
     messageInput.setSelectionRange(cursorPos + emoji.length, cursorPos + emoji.length);
-    
+
     // Remove emoji picker
     const picker = document.getElementById('emojiPicker');
     if (picker) picker.remove();
@@ -327,7 +327,7 @@ function uploadAttachment(event) {
         if (data.success) {
             pendingAttachments.push(data.attachment);
             closeAttachmentModal();
-            
+
             // Show attachment indicator
             const messageInput = document.getElementById('messageInput');
             const attachmentIndicator = document.createElement('div');
@@ -339,7 +339,7 @@ function uploadAttachment(event) {
                     <i class="fas fa-times"></i>
                 </button>
             `;
-            
+
             const messageForm = document.getElementById('messageForm');
             if (!document.getElementById('attachmentIndicator')) {
                 messageForm.parentElement.insertBefore(attachmentIndicator, messageForm);
@@ -370,13 +370,13 @@ document.getElementById('messageForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const form = this;
     const formData = new FormData(form);
-    
+
     // Add attachment data if any
     if (pendingAttachments.length > 0) {
         formData.append('attachment_data', JSON.stringify(pendingAttachments[0]));
         formData.append('message_type', 'file');
     }
-    
+
     fetch(form.action, {
         method: 'POST',
         body: formData,
@@ -403,4 +403,3 @@ document.getElementById('messageForm').addEventListener('submit', function(e) {
 });
 </script>
 {% endblock %}
-

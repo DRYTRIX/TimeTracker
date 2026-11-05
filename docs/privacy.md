@@ -335,4 +335,3 @@ Not collected:
 **Version**: 1.0  
 **Effective Date**: 2025-10-20  
 **Document Owner**: Privacy & Security Team
-

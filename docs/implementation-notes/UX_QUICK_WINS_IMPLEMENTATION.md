@@ -268,7 +268,7 @@ container.appendChild(overlay);
 // Show loading on button click
 button.addEventListener('click', function() {
     TimeTrackerUI.addLoadingState(this);
-    
+
     // Your async operation
     fetch('/api/endpoint')
         .then(() => TimeTrackerUI.removeLoadingState(button));
@@ -321,7 +321,7 @@ container.appendChild(overlay);
             <i class="fas fa-question-circle me-2"></i>Learn More
         </a>
     {% endset %}
-    
+
     {{ empty_state(
         icon_class='fas fa-folder-open',
         title='No Items Yet',
@@ -479,4 +479,3 @@ For questions or issues with these UX enhancements:
 **Last Updated:** October 2025  
 **Version:** 1.0.0  
 **Status:** ✅ Production Ready
-

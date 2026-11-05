@@ -7,10 +7,10 @@ Create Date: 2025-01-30
 Admin can disable modules system-wide via settings.disabled_module_ids (JSON array).
 Empty or NULL means no modules are disabled (all enabled).
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
-
 
 revision = "110_add_disabled_module_ids"
 down_revision = "109_add_pdf_template_date_format"

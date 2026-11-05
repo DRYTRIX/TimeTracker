@@ -557,7 +557,7 @@ curl -X POST https://your-domain.com/api/v1/projects \
 ### "Insufficient permissions" Error
 
 **Cause**: Token lacks required scope  
-**Solution**: 
+**Solution**:
 1. Check error message for `required_scope`
 2. Create new token with needed scope
 3. Update integration to use new token
@@ -606,4 +606,3 @@ curl -X POST https://your-domain.com/api/v1/projects \
 - 🚀 **Quick Start**: `docs/REST_API_QUICKSTART.md`
 - 🔍 **Interactive Docs**: `/api/docs`
 - 📋 **Implementation Summary**: `REST_API_IMPLEMENTATION_SUMMARY.md`
-

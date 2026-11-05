@@ -18106,4 +18106,3 @@ msgstr "ההפעלה שלך פג או שהדף היה פתוח יותר מדי. 
 
 #~ msgid "Please log in to access this page"
 #~ msgstr "אנא היכנס כדי לגשת לדף זה"
-

@@ -407,4 +407,3 @@ All while maintaining the core privacy principles:
 4. Choose telemetry preference
 
 **Ready to deploy!** 🚀
-

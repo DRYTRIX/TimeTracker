@@ -33,15 +33,20 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const iosSettings = DarwinInitializationSettings();
   await plugin.initialize(
-    const InitializationSettings(android: androidSettings, iOS: iosSettings),
+    settings: const InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    ),
   );
   await plugin.show(
-    AppConstants.notificationIdleReminder,
-    message.notification?.title ?? message.data['title'] ?? 'Still working?',
-    message.notification?.body ??
+    id: AppConstants.notificationIdleReminder,
+    title: message.notification?.title ??
+        message.data['title'] ??
+        'Still working?',
+    body: message.notification?.body ??
         message.data['message'] ??
         'Your timer has been idle. Confirm you are still working or it will stop automatically.',
-    const NotificationDetails(
+    notificationDetails: const NotificationDetails(
       android: AndroidNotificationDetails(
         AppConstants.idleReminderChannelId,
         AppConstants.idleReminderChannelName,
@@ -241,7 +246,7 @@ class NotificationService {
     );
 
     await _localNotifications.initialize(
-      settings,
+      settings: settings,
       onDidReceiveNotificationResponse: _handleNotificationResponse,
     );
 
@@ -463,10 +468,10 @@ class NotificationService {
     );
 
     await _localNotifications.show(
-      AppConstants.notificationTimerRunning,
-      title,
-      body,
-      details,
+      id: AppConstants.notificationTimerRunning,
+      title: title,
+      body: body,
+      notificationDetails: details,
       payload: 'timer_running',
     );
   }
@@ -526,10 +531,10 @@ class NotificationService {
       );
 
       await _localNotifications.show(
-        AppConstants.notificationIdleReminder,
-        title,
-        body,
-        details,
+        id: AppConstants.notificationIdleReminder,
+        title: title,
+        body: body,
+        notificationDetails: details,
         payload: 'idle_prompt',
       );
       _idlePromptShowing = true;
@@ -561,10 +566,11 @@ class NotificationService {
         ),
       );
       await _localNotifications.show(
-        AppConstants.notificationNeedsReview,
-        'Timer needs review',
-        'You were idle and did not answer. Your timer kept running — open TimeTracker to trim or stop it.',
-        details,
+        id: AppConstants.notificationNeedsReview,
+        title: 'Timer needs review',
+        body:
+            'You were idle and did not answer. Your timer kept running — open TimeTracker to trim or stop it.',
+        notificationDetails: details,
         payload: 'needs_review',
       );
     } catch (e, st) {
@@ -581,7 +587,9 @@ class NotificationService {
       return;
     }
     try {
-      await _localNotifications.cancel(AppConstants.notificationIdleReminder);
+      await _localNotifications.cancel(
+        id: AppConstants.notificationIdleReminder,
+      );
     } catch (e, st) {
       debugPrint('NotificationService.cancelIdlePrompt failed: $e\n$st');
     } finally {
@@ -605,7 +613,9 @@ class NotificationService {
       await FlutterForegroundTask.clearAllData();
     }
 
-    await _localNotifications.cancel(AppConstants.notificationTimerRunning);
+    await _localNotifications.cancel(
+      id: AppConstants.notificationTimerRunning,
+    );
     _isShowing = false;
   }
 

@@ -63,23 +63,23 @@
 // Check ServiceWorker status on load
 async function checkSWStatus() {
     const statusDiv = document.getElementById('sw-status');
-    
+
     if (!('serviceWorker' in navigator)) {
         statusDiv.innerHTML = '<p class="text-yellow-600">ServiceWorker not supported in this browser</p>';
         return;
     }
-    
+
     try {
         const registration = await navigator.serviceWorker.getRegistration();
-        
+
         if (!registration) {
             statusDiv.innerHTML = '<p class="text-green-600">✓ No ServiceWorker registered</p>';
             return;
         }
-        
+
         const state = registration.active ? registration.active.state : 'none';
         const scope = registration.scope;
-        
+
         statusDiv.innerHTML = `
             <div class="space-y-2 text-sm">
                 <p><strong>Status:</strong> <span class="text-blue-600">${state}</span></p>
@@ -98,7 +98,7 @@ async function clearAllCaches() {
     statusDiv.classList.remove('hidden');
     statusDiv.className = 'mt-4 p-3 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200';
     statusDiv.textContent = 'Clearing caches...';
-    
+
     try {
         if ('serviceWorker' in navigator) {
             const registration = await navigator.serviceWorker.getRegistration();
@@ -106,11 +106,11 @@ async function clearAllCaches() {
                 registration.active.postMessage({ type: 'CLEAR_CACHE' });
             }
         }
-        
+
         if ('caches' in window) {
             const cacheNames = await caches.keys();
             await Promise.all(cacheNames.map(name => caches.delete(name)));
-            
+
             statusDiv.className = 'mt-4 p-3 rounded bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200';
             statusDiv.textContent = `✓ Successfully cleared ${cacheNames.length} cache(s). Refresh the page to see changes.`;
         } else {
@@ -129,24 +129,24 @@ async function unregisterSW() {
     statusDiv.classList.remove('hidden');
     statusDiv.className = 'mt-4 p-3 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200';
     statusDiv.textContent = 'Unregistering ServiceWorker...';
-    
+
     try {
         if (!('serviceWorker' in navigator)) {
             statusDiv.className = 'mt-4 p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200';
             statusDiv.textContent = 'ServiceWorker not supported';
             return;
         }
-        
+
         const registration = await navigator.serviceWorker.getRegistration();
-        
+
         if (!registration) {
             statusDiv.className = 'mt-4 p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200';
             statusDiv.textContent = 'No ServiceWorker registered';
             return;
         }
-        
+
         const success = await registration.unregister();
-        
+
         if (success) {
             statusDiv.className = 'mt-4 p-3 rounded bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200';
             statusDiv.textContent = '✓ ServiceWorker unregistered successfully. Refresh the page.';
@@ -167,24 +167,24 @@ async function updateSW() {
     statusDiv.classList.remove('hidden');
     statusDiv.className = 'mt-4 p-3 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200';
     statusDiv.textContent = 'Checking for ServiceWorker updates...';
-    
+
     try {
         if (!('serviceWorker' in navigator)) {
             statusDiv.className = 'mt-4 p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200';
             statusDiv.textContent = 'ServiceWorker not supported';
             return;
         }
-        
+
         const registration = await navigator.serviceWorker.getRegistration();
-        
+
         if (!registration) {
             statusDiv.className = 'mt-4 p-3 rounded bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200';
             statusDiv.textContent = 'No ServiceWorker registered';
             return;
         }
-        
+
         await registration.update();
-        
+
         statusDiv.className = 'mt-4 p-3 rounded bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200';
         statusDiv.textContent = '✓ ServiceWorker update checked. Refresh the page to activate new version.';
         setTimeout(() => checkSWStatus(), 1000);
@@ -198,4 +198,3 @@ async function updateSW() {
 checkSWStatus();
 </script>
 {% endblock %}
-

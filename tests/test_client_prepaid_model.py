@@ -1,10 +1,11 @@
-import pytest
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
 
-from app import db
-from app.models import Client, ClientPrepaidConsumption, User, Project, TimeEntry
+import pytest
 from factories import TimeEntryFactory
+
+from app import db
+from app.models import Client, ClientPrepaidConsumption, Project, TimeEntry, User
 
 
 @pytest.mark.unit

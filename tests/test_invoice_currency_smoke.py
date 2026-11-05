@@ -3,13 +3,14 @@ Smoke tests for invoice currency functionality
 Simple high-level tests to ensure the system works end-to-end
 """
 
-import pytest
 from datetime import date, timedelta
 from decimal import Decimal
 
+import pytest
+from factories import ClientFactory, ProjectFactory, UserFactory
+
 from app import db
 from app.models import Invoice, Settings
-from factories import UserFactory, ClientFactory, ProjectFactory
 
 
 def _create_invoice_graph(*, username: str, client_name: str, project_name: str, currency: str):

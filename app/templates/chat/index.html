@@ -26,7 +26,7 @@
         </div>
         <div class="space-y-2">
             {% for channel in channels %}
-            <a href="{{ url_for('team_chat.chat_channel', channel_id=channel.id) }}" 
+            <a href="{{ url_for('team_chat.chat_channel', channel_id=channel.id) }}"
                class="block p-2 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors {% if request.endpoint == 'team_chat.chat_channel' and request.view_args.channel_id == channel.id %}bg-primary/10 border-l-2 border-primary{% endif %}">
                 <div class="flex items-center justify-between">
                     <span class="font-medium"># {{ channel.name }}</span>
@@ -48,7 +48,7 @@
             <h3 class="text-sm font-semibold mb-2 text-text-muted-light dark:text-text-muted-dark">{{ _('Direct Messages') }}</h3>
             <div class="space-y-2">
                 {% for channel in direct_channels %}
-                <a href="{{ url_for('team_chat.chat_channel', channel_id=channel.id) }}" 
+                <a href="{{ url_for('team_chat.chat_channel', channel_id=channel.id) }}"
                    class="block p-2 rounded hover:bg-background-light dark:hover:bg-background-dark transition-colors">
                     <div class="flex items-center gap-2">
                         {% for member in channel.members %}
@@ -145,4 +145,3 @@ document.addEventListener('click', function(e) {
 });
 </script>
 {% endblock %}
-

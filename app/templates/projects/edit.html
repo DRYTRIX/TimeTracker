@@ -106,12 +106,12 @@
                                 {{ definition.label }}
                                 {% if definition.is_mandatory %}<span class="text-red-600 dark:text-red-400">*</span>{% endif %}
                             </label>
-                            <input 
-                                type="text" 
-                                id="custom_field_{{ definition.field_key }}" 
-                                name="custom_field_{{ definition.field_key }}" 
-                                value="{{ request.form.get('custom_field_' + definition.field_key, project.get_custom_field(definition.field_key, '') if project.custom_fields else '') }}" 
-                                placeholder="{{ definition.description or _('Enter value') }}" 
+                            <input
+                                type="text"
+                                id="custom_field_{{ definition.field_key }}"
+                                name="custom_field_{{ definition.field_key }}"
+                                value="{{ request.form.get('custom_field_' + definition.field_key, project.get_custom_field(definition.field_key, '') if project.custom_fields else '') }}"
+                                placeholder="{{ definition.description or _('Enter value') }}"
                                 class="form-input w-full"
                                 {% if definition.is_mandatory %}required{% endif %}
                             >
@@ -212,8 +212,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (form) {
         form.addEventListener('submit', function(){
             if (mdEditor && descriptionInput) {
-                try { 
-                    descriptionInput.value = mdEditor.getMarkdown(); 
+                try {
+                    descriptionInput.value = mdEditor.getMarkdown();
                 } catch (err) {
                     console.error('Failed to sync markdown editor:', err);
                 }
@@ -223,5 +223,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-
-

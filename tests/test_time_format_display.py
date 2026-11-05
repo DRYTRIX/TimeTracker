@@ -17,11 +17,7 @@ from flask import url_for
 
 from app import db
 from app.models import Permission, Role, Settings, TimeEntry, User
-from app.utils.timezone import (
-    format_user_datetime,
-    get_resolved_time_format_key,
-    get_user_time_format,
-)
+from app.utils.timezone import format_user_datetime, get_resolved_time_format_key, get_user_time_format
 
 
 def test_get_user_time_format_24h_no_ampm(app, user):
@@ -164,7 +160,7 @@ def test_date_picker_init_disables_flatpickr_mobile_mode():
     # One disableMobile per date / time / datetime-local initializer
     assert src.count("disableMobile: true") == 3
     # Defensive selectors must exclude Flatpickr's own mobile inputs
-    assert ':not(.flatpickr-mobile)' in src
+    assert ":not(.flatpickr-mobile)" in src
     assert src.count(":not(.flatpickr-mobile)") >= 3
     # Observer must batch + filter rather than calling initAll() synchronously
     assert "initScheduled" in src
@@ -192,9 +188,9 @@ def test_all_datetime_local_inputs_are_prefs_aware():
         src = path.read_text(encoding="utf-8", errors="ignore")
         for tag in tag_re.findall(src):
             if 'type="datetime-local"' in tag.replace("\n", " "):
-                assert "user-datetime-input" in tag.replace("\n", " "), (
-                    f"{path}: datetime-local input without user-datetime-input: {tag!r}"
-                )
+                assert "user-datetime-input" in tag.replace(
+                    "\n", " "
+                ), f"{path}: datetime-local input without user-datetime-input: {tag!r}"
 
 
 def _run_parse_user_time_cases():
@@ -242,9 +238,7 @@ console.log(JSON.stringify(out));
         check=False,
     )
     if result.returncode != 0:
-        raise AssertionError(
-            f"node parse helper failed: {result.stderr or result.stdout}"
-        )
+        raise AssertionError(f"node parse helper failed: {result.stderr or result.stdout}")
     return json.loads(result.stdout.strip())
 
 
@@ -285,9 +279,7 @@ def _ensure_edit_own_permission(user_id):
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_edit_timer_uses_user_date_input_and_datetime_filter(
-    app, authenticated_client, user, project
-):
+def test_edit_timer_uses_user_date_input_and_datetime_filter(app, authenticated_client, user, project):
     """Edit page must use preference-aware date inputs and user_datetime display."""
     with app.app_context():
         settings = Settings.get_settings()
@@ -334,9 +326,9 @@ def test_edit_timer_uses_user_date_input_and_datetime_filter(
     )
     assert created_match, "Created field missing from edit page"
     created_text = created_match.group(1).strip()
-    assert re.search(r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}", created_text), (
-        f"Expected DD.MM.YYYY HH:MM Created, got: {created_text!r}"
-    )
+    assert re.search(
+        r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}", created_text
+    ), f"Expected DD.MM.YYYY HH:MM Created, got: {created_text!r}"
     assert re.search(r"\d{4}-\d{2}-\d{2}", created_text) is None
 
 

@@ -252,5 +252,3 @@ See [TROUBLESHOOTING_OIDC_DNS.md](../../TROUBLESHOOTING_OIDC_DNS.md) for detaile
 ### 11) Support
 
 If you run into issues, capture the application logs (including the IdP error page if any) and verify your env vars. Most problems are due to a mismatch in redirect URI, missing scopes/claims, or proxy/HTTPS configuration.
-
-

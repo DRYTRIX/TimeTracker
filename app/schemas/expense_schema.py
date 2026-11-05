@@ -16,7 +16,7 @@ class ExpenseSchema(Schema):
     description = fields.Str(required=True, validate=validate.Length(max=500))
     date = fields.Date(required=True)
     category_id = fields.Int(allow_none=True)
-    billable = fields.Bool(missing=False)
+    billable = fields.Bool(load_default=False)
     receipt_path = fields.Str(allow_none=True)
     created_by = fields.Int(required=True)
     created_at = fields.DateTime(dump_only=True)
@@ -35,7 +35,7 @@ class ExpenseCreateSchema(Schema):
     description = fields.Str(required=True, validate=validate.Length(min=1, max=500))
     date = fields.Date(required=True)
     category_id = fields.Int(allow_none=True)
-    billable = fields.Bool(missing=False)
+    billable = fields.Bool(load_default=False)
     receipt_path = fields.Str(allow_none=True)
 
 

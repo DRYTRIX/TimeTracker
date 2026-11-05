@@ -44,13 +44,13 @@
                 </h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ _('Use a barcode scanner or type the SKU manually') }}</p>
             </div>
-            
+
             <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <i class="fas fa-search text-gray-400"></i>
                 </div>
-                <input type="text" 
-                       id="barcode-input" 
+                <input type="text"
+                       id="barcode-input"
                        class="w-full pl-12 pr-14 bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-4 sm:py-5 text-xl sm:text-2xl text-center font-mono tracking-wider text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all min-h-[48px]"
                        placeholder="{{ _('Scan barcode or enter SKU...') }}"
                        autocomplete="off"
@@ -58,8 +58,8 @@
                        aria-label="{{ _('Barcode or SKU input') }}"
                        aria-describedby="barcode-status"
                        autofocus>
-                <button type="button" 
-                        id="camera-scan-btn" 
+                <button type="button"
+                        id="camera-scan-btn"
                         class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 rounded-lg min-w-[48px] min-h-[48px]"
                         title="{{ _('Use Camera to Scan') }}"
                         aria-label="{{ _('Open camera scanner') }}"
@@ -67,9 +67,9 @@
                     <i class="fas fa-camera text-xl" aria-hidden="true"></i>
                 </button>
             </div>
-            
+
             <div class="mt-4 min-h-[40px]" id="barcode-status" role="status" aria-live="polite"></div>
-            
+
             <!-- Loading Skeleton for Item Display -->
             <div id="item-loading-skeleton" class="hidden mt-6">
                 <div class="bg-card-light dark:bg-card-dark rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8 animate-pulse">
@@ -81,7 +81,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Camera Scanner Container -->
             <div id="camera-scanner-container" class="hidden mt-6">
                 <div class="bg-gray-900 rounded-xl overflow-hidden">
@@ -113,7 +113,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <div class="bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-900/30 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center gap-2 mb-3">
@@ -167,15 +167,15 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Quantity') }}</label>
                     <div class="flex items-center gap-3">
                         <button type="button" class="w-14 h-14 flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors font-bold text-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-w-[56px] min-h-[56px]" onclick="adjustQuantity(-1)" aria-label="{{ _('Decrease quantity') }}">
                             <i class="fas fa-minus" aria-hidden="true"></i>
                         </button>
-                        <input type="number" 
-                               id="adjust-quantity" 
+                        <input type="number"
+                               id="adjust-quantity"
                                class="flex-1 bg-gray-50 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-4 text-center text-3xl font-bold text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all min-h-[56px]"
                                value="0"
                                step="0.01"
@@ -187,7 +187,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Reason') }}</label>
                     <div class="relative">
@@ -207,13 +207,13 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed" id="adjust-submit-btn" aria-label="{{ _('Apply stock adjustment') }}">
                     <i class="fas fa-check" id="adjust-submit-icon" aria-hidden="true"></i>
                     <span id="adjust-submit-text">{{ _('Apply Adjustment') }}</span>
                     <i class="fas fa-spinner fa-spin hidden" id="adjust-submit-spinner" aria-hidden="true"></i>
                 </button>
-                
+
                 <!-- Undo Button (hidden by default) -->
                 <button type="button" id="adjust-undo-btn" class="hidden w-full bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-100 font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px]" aria-label="{{ _('Undo last adjustment') }}">
                     <i class="fas fa-undo" aria-hidden="true"></i>
@@ -241,7 +241,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('To Warehouse') }}</label>
                     <div class="relative">
@@ -258,11 +258,11 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Quantity') }}</label>
-                    <input type="number" 
-                           id="transfer-quantity" 
+                    <input type="number"
+                           id="transfer-quantity"
                            class="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all min-h-[48px]"
                            value="1"
                            min="0.01"
@@ -271,7 +271,7 @@
                            aria-label="{{ _('Transfer quantity') }}"
                            required>
                 </div>
-                
+
                 <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed" id="transfer-submit-btn" aria-label="{{ _('Transfer stock') }}">
                     <i class="fas fa-exchange-alt" id="transfer-submit-icon" aria-hidden="true"></i>
                     <span id="transfer-submit-text">{{ _('Transfer Stock') }}</span>
@@ -321,7 +321,7 @@
                             </p>
                             {% endif %}
                         </div>
-                        
+
                         <div>
                             <label for="timer-task" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Task') }} <span class="text-gray-500 dark:text-gray-400 font-normal">({{ _('Optional') }})</span></label>
                             <select id="timer-task" class="form-input w-full text-lg"
@@ -333,12 +333,12 @@
                             </select>
                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">{{ _('Tasks will load after selecting a project') }}</p>
                         </div>
-                        
+
                         <div>
                             <label for="timer-notes" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ _('Notes') }} <span class="text-gray-500 dark:text-gray-400 font-normal">({{ _('Optional') }})</span></label>
                             <textarea id="timer-notes" class="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all resize-none" rows="4" placeholder="{{ _('What are you working on?') }}"></textarea>
                         </div>
-                        
+
                         <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed" id="timer-submit-btn" aria-label="{{ _('Start timer') }}">
                             <i class="fas fa-play" id="timer-submit-icon" aria-hidden="true"></i>
                             <span id="timer-submit-text">{{ _('Start Timer') }}</span>
@@ -386,20 +386,20 @@ document.addEventListener('DOMContentLoaded', function() {
     function enhanceSearchable() {
         if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
     }
-    
+
     if (projectSelect && taskSelect) {
         projectSelect.addEventListener('change', function() {
             const projectId = this.value;
-            
+
             // Reset task select
             taskSelect.innerHTML = '<option value="">{{ _("No task") }}</option>';
             taskSelect.disabled = true;
             enhanceSearchable();
-            
+
             if (!projectId) {
                 return;
             }
-            
+
             // Fetch tasks for selected project
             fetch(`/api/tasks?project_id=${projectId}`, {
                 credentials: 'same-origin'

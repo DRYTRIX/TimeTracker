@@ -33,7 +33,7 @@ def _tt_payload():
             "type_id": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##x::2.1",
             "process_id": "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
         },
-        "payload": {"ubl_xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Invoice></Invoice>"},
+        "payload": {"ubl_xml": '<?xml version="1.0" encoding="UTF-8"?><Invoice></Invoice>'},
     }
 
 
@@ -169,4 +169,3 @@ def test_peppyrus_send_uses_x_api_key(monkeypatch):
     req_headers = responses.calls[0].request.headers
     assert req_headers.get("X-Api-Key") == "k_test"
     assert "Authorization" not in req_headers
-

@@ -35,8 +35,7 @@ from app.models import (
 )
 from app.services import ProjectService
 from app.utils.db import safe_commit
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR, safe_log
-from app.utils.safe_redirect import safe_redirect, safe_redirect_target
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response, safe_log
 from app.utils.permissions import admin_or_permission_required, permission_required
 from app.utils.posthog_funnels import (
     track_onboarding_first_project,
@@ -45,6 +44,7 @@ from app.utils.posthog_funnels import (
     track_project_setup_completed,
     track_project_setup_started,
 )
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.timezone import convert_app_datetime_to_user
 
 _project_service = ProjectService()
@@ -678,7 +678,9 @@ def view_project(project_id):
         link_templates_by_field=link_templates_by_field,
         attachments=attachments,
         budget_status=budget_status,
-        milestones=Milestone.query.filter_by(project_id=project.id).order_by(Milestone.due_date.asc().nullslast(), Milestone.name).all(),
+        milestones=Milestone.query.filter_by(project_id=project.id)
+        .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
+        .all(),
     )
     resp = make_response(response)
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
@@ -2444,8 +2446,13 @@ def download_project_attachment(attachment_id):
     if not user_can_access_project(current_user, attachment.project_id):
         abort(403)
 
-    # Build file path
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+    except PathEscapeError:
+        flash(_("File not found"), "error")
+        return redirect(url_for("projects.view_project", project_id=project.id))
 
     if not os.path.exists(file_path):
         flash(_("File not found"), "error")
@@ -2468,13 +2475,14 @@ def delete_project_attachment(attachment_id):
     attachment = ProjectAttachment.query.get_or_404(attachment_id)
     project = attachment.project
 
-    # Delete file
-    file_path = os.path.join(current_app.root_path, "..", attachment.file_path)
-    if os.path.exists(file_path):
-        try:
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, attachment.file_path)
+        if os.path.exists(file_path):
             os.remove(file_path)
-        except Exception as e:
-            current_app.logger.error(f"Failed to delete attachment file: {e}")
+    except (PathEscapeError, OSError) as e:
+        current_app.logger.error(f"Failed to delete attachment file: {e}")
 
     # Delete database record
     attachment_id_for_log = attachment.id

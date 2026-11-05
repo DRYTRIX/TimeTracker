@@ -96,7 +96,7 @@ app/config/
    POSTHOG_API_KEY
    ├─ Name: POSTHOG_API_KEY
    └─ Value: phc_xxxxxxxxxxxxxxxxxxxxx
-   
+
    SENTRY_DSN
    ├─ Name: SENTRY_DSN
    └─ Value: https://xxxxx@sentry.io/xxxxx
@@ -295,4 +295,3 @@ A: Yes! Check `logs/app.jsonl` for all events, and `docs/all_tracked_events.md` 
 ---
 
 **Need Help?** Open an issue on GitHub or check the documentation in `docs/`.
-

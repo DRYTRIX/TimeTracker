@@ -29,7 +29,9 @@ def upgrade():
         return
 
     if not _has_column(inspector, "users", "two_factor_enabled"):
-        op.add_column("users", sa.Column("two_factor_enabled", sa.Boolean(), nullable=False, server_default=sa.text("false")))
+        op.add_column(
+            "users", sa.Column("two_factor_enabled", sa.Boolean(), nullable=False, server_default=sa.text("false"))
+        )
     if not _has_column(inspector, "users", "two_factor_secret"):
         op.add_column("users", sa.Column("two_factor_secret", sa.String(length=255), nullable=True))
     if not _has_column(inspector, "users", "two_factor_confirmed_at"):
@@ -51,4 +53,3 @@ def downgrade():
     for name in ("two_factor_confirmed_at", "two_factor_secret", "two_factor_enabled"):
         if _has_column(inspector, "users", name):
             op.drop_column("users", name)
-

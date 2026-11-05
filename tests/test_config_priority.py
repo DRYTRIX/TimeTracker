@@ -4,11 +4,13 @@ Tests that WebUI settings take priority over .env values, and that .env values
 are used as initial startup values.
 """
 
-import pytest
 import os
+
+import pytest
+
+from app import db
 from app.models import Settings
 from app.utils.config_manager import ConfigManager
-from app import db
 
 
 class TestConfigPriority:

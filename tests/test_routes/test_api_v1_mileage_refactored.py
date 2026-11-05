@@ -8,7 +8,8 @@ pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import date
 from decimal import Decimal
-from app.models import Mileage, Project, ApiToken
+
+from app.models import ApiToken, Mileage, Project
 
 
 class TestAPIMileageRefactored:

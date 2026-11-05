@@ -106,7 +106,8 @@ class OutlookCalendarConnector(BaseConnector):
         if "access_token" in data:
             try:
                 user_response = requests.get(
-                    f"{self.GRAPH_BASE_URL}/me", headers={"Authorization": f"Bearer {data['access_token']}"},
+                    f"{self.GRAPH_BASE_URL}/me",
+                    headers={"Authorization": f"Bearer {data['access_token']}"},
                     timeout=(5, 30),
                 )
                 if user_response.status_code == 200:
@@ -193,7 +194,9 @@ class OutlookCalendarConnector(BaseConnector):
 
         try:
             # Get user info and calendars
-            response = requests.get(f"{self.GRAPH_BASE_URL}/me/calendars", headers={"Authorization": f"Bearer {token}"}, timeout=(5, 30))
+            response = requests.get(
+                f"{self.GRAPH_BASE_URL}/me/calendars", headers={"Authorization": f"Bearer {token}"}, timeout=(5, 30)
+            )
 
             if response.status_code == 200:
                 calendars = response.json().get("value", [])

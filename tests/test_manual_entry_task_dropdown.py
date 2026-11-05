@@ -24,6 +24,4 @@ def test_manual_entry_declares_form_before_suggest_break(authenticated_client):
     suggest_break_use = html.find("if (suggestBreakBtn && breakTimeInput && form)")
     assert form_decl != -1, "manualEntryForm lookup missing from page script"
     assert suggest_break_use != -1, "suggest-break block missing from page script"
-    assert form_decl < suggest_break_use, (
-        "form must be declared before suggest-break block (Issue #675 TDZ regression)"
-    )
+    assert form_decl < suggest_break_use, "form must be declared before suggest-break block (Issue #675 TDZ regression)"

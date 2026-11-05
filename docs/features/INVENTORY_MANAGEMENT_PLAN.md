@@ -221,7 +221,7 @@ Add to `app/templates/base.html` after "Finance & Expenses" section:
 
 ```html
 <li class="mt-2">
-    <button onclick="toggleDropdown('inventoryDropdown')" data-dropdown="inventoryDropdown" 
+    <button onclick="toggleDropdown('inventoryDropdown')" data-dropdown="inventoryDropdown"
             class="w-full flex items-center p-2 rounded-lg {% if inventory_open %}bg-background-light dark:bg-background-dark text-primary font-semibold{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}">
         <i class="fas fa-boxes w-6 text-center"></i>
         <span class="ml-3 sidebar-label">{{ _('Inventory') }}</span>
@@ -229,55 +229,55 @@ Add to `app/templates/base.html` after "Finance & Expenses" section:
     </button>
     <ul id="inventoryDropdown" class="{% if not inventory_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
         <li>
-            <a class="block px-2 py-1 rounded {% if nav_active_stock_items %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" 
+            <a class="block px-2 py-1 rounded {% if nav_active_stock_items %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}"
                href="{{ url_for('inventory.list_stock_items') }}">
                 <i class="fas fa-cubes w-4 mr-2"></i>{{ _('Stock Items') }}
             </a>
         </li>
         <li>
-            <a class="block px-2 py-1 rounded {% if nav_active_warehouses %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" 
+            <a class="block px-2 py-1 rounded {% if nav_active_warehouses %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}"
                href="{{ url_for('inventory.list_warehouses') }}">
                 <i class="fas fa-warehouse w-4 mr-2"></i>{{ _('Warehouses') }}
             </a>
         </li>
         <li>
-            <a class="block px-2 py-1 rounded {% if nav_active_stock_levels %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" 
+            <a class="block px-2 py-1 rounded {% if nav_active_stock_levels %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}"
                href="{{ url_for('inventory.stock_levels') }}">
                 <i class="fas fa-list-ul w-4 mr-2"></i>{{ _('Stock Levels') }}
             </a>
         </li>
         <li>
-            <a class="block px-2 py-1 rounded {% if nav_active_movements %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" 
+            <a class="block px-2 py-1 rounded {% if nav_active_movements %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}"
                href="{{ url_for('inventory.list_movements') }}">
                 <i class="fas fa-exchange-alt w-4 mr-2"></i>{{ _('Stock Movements') }}
             </a>
         </li>
         <li>
-            <a class="block px-2 py-1 rounded {% if nav_active_transfers %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" 
+            <a class="block px-2 py-1 rounded {% if nav_active_transfers %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}"
                href="{{ url_for('inventory.list_transfers') }}">
                 <i class="fas fa-truck w-4 mr-2"></i>{{ _('Transfers') }}
             </a>
         </li>
         <li>
-            <a class="block px-2 py-1 rounded {% if nav_active_reservations %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" 
+            <a class="block px-2 py-1 rounded {% if nav_active_reservations %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}"
                href="{{ url_for('inventory.list_reservations') }}">
                 <i class="fas fa-bookmark w-4 mr-2"></i>{{ _('Reservations') }}
             </a>
         </li>
         <li>
-            <a class="block px-2 py-1 rounded {% if nav_active_adjustments %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" 
+            <a class="block px-2 py-1 rounded {% if nav_active_adjustments %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}"
                href="{{ url_for('inventory.list_adjustments') }}">
                 <i class="fas fa-edit w-4 mr-2"></i>{{ _('Stock Adjustments') }}
             </a>
         </li>
         <li>
-            <a class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" 
+            <a class="block px-2 py-1 rounded {% if nav_active_reports %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}"
                href="{{ url_for('inventory.reports') }}">
                 <i class="fas fa-chart-pie w-4 mr-2"></i>{{ _('Inventory Reports') }}
             </a>
         </li>
         <li>
-            <a class="block px-2 py-1 rounded {% if nav_active_low_stock %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" 
+            <a class="block px-2 py-1 rounded {% if nav_active_low_stock %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}"
                href="{{ url_for('inventory.low_stock_alerts') }}">
                 <i class="fas fa-exclamation-triangle w-4 mr-2"></i>{{ _('Low Stock Alerts') }}
             </a>
@@ -286,7 +286,7 @@ Add to `app/templates/base.html` after "Finance & Expenses" section:
 </li>
 ```
 
-**Menu Variable**: 
+**Menu Variable**:
 ```python
 {% set inventory_open = ep.startswith('inventory.') %}
 ```
@@ -763,4 +763,3 @@ Create the following documentation:
 ## Conclusion
 
 This comprehensive inventory management system will provide TimeTracker with professional-grade inventory tracking capabilities while maintaining seamless integration with existing quote, invoice, and project workflows. The phased implementation approach ensures steady progress while maintaining code quality and test coverage.
-

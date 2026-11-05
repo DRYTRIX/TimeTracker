@@ -6,14 +6,14 @@
 /* ---- Chart wrapper (our #gantt-container) ---- */
 #gantt-container {
   border-radius: 0.5rem;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--color-border-light);
   overflow-x: auto;
-  background: #ffffff;
+  background: var(--color-card-light);
   font-size: 13px;
 }
 .dark #gantt-container {
-  background: #2D3748;
-  border-color: #4A5568;
+  background: var(--color-card-dark);
+  border-color: var(--color-border-dark);
 }
 
 /* ---- Frappe .gantt (SVG root) ---- */
@@ -23,70 +23,70 @@
 
 /* Grid header */
 .gantt .grid-header {
-  fill: #ffffff;
-  stroke: #E2E8F0;
+  fill: var(--color-card-light);
+  stroke: var(--color-border-light);
   stroke-width: 1.2;
 }
 .dark .gantt .grid-header {
-  fill: #2D3748;
-  stroke: #4A5568;
+  fill: var(--color-card-dark);
+  stroke: var(--color-border-dark);
 }
 
 /* Grid rows – subtle alternating */
 .gantt .grid-row {
-  fill: #ffffff;
+  fill: var(--color-card-light);
 }
 .gantt .grid-row:nth-child(even) {
-  fill: #F7F9FB;
+  fill: var(--color-bg-light);
 }
 .dark .gantt .grid-row {
-  fill: #2D3748;
+  fill: var(--color-card-dark);
 }
 .dark .gantt .grid-row:nth-child(even) {
-  fill: #374151;
+  fill: var(--color-bg-dark-secondary);
 }
 
 /* Row and tick lines */
 .gantt .row-line {
-  stroke: #E2E8F0;
+  stroke: var(--color-border-light);
 }
 .dark .gantt .row-line {
-  stroke: #4A5568;
+  stroke: var(--color-border-dark);
 }
 
 .gantt .tick {
-  stroke: #E2E8F0;
+  stroke: var(--color-border-light);
   stroke-width: 0.5;
 }
 .gantt .tick.thick {
-  stroke: #E2E8F0;
+  stroke: var(--color-border-light);
   stroke-width: 1;
 }
 .dark .gantt .tick {
-  stroke: #4A5568;
+  stroke: var(--color-border-dark);
 }
 .dark .gantt .tick.thick {
-  stroke: #4A5568;
+  stroke: var(--color-border-dark);
 }
 
 /* Today highlight – primary tint instead of yellow */
 .gantt .today-highlight {
-  fill: #4A90E2;
+  fill: #4F46E5;
   opacity: 0.08;
 }
 .dark .gantt .today-highlight {
-  fill: #4A90E2;
+  fill: #4F46E5;
   opacity: 0.12;
 }
 
 /* Dependency arrows */
 .gantt .arrow {
   fill: none;
-  stroke: #A0AEC0;
+  stroke: var(--color-text-light-muted);
   stroke-width: 1.2;
 }
 .dark .gantt .arrow {
-  stroke: #718096;
+  stroke: var(--color-text-dark-muted);
 }
 
 /* ---- Bars (default; custom_class overrides per project/task) ---- */
@@ -98,23 +98,23 @@
   user-select: none;
 }
 .gantt .bar-progress {
-  fill: #4A90E2;
+  fill: #4F46E5;
   opacity: 0.45;
 }
 .dark .gantt .bar {
-  fill: #4A5568;
+  fill: var(--color-border-dark);
 }
 .dark .gantt .bar-progress {
-  fill: #4A90E2;
+  fill: #4F46E5;
   opacity: 0.5;
 }
 
 /* Project (primary) and task (secondary) when no custom color */
 .gantt .bar-wrapper.gantt-project .bar {
-  fill: #4A90E2 !important;
+  fill: #4F46E5 !important;
 }
 .gantt .bar-wrapper.gantt-project .bar-progress {
-  fill: #4A90E2 !important;
+  fill: #4F46E5 !important;
   opacity: 0.4;
 }
 .gantt .bar-wrapper.gantt-task .bar {
@@ -137,18 +137,18 @@
 /* Invalid / placeholder bars */
 .gantt .bar-invalid {
   fill: transparent;
-  stroke: #A0AEC0;
+  stroke: var(--color-text-light-muted);
   stroke-width: 1;
   stroke-dasharray: 5;
 }
 .dark .gantt .bar-invalid {
-  stroke: #718096;
+  stroke: var(--color-text-dark-muted);
 }
 .gantt .bar-invalid ~ .bar-label {
-  fill: #718096;
+  fill: var(--color-text-light-secondary);
 }
 .dark .gantt .bar-invalid ~ .bar-label {
-  fill: #A0AEC0;
+  fill: var(--color-text-dark-secondary);
 }
 
 /* Bar label – white on colored bars */
@@ -160,18 +160,18 @@
   font-weight: 500;
 }
 .gantt .bar-label.big {
-  fill: #2D3748;
+  fill: var(--color-text-light);
   text-anchor: start;
   font-weight: 500;
 }
 .dark .gantt .bar-label.big {
-  fill: #E2E8F0;
+  fill: var(--color-text-dark);
 }
 
 /* Resize handles */
 .gantt .handle {
   fill: rgba(255, 255, 255, 0.9);
-  stroke: #E2E8F0;
+  stroke: var(--color-border-light);
   stroke-width: 1;
   cursor: ew-resize;
   opacity: 0;
@@ -179,8 +179,8 @@
   transition: opacity 0.2s ease;
 }
 .dark .gantt .handle {
-  fill: #4A5568;
-  stroke: #718096;
+  fill: var(--color-border-dark);
+  stroke: var(--color-text-dark-muted);
 }
 .gantt .bar-wrapper:hover .handle,
 .gantt .bar-wrapper.active .handle {
@@ -190,22 +190,22 @@
 
 /* Header text (dates) */
 .gantt .upper-text {
-  fill: #A0AEC0;
+  fill: var(--color-text-light-muted);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 .gantt .lower-text {
-  fill: #2D3748;
+  fill: var(--color-text-light);
   font-size: 12px;
   font-weight: 500;
 }
 .dark .gantt .upper-text {
-  fill: #718096;
+  fill: var(--color-text-dark-muted);
 }
 .dark .gantt .lower-text {
-  fill: #E2E8F0;
+  fill: var(--color-text-dark);
 }
 
 .gantt .hide {
@@ -214,45 +214,45 @@
 
 /* ---- Popup (tooltip on hover) – match app card ---- */
 .gantt-container .popup-wrapper {
-  background: #ffffff;
-  color: #2D3748;
+  background: var(--color-card-light);
+  color: var(--color-text-light);
   border-radius: 8px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--color-border-light);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
   padding: 0;
   overflow: hidden;
 }
 .dark .gantt-container .popup-wrapper {
-  background: #2D3748;
-  color: #E2E8F0;
-  border-color: #4A5568;
+  background: var(--color-card-dark);
+  color: var(--color-text-dark);
+  border-color: var(--color-border-dark);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
 
 .gantt-container .popup-wrapper .title {
-  border-bottom: 2px solid #4A90E2;
+  border-bottom: 2px solid #4F46E5;
   padding: 10px 12px;
   font-weight: 600;
   font-size: 13px;
 }
 .dark .gantt-container .popup-wrapper .title {
-  border-bottom-color: #4A90E2;
+  border-bottom-color: #4F46E5;
 }
 
 .gantt-container .popup-wrapper .subtitle {
   padding: 10px 12px;
-  color: #718096;
+  color: var(--color-text-light-secondary);
   font-size: 12px;
 }
 .dark .gantt-container .popup-wrapper .subtitle {
-  color: #A0AEC0;
+  color: var(--color-text-dark-secondary);
 }
 
 .gantt-container .popup-wrapper .pointer {
-  border-top-color: #ffffff;
+  border-top-color: var(--color-card-light);
 }
 .dark .gantt-container .popup-wrapper .pointer {
-  border-top-color: #2D3748;
+  border-top-color: var(--color-card-dark);
 }
 
 /* ---- View switcher (if Frappe renders buttons in HTML) ---- */

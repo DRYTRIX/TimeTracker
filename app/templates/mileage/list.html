@@ -27,7 +27,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
@@ -39,7 +39,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
             <div>
@@ -74,11 +74,11 @@
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-filter-form>
         <div>
             <label for="mileage-filter-search" class="form-label">Search</label>
-            <input type="text" name="search" id="mileage-filter-search" value="{{ search or '' }}" 
-                   placeholder="{{ _('Purpose, location...') }}" 
+            <input type="text" name="search" id="mileage-filter-search" value="{{ search or '' }}"
+                   placeholder="{{ _('Purpose, location...') }}"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
         </div>
-        
+
         <div>
             <label for="status" class="form-label">Status</label>
             <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
@@ -89,7 +89,7 @@
                 <option value="reimbursed" {% if status == 'reimbursed' %}selected{% endif %}>Reimbursed</option>
             </select>
         </div>
-        
+
         <div>
             <label for="project_id" class="form-label">Project</label>
             <select name="project_id" id="project_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
@@ -99,7 +99,7 @@
                 {% endfor %}
             </select>
         </div>
-        
+
         <div>
             <label for="client_id" class="form-label">Client</label>
             {% set locked_client = get_locked_client() %}
@@ -120,19 +120,19 @@
                 </select>
             {% endif %}
         </div>
-        
+
         <div>
             <label for="start_date" class="form-label">Start Date</label>
-            <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}" 
+            <input type="date" name="start_date" id="start_date" value="{{ start_date or '' }}"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
         </div>
-        
+
         <div>
             <label for="end_date" class="form-label">End Date</label>
-            <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}" 
+            <input type="date" name="end_date" id="end_date" value="{{ end_date or '' }}"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
         </div>
-        
+
         <div class="flex items-end gap-2 col-span-full md:col-span-2">
             <button type="submit" class="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-filter mr-2"></i>Filter
@@ -315,9 +315,9 @@ function toggleFilterVisibility() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
     const isCollapsed = filterBody.classList.contains('filter-collapsed');
-    
+
     if (isCollapsed) {
         // Show filters
         filterBody.classList.remove('filter-collapsed');
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
     const filtersVisible = localStorage.getItem('mileageListFiltersVisible');
     if (filtersVisible === 'false') {
         filterBody.classList.add('filter-collapsed');
@@ -381,7 +381,7 @@ function updateBulkDeleteButton() {
     const count = checkboxes.length;
     const btn = document.getElementById('bulkActionsBtn');
     const countSpan = document.getElementById('selectedCount');
-    
+
     if (countSpan) countSpan.textContent = count;
     if (btn) btn.disabled = count === 0;
 }
@@ -396,7 +396,7 @@ function openMenu(triggerEl, menuId) {
     const willOpen = menu.classList.contains('hidden');
     closeAllMenus();
     if (!willOpen) return;
-    
+
     menu.style.top = '';
     menu.style.bottom = '';
     const rect = triggerEl.getBoundingClientRect();
@@ -437,15 +437,15 @@ function closeBulkDeleteDialog() {
 function submitBulkDelete() {
     const form = document.getElementById('confirmBulkDelete-form');
     if (!form) return;
-    
+
     form.querySelectorAll('input[name="mileage_ids[]"]').forEach(input => input.remove());
-    
+
     const checkboxes = document.querySelectorAll('.mileage-entry-checkbox:checked');
     if (checkboxes.length === 0) {
         alert('Please select at least one mileage entry to delete.');
         return;
     }
-    
+
     // Show loading state
     const btn = document.getElementById('bulkActionsBtn');
     let originalHTML = '';
@@ -453,14 +453,14 @@ function submitBulkDelete() {
         originalHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
-        
+
         // Re-enable after timeout (safety fallback)
         setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.disabled = false;
         }, 10000);
     }
-    
+
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -468,7 +468,7 @@ function submitBulkDelete() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     // Submit the form - routes are already implemented
     form.submit();
 }
@@ -485,29 +485,29 @@ function closeBulkStatusDialog() {
 function submitBulkStatus() {
     const statusSelect = document.getElementById('bulkStatusSelect');
     if (!statusSelect) return;
-    
+
     const status = statusSelect.value;
     if (!status) {
         alert('Please select a status');
         return;
     }
-    
+
     const form = document.getElementById('bulkStatusForm');
     if (!form) return;
-    
+
     const statusValueInput = document.getElementById('bulkStatusValue');
     if (statusValueInput) {
         statusValueInput.value = status;
     }
-    
+
     form.querySelectorAll('input[name="mileage_ids[]"]').forEach(input => input.remove());
-    
+
     const checkboxes = document.querySelectorAll('.mileage-entry-checkbox:checked');
     if (checkboxes.length === 0) {
         alert('Please select at least one mileage entry to update.');
         return;
     }
-    
+
     // Show loading state
     const btn = document.getElementById('bulkActionsBtn');
     let originalHTML = '';
@@ -515,14 +515,14 @@ function submitBulkStatus() {
         originalHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
-        
+
         // Re-enable after timeout (safety fallback)
         setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.disabled = false;
         }, 10000);
     }
-    
+
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -530,7 +530,7 @@ function submitBulkStatus() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     // Submit the form - routes are already implemented
     form.submit();
 }
@@ -538,4 +538,3 @@ function submitBulkStatus() {
 
 </script>
 {% endblock %}
-

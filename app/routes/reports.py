@@ -2088,7 +2088,13 @@ def utilization_report():
         writer.writerow(["Name", "Billable Hours", "Non-billable Hours", "Total Hours", "Utilization %"])
         for row in rows:
             writer.writerow(
-                [row["name"], row["billable_hours"], row["non_billable_hours"], row["total_hours"], row["utilization_rate"]]
+                [
+                    row["name"],
+                    row["billable_hours"],
+                    row["non_billable_hours"],
+                    row["total_hours"],
+                    row["utilization_rate"],
+                ]
             )
         return current_app.response_class(
             output.getvalue(),

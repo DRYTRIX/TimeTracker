@@ -68,9 +68,7 @@ def upgrade():
         op.create_index(
             "ix_oauth_authorization_codes_code_hash", "oauth_authorization_codes", ["code_hash"], unique=True
         )
-        op.create_index(
-            "ix_oauth_authorization_codes_application_id", "oauth_authorization_codes", ["application_id"]
-        )
+        op.create_index("ix_oauth_authorization_codes_application_id", "oauth_authorization_codes", ["application_id"])
         op.create_index("ix_oauth_authorization_codes_user_id", "oauth_authorization_codes", ["user_id"])
 
 

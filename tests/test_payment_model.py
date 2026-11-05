@@ -1,12 +1,14 @@
 """Tests for Payment model"""
 
-import pytest
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
-from app import db, create_app
+
+import pytest
+from factories import ClientFactory, InvoiceFactory, PaymentFactory, ProjectFactory, UserFactory
 from sqlalchemy.pool import StaticPool
-from app.models import Payment, Invoice, User, Project, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, PaymentFactory
+
+from app import create_app, db
+from app.models import Client, Invoice, Payment, Project, User
 
 
 @pytest.fixture

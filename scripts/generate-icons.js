@@ -2,12 +2,12 @@
 
 /**
  * Icon Generation Script for TimeTracker
- * 
+ *
  * This script generates all required icon formats from the SVG logo.
  * Requires: sharp, to-ico (npm install sharp to-ico)
- * 
+ *
  * Usage: node scripts/generate-icons.js
- * 
+ *
  * For macOS .icns: run scripts/generate-macos-icon.sh on macOS (uses iconutil)
  */
 
@@ -54,7 +54,7 @@ async function generateIcons() {
     // Read SVG
     const svgBuffer = fs.readFileSync(logoPath);
 
-    // Generate favicon.ico (multi-size)
+    // Generate favicon.ico (multi-size) + PNG fallback
     console.log('Generating favicon.ico...');
     const faviconSizes = [16, 32, 48];
     const faviconImages = await Promise.all(
@@ -65,8 +65,10 @@ async function generateIcons() {
           .toBuffer()
       )
     );
-    // Note: Creating a proper .ico file requires additional library
-    // For now, we'll create a 32x32 PNG as favicon
+    const webIcoBuffer = await toIco(faviconImages);
+    fs.writeFileSync(path.join(outputDir, 'favicon.ico'), webIcoBuffer);
+    console.log('  ✓ Created favicon.ico (16/32/48)');
+
     await sharp(svgBuffer)
       .resize(32, 32)
       .png()

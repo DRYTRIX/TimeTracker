@@ -57,7 +57,7 @@ from app.integrations.slack_connector import PROVIDER_KEY as SLACK_PROVIDER
 from app.integrations.slack_connector import SlackConnector
 from app.models import Integration
 from app.utils.db import safe_commit
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 
 logger = logging.getLogger(__name__)
 

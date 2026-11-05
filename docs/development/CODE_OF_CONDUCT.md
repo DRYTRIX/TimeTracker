@@ -1,5 +1,7 @@
 # Contributor Covenant Code of Conduct
 
+> Canonical copy for GitHub community health: [`CODE_OF_CONDUCT.md`](../../CODE_OF_CONDUCT.md) at the repository root.
+
 ## Our Pledge
 
 We as members, contributors, and leaders pledge to make participation in our

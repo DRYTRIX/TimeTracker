@@ -1,0 +1,54 @@
+name: Setup Python env
+description: Install Python 3.11 and project dependencies via uv with pip-compatible cache
+
+inputs:
+  python-version:
+    description: Python version
+    required: false
+    default: '3.11'
+  install-dev:
+    description: Also install requirements-test.txt and editable package
+    required: false
+    default: 'true'
+  extra-packages:
+    description: Extra pip packages to install (space-separated)
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install uv
+      shell: bash
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+    - name: Cache uv / pip packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          ~/.cache/pip
+        key: uv-${{ runner.os }}-py${{ inputs.python-version }}-${{ hashFiles('requirements.txt', 'requirements-test.txt') }}
+        restore-keys: |
+          uv-${{ runner.os }}-py${{ inputs.python-version }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        uv pip install --system -r requirements.txt
+        if [ "${{ inputs.install-dev }}" = "true" ]; then
+          uv pip install --system -r requirements-test.txt
+          uv pip install --system -e .
+        fi
+        if [ -n "${{ inputs.extra-packages }}" ]; then
+          # shellcheck disable=SC2086
+          uv pip install --system ${{ inputs.extra-packages }}
+        fi

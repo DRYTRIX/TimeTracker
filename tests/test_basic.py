@@ -1,9 +1,11 @@
-import pytest
-from app import db
-from app.models import User, Project, TimeEntry, Settings, Client
-from factories import TimeEntryFactory
 from datetime import datetime, timedelta
 from decimal import Decimal
+
+import pytest
+from factories import TimeEntryFactory
+
+from app import db
+from app.models import Client, Project, Settings, TimeEntry, User
 
 # Note: All fixtures are now imported from conftest.py
 # No duplicate fixtures needed here
@@ -242,14 +244,16 @@ def test_testing_config_respects_database_url():
     Locally without DATABASE_URL, it will use SQLite.
     """
     import os
-    from app.config import TestingConfig
+
+    from app.config import TestingConfig, normalize_database_url
 
     config = TestingConfig()
 
     # Verify that the config uses the DATABASE_URL if set, otherwise defaults to SQLite
     if "DATABASE_URL" in os.environ:
-        # In CI/CD or when DATABASE_URL is explicitly set
-        assert config.SQLALCHEMY_DATABASE_URI == os.environ["DATABASE_URL"]
+        # In CI/CD or when DATABASE_URL is explicitly set (bare postgresql:// is
+        # normalized to postgresql+psycopg2:// for SQLAlchemy 2.1 + psycopg2).
+        assert config.SQLALCHEMY_DATABASE_URI == normalize_database_url(os.environ["DATABASE_URL"])
     else:
         # Local development/testing without DATABASE_URL
         assert config.SQLALCHEMY_DATABASE_URI == "sqlite:///:memory:"

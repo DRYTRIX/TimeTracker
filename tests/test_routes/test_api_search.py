@@ -25,10 +25,11 @@ class _FailingProjectQuery:
     def all(self):
         raise SQLAlchemyError("simulated project search failure")
 
+
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from app import db
-from app.models import Project, Task, Client, TimeEntry, ApiToken
+from app.models import ApiToken, Client, Project, Task, TimeEntry
 from app.services import global_search_service as global_search_service_module
 
 
@@ -118,7 +119,8 @@ class TestLegacySearchAPI:
         data = response.get_json()
         assert data["partial"] is True
         assert "projects" in data["errors"]
-        assert "simulated project search failure" in data["errors"]["projects"]
+        # Service returns a generic message (does not leak exception text).
+        assert data["errors"]["projects"] == "Search failed"
         assert data["errors"].get("tasks") is None
         assert isinstance(data["results"], list)
 
@@ -191,9 +193,7 @@ class TestLegacySearchAPI:
         task_ids = [r["id"] for r in resp_t.get_json()["results"] if r["type"] == "task"]
         assert task.id in task_ids
 
-    def test_search_admin_sees_out_of_scope_project(
-        self, admin_authenticated_client, out_of_scope_entities
-    ):
+    def test_search_admin_sees_out_of_scope_project(self, admin_authenticated_client, out_of_scope_entities):
         """Admin global search includes projects outside any subcontractor scope."""
         marker = out_of_scope_entities["marker"]
         resp = admin_authenticated_client.get("/api/search", query_string={"q": marker, "types": "project"})
@@ -208,9 +208,7 @@ class TestV1SearchAPI:
     @pytest.fixture
     def api_token(self, app, user):
         """Create an API token for testing"""
-        token, plain_token = ApiToken.create_token(
-            user_id=user.id, name="Test API Token", scopes="read:projects"
-        )
+        token, plain_token = ApiToken.create_token(user_id=user.id, name="Test API Token", scopes="read:projects")
         from app import db
 
         db.session.add(token)
@@ -266,7 +264,8 @@ class TestV1SearchAPI:
         data = response.get_json()
         assert data["partial"] is True
         assert "projects" in data["errors"]
-        assert "simulated project search failure" in data["errors"]["projects"]
+        # Service returns a generic message (does not leak exception text).
+        assert data["errors"]["projects"] == "Search failed"
         assert isinstance(data["results"], list)
 
     def test_search_requires_authentication(self, app):
@@ -281,9 +280,7 @@ class TestV1SearchAPI:
     def test_search_requires_read_projects_scope(self, app, user):
         """Test that search requires read:projects scope"""
         # Create token without read:projects scope
-        token, plain_token = ApiToken.create_token(
-            user_id=user.id, name="Test Token", scopes="read:time_entries"
-        )
+        token, plain_token = ApiToken.create_token(user_id=user.id, name="Test Token", scopes="read:time_entries")
         from app import db
 
         db.session.add(token)
@@ -330,13 +327,12 @@ class TestV1SearchAPI:
 
     def test_search_time_entries_respects_user_permissions(self, app, user, project):
         """Test that non-admin users only see their own time entries"""
-        from app import db
         from datetime import datetime, timedelta
 
+        from app import db
+
         # Create API token for user
-        token, plain_token = ApiToken.create_token(
-            user_id=user.id, name="Test Token", scopes="read:projects"
-        )
+        token, plain_token = ApiToken.create_token(user_id=user.id, name="Test Token", scopes="read:projects")
         db.session.add(token)
 
         # Create time entry for this user
@@ -404,10 +400,7 @@ class TestV1SearchAPI:
         assert out_of_scope_entities["task_id"] not in task_ids
         assert out_of_scope_entities["client_id"] not in client_ids
 
-        resp_ok = test_client.get(
-            "/api/v1/search", query_string={"q": project.name[:4], "types": "project"}
-        )
+        resp_ok = test_client.get("/api/v1/search", query_string={"q": project.name[:4], "types": "project"})
         assert resp_ok.status_code == 200
         proj_ok = [r["id"] for r in resp_ok.get_json()["results"] if r["type"] == "project"]
         assert project.id in proj_ok
-

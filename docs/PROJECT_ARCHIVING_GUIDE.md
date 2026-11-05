@@ -532,7 +532,7 @@ For developers and database administrators:
 ### New Fields in `projects` Table
 
 ```sql
-ALTER TABLE projects 
+ALTER TABLE projects
 ADD COLUMN archived_at DATETIME NULL,
 ADD COLUMN archived_by INTEGER NULL,
 ADD COLUMN archived_reason TEXT NULL,
@@ -564,4 +564,3 @@ If you encounter issues with project archiving:
 **Document Version**: 1.0  
 **Last Updated**: October 24, 2025  
 **TimeTracker Version**: 2.0+
-

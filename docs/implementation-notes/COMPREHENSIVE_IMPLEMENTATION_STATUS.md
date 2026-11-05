@@ -196,7 +196,7 @@
    from app.routes.time_approvals import time_approvals_bp
    from app.routes.activity_feed import activity_feed_bp
    from app.routes.recurring_tasks import recurring_tasks_bp
-   
+
    app.register_blueprint(workflows_bp)
    app.register_blueprint(time_approvals_bp)
    app.register_blueprint(activity_feed_bp)
@@ -226,4 +226,3 @@
 
 **Foundation Complete** ✅  
 **Ready for:** UI development, testing, and remaining feature implementation
-

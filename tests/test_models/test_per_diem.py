@@ -8,6 +8,7 @@ pytestmark = [pytest.mark.unit, pytest.mark.models]
 
 from datetime import date, datetime, time
 from decimal import Decimal
+
 from app import db
 from app.models import PerDiem, PerDiemRate, User
 

@@ -2,11 +2,13 @@
 Tests for OIDC logout behavior
 """
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 from flask import session, url_for
-from app.models import User
+
 from app import db
+from app.models import User
 
 
 @pytest.fixture
@@ -187,9 +189,9 @@ def test_logout_uses_cached_oidc_id_token_hint_when_present(oidc_authenticated_c
             def delete(self, key):
                 fake_cache_store.pop(key, None)
 
-        with patch("app.routes.auth.get_cache", return_value=FakeCache()), patch("app.routes.auth.oauth") as mock_oauth, patch(
-            "app.routes.auth.Config"
-        ) as mock_config:
+        with patch("app.routes.auth.get_cache", return_value=FakeCache()), patch(
+            "app.routes.auth.oauth"
+        ) as mock_oauth, patch("app.routes.auth.Config") as mock_config:
             mock_config.AUTH_METHOD = "oidc"
             mock_config.OIDC_POST_LOGOUT_REDIRECT_URI = "https://app.example.com/"
             mock_client = MagicMock()

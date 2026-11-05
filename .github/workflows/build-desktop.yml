@@ -1,30 +1,24 @@
 name: Build Desktop Apps
 
+# Installers ship from cd-release.yml. This workflow is manual (or path CI via ci.yml).
 env:
   NODE_VERSION: '24'
 
 on:
-  push:
-    branches: [ main, develop ]
-    paths:
-      - 'desktop/**'
-      - '.github/workflows/build-desktop.yml'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'desktop/**'
   workflow_dispatch:
 
 jobs:
   test-desktop:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
 
       - name: Install dependencies
         working-directory: desktop
@@ -38,32 +32,31 @@ jobs:
     needs: test-desktop
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v7
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-      
+
       - name: Generate desktop icons
         run: |
           npm install
           npm run generate:icons
-      
+
       - name: Install dependencies
         working-directory: desktop
         run: npm ci
-      
+
       - name: Build Windows
         working-directory: desktop
         env:
-          # Code signing (optional - only signs if secrets are configured)
           CSC_LINK: ${{ secrets.WINDOWS_CODE_SIGN_CERT }}
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CODE_SIGN_PASSWORD }}
         run: npm run build:win
-      
+
       - name: Upload Windows installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-installer
           path: desktop/dist/*.exe
@@ -72,28 +65,28 @@ jobs:
     needs: test-desktop
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v7
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-      
+
       - name: Generate desktop icons
         run: |
           npm install
           npm run generate:icons
-      
+
       - name: Install dependencies
         working-directory: desktop
         run: npm ci
-      
+
       - name: Build Linux
         working-directory: desktop
         run: npm run build:linux
-      
+
       - name: Upload Linux packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-packages
           path: |
@@ -104,30 +97,30 @@ jobs:
     needs: test-desktop
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - uses: actions/checkout@v7
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-      
+
       - name: Generate desktop icons
         run: |
           npm install
           npm run generate:icons
           chmod +x scripts/generate-macos-icon.sh
           ./scripts/generate-macos-icon.sh
-      
+
       - name: Install dependencies
         working-directory: desktop
         run: npm ci
-      
+
       - name: Build macOS
         working-directory: desktop
         run: npm run build:mac
-      
+
       - name: Upload macOS DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-dmg
           path: desktop/dist/*.dmg

@@ -102,4 +102,3 @@ class EInvoiceProvider(ProviderBase):
         if isinstance(sent, dict):
             message_id = sent.get("message_id") or sent.get("messageId") or sent.get("id") or str(doc_id)
         return ProviderSendResult(message_id=message_id, raw={"created": created, "sent": sent})
-

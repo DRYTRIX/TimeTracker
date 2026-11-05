@@ -3,13 +3,14 @@
 from datetime import datetime, timedelta
 
 import pytest
+
 from app.utils.time_rounding import (
-    round_time_duration,
     apply_user_rounding,
     format_rounding_interval,
     get_available_rounding_intervals,
     get_available_rounding_methods,
     get_user_rounding_settings,
+    round_time_duration,
 )
 
 

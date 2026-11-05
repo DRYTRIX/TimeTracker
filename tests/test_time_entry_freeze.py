@@ -3,10 +3,10 @@
 import datetime as dt
 
 import pytest
+from factories import ProjectFactory, UserFactory
 
 from app import db
 from app.models import TimeEntry
-from factories import UserFactory, ProjectFactory
 
 
 @pytest.mark.unit

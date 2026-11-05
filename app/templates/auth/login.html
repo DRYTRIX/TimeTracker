@@ -1,126 +1,89 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ _('Login') }} - {{ app_name }}</title>
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
-    <link rel="alternate icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/timetracker-logo.svg') }}">
-    {# Inter is self-hosted via @font-face in dist/output.css (app/static/vendor/inter). #}
-    {# Font Awesome must load BEFORE dist/output.css: its `.fa-solid{display:inline-block}`
-       has the same specificity as Tailwind's `.hidden{display:none}`, so whichever
-       loads last wins. #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}?v={{ app_version }}-toastfix1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='toast-notifications.css') }}?v={{ app_version }}-toastfix1">
-    <script nonce="{{ csp_nonce() }}">
-        // On page load or when changing themes, best to add inline in `head` to avoid FOUC
-        if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark')
-        }
-    </script>
-</head>
-<body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-    <div class="min-h-screen flex items-center justify-center px-4">
-        <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-0 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
-            <div class="hidden md:flex items-center justify-center p-10 bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20">
-                <div class="text-center">
-                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-32 h-32 mx-auto mb-6 drop-shadow-lg animate-pulse">
-                    <h1 class="text-4xl font-bold mt-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TimeTracker</h1>
-                    <p class="mt-3 text-lg text-text-muted-light dark:text-text-muted-dark">{{ _('Track time. Stay organized.') }}</p>
-                    <div class="mt-6 flex flex-wrap gap-2 justify-center">
-                        <span class="px-3 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">
-                            <i class="fas fa-clock mr-1"></i>{{ _('Time Tracking') }}
-                        </span>
-                        <span class="px-3 py-1 rounded-full text-xs bg-secondary/10 text-secondary border border-secondary/20">
-                            <i class="fas fa-project-diagram mr-1"></i>{{ _('Projects') }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            <div class="p-6 sm:p-8">
-                <div class="flex items-center gap-3 mb-4 md:hidden">
-                    <img src="{{ url_for('static', filename='images/timetracker-logo.svg') }}" alt="TimeTracker Logo" class="w-10 h-10">
-                    <span class="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TimeTracker</span>
-                </div>
-                <h2 class="text-2xl font-bold tracking-tight">{{ _('Sign in to your account') }}</h2>
-                {% if demo_mode %}
-                <div class="mt-4 p-4 rounded-lg bg-primary/10 dark:bg-primary/20 border border-primary/30 dark:border-primary/40">
-                    <p class="text-sm font-medium text-primary dark:text-primary/90 mb-2">{{ _('Demo credentials') }}</p>
-                    <p class="text-sm text-text-light dark:text-text-dark"><span class="font-medium">{{ _('Username') }}:</span> <code class="bg-background-light dark:bg-gray-700 px-1.5 py-0.5 rounded">{{ demo_username }}</code></p>
-                    <p class="text-sm text-text-light dark:text-text-dark mt-1"><span class="font-medium">{{ _('Password') }}:</span> <code class="bg-background-light dark:bg-gray-700 px-1.5 py-0.5 rounded">{{ demo_password }}</code></p>
-                </div>
-                {% endif %}
-                <form class="mt-6" method="POST" action="{{ url_for('auth.login') }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <label for="username" class="block mb-2 text-sm font-medium">{{ _('Username') }}</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>
-                        <input type="text" name="username" id="username" autocomplete="username" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2.5 text-base text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="your-username" required>
-                    </div>
+{% extends "auth/_auth_shell.html" %}
 
-                    {% if requires_password %}
-                    <label for="password" class="block mb-2 text-sm font-medium mt-4">{{ _('Password') }}</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>
-                        <input type="password" name="password" id="password" autocomplete="current-password" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2.5 text-base text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="{{ _('Password') }}">
-                    </div>
-                    {% if not demo_mode and show_forgot_password %}
-                    <div class="mt-2 text-right">
-                        <a href="{{ url_for('auth.forgot_password') }}" class="text-xs text-primary hover:underline">
-                            {{ _('Forgot your password?') }}
-                        </a>
-                    </div>
-                    {% endif %}
-                    {% endif %}
+{% block title %}{{ _('Login') }} - {{ app_name }}{% endblock %}
 
-                    {% if auth_includes_ldap %}
-                    <p class="mt-2 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('LDAP authentication is enabled') }}</p>
-                    {% endif %}
-
-                    <button type="submit" class="btn btn-primary w-full mt-6">{{ _('Sign in') }}</button>
-
-                    {% if demo_mode %}
-                    <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark text-center">{{ _('Use the demo credentials above.') }}</p>
-                    {% elif allow_self_register %}
-                    <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark text-center">{{ _('Tip: Enter a new username to create your account.') }}</p>
-                    {% endif %}
-
-                    {% if not demo_mode and auth_includes_oidc %}
-                    <div class="relative my-6">
-                        <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                            <div class="w-full border-t border-border-light dark:border-border-dark"></div>
-                        </div>
-                        <div class="relative flex justify-center text-sm">
-                            <span class="px-2 bg-card-light dark:bg-card-dark text-text-muted-light dark:text-text-muted-dark">{{ _('Or continue with') }}</span>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('auth.login_oidc') }}" class="btn btn-secondary w-full">
-                        <i class="fa-solid fa-right-to-bracket"></i>
-                        {{ _('Single Sign-On') }}
-                    </a>
-                    {% endif %}
-                </form>
+{% block auth_layout %}
+<div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-0 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden">
+    <div class="hidden md:flex items-center justify-center p-10 bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/20 dark:to-secondary/20">
+        <div class="text-center">
+            <img src="{{ url_for('static', filename='images/timetracker-logo-light.svg') }}" alt="TimeTracker Logo" class="w-32 h-32 mx-auto mb-6 drop-shadow-lg dark:hidden">
+            <img src="{{ url_for('static', filename='images/timetracker-logo-dark.svg') }}" alt="TimeTracker Logo" class="w-32 h-32 mx-auto mb-6 drop-shadow-lg hidden dark:block">
+            <h1 class="text-4xl font-bold mt-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TimeTracker</h1>
+            <p class="mt-3 text-lg text-text-muted-light dark:text-text-muted-dark">{{ _('Track time. Stay organized.') }}</p>
+            <div class="mt-6 flex flex-wrap gap-2 justify-center">
+                <span class="px-3 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20">
+                    <i class="fas fa-clock mr-1"></i>{{ _('Time Tracking') }}
+                </span>
+                <span class="px-3 py-1 rounded-full text-xs bg-secondary/10 text-secondary border border-secondary/20">
+                    <i class="fas fa-project-diagram mr-1"></i>{{ _('Projects') }}
+                </span>
             </div>
         </div>
     </div>
+    <div class="p-6 sm:p-8">
+        <div class="flex items-center gap-3 mb-4 md:hidden">
+            <img src="{{ url_for('static', filename='images/timetracker-logo-light.svg') }}" alt="TimeTracker Logo" class="w-10 h-10 dark:hidden">
+            <img src="{{ url_for('static', filename='images/timetracker-logo-dark.svg') }}" alt="TimeTracker Logo" class="w-10 h-10 hidden dark:block">
+            <span class="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">TimeTracker</span>
+        </div>
+        <h2 class="text-2xl font-bold tracking-tight">{{ _('Sign in to your account') }}</h2>
+        {% if demo_mode %}
+        <div class="mt-4 p-4 rounded-lg bg-primary/10 dark:bg-primary/20 border border-primary/30 dark:border-primary/40">
+            <p class="text-sm font-medium text-primary dark:text-primary/90 mb-2">{{ _('Demo credentials') }}</p>
+            <p class="text-sm text-text-light dark:text-text-dark"><span class="font-medium">{{ _('Username') }}:</span> <code class="bg-background-light dark:bg-gray-700 px-1.5 py-0.5 rounded">{{ demo_username }}</code></p>
+            <p class="text-sm text-text-light dark:text-text-dark mt-1"><span class="font-medium">{{ _('Password') }}:</span> <code class="bg-background-light dark:bg-gray-700 px-1.5 py-0.5 rounded">{{ demo_password }}</code></p>
+        </div>
+        {% endif %}
+        <form class="mt-6" method="POST" action="{{ url_for('auth.login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="username" class="block mb-2 text-sm font-medium">{{ _('Username') }}</label>
+            <div class="relative">
+                <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>
+                <input type="text" name="username" id="username" autocomplete="username" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2.5 text-base text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="your-username" required>
+            </div>
 
-    <!-- Flash Messages (hidden; converted to toasts) -->
-    <div id="flash-messages-container" class="hidden">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert {% if category == 'success' %}alert-success{% elif category == 'error' %}alert-danger{% elif category == 'warning' %}alert-warning{% else %}alert-info{% endif %}" data-toast-message="{{ message }}" data-toast-type="{{ category }}"></div>
-                {% endfor %}
+            {% if requires_password %}
+            <label for="password" class="block mb-2 text-sm font-medium mt-4">{{ _('Password') }}</label>
+            <div class="relative">
+                <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>
+                <input type="password" name="password" id="password" autocomplete="current-password" class="w-full pl-10 bg-background-light dark:bg-gray-700 border border-border-light dark:border-border-dark rounded-lg px-3 py-2.5 text-base text-text-light dark:text-text-dark placeholder-text-muted-light dark:placeholder-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary" placeholder="{{ _('Password') }}">
+            </div>
+            {% if not demo_mode and show_forgot_password %}
+            <div class="mt-2 text-right">
+                <a href="{{ url_for('auth.forgot_password') }}" class="text-xs text-primary hover:underline">
+                    {{ _('Forgot your password?') }}
+                </a>
+            </div>
             {% endif %}
-        {% endwith %}
-    </div>
+            {% endif %}
 
-    <script src="{{ asset_url('toast') }}"></script>
-    <script src="{{ asset_url('errors') }}"></script>
-</body>
-</html>
+            {% if auth_includes_ldap %}
+            <p class="mt-2 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('LDAP authentication is enabled') }}</p>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary w-full mt-6">{{ _('Sign in') }}</button>
+
+            {% if demo_mode %}
+            <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark text-center">{{ _('Use the demo credentials above.') }}</p>
+            {% elif allow_self_register %}
+            <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark text-center">{{ _('Tip: Enter a new username to create your account.') }}</p>
+            {% endif %}
+
+            {% if not demo_mode and auth_includes_oidc %}
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div class="w-full border-t border-border-light dark:border-border-dark"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-card-light dark:bg-card-dark text-text-muted-light dark:text-text-muted-dark">{{ _('Or continue with') }}</span>
+                </div>
+            </div>
+            <a href="{{ url_for('auth.login_oidc') }}" class="btn btn-secondary w-full">
+                <i class="fa-solid fa-right-to-bracket"></i>
+                {{ _('Single Sign-On') }}
+            </a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}

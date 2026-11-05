@@ -227,4 +227,3 @@ The issue is now completely fixed. Users can:
 - See changes immediately without Ctrl+Shift+R
 
 Perfect! 🎉
-

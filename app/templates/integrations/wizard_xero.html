@@ -12,7 +12,7 @@
                     {{ _('Configure OAuth credentials from Xero Developer Portal.') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="xero_client_id" class="block text-sm font-medium mb-2">
                     {{ _('Xero OAuth Client ID') }} <span class="text-red-500">*</span>
@@ -21,7 +21,7 @@
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                        placeholder="{{ _('Enter OAuth Client ID') }}" required>
             </div>
-            
+
             <div>
                 <label for="xero_client_secret" class="block text-sm font-medium mb-2">
                     {{ _('Xero OAuth Client Secret') }} <span class="text-red-500">*</span>
@@ -72,7 +72,7 @@
                     </option>
                 </select>
             </div>
-            
+
             <div>
                 <label class="block text-sm font-medium mb-2">{{ _('Items to Sync') }}</label>
                 <div class="space-y-2">
@@ -103,7 +103,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div>
                 <label for="sync_interval" class="block text-sm font-medium mb-2">{{ _('Sync Schedule') }}</label>
                 <select id="sync_interval" name="sync_interval"
@@ -113,7 +113,7 @@
                     <option value="daily" {% if current_config.get('sync_interval') == 'daily' %}selected{% endif %}>{{ _('Daily') }}</option>
                 </select>
             </div>
-            
+
             <div class="flex items-center">
                 <input type="checkbox" name="auto_sync" id="auto_sync" value="1"
                        {% if current_config.get('auto_sync', False) %}checked{% endif %}
@@ -139,7 +139,7 @@
                     {{ _('Xero account code to use for expenses when no mapping is configured') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="contact_mappings" class="block text-sm font-medium mb-2">
                     {{ _('Contact Mappings') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs font-normal">({{ _('JSON') }})</span>
@@ -151,7 +151,7 @@
                     {{ _('Map TimeTracker client IDs to Xero Contact IDs (JSON format)') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="account_mappings" class="block text-sm font-medium mb-2">
                     {{ _('Account Mappings') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs font-normal">({{ _('JSON') }})</span>
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const syncDirection = document.getElementById('sync_direction')?.selectedOptions[0]?.text || '';
                     const syncItems = Array.from(document.querySelectorAll('input[name="sync_items"]:checked'))
                         .map(cb => cb.nextElementSibling.textContent).join(', ') || '{{ _("None") }}';
-                    
+
                     document.getElementById('review-tenant-id').textContent = tenantId;
                     document.getElementById('review-sync-direction').textContent = syncDirection;
                     document.getElementById('review-sync-items').textContent = syncItems;

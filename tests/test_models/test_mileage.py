@@ -8,8 +8,9 @@ pytestmark = [pytest.mark.unit, pytest.mark.models]
 
 from datetime import date, datetime
 from decimal import Decimal
+
 from app import db
-from app.models import Mileage, User, Project, Client, Expense
+from app.models import Client, Expense, Mileage, Project, User
 
 
 @pytest.fixture

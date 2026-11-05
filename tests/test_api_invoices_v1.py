@@ -1,7 +1,8 @@
 import json
-import uuid
-import tempfile
 import os
+import tempfile
+import uuid
+
 import pytest
 
 pytestmark = [pytest.mark.api, pytest.mark.integration]
@@ -9,7 +10,7 @@ pytestmark = [pytest.mark.api, pytest.mark.integration]
 from datetime import date, timedelta
 
 from app import create_app, db
-from app.models import User, Client, Project, Invoice, ApiToken
+from app.models import ApiToken, Client, Invoice, Project, User
 
 
 @pytest.fixture
@@ -232,9 +233,7 @@ def test_set_invoice_items_skips_blank_descriptions(client, api_token, project, 
 
 def test_set_invoice_items_rejects_non_list(client, api_token, project, client_model):
     invoice_id = _create_draft_invoice(client, api_token, project, client_model)
-    r = client.put(
-        f"/api/v1/invoices/{invoice_id}/items", headers=_auth_header(api_token), json={"items": "nope"}
-    )
+    r = client.put(f"/api/v1/invoices/{invoice_id}/items", headers=_auth_header(api_token), json={"items": "nope"})
     assert r.status_code == 400
 
 

@@ -79,4 +79,3 @@ The bridge exposes:
 If `PEPPOL_BRIDGE_AUTH_TOKEN` is set, `/test` and `/send` require:
 
 - `Authorization: Bearer <token>`
-

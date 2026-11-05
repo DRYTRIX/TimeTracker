@@ -37,7 +37,7 @@ from app.models import (
     User,
 )
 from app.utils.db import safe_commit
-from app.utils.safe_redirect import safe_redirect, safe_redirect_target
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.excel_export import create_invoices_list_excel
 from app.utils.module_helpers import module_enabled
 from app.utils.posthog_funnels import (
@@ -47,7 +47,7 @@ from app.utils.posthog_funnels import (
     track_invoice_project_selected,
 )
 from app.utils.prepaid_hours import PrepaidHoursAllocator
-from app.utils.error_handling import client_error_response, client_error_payload, DEFAULT_CLIENT_ERROR
+from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 
 invoices_bp = Blueprint("invoices", __name__)
 logger = logging.getLogger(__name__)
@@ -824,9 +824,7 @@ def update_invoice_status(invoice_id):
             new_status=new_status,
         )
     except Exception:
-        current_app.logger.warning(
-            "Failed to log invoice.status_changed for invoice %s", invoice.id, exc_info=True
-        )
+        current_app.logger.warning("Failed to log invoice.status_changed for invoice %s", invoice.id, exc_info=True)
 
     return jsonify({"success": True, "status": new_status})
 
@@ -847,6 +845,7 @@ def delete_invoice(invoice_id):
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 
     invoice_number = invoice.invoice_number
+    invoice.release_invoiced_costs_and_expenses()
     db.session.delete(invoice)
     if not safe_commit("delete_invoice", {"invoice_id": invoice.id}):
         flash(_("Could not delete invoice due to a database error. Please check server logs."), "error")
@@ -890,13 +889,12 @@ def bulk_delete_invoices():
                 continue
 
             invoice_number = invoice.invoice_number
+            invoice.release_invoiced_costs_and_expenses()
             db.session.delete(invoice)
             deleted_count += 1
 
         except Exception as e:
-            current_app.logger.warning(
-                "Skipping invoice %s during bulk delete", invoice_id_str, exc_info=True
-            )
+            current_app.logger.warning("Skipping invoice %s during bulk delete", invoice_id_str, exc_info=True)
             try:
                 db.session.rollback()
             except Exception:
@@ -970,9 +968,7 @@ def bulk_update_status():
             updated_count += 1
 
         except Exception:
-            current_app.logger.warning(
-                "Skipping invoice %s during bulk status update", invoice_id_str, exc_info=True
-            )
+            current_app.logger.warning("Skipping invoice %s during bulk status update", invoice_id_str, exc_info=True)
             try:
                 db.session.rollback()
             except Exception:
@@ -1228,7 +1224,9 @@ def export_invoice_ubl(invoice_id):
     invoice = Invoice.query.get_or_404(invoice_id)
     if not current_user.is_admin and invoice.created_by != current_user.id:
         flash(_("You do not have permission to export this invoice"), "error")
-        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices"))
+        return safe_redirect(
+            request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices")
+        )
     try:
         from app.integrations.peppol import build_peppol_ubl_invoice_xml
         from app.services.peppol_service import PeppolService
@@ -1288,7 +1286,9 @@ def export_invoice_pdf(invoice_id):
             f"[PDF_EXPORT] Permission denied - InvoiceID: {invoice_id}, User: {current_user.username}"
         )
         flash(_("You do not have permission to export this invoice"), "error")
-        return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices"))
+        return safe_redirect(
+            request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices")
+        )
 
     # Get page size from query parameter, default to A4
     page_size_raw = request.args.get("size", "A4")
@@ -1319,7 +1319,11 @@ def export_invoice_pdf(invoice_id):
             if not ok:
                 for msg in fx_issues[:5]:
                     flash(msg, "error")
-                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
+                return safe_redirect(
+                    request.referrer,
+                    allow_absolute_same_host=True,
+                    fallback=url_for("invoices.view_invoice", invoice_id=invoice.id),
+                )
 
         current_app.logger.info(
             f"[PDF_EXPORT] Creating InvoicePDFGenerator - PageSize: '{page_size}', InvoiceID: {invoice_id}"
@@ -1351,7 +1355,11 @@ def export_invoice_pdf(invoice_id):
                 ),
                 "error",
             )
-            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
+            return safe_redirect(
+                request.referrer,
+                allow_absolute_same_host=True,
+                fallback=url_for("invoices.view_invoice", invoice_id=invoice.id),
+            )
         if pdfa_err:
             current_app.logger.warning(
                 f"[PDF_EXPORT] PDF/A-3 conversion failed - InvoiceID: {invoice_id}, Error: {pdfa_err}"
@@ -1360,7 +1368,11 @@ def export_invoice_pdf(invoice_id):
                 _("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err),
                 "error",
             )
-            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
+            return safe_redirect(
+                request.referrer,
+                allow_absolute_same_host=True,
+                fallback=url_for("invoices.view_invoice", invoice_id=invoice.id),
+            )
         pdf_size_bytes = len(pdf_bytes)
         # Optional: run veraPDF and surface summary (does not block)
         if getattr(settings, "invoices_validate_export", False):
@@ -1419,10 +1431,18 @@ def export_invoice_pdf(invoice_id):
                     _("Factur-X embedding is enabled but failed: %(err)s. Export aborted.", err=embed_err),
                     "error",
                 )
-                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
+                return safe_redirect(
+                    request.referrer,
+                    allow_absolute_same_host=True,
+                    fallback=url_for("invoices.view_invoice", invoice_id=invoice.id),
+                )
             if pdfa_err:
                 flash(_("PDF/A-3 normalization failed: %(err)s. Export aborted.", err=pdfa_err), "error")
-                return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
+                return safe_redirect(
+                    request.referrer,
+                    allow_absolute_same_host=True,
+                    fallback=url_for("invoices.view_invoice", invoice_id=invoice.id),
+                )
             pdf_size_bytes = len(pdf_bytes)
             current_app.logger.info(
                 f"[PDF_EXPORT] Fallback PDF generated successfully - PageSize: '{page_size}', InvoiceID: {invoice_id}, PDFSize: {pdf_size_bytes} bytes"
@@ -1438,7 +1458,11 @@ def export_invoice_pdf(invoice_id):
                 exc_info=True,
             )
             flash(_("PDF generation failed. Please try again."), "error")
-            return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.view_invoice", invoice_id=invoice.id))
+            return safe_redirect(
+                request.referrer,
+                allow_absolute_same_host=True,
+                fallback=url_for("invoices.view_invoice", invoice_id=invoice.id),
+            )
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/duplicate")
@@ -1613,9 +1637,7 @@ def send_invoice_peppol_route(invoice_id):
             return jsonify(
                 {"success": True, "message": "Invoice sent via Peppol", "peppol_tx_id": tx.id if tx else None}
             )
-        return jsonify(
-            {"error": "Failed to send invoice via Peppol", "peppol_tx_id": tx.id if tx else None}
-        ), 400
+        return jsonify({"error": "Failed to send invoice via Peppol", "peppol_tx_id": tx.id if tx else None}), 400
     except Exception as e:
         logger.error(f"Error sending invoice via Peppol: {type(e).__name__}: {str(e)}")
         logger.exception("Full error traceback:")
@@ -1907,13 +1929,14 @@ def delete_invoice_image(invoice_id, image_id):
         flash(_("You do not have permission to delete images from this invoice"), "error")
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice_id))
 
-    # Delete file from disk
-    file_path = os.path.join(current_app.root_path, "..", image.file_path)
-    if os.path.exists(file_path):
-        try:
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, image.file_path)
+        if os.path.exists(file_path):
             os.remove(file_path)
-        except OSError as e:
-            current_app.logger.warning(f"Failed to delete image file {file_path}: {e}")
+    except (PathEscapeError, OSError) as e:
+        current_app.logger.warning(f"Failed to delete image file: {e}")
 
     image_id_for_log = image.id
     db.session.delete(image)
@@ -1960,7 +1983,12 @@ def get_invoice_image_base64(invoice_id, image_id):
     if not current_user.is_admin and invoice.created_by != current_user.id:
         return jsonify({"error": "Permission denied"}), 403
 
-    file_path = os.path.join(current_app.root_path, "..", image.file_path)
+    from app.utils.paths import PathEscapeError, resolve_stored_upload_path
+
+    try:
+        file_path = resolve_stored_upload_path(current_app.root_path, image.file_path)
+    except PathEscapeError:
+        return jsonify({"error": "File not found"}), 404
     if not os.path.exists(file_path):
         return jsonify({"error": "File not found"}), 404
 

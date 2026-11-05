@@ -1,13 +1,15 @@
 """Tests for Payment routes"""
 
-import pytest
-from datetime import datetime, date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+
+import pytest
+from factories import ClientFactory, InvoiceFactory, PaymentFactory, ProjectFactory, UserFactory
 from flask import url_for
-from app import db, create_app
-from app.models import Payment, Invoice, User, Project, Client
-from factories import UserFactory, ClientFactory, ProjectFactory, InvoiceFactory, PaymentFactory
 from sqlalchemy.pool import StaticPool
+
+from app import create_app, db
+from app.models import Client, Invoice, Payment, Project, User
 
 
 @pytest.fixture
@@ -50,6 +52,8 @@ def test_user(app):
     """Create a test user"""
     with app.app_context():
         user = UserFactory(username="testuser")
+        user.set_password("password123")
+        db.session.commit()
         yield user
 
 
@@ -58,6 +62,7 @@ def test_admin(app):
     """Create a test admin user"""
     with app.app_context():
         admin = UserFactory(username="testadmin", role="admin")
+        admin.set_password("password123")
         db.session.add(admin)
         db.session.commit()
         yield admin
@@ -130,7 +135,7 @@ class TestPaymentRoutes:
         """Test listing payments as a regular user"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # List payments
             response = client.get("/payments")
@@ -140,7 +145,7 @@ class TestPaymentRoutes:
         """Test listing payments as admin"""
         with client:
             # Login
-            client.post("/login", data={"username": "testadmin"}, follow_redirects=True)
+            client.post("/login", data={"username": "testadmin", "password": "password123"}, follow_redirects=True)
 
             # List payments
             response = client.get("/payments")
@@ -155,7 +160,7 @@ class TestPaymentRoutes:
         """Test viewing a payment"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # View payment
             response = client.get(f"/payments/{test_payment.id}")
@@ -170,7 +175,7 @@ class TestPaymentRoutes:
         """Test creating payment GET request"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Get create form
             response = client.get("/payments/create")
@@ -180,7 +185,7 @@ class TestPaymentRoutes:
         """Test creating a payment via POST"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Get CSRF token
             response = client.get("/payments/create")
@@ -214,7 +219,7 @@ class TestPaymentRoutes:
         """Test creating a payment with gateway fee"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Create payment with gateway fee
             payment_data = {
@@ -245,7 +250,7 @@ class TestPaymentRoutes:
         """Test editing payment GET request"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Get edit form
             response = client.get(f"/payments/{test_payment.id}/edit")
@@ -255,7 +260,7 @@ class TestPaymentRoutes:
         """Test editing a payment via POST"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Edit payment
             payment_data = {
@@ -282,7 +287,7 @@ class TestPaymentRoutes:
         """Test deleting a payment"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Delete payment
             payment_id = test_payment.id
@@ -298,7 +303,7 @@ class TestPaymentRoutes:
         """Test payment statistics API"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Get payment stats
             response = client.get("/api/payments/stats")
@@ -314,7 +319,7 @@ class TestPaymentRoutes:
         """Test creating payment with invalid amount"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Try to create payment with invalid amount
             payment_data = {
@@ -333,7 +338,7 @@ class TestPaymentRoutes:
         """Test creating payment without selecting invoice"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Try to create payment without invoice
             payment_data = {
@@ -355,7 +360,7 @@ class TestPaymentFilteringAndSearch:
         """Test filtering payments by status"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Filter by status
             response = client.get("/payments?status=completed")
@@ -365,7 +370,7 @@ class TestPaymentFilteringAndSearch:
         """Test filtering payments by method"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Filter by method
             response = client.get("/payments?method=bank_transfer")
@@ -375,7 +380,7 @@ class TestPaymentFilteringAndSearch:
         """Test filtering payments by date range"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Filter by date range
             date_from = (date.today() - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -387,7 +392,7 @@ class TestPaymentFilteringAndSearch:
         """Test filtering payments by invoice"""
         with client:
             # Login
-            client.post("/login", data={"username": "testuser"}, follow_redirects=True)
+            client.post("/login", data={"username": "testuser", "password": "password123"}, follow_redirects=True)
 
             # Filter by invoice
             response = client.get(f"/payments?invoice_id={test_invoice.id}")

@@ -234,9 +234,7 @@ class TaskService:
         assignee_ids = kwargs.pop("assignee_ids", None)
         assignee_id = kwargs.pop("assignee_id", None)
         assigned_to = kwargs.pop("assigned_to", None)
-        update_assignees = (
-            assignee_ids is not None or assignee_id is not None or assigned_to is not None
-        )
+        update_assignees = assignee_ids is not None or assignee_id is not None or assigned_to is not None
 
         # Update scalar fields
         self.task_repo.update(task, **kwargs)
@@ -442,8 +440,13 @@ class TaskService:
         pagination.has_next = has_next
         pagination.has_prev = page > 1
 
+        # codeql[py/log-injection]
         logger.debug(
-            "[TaskService.list_tasks] Step 5: Pagination query execution took %.2fms (total: %s tasks, page: %s, per_page: %s)" % ((time.time() - step_start) * 1000, sanitize_log_value(pagination.total), sanitize_log_value(page), sanitize_log_value(per_page))
+            "[TaskService.list_tasks] Step 5: Pagination query execution took %.2fms (total: %s tasks, page: %s, per_page: %s)",
+            (time.time() - step_start) * 1000,
+            sanitize_log_value(pagination.total),
+            sanitize_log_value(page),
+            sanitize_log_value(per_page),
         )
 
         step_start = time.time()
@@ -511,8 +514,13 @@ class TaskService:
             )
 
         total_time = (time.time() - start_time) * 1000
+        # codeql[py/log-injection]
         logger.info(
-            "[TaskService.list_tasks] Total time: %.2fms (tasks: %s, page: %s, per_page: %s)" % (total_time, sanitize_log_value(len(tasks) if tasks else 0), sanitize_log_value(page), sanitize_log_value(per_page))
+            "[TaskService.list_tasks] Total time: %.2fms (tasks: %s, page: %s, per_page: %s)",
+            total_time,
+            sanitize_log_value(len(tasks) if tasks else 0),
+            sanitize_log_value(page),
+            sanitize_log_value(per_page),
         )
 
         return {"tasks": tasks, "pagination": pagination, "total": pagination.total}

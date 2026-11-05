@@ -1,4 +1,5 @@
 """Tests for PDF/A-3 conversion with ICC profile embedding."""
+
 import io
 import os
 
@@ -68,8 +69,9 @@ def test_convert_to_pdfa3_adds_output_intent(app):
 @pytest.mark.skipif(not pikepdf, reason="pikepdf not installed")
 def test_convert_to_pdfa3_icc_profile_is_valid(app):
     """The embedded ICC profile has the correct signature and structure."""
-    from app.utils.pdfa3 import convert_to_pdfa3
     import struct
+
+    from app.utils.pdfa3 import convert_to_pdfa3
 
     pdf = pikepdf.Pdf.new()
     pdf.add_blank_page(page_size=(595, 842))

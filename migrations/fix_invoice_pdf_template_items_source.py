@@ -15,7 +15,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app import create_app, db
 from app.models import InvoicePDFTemplate
 
-
 OLD_DATA_SOURCE = "{{ invoice.items }}"
 NEW_DATA_SOURCE = "{{ invoice.all_line_items }}"
 

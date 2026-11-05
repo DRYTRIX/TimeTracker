@@ -7,6 +7,7 @@ import pytest
 from app.models import Settings, User
 from app.models.attendance_compliance import (
     AttendanceBreak,
+    AttendanceCorrection,
     AttendanceCorrectionStatus,
     AttendanceDayStatus,
     AttendanceWorkPeriod,
@@ -26,9 +27,22 @@ def compliance_user(app):
         db.session.add(user)
         db.session.commit()
         yield user
+        # Tear down dependents before deleting the user (FK NOT NULL / ON DELETE SET NULL).
+        from app.models import WorkdaySession
+
+        day_ids = [d.id for d in DailyAttendanceRecord.query.filter_by(user_id=user.id).all()]
+        if day_ids:
+            AttendanceCorrection.query.filter(AttendanceCorrection.attendance_day_id.in_(day_ids)).delete(
+                synchronize_session=False
+            )
         AttendanceBreak.query.filter_by(user_id=user.id).delete()
         AttendanceWorkPeriod.query.filter_by(user_id=user.id).delete()
         DailyAttendanceRecord.query.filter_by(user_id=user.id).delete()
+        TimeOffRequest.query.filter_by(user_id=user.id).delete()
+        AttendanceCorrection.query.filter(
+            (AttendanceCorrection.requested_by == user.id) | (AttendanceCorrection.reviewed_by == user.id)
+        ).delete(synchronize_session=False)
+        WorkdaySession.query.filter_by(user_id=user.id).delete()
         db.session.delete(user)
         db.session.commit()
 
@@ -60,9 +74,7 @@ class TestAttendanceComplianceService:
             svc.clock_out(compliance_user.id)
 
             today = date.today()
-            day = DailyAttendanceRecord.query.filter_by(
-                user_id=compliance_user.id, work_date=today
-            ).first()
+            day = DailyAttendanceRecord.query.filter_by(user_id=compliance_user.id, work_date=today).first()
             assert day is not None
             assert (day.total_break_seconds or 0) >= 0
 
@@ -88,9 +100,7 @@ class TestAttendanceComplianceService:
             count = svc.sync_time_off_request(req)
             assert count == 1
 
-            day = DailyAttendanceRecord.query.filter_by(
-                user_id=compliance_user.id, work_date=date.today()
-            ).first()
+            day = DailyAttendanceRecord.query.filter_by(user_id=compliance_user.id, work_date=date.today()).first()
             assert day is not None
             assert day.status == AttendanceDayStatus.ABSENT
 
@@ -202,9 +212,7 @@ class TestAttendanceComplianceService:
             review = svc.review_correction(corr["correction"].id, admin.id, approve=True)
             assert review["success"] is True
 
-            day = DailyAttendanceRecord.query.filter_by(
-                user_id=compliance_user.id, work_date=work_date
-            ).first()
+            day = DailyAttendanceRecord.query.filter_by(user_id=compliance_user.id, work_date=work_date).first()
             assert day is not None
             assert day.work_periods.count() == 1
             period = day.work_periods.first()

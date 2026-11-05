@@ -38,7 +38,8 @@ ALLOWED_BORDER_RADII = ("none", "default", "full")
 # Tailwind 500-shade palette so the swatches feel consistent with the
 # rest of the UI (and with the per-theme accent colours below).
 ACCENT_PRESETS = (
-    "#3b82f6",  # blue-500
+    "#4F46E5",  # brand indigo
+    "#3b82f6",  # blue-500 (info)
     "#0ea5e9",  # sky-500
     "#06b6d4",  # cyan-500
     "#10b981",  # emerald-500
@@ -55,8 +56,8 @@ BUILT_IN_THEMES: Dict[str, Dict[str, Any]] = {
     "default": {
         "label": "Default",
         "description": "The classic TimeTracker look — inherits all current colours.",
-        "preview_colors": ["#3b82f6", "#1f2937", "#f9fafb"],
-        "accent": "#3b82f6",
+        "preview_colors": ["#4F46E5", "#1f2937", "#f9fafb"],
+        "accent": "#4F46E5",
         "vars": {
             # No overrides – the default theme intentionally relies on the
             # existing Tailwind classes so existing users see no change.
@@ -317,7 +318,7 @@ class ThemeService:
         if accent_override and self.validate_accent_color(accent_override):
             accent = accent_override
         if not self.validate_accent_color(accent or ""):
-            accent = "#3b82f6"
+            accent = "#4F46E5"
 
         accent_hover = _lighten(accent, 0.1)
         accent_muted = _rgba(accent, 0.2)
@@ -422,28 +423,36 @@ class ThemeService:
                 "background-color: var(--sidebar-active) !important; }"
             )
 
-        # Body / link / primary button rules.
+        # Body / link / primary utility rules — remap Tailwind primary
+        # utilities onto the theme accent so buttons, badges, and focus
+        # rings follow the user's chosen colour.
         lines.append("body { font-size: var(--font-size-base, 16px); }")
         lines.append("a, button { color: inherit; }")
         lines.append(
-            ".btn-primary, [data-theme-accent] { "
+            ".btn-primary, [data-theme-accent], .bg-primary { "
             "background-color: var(--color-accent) !important; "
-            "border-color: var(--color-accent) !important; color: #fff !important; }"
+            "border-color: var(--color-accent) !important; }"
         )
+        lines.append(".btn-primary, [data-theme-accent] { color: #fff !important; }")
         lines.append(
-            ".btn-primary:hover, [data-theme-accent]:hover { "
+            ".btn-primary:hover, [data-theme-accent]:hover, "
+            ".hover\\:bg-primary:hover { "
             "background-color: var(--color-accent-hover) !important; "
             "border-color: var(--color-accent-hover) !important; }"
         )
+        lines.append(".text-primary { color: var(--color-accent) !important; }")
+        lines.append(".border-primary { border-color: var(--color-accent) !important; }")
+        lines.append(
+            ".ring-primary, .focus\\:ring-primary:focus, "
+            ".focus-visible\\:ring-primary:focus-visible, "
+            ".focus\\:ring-primary\\/30:focus { "
+            "--tw-ring-color: var(--color-accent) !important; }"
+        )
 
-        # Border-radius overrides (only when not default).
+        # Softened radius theming: only interactive/card shells, not every
+        # Tailwind .rounded-* utility (avoids pill-ifying badges, avatars, etc.).
         if border_radius != "default":
-            radius = "0px" if border_radius == "none" else "9999px"
-            lines.append(
-                ".rounded, .rounded-md, .rounded-lg, .rounded-xl, "
-                ".rounded-2xl, .rounded-3xl { border-radius: "
-                f"{radius} !important; }}"
-            )
+            lines.append(".card, .btn, .form-input { " "border-radius: var(--border-radius-md, 0.5rem) !important; }")
 
         lines.append("</style>")
         return "\n".join(lines)

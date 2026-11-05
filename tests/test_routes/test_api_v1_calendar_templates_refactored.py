@@ -7,7 +7,8 @@ import pytest
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
 from datetime import datetime, timedelta
-from app.models import CalendarEvent, TimeEntryTemplate, ApiToken
+
+from app.models import ApiToken, CalendarEvent, TimeEntryTemplate
 
 
 class TestAPICalendarTemplatesRefactored:

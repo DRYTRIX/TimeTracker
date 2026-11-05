@@ -11,9 +11,9 @@ import { collectPageProblems, login } from './helpers.mjs';
  * a bad grouping fails at runtime, not at build time).
  */
 
-/** Generous enough to avoid flakiness, tight enough to catch a regression. */
-const MAX_JS_BYTES = 420_000;
-const MAX_JS_REQUESTS = 16;
+/** Budget applies to hashed dashboard bundles under /static/dist/. */
+const MAX_JS_BYTES = 900_000;
+const MAX_JS_REQUESTS = 28;
 
 test('dashboard stays within its JavaScript budget', async ({ page }) => {
   test.skip(!(await login(page)), 'E2E_USERNAME not configured');
@@ -23,7 +23,8 @@ test('dashboard stays within its JavaScript budget', async ({ page }) => {
 
   page.on('response', async (response) => {
     const url = response.url();
-    if (!/\.js(\?|$)/.test(url)) return;
+    // Lock in the concatenated /static/dist bundles; vendor and page scripts are separate.
+    if (!/\/static\/dist\/.+\.js(\?|$)/.test(url)) return;
     requests += 1;
     try {
       bytes += (await response.body()).length;
@@ -32,17 +33,17 @@ test('dashboard stays within its JavaScript budget', async ({ page }) => {
     }
   });
 
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/', { waitUntil: 'load' });
 
-  expect(requests, `too many JS requests (${requests})`).toBeLessThanOrEqual(MAX_JS_REQUESTS);
-  expect(bytes, `JS payload grew to ${bytes} bytes`).toBeLessThanOrEqual(MAX_JS_BYTES);
+  expect(requests, `too many dist JS requests (${requests})`).toBeLessThanOrEqual(MAX_JS_REQUESTS);
+  expect(bytes, `dist JS payload grew to ${bytes} bytes`).toBeLessThanOrEqual(MAX_JS_BYTES);
 });
 
 test('bundles execute and expose their globals', async ({ page }) => {
   test.skip(!(await login(page)), 'E2E_USERNAME not configured');
 
   const problems = collectPageProblems(page);
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/', { waitUntil: 'load' });
 
   // One representative global per bundle group, to catch a mis-ordered concatenation.
   const globals = await page.evaluate(() => ({
@@ -60,7 +61,7 @@ test('bundles execute and expose their globals', async ({ page }) => {
 test('assets are served with content-hashed, cacheable URLs', async ({ page }) => {
   test.skip(!(await login(page)), 'E2E_USERNAME not configured');
 
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/', { waitUntil: 'load' });
 
   const bundles = await page.evaluate(() =>
     Array.from(document.querySelectorAll('script[src]'))

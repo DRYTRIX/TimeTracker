@@ -15,7 +15,8 @@ def test_module_registry_hides_module_if_all_roles_hide(app, user):
     db.session.add(r)
     db.session.commit()
 
-    user.add_role(r)
+    # Replace seeded roles so analytics is hidden by every assigned role.
+    user.roles = [r]
     db.session.commit()
 
     assert ModuleRegistry.is_enabled("analytics", settings, user) is False
@@ -53,10 +54,10 @@ def test_module_enabled_decorator_blocks_hidden_module_route(app, user):
 
     from flask_login import login_user
     from werkzeug.exceptions import Forbidden
+
     from app.routes.analytics import analytics_dashboard
 
     with app.test_request_context("/analytics"):
         login_user(user, remember=True)
         with pytest.raises(Forbidden):
             analytics_dashboard()
-

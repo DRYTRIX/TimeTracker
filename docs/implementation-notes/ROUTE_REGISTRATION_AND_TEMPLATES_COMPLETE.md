@@ -154,4 +154,3 @@ All templates include:
 - ✅ Register new routes in `app/__init__.py`
 - ✅ Add JavaScript files to templates
 - ✅ Create UI templates (documented in reports)
-

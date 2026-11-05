@@ -63,11 +63,13 @@ class PeppyrusProvider(ProviderBase):
             process_id = f"cenbii-procid-ubl::{process_id}"
         payload = {
             "sender": f"{sender_scheme_id}:{sender_endpoint_id}" if sender_scheme_id else sender_endpoint_id,
-            "recipient": f"{recipient_scheme_id}:{recipient_endpoint_id}" if recipient_scheme_id else recipient_endpoint_id,
+            "recipient": (
+                f"{recipient_scheme_id}:{recipient_endpoint_id}" if recipient_scheme_id else recipient_endpoint_id
+            ),
             "documentType": document_type_id,
             "processType": process_id,
             "fileName": f"{document_id or 'invoice'}.xml",
-            "fileContent": base64.b64encode(ubl_xml.encode('utf-8')).decode('ascii'),
+            "fileContent": base64.b64encode(ubl_xml.encode("utf-8")).decode("ascii"),
         }
         try:
             resp = requests.post(url, headers=self._headers(), json=payload, timeout=self.timeout_s)
@@ -117,4 +119,3 @@ class PeppyrusProvider(ProviderBase):
             except Exception:
                 pass
         return out
-

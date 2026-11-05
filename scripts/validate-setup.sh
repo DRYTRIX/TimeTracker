@@ -26,4 +26,3 @@ fi
 # Run the validation script
 $PYTHON scripts/validate-setup.py
 exit $?
-

@@ -11,25 +11,25 @@ let lastApiCheck = 0;
 // Initialize timer display
 document.addEventListener('DOMContentLoaded', function() {
     updateTimerDisplay();
-    
+
     // Update timer display every second (client-side calculation)
     // Poll API less frequently to reduce server load
     timerInterval = setInterval(() => {
         const now = Date.now();
-        
+
         // Update display every second
         if (now - lastTimerUpdate >= TIMER_UPDATE_INTERVAL) {
             updateTimerDisplay(true); // true = use client-side calculation
             lastTimerUpdate = now;
         }
-        
+
         // Poll API every 5 seconds
         if (now - lastApiCheck >= TIMER_API_INTERVAL) {
             updateTimerDisplay(false); // false = fetch from API
             lastApiCheck = now;
         }
     }, TIMER_UPDATE_INTERVAL);
-    
+
     // Handle timer form submission
     const timerForm = document.getElementById('timer-form');
     if (timerForm) {
@@ -50,20 +50,20 @@ let cachedTimerData = null;
 async function updateTimerDisplay(useCache = false) {
     try {
         let data = cachedTimerData;
-        
+
         // Fetch from API if not using cache or cache is stale
         if (!useCache || !data) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
+
             try {
                 const response = await fetch('/api/kiosk/timer-status', {
                     credentials: 'same-origin',
                     signal: controller.signal
                 });
-                
+
                 clearTimeout(timeoutId);
-                
+
                 if (!response.ok) {
                     // On error, try to use cached data if available
                     if (cachedTimerData) {
@@ -85,7 +85,7 @@ async function updateTimerDisplay(useCache = false) {
                 }
             }
         }
-        
+
         const timerDisplay = document.getElementById('kiosk-timer-display');
         if (!timerDisplay || !data) return;
 
@@ -94,19 +94,19 @@ async function updateTimerDisplay(useCache = false) {
             const startTime = new Date(data.timer.start_time);
             const now = new Date();
             const elapsed = Math.floor((now - startTime) / 1000);
-            
+
             const hours = Math.floor(elapsed / 3600);
             const minutes = Math.floor((elapsed % 3600) / 60);
             const seconds = elapsed % 60;
-            
+
             const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            
+
             timerDisplay.innerHTML = `
                 <i class="fas fa-clock"></i>
                 <span id="timer-time" class="font-mono">${timeString}</span>
                 <span class="text-sm font-normal text-text-muted-light dark:text-text-muted-dark">${data.timer.project_name || ''}</span>
             `;
-            
+
             // Update timer controls section
             const timerControls = document.getElementById('timer-controls');
             if (timerControls) {
@@ -129,7 +129,7 @@ async function updateTimerDisplay(useCache = false) {
                 <i class="fas fa-clock text-text-muted-light dark:text-text-muted-dark"></i>
                 <span class="text-text-muted-light dark:text-text-muted-dark font-medium">No active timer</span>
             `;
-            
+
             // Update timer controls section - show start timer form
             const timerControls = document.getElementById('timer-controls');
             if (timerControls) {
@@ -143,7 +143,7 @@ async function updateTimerDisplay(useCache = false) {
                         // Form already exists with projects loaded, don't recreate
                         return;
                     }
-                    
+
                     // Fetch projects for the form
                     fetch('/api/kiosk/projects', {
                         credentials: 'same-origin'
@@ -161,13 +161,13 @@ async function updateTimerDisplay(useCache = false) {
                         const projects = data.projects || [];
                         let projectOptions = '';
                         if (projects.length > 0) {
-                            projectOptions = projects.map(p => 
+                            projectOptions = projects.map(p =>
                                 `<option value="${p.id}">${p.name}</option>`
                             ).join('');
                         } else {
                             projectOptions = '<option value="" disabled>No projects available</option>';
                         }
-                        
+
                         timerControls.innerHTML = `
                             <form id="timer-form" class="space-y-6">
                                 <div>
@@ -178,7 +178,7 @@ async function updateTimerDisplay(useCache = false) {
                                     </select>
                                     ${projects.length === 0 ? '<p class="text-xs text-yellow-600 dark:text-yellow-400 mt-1.5 flex items-center gap-1"><i class="fas fa-exclamation-triangle"></i>No active projects found. Please create a project first.</p>' : ''}
                                 </div>
-                                
+
                                 <div>
                                     <label for="timer-task" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Task <span class="text-gray-500 dark:text-gray-400 font-normal">(Optional)</span></label>
                                     <select id="timer-task" class="form-input w-full text-lg" data-searchable-select="task" data-filter-by="timer-project" data-search-placeholder="Type to search tasks…" disabled>
@@ -186,12 +186,12 @@ async function updateTimerDisplay(useCache = false) {
                                     </select>
                                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5">Tasks will load after selecting a project</p>
                                 </div>
-                                
+
                                 <div>
                                     <label for="timer-notes" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Notes <span class="text-gray-500 dark:text-gray-400 font-normal">(Optional)</span></label>
                                     <textarea id="timer-notes" class="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all resize-none" rows="4" placeholder="What are you working on?"></textarea>
                                 </div>
-                                
+
                                 <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-4 px-6 rounded-xl transition-colors shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 flex items-center justify-center gap-2">
                                     <i class="fas fa-play"></i>
                                     Start Timer
@@ -200,7 +200,7 @@ async function updateTimerDisplay(useCache = false) {
                         `;
 
                         if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
-                        
+
                         // Re-attach form handler
                         const newTimerForm = document.getElementById('timer-form');
                         if (newTimerForm) {
@@ -208,24 +208,24 @@ async function updateTimerDisplay(useCache = false) {
                                 e.preventDefault();
                                 await startTimer();
                             });
-                            
+
                             // Add project change handler to load tasks
                             const projectSelect = document.getElementById('timer-project');
                             const taskSelect = document.getElementById('timer-task');
-                            
+
                             if (projectSelect && taskSelect) {
                                 projectSelect.addEventListener('change', function() {
                                     const projectId = this.value;
-                                    
+
                                     // Reset task select
                                     taskSelect.innerHTML = '<option value="">No task</option>';
                                     taskSelect.disabled = true;
                                     if (window.ttEnhanceSearchableSelects) window.ttEnhanceSearchableSelects();
-                                    
+
                                     if (!projectId) {
                                         return;
                                     }
-                                    
+
                                     // Fetch tasks for selected project
                                     fetch(`/api/tasks?project_id=${projectId}`, {
                                         credentials: 'same-origin'
@@ -285,13 +285,13 @@ async function startTimer() {
         showError('Please select a project');
         return;
     }
-    
+
     // Set loading state
     const submitBtn = document.getElementById('timer-submit-btn');
     const submitIcon = document.getElementById('timer-submit-icon');
     const submitText = document.getElementById('timer-submit-text');
     const submitSpinner = document.getElementById('timer-submit-spinner');
-    
+
     if (submitBtn) {
         submitBtn.disabled = true;
         if (submitIcon) submitIcon.classList.add('hidden');
@@ -322,17 +322,17 @@ async function startTimer() {
 
         const data = await response.json();
         showSuccess(data.message || 'Timer started successfully');
-        
+
         // Clear cache and update display immediately
         cachedTimerData = null;
         updateTimerDisplay(false); // Force API fetch
-        
+
         // Switch to timer tab and update controls
         const timerTab = document.querySelector('.kiosk-tab[data-tab="timer"]');
         if (timerTab) {
             timerTab.click();
         }
-        
+
         // Update timer controls after a brief delay
         setTimeout(() => {
             updateTimerDisplay(false);
@@ -367,17 +367,17 @@ async function stopTimer() {
     } else {
         confirmed = confirm('Stop the active timer?');
     }
-    
+
     if (!confirmed) {
         return;
     }
-    
+
     // Set loading state
     const stopBtn = document.getElementById('timer-stop-btn');
     const stopIcon = document.getElementById('timer-stop-icon');
     const stopText = document.getElementById('timer-stop-text');
     const stopSpinner = document.getElementById('timer-stop-spinner');
-    
+
     if (stopBtn) {
         stopBtn.disabled = true;
         if (stopIcon) stopIcon.classList.add('hidden');
@@ -403,11 +403,11 @@ async function stopTimer() {
 
         const data = await response.json();
         showSuccess(data.message || 'Timer stopped successfully');
-        
+
         // Clear cache and update display immediately
         cachedTimerData = null;
         updateTimerDisplay(false); // Force API fetch
-        
+
         // Update timer controls after a brief delay
         setTimeout(() => {
             updateTimerDisplay(false);
@@ -454,4 +454,3 @@ function showSuccess(message) {
 
 // Make stopTimer globally available
 window.stopTimer = stopTimer;
-

@@ -22,8 +22,8 @@
         <div>
             <h2 class="text-xl sm:text-2xl font-bold">{{ _('Time Entry') }} #{{ approval.time_entry_id }}</h2>
             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">
-                {{ _('Status') }}: 
-                <span class="px-3 py-1 text-xs rounded-full 
+                {{ _('Status') }}:
+                <span class="px-3 py-1 text-xs rounded-full
                     {% if approval.status.value == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                     {% elif approval.status.value == 'approved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                     {% elif approval.status.value == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
@@ -33,39 +33,39 @@
             </p>
         </div>
     </div>
-    
+
     {% if approval.time_entry %}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Project') }}</h3>
             <p class="font-medium">{{ approval.time_entry.project.name if approval.time_entry.project else _('N/A') }}</p>
         </div>
-        
+
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Task') }}</h3>
             <p class="font-medium">{{ approval.time_entry.task.name if approval.time_entry.task else _('No Task') }}</p>
         </div>
-        
+
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Date') }}</h3>
             <p class="font-medium">{{ approval.time_entry.start_time|user_date if approval.time_entry.start_time else _('N/A') }}</p>
         </div>
-        
+
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Duration') }}</h3>
             <p class="font-medium">{{ "%.2f"|format(approval.time_entry.duration_hours) }} {{ _('hours') }}</p>
         </div>
-        
+
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Start Time') }}</h3>
             <p class="font-medium">{{ approval.time_entry.start_time|user_time if approval.time_entry.start_time else _('N/A') }}</p>
         </div>
-        
+
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('End Time') }}</h3>
             <p class="font-medium">{{ approval.time_entry.end_time|user_time if approval.time_entry.end_time else _('N/A') }}</p>
         </div>
-        
+
         {% if approval.time_entry.billable %}
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Billable') }}</h3>
@@ -75,14 +75,14 @@
         </div>
         {% endif %}
     </div>
-    
+
     {% if approval.time_entry.notes %}
     <div class="mb-6">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Notes') }}</h3>
         <div class="prose prose-sm dark:prose-invert max-w-none bg-background-light dark:bg-background-dark p-4 rounded-lg">{{ approval.time_entry.notes | markdown | safe }}</div>
     </div>
     {% endif %}
-    
+
     {% if approval.time_entry.tags %}
     <div class="mb-6">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Tags') }}</h3>
@@ -94,14 +94,14 @@
     </div>
     {% endif %}
     {% endif %}
-    
+
     {% if approval.request_comment %}
     <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-600">
         <h3 class="text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">{{ _('Request Comment') }}</h3>
         <p class="text-sm text-blue-800 dark:text-blue-300 whitespace-pre-line">{{ approval.request_comment }}</p>
     </div>
     {% endif %}
-    
+
     {% if approval.status.value == 'approved' and approval.approval_comment %}
     <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-600">
         <h3 class="text-sm font-medium text-green-900 dark:text-green-200 mb-2">{{ _('Approval Comment') }}</h3>
@@ -111,7 +111,7 @@
         </p>
     </div>
     {% endif %}
-    
+
     {% if approval.status.value == 'rejected' and approval.rejection_reason %}
     <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-600">
         <h3 class="text-sm font-medium text-red-900 dark:text-red-200 mb-2">{{ _('Rejection Reason') }}</h3>
@@ -121,7 +121,7 @@
         </p>
     </div>
     {% endif %}
-    
+
     <div class="pt-6 border-t border-border-light dark:border-border-dark">
         <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
             <p><strong>{{ _('Requested on') }}:</strong> {{ approval.requested_at|user_datetime if approval.requested_at else _('N/A') }}</p>
@@ -135,24 +135,24 @@
 {% if approval.status.value == 'pending' %}
 <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h3 class="text-lg font-semibold mb-4">{{ _('Actions') }}</h3>
-    
+
     <div class="space-y-4">
         <!-- Approve Form -->
         <form method="POST" action="{{ url_for('client_portal.approve_time_entry', approval_id=approval.id) }}" class="border-b border-border-light dark:border-border-dark pb-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-4">
                 <label for="approval_comment" class="block text-sm font-medium mb-2">{{ _('Comment (optional)') }}</label>
-                <textarea id="approval_comment" name="comment" rows="3" 
+                <textarea id="approval_comment" name="comment" rows="3"
                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                           placeholder="{{ _('Add a comment...') }}"></textarea>
             </div>
-            <button type="submit" 
+            <button type="submit"
                     class="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
                     onclick="return confirm('{{ _('Are you sure you want to approve this time entry?') }}');">
                 <i class="fas fa-check-circle mr-2"></i>{{ _('Approve Time Entry') }}
             </button>
         </form>
-        
+
         <!-- Reject Form -->
         <form method="POST" action="{{ url_for('client_portal.reject_time_entry', approval_id=approval.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -162,7 +162,7 @@
                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                           placeholder="{{ _('Please provide a reason for rejecting this time entry...') }}"></textarea>
             </div>
-            <button type="submit" 
+            <button type="submit"
                     class="inline-flex items-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
                     onclick="return confirm('{{ _('Are you sure you want to reject this time entry?') }}');">
                 <i class="fas fa-times-circle mr-2"></i>{{ _('Reject Time Entry') }}
@@ -173,7 +173,7 @@
 {% endif %}
 
 <div class="mt-6">
-    <a href="{{ url_for('client_portal.time_entry_approvals') }}" 
+    <a href="{{ url_for('client_portal.time_entry_approvals') }}"
        class="inline-flex items-center px-4 py-2 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg transition-colors">
         <i class="fas fa-arrow-left mr-2"></i>{{ _('Back to Approvals') }}
     </a>

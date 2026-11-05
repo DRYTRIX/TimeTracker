@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalNotes = {{ (timer.notes or '')|tojson }};
             const originalTags = {{ (timer.tags or '')|tojson }};
             const originalBillable = {{ 'true' if timer.billable else 'false' }};
-            
+
             const startDate = document.getElementById('start_date').value;
             const startTime = document.getElementById('start_time').value;
             const endDate = document.getElementById('end_date').value;
@@ -158,10 +158,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const notesVal = (notesInput && notesInput.value) ? notesInput.value : '';
             const tagsVal = document.getElementById('tags').value || '';
             const billableVal = document.getElementById('billable').checked;
-            
+
             const newStart = startDate && startTime ? `${startDate} ${startTime}` : originalStart;
             const newEnd = endDate && endTime ? `${endDate} ${endTime}` : originalEnd;
-            
+
             const changes = [];
             if (originalProject !== selectedProject) changes.push({ label: 'Project / Client', from: originalProject, to: selectedProject });
             if (originalStart !== newStart) changes.push({ label: 'Start', from: originalStart, to: newStart });
@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             <form method="POST" action="{{ url_for('timer.edit_timer', timer_id=timer.id) }}" data-edit-timer-form>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
+
                 <!-- Client and Project Selection (Issue #728: client first, then project, then task) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
@@ -435,7 +435,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="start_date" class="form-label">
                             <i class="fas fa-clock mr-1"></i>{{ _('Start Date') }}
                         </label>
-                        <input type="date" class="form-input user-date-input" id="start_date" name="start_date" 
+                        <input type="date" class="form-input user-date-input" id="start_date" name="start_date"
                                value="{{ timer.start_time.strftime('%Y-%m-%d') }}" required>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('When the work started') }}</p>
                     </div>
@@ -443,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="start_time" class="form-label">
                             <i class="fas fa-clock mr-1"></i>{{ _('Start Time') }}
                         </label>
-                        <input type="time" class="form-input user-time-input" id="start_time" name="start_time" 
+                        <input type="time" class="form-input user-time-input" id="start_time" name="start_time"
                                value="{{ timer.start_time.strftime('%H:%M') }}" required>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Time the work started') }}</p>
                     </div>
@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="end_date" class="form-label">
                             <i class="fas fa-stop-circle mr-1"></i>{{ _('End Date') }}
                         </label>
-                        <input type="date" class="form-input user-date-input" id="end_date" name="end_date" 
+                        <input type="date" class="form-input user-date-input" id="end_date" name="end_date"
                                value="{{ timer.end_time.strftime('%Y-%m-%d') if timer.end_time else '' }}">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('When the work ended (leave empty if still running)') }}</p>
                     </div>
@@ -463,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <label for="end_time" class="form-label">
                             <i class="fas fa-stop-circle mr-1"></i>{{ _('End Time') }}
                         </label>
-                        <input type="time" class="form-input user-time-input" id="end_time" name="end_time" 
+                        <input type="time" class="form-input user-time-input" id="end_time" name="end_time"
                                value="{{ timer.end_time.strftime('%H:%M') if timer.end_time else '' }}">
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Time the work ended') }}</p>
                     </div>
@@ -575,7 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <!-- Regular user form -->
             <form method="POST" action="{{ url_for('timer.edit_timer', timer_id=timer.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                
+
                 <!-- Read-only information -->
                 <div class="bg-background-light dark:bg-background-dark p-4 rounded-lg mb-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -819,7 +819,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Multiple image upload handler - improved version
         mdEditor.removeHook && mdEditor.removeHook('addImageBlobHook');
-        
+
         // Create custom multiple file input with unique ID
         const fileInputId = 'edit-timer-image-input-' + Date.now();
         let fileInput = document.getElementById(fileInputId);
@@ -834,17 +834,17 @@ document.addEventListener('DOMContentLoaded', function() {
             fileInput.style.left = '-9999px';
             document.body.appendChild(fileInput);
         }
-        
+
         // Verify multiple attribute is set
         if (!fileInput.hasAttribute('multiple')) {
             fileInput.setAttribute('multiple', 'multiple');
         }
         console.log('File input multiple attribute:', fileInput.multiple, fileInput.hasAttribute('multiple'));
-        
+
         // Function to find image button with multiple strategies
         function findImageButton(toolbar, retries = 0) {
             if (!toolbar) return null;
-            
+
             // Try multiple selectors in order of reliability
             const selectors = [
                 '[data-tooltip="Insert image"]',
@@ -856,7 +856,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 '.toastui-editor-toolbar-group button:nth-child(6)',
                 '.toastui-editor-toolbar-group button:nth-child(4)'
             ];
-            
+
             for (const selector of selectors) {
                 try {
                     const button = toolbar.querySelector(selector);
@@ -864,7 +864,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Verify it's likely the image button by checking if it has image-related attributes or classes
                         const buttonText = (button.textContent || '').toLowerCase();
                         const buttonTitle = (button.title || button.getAttribute('title') || '').toLowerCase();
-                        if (buttonText.includes('image') || buttonTitle.includes('image') || 
+                        if (buttonText.includes('image') || buttonTitle.includes('image') ||
                             selector.includes('image') || button.classList.toString().includes('image')) {
                             return button;
                         }
@@ -873,15 +873,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Continue to next selector
                 }
             }
-            
+
             return null;
         }
-        
+
         // Function to intercept image button with retry logic
         function setupImageButtonInterception(editor, input, maxRetries = 5) {
             let attempts = 0;
             let intercepted = false;
-            
+
             function tryIntercept() {
                 attempts++;
                 try {
@@ -890,7 +890,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!editorContainer) {
                         throw new Error('Editor container element not found');
                     }
-                    
+
                     // Find toolbar - try multiple ways to access it
                     let toolbar = null;
                     // Try finding toolbar relative to editor container
@@ -908,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!toolbar) {
                         toolbar = document.querySelector('.toastui-editor-toolbar');
                     }
-                    
+
                     if (toolbar && !intercepted) {
                         const imageButton = findImageButton(toolbar, attempts);
                         if (imageButton) {
@@ -917,15 +917,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 e.stopImmediatePropagation();
-                                
+
                                 // Small delay to ensure default behavior is prevented
                                 setTimeout(() => {
                                     input.click();
                                 }, 10);
-                                
+
                                 return false;
                             }, true); // Use capture phase
-                            
+
                             intercepted = true;
                             console.log('Successfully intercepted image button for multiple file selection');
                             return true;
@@ -934,7 +934,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } catch (err) {
                     console.warn('Error intercepting image button (attempt ' + attempts + '):', err);
                 }
-                
+
                 // Retry if we haven't exceeded max retries
                 if (attempts < maxRetries && !intercepted) {
                     setTimeout(tryIntercept, 200 * attempts); // Exponential backoff
@@ -945,11 +945,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return false;
             }
-            
+
             // Start with initial delay to ensure toolbar is ready
             setTimeout(tryIntercept, 100);
         }
-        
+
         // Override the addImageBlobHook to use multiple file selection
         // This is the fallback if button interception fails
         if (mdEditor && typeof mdEditor.addHook === 'function') {
@@ -962,27 +962,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Don't call callback - let fileInput.change handle it
             });
         }
-        
+
         // Setup button interception
         if (mdEditor) {
             setupImageButtonInterception(mdEditor, fileInput);
         }
-        
+
         // Handle multiple file selection with progress feedback
         fileInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             console.log('File input changed. Files selected:', files.length, 'Multiple attribute:', fileInput.multiple);
-            
+
             if (files.length === 0) {
                 console.log('No files selected');
                 return;
             }
-            
+
             // Log file details for debugging
             files.forEach((file, index) => {
                 console.log(`File ${index + 1}: ${file.name}, type: ${file.type}, size: ${file.size}`);
             });
-            
+
             // Validate file types
             const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
             const validFiles = files.filter(file => {
@@ -992,23 +992,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return isValid;
             });
-            
+
             if (validFiles.length === 0) {
                 alert('{{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.") }}');
                 fileInput.value = '';
                 return;
             }
-            
+
             if (validFiles.length < files.length) {
                 console.warn('Some files were skipped due to invalid type');
             }
-            
+
             // Show loading feedback
             const fileCount = validFiles.length;
-            const loadingMsg = fileCount > 1 ? 
-                `{{ _("Uploading") }} ${fileCount} {{ _("images") }}...` : 
+            const loadingMsg = fileCount > 1 ?
+                `{{ _("Uploading") }} ${fileCount} {{ _("images") }}...` :
                 '{{ _("Uploading image") }}...';
-            
+
             // Try to show a temporary loading indicator (if toast/notification system exists)
             let loadingIndicator = null;
             try {
@@ -1020,18 +1020,18 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (e) {
                 // No toast system available, continue without it
             }
-            
+
             try {
                 const formData = new FormData();
                 validFiles.forEach(file => {
                     formData.append('images', file);
                 });
-                
+
                 const res = await fetch('{{ url_for('api.upload_editor_images_bulk') }}', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await res.json();
                 if (data && data.urls && data.urls.length > 0) {
                     // Insert all images into editor
@@ -1039,28 +1039,28 @@ document.addEventListener('DOMContentLoaded', function() {
                         const fileName = validFiles[index].name || 'image';
                         return `![${fileName}](${url})`;
                     }).join('\n\n');
-                    
+
                     // Get current markdown content
                     const currentMarkdown = mdEditor.getMarkdown() || '';
-                    
+
                     // Append images to current content (with proper spacing)
-                    const newMarkdown = currentMarkdown 
+                    const newMarkdown = currentMarkdown
                         ? currentMarkdown + '\n\n' + imagesMarkdown
                         : imagesMarkdown;
-                    
+
                     // Set the markdown which will properly render images in WYSIWYG mode
                     mdEditor.setMarkdown(newMarkdown);
-                    
+
                     // Show success message
-                    const successMsg = data.urls.length > 1 ? 
-                        `{{ _("Successfully uploaded") }} ${data.urls.length} {{ _("images") }}` : 
+                    const successMsg = data.urls.length > 1 ?
+                        `{{ _("Successfully uploaded") }} ${data.urls.length} {{ _("images") }}` :
                         '{{ _("Image uploaded successfully") }}';
-                    
+
                     if (loadingIndicator && typeof loadingIndicator.update === 'function') {
                         loadingIndicator.update(successMsg, 'success');
                         setTimeout(() => loadingIndicator.remove && loadingIndicator.remove(), 2000);
                     }
-                    
+
                     // Show warnings if any
                     if (data.warnings && data.warnings.length > 0) {
                         console.warn('Some images failed to upload:', data.warnings);
@@ -1087,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 alert('{{ _("Failed to upload images. Please check your connection and try again.") }}');
             }
-            
+
             // Reset file input
             fileInput.value = '';
         });

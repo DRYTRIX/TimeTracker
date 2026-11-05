@@ -5,9 +5,9 @@ Revises: 077_ui_feature_flags
 Create Date: 2025-01-22 00:10:00
 
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision = "078_system_ui_feature_flags"
@@ -26,32 +26,32 @@ def upgrade():
 
     # Check if settings table exists
     table_names = set(inspector.get_table_names())
-    if 'settings' not in table_names:
+    if "settings" not in table_names:
         print("⚠ Settings table does not exist, skipping UI feature flag columns")
         return
 
     # Determine database dialect for proper default values
     dialect_name = bind.dialect.name if bind else "generic"
-    
+
     # Set appropriate boolean defaults based on database
-    if dialect_name == 'sqlite':
-        bool_true_default = '1'
-    elif dialect_name == 'postgresql':
-        bool_true_default = 'true'
+    if dialect_name == "sqlite":
+        bool_true_default = "1"
+    elif dialect_name == "postgresql":
+        bool_true_default = "true"
     else:  # MySQL/MariaDB and others
-        bool_true_default = '1'
+        bool_true_default = "1"
 
     # Helper to add a boolean column with server default true
     def _add_bool_column(name: str):
         # Refresh column list each time to handle partial migrations
         try:
-            current_cols = {c['name'] for c in inspector.get_columns('settings')}
+            current_cols = {c["name"] for c in inspector.get_columns("settings")}
             if name in current_cols:
                 print(f"✓ Column {name} already exists in settings table")
                 return
         except Exception as e:
             print(f"⚠ Warning checking for {name} column: {e}")
-        
+
         try:
             op.add_column(
                 "settings",
@@ -61,7 +61,7 @@ def upgrade():
         except Exception as e:
             error_msg = str(e)
             # Check if column already exists (different error messages for different databases)
-            if 'already exists' in error_msg.lower() or 'duplicate' in error_msg.lower():
+            if "already exists" in error_msg.lower() or "duplicate" in error_msg.lower():
                 print(f"✓ Column {name} already exists in settings table (detected via error)")
             else:
                 # Re-raise the exception for other errors so Alembic can handle it properly
@@ -132,5 +132,3 @@ def downgrade():
             print(f"✓ Dropped {name} column from settings table")
         except Exception as e:
             print(f"⚠ Warning dropping {name} column from settings table: {e}")
-
-

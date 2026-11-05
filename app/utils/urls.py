@@ -183,9 +183,7 @@ def safe_external_url_for(endpoint: str, **values) -> str:
         return url_for(endpoint, _external=True, **values)
     except (BuildError, RuntimeError) as exc:
         try:
-            current_app.logger.warning(
-                "Could not build external URL for %s: %s", endpoint, exc
-            )
+            current_app.logger.warning("Could not build external URL for %s: %s", endpoint, exc)
         except RuntimeError:
             logger.warning("Could not build external URL for %s: %s", endpoint, exc)
         return ""

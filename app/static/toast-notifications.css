@@ -1,3 +1,6 @@
+/* DEPRECATED standalone file — toast styles live in app/static/src/input.css (compiled to dist/output.css).
+   Kept for offline docs/demos only; app templates no longer link this file. */
+
 /* Toast Notifications - styled to match TimeTracker UI (light + dark) */
 
 #toast-notification-container {

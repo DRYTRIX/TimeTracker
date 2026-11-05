@@ -6,8 +6,9 @@ presented all 41 of them at once. The setup wizard now offers a preset that writ
 Settings.disabled_module_ids so unused areas start switched off.
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from app.models import Settings
 from app.utils.module_registry import ModuleCategory, ModulePreset, ModuleRegistry
