@@ -361,6 +361,7 @@ def oauth_callback(provider):
         return redirect(url_for("integrations.manage_integration", provider=provider))
 
     except Exception as e:
+        # codeql[py/log-injection]
         logger.error(
             "Error in OAuth callback for %s: %s", sanitize_log_value(provider), sanitize_log_value(type(e).__name__)
         )
@@ -499,6 +500,7 @@ def manage_integration(provider):
                         except AttributeError:
                             logger.warning(f"Settings attribute {secret_attr} does not exist, skipping")
                 else:
+                    # codeql[py/log-injection]
                     logger.warning(
                         "Provider %s not in attr_map, cannot save OAuth credentials", sanitize_log_value(provider)
                     )
@@ -659,6 +661,7 @@ def manage_integration(provider):
                     temp_connector = connector_class(integration_to_update, None)
                     config_schema = temp_connector.get_config_schema()
                 except Exception as e:
+                    # codeql[py/log-injection]
                     logger.warning(
                         "Could not get config schema for %s: %s",
                         sanitize_log_value(provider),
@@ -824,6 +827,7 @@ def manage_integration(provider):
             try:
                 config_schema = connector.get_config_schema()
             except Exception as e:
+                # codeql[py/log-injection]
                 logger.warning(
                     "Could not get config schema for %s: %s",
                     sanitize_log_value(provider),
@@ -834,6 +838,7 @@ def manage_integration(provider):
                 temp_connector = connector_class(active_integration, None)
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
+                # codeql[py/log-injection]
                 logger.warning(
                     "Could not get config schema for %s: %s",
                     sanitize_log_value(provider),
@@ -1512,6 +1517,7 @@ def setup_wizard(provider):
                 temp_connector = connector_class(temp_integration, None)
                 config_schema = temp_connector.get_config_schema()
             except Exception as e:
+                # codeql[py/log-injection]
                 logger.warning(
                     "Could not get config schema for %s: %s",
                     sanitize_log_value(provider),
@@ -1647,6 +1653,7 @@ def setup_wizard(provider):
             temp_connector = connector_class(temp_integration, None)
             config_schema = temp_connector.get_config_schema()
         except Exception as e:
+            # codeql[py/log-injection]
             logger.warning(
                 "Could not get config schema for %s: %s",
                 sanitize_log_value(provider),
@@ -1726,6 +1733,7 @@ def test_connection_wizard(provider):
         result = connector.test_connection()
         return jsonify(result)
     except Exception as e:
+        # codeql[py/log-injection]
         logger.error(
             "Connection test error for %s: %s",
             sanitize_log_value(provider),

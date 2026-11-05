@@ -140,17 +140,9 @@ class CalendarEvent(db.Model):
 
         logger = logging.getLogger(__name__)
 
-        print(f"\n{'*'*80}")
-        print(f"MODEL - get_events_in_range called:")
-        print(f"  user_id={user_id}")
-        print(f"  start={start_date}")
-        print(f"  end={end_date}")
-        print(f"  include_tasks={include_tasks} (type: {type(include_tasks)})")
-        print(f"  include_time_entries={include_time_entries} (type: {type(include_time_entries)})")
-        print(f"{'*'*80}\n")
-
         from app.utils.error_handling import sanitize_log_value
 
+        # codeql[py/log-injection]
         logger.info(
             "get_events_in_range called: user_id=%s, start=%s, end=%s, include_tasks=%s, include_time_entries=%s",
             sanitize_log_value(user_id),
@@ -173,13 +165,12 @@ class CalendarEvent(db.Model):
             .all()
         )
 
-        logger.info(f"Found {len(events)} calendar events")
-        print(f"MODEL - Found {len(events)} calendar events")
+        logger.info("Found %s calendar events", len(events))
         result["events"] = [event.to_dict() for event in events]
 
         # Optionally include tasks with due dates
         if include_tasks:
-            print(f"MODEL - Querying tasks for user {user_id}")
+            # codeql[py/log-injection]
             logger.info("Querying tasks for user %s", sanitize_log_value(user_id))
             from app.services.task_service import task_assigned_to_user_clause
 
@@ -191,8 +182,7 @@ class CalendarEvent(db.Model):
                 Task.status.in_(["todo", "in_progress", "review"]),
             ).all()
 
-            print(f"MODEL - Found {len(tasks)} tasks with due dates")
-            logger.info(f"Found {len(tasks)} tasks with due dates")
+            logger.info("Found %s tasks with due dates", len(tasks))
 
             result["tasks"] = [
                 {
@@ -208,12 +198,11 @@ class CalendarEvent(db.Model):
                 for task in tasks
             ]
         else:
-            print(f"MODEL - Not including tasks (include_tasks=False)")
             logger.info("Not including tasks (include_tasks=False)")
 
         # Optionally include time entries
         if include_time_entries:
-            print(f"MODEL - Querying time entries for user {user_id}")
+            # codeql[py/log-injection]
             logger.info("Querying time entries for user %s", sanitize_log_value(user_id))
             time_entries = (
                 TimeEntry.query.filter(
@@ -226,8 +215,7 @@ class CalendarEvent(db.Model):
                 .all()
             )
 
-            print(f"MODEL - Found {len(time_entries)} time entries")
-            logger.info(f"Found {len(time_entries)} time entries")
+            logger.info("Found %s time entries", len(time_entries))
 
             result["time_entries"] = [
                 {
@@ -266,17 +254,12 @@ class CalendarEvent(db.Model):
                     }
                 )
         else:
-            print(f"MODEL - Not including time entries (include_time_entries=False)")
             logger.info("Not including time entries (include_time_entries=False)")
 
-        print(f"\n{'*'*80}")
-        print(f"MODEL - Returning:")
-        print(f"  events: {len(result['events'])}")
-        print(f"  tasks: {len(result['tasks'])}")
-        print(f"  time_entries: {len(result['time_entries'])}")
-        print(f"{'*'*80}\n")
-
         logger.info(
-            f"Returning: {len(result['events'])} events, {len(result['tasks'])} tasks, {len(result['time_entries'])} time_entries"
+            "Returning: %s events, %s tasks, %s time_entries",
+            len(result["events"]),
+            len(result["tasks"]),
+            len(result["time_entries"]),
         )
         return result

@@ -2,6 +2,8 @@
 Workflow automation routes
 """
 
+import logging
+
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
@@ -13,9 +15,11 @@ from app.routes.workflow_helpers import get_action_types, get_trigger_types, par
 from app.services.workflow_engine import WorkflowEngine
 from app.services.workflow_template_service import WorkflowTemplateService
 from app.utils.decorators import admin_required
+from app.utils.error_handling import client_error_payload
 from app.utils.module_helpers import module_enabled
 
 workflows_bp = Blueprint("workflows", __name__)
+logger = logging.getLogger(__name__)
 _template_service = WorkflowTemplateService()
 
 
@@ -405,6 +409,49 @@ def api_delete_workflow(workflow_id):
     return jsonify({"success": True})
 
 
+_SAFE_WORKFLOW_TEST_MESSAGES = frozenset(
+    {
+        "Trigger conditions not met",
+        "Database error during workflow execution",
+        "Workflow executed successfully",
+        "Some actions failed",
+        "Workflow execution failed",
+    }
+)
+
+
+def _safe_workflow_test_payload(result):
+    """Allowlist workflow test response fields; never forward raw action payloads."""
+    safe_results = []
+    for entry in result.get("results") or []:
+        action = entry.get("action") or {}
+        safe_entry = {
+            "action": {"type": action.get("type")} if isinstance(action, dict) else {},
+            "success": bool(entry.get("success")),
+        }
+        if not entry.get("success"):
+            safe_entry["error"] = "Action execution failed"
+        safe_results.append(safe_entry)
+
+    raw_message = result.get("message")
+    if raw_message in _SAFE_WORKFLOW_TEST_MESSAGES:
+        message = raw_message
+    elif result.get("success"):
+        message = "Workflow executed successfully"
+    else:
+        message = "Workflow execution failed"
+
+    payload = {
+        "success": bool(result.get("success")),
+        "message": message,
+        "execution_time_ms": result.get("execution_time_ms"),
+        "results": safe_results,
+    }
+    if "executed" in result:
+        payload["executed"] = bool(result.get("executed"))
+    return payload
+
+
 @workflows_bp.route("/api/workflows/<int:workflow_id>/test", methods=["POST"])
 @login_required
 @module_enabled("workflows")
@@ -415,9 +462,12 @@ def test_workflow(workflow_id):
     if workflow.user_id != current_user.id and not current_user.is_admin:
         return jsonify({"error": "Access denied"}), 403
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     test_event = data.get("event", {"type": workflow.trigger_type, "data": {"user_id": current_user.id}})
 
-    result = WorkflowEngine.execute_rule(workflow, test_event)
-
-    return jsonify(result)
+    try:
+        result = WorkflowEngine.execute_rule(workflow, test_event)
+        return jsonify(_safe_workflow_test_payload(result))
+    except Exception:
+        logger.exception("Workflow test failed for workflow %s", workflow_id)
+        return jsonify({"success": False, **client_error_payload()}), 500

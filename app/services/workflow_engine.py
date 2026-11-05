@@ -371,8 +371,9 @@ class WorkflowEngine:
         url = WorkflowEngine._resolve_template(url, context)
         try:
             url = validate_outbound_url(url)
-        except UnsafeOutboundURL as exc:
-            return {"sent": False, "error": f"unsafe url: {exc}"}
+        except UnsafeOutboundURL:
+            logger.warning("Blocked unsafe outbound webhook URL for workflow action")
+            return {"sent": False, "error": "unsafe url"}
 
         resolved_payload = {k: WorkflowEngine._resolve_template(v, context) for k, v in payload.items()}
 
