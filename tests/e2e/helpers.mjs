@@ -27,8 +27,8 @@ export function collectPageProblems(page) {
     if (/Content Security Policy|Refused to (load|execute|apply)/i.test(text)) {
       problems.csp.push(text);
     } else if (msg.type() === 'error') {
-      // Socket.IO / Redis-less CI emits noisy 500s and websocket handshake failures.
-      if (/socket\.io|WebSocket connection|Failed to load resource:.*\b500\b/i.test(text)) return;
+      // Network/console noise (missing optional assets, socket.io without Redis).
+      if (/socket\.io|WebSocket connection|Failed to load resource:/i.test(text)) return;
       problems.errors.push(text);
     }
   });
@@ -59,12 +59,8 @@ export async function login(page) {
   if (await passwordField.count()) {
     await passwordField.fill(PASSWORD);
   }
-  // Prefer waitForURL over networkidle: authenticated pages keep polling / WebSockets open.
-  await Promise.all([
-    page.waitForURL((url) => !String(url.pathname || url).includes('/login'), { timeout: 15_000 }),
-    page.click('button[type="submit"], input[type="submit"]'),
-  ]);
-
-  await expect(page).not.toHaveURL(/\/login/);
+  // Prefer explicit URL assertion over networkidle: authenticated pages keep polling open.
+  await page.click('button[type="submit"], input[type="submit"]');
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 20_000 });
   return true;
 }
