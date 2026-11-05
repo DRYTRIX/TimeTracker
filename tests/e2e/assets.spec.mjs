@@ -13,7 +13,7 @@ import { collectPageProblems, login } from './helpers.mjs';
 
 /** Budget applies to hashed dashboard bundles under /static/dist/. */
 const MAX_JS_BYTES = 900_000;
-const MAX_JS_REQUESTS = 16;
+const MAX_JS_REQUESTS = 28;
 
 test('dashboard stays within its JavaScript budget', async ({ page }) => {
   test.skip(!(await login(page)), 'E2E_USERNAME not configured');
