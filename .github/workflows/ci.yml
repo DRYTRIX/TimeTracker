@@ -457,6 +457,7 @@ jobs:
             -e SECRET_KEY=ci-e2e-secret-key-not-for-production \
             -e DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker \
             -e ADMIN_USERNAMES=e2eadmin \
+            -e LOGIN_RATE_LIMIT="120 per minute" \
             -e TZ=UTC \
             timetracker:ci
           for i in $(seq 1 60); do

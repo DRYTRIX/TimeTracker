@@ -110,6 +110,7 @@
         {# Actions FAB on mobile only (CSS). Desktop: topbar timer + Ctrl+K. Chat/AI via tools overflow. #}
         <div id="fabDock"
              class="{% if is_admin_user %}fab-dock--admin{% endif %}"
+             role="region"
              aria-label="{{ _('Quick actions dock') }}"
              data-dashboard-url="{{ url_for('main.dashboard') }}"
              data-manual-entry-url="{{ url_for('timer.manual_entry') }}"

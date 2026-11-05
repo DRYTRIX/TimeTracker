@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 from flask import (
@@ -346,7 +347,7 @@ def reset_password(token: str):
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute", methods=["POST"])  # rate limit login attempts
+@limiter.limit(os.getenv("LOGIN_RATE_LIMIT", "5 per minute"), methods=["POST"])
 def login():
     """Login page. Local username login is allowed only if AUTH_METHOD != 'oidc'."""
     if request.method == "GET":

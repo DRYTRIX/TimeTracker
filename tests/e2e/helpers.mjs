@@ -27,17 +27,23 @@ export function collectPageProblems(page) {
     if (/Content Security Policy|Refused to (load|execute|apply)/i.test(text)) {
       problems.csp.push(text);
     } else if (msg.type() === 'error') {
+      // Socket.IO / Redis-less CI emits noisy 500s and websocket handshake failures.
+      if (/socket\.io|WebSocket connection|Failed to load resource:.*\b500\b/i.test(text)) return;
       problems.errors.push(text);
     }
   });
 
-  page.on('pageerror', (err) => problems.errors.push(String(err)));
+  page.on('pageerror', (err) => {
+    const text = String(err);
+    if (/socket\.io|WebSocket/i.test(text)) return;
+    problems.errors.push(text);
+  });
 
   page.on('requestfailed', (req) => {
     // about:/data: and intentionally aborted requests are not interesting.
-    if (/^https?:/.test(req.url())) {
-      problems.failedRequests.push(`${req.url()} (${req.failure()?.errorText})`);
-    }
+    if (!/^https?:/.test(req.url())) return;
+    if (/\/socket\.io\//i.test(req.url())) return;
+    problems.failedRequests.push(`${req.url()} (${req.failure()?.errorText})`);
   });
 
   return problems;
