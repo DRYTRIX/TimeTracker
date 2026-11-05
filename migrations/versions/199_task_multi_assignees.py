@@ -88,7 +88,10 @@ def upgrade():
         )
         op.create_index("ix_recurring_task_assignees_user_id", "recurring_task_assignees", ["user_id"])
 
-    # Backfill from legacy assigned_to columns
+    # Backfill from legacy assigned_to columns, then drop them.
+    # SQLite needs batch_alter_table to drop a column that participates in an FK.
+    is_sqlite = bind.dialect.name == "sqlite"
+
     inspector = inspect(bind)
     if _has_column(inspector, "tasks", "assigned_to"):
         op.execute(sa.text("""
@@ -101,9 +104,21 @@ def upgrade():
                       WHERE ta.task_id = tasks.id AND ta.user_id = tasks.assigned_to
                   )
                 """))
-        _drop_fk_on_column(inspector, "tasks", "assigned_to")
-        _drop_indexes_on_column(inspector, "tasks", "assigned_to")
-        op.drop_column("tasks", "assigned_to")
+        if is_sqlite:
+            # Drop indexes/FKs that reference assigned_to inside the batch so the
+            # rebuilt table does not try to recreate them after the column is gone.
+            with op.batch_alter_table("tasks", schema=None) as batch_op:
+                for ix in inspector.get_indexes("tasks"):
+                    if "assigned_to" in (ix.get("column_names") or []) and ix.get("name"):
+                        batch_op.drop_index(ix["name"])
+                for fk in inspector.get_foreign_keys("tasks"):
+                    if "assigned_to" in (fk.get("constrained_columns") or []) and fk.get("name"):
+                        batch_op.drop_constraint(fk["name"], type_="foreignkey")
+                batch_op.drop_column("assigned_to")
+        else:
+            _drop_fk_on_column(inspector, "tasks", "assigned_to")
+            _drop_indexes_on_column(inspector, "tasks", "assigned_to")
+            op.drop_column("tasks", "assigned_to")
 
     inspector = inspect(bind)
     if _has_column(inspector, "recurring_tasks", "assigned_to"):
@@ -118,9 +133,19 @@ def upgrade():
                         AND rta.user_id = recurring_tasks.assigned_to
                   )
                 """))
-        _drop_fk_on_column(inspector, "recurring_tasks", "assigned_to")
-        _drop_indexes_on_column(inspector, "recurring_tasks", "assigned_to")
-        op.drop_column("recurring_tasks", "assigned_to")
+        if is_sqlite:
+            with op.batch_alter_table("recurring_tasks", schema=None) as batch_op:
+                for ix in inspector.get_indexes("recurring_tasks"):
+                    if "assigned_to" in (ix.get("column_names") or []) and ix.get("name"):
+                        batch_op.drop_index(ix["name"])
+                for fk in inspector.get_foreign_keys("recurring_tasks"):
+                    if "assigned_to" in (fk.get("constrained_columns") or []) and fk.get("name"):
+                        batch_op.drop_constraint(fk["name"], type_="foreignkey")
+                batch_op.drop_column("assigned_to")
+        else:
+            _drop_fk_on_column(inspector, "recurring_tasks", "assigned_to")
+            _drop_indexes_on_column(inspector, "recurring_tasks", "assigned_to")
+            op.drop_column("recurring_tasks", "assigned_to")
 
 
 def downgrade():

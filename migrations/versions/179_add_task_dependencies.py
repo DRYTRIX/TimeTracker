@@ -19,6 +19,7 @@ def upgrade():
     inspector = inspect(bind)
     if "task_dependencies" in inspector.get_table_names():
         return
+    # UniqueConstraint must be declared on create_table — SQLite cannot ALTER to add it.
     op.create_table(
         "task_dependencies",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -26,10 +27,10 @@ def upgrade():
         sa.Column("depends_on_id", sa.Integer(), sa.ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False),
         sa.Column("dependency_type", sa.String(20), nullable=False, server_default="finish_to_start"),
         sa.Column("created_at", sa.DateTime(), nullable=False),
+        sa.UniqueConstraint("task_id", "depends_on_id", name="uq_task_dependencies_pair"),
     )
     op.create_index("ix_task_dependencies_task_id", "task_dependencies", ["task_id"])
     op.create_index("ix_task_dependencies_depends_on_id", "task_dependencies", ["depends_on_id"])
-    op.create_unique_constraint("uq_task_dependencies_pair", "task_dependencies", ["task_id", "depends_on_id"])
 
 
 def downgrade():

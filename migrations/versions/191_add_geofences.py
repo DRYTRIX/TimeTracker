@@ -44,14 +44,15 @@ def upgrade():
     if "accuracy_m" not in ws_cols:
         op.add_column("workday_sessions", sa.Column("accuracy_m", sa.Float(), nullable=True))
     if "geofence_id" not in ws_cols:
-        op.add_column("workday_sessions", sa.Column("geofence_id", sa.Integer(), nullable=True))
-        op.create_foreign_key(
-            "fk_workday_sessions_geofence_id",
-            "workday_sessions",
-            "geofences",
-            ["geofence_id"],
-            ["id"],
-        )
+        # SQLite cannot ALTER to add FK constraints; use batch copy-and-move.
+        with op.batch_alter_table("workday_sessions", schema=None) as batch_op:
+            batch_op.add_column(sa.Column("geofence_id", sa.Integer(), nullable=True))
+            batch_op.create_foreign_key(
+                "fk_workday_sessions_geofence_id",
+                "geofences",
+                ["geofence_id"],
+                ["id"],
+            )
     if "geofence_status" not in ws_cols:
         op.add_column("workday_sessions", sa.Column("geofence_status", sa.String(20), nullable=True))
 
@@ -64,8 +65,9 @@ def downgrade():
     if "geofence_status" in ws_cols:
         op.drop_column("workday_sessions", "geofence_status")
     if "geofence_id" in ws_cols:
-        op.drop_constraint("fk_workday_sessions_geofence_id", "workday_sessions", type_="foreignkey")
-        op.drop_column("workday_sessions", "geofence_id")
+        with op.batch_alter_table("workday_sessions", schema=None) as batch_op:
+            batch_op.drop_constraint("fk_workday_sessions_geofence_id", type_="foreignkey")
+            batch_op.drop_column("geofence_id")
     if "accuracy_m" in ws_cols:
         op.drop_column("workday_sessions", "accuracy_m")
     if "longitude" in ws_cols:

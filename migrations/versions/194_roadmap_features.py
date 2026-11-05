@@ -102,12 +102,18 @@ def upgrade():
             sa.Column("completed_at", sa.DateTime(), nullable=True),
         )
 
+    # SQLite cannot ALTER to add FK constraints; use batch copy-and-move.
     if "api_tokens" in tables and not _has_column(inspector, "api_tokens", "client_id"):
-        op.add_column(
-            "api_tokens",
-            sa.Column("client_id", sa.Integer(), sa.ForeignKey("clients.id", ondelete="CASCADE"), nullable=True),
-        )
-        op.create_index("ix_api_tokens_client_id", "api_tokens", ["client_id"])
+        with op.batch_alter_table("api_tokens", schema=None) as batch_op:
+            batch_op.add_column(sa.Column("client_id", sa.Integer(), nullable=True))
+            batch_op.create_foreign_key(
+                "fk_api_tokens_client_id_clients",
+                "clients",
+                ["client_id"],
+                ["id"],
+                ondelete="CASCADE",
+            )
+            batch_op.create_index("ix_api_tokens_client_id", ["client_id"])
 
 
 def downgrade():
@@ -116,8 +122,10 @@ def downgrade():
     tables = set(inspector.get_table_names())
 
     if "api_tokens" in tables and _has_column(inspector, "api_tokens", "client_id"):
-        op.drop_index("ix_api_tokens_client_id", table_name="api_tokens")
-        op.drop_column("api_tokens", "client_id")
+        with op.batch_alter_table("api_tokens", schema=None) as batch_op:
+            batch_op.drop_index("ix_api_tokens_client_id")
+            batch_op.drop_constraint("fk_api_tokens_client_id_clients", type_="foreignkey")
+            batch_op.drop_column("client_id")
 
     if "payroll_sync_logs" in tables:
         op.drop_table("payroll_sync_logs")
