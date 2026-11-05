@@ -1200,10 +1200,23 @@ def installation_config(temp_dir):
 # ============================================================================
 
 
+def _clear_limiter_manager_defaults():
+    """Drop limit_manager defaults so the next create_app/init_app starts clean.
+
+    Restoring RuntimeLimit objects from a prior init_app breaks Flask-Limiter 4
+    (`AttributeError: 'RuntimeLimit' object has no attribute 'finalized'`).
+    """
+    try:
+        limiter.limit_manager.set_default_limits([])
+    except Exception:
+        pass
+
+
 @pytest.fixture(autouse=True)
 def _reset_rate_limiter_after_test():
     """Clear in-memory rate-limit counters so xdist workers don't leak 429s across tests."""
     yield
+    _clear_limiter_manager_defaults()
     try:
         limiter.reset()
     except Exception:
@@ -1221,10 +1234,6 @@ def force_strict_rate_limit(app):
 
     previous_config = app.config.get("RATELIMIT_DEFAULT")
     previous_default_limits = list(getattr(limiter, "_default_limits", []) or [])
-    try:
-        previous_manager_limits = list(limiter.limit_manager.default_limits or [])
-    except Exception:
-        previous_manager_limits = []
 
     def _apply(limit="5 per hour"):
         app.config["RATELIMIT_DEFAULT"] = limit
@@ -1244,23 +1253,15 @@ def force_strict_rate_limit(app):
 
     yield _apply
 
-    # Restore previous defaults so subsequent tests keep the app's configured budget.
+    # Restore config + string defaults; never put RuntimeLimit objects back.
     if previous_config is None:
         app.config.pop("RATELIMIT_DEFAULT", None)
     else:
         app.config["RATELIMIT_DEFAULT"] = previous_config
-    limiter._default_limits = previous_default_limits
-    try:
-        limiter.limit_manager.set_default_limits(previous_manager_limits)
-    except Exception:
-        raw = app.config.get("RATELIMIT_DEFAULT") or ""
-        parts = [p.strip() for p in str(raw).replace(",", ";").split(";") if p.strip()]
-        try:
-            limiter.limit_manager.set_default_limits(
-                [Limit(p, key_function=limiter._key_func) for p in parts] if parts else []
-            )
-        except Exception:
-            pass
+    limiter._default_limits = [p for p in previous_default_limits if isinstance(p, str)] or [
+        p.strip() for p in str(app.config.get("RATELIMIT_DEFAULT") or "").replace(",", ";").split(";") if p.strip()
+    ]
+    _clear_limiter_manager_defaults()
     try:
         limiter.reset()
     except Exception:
