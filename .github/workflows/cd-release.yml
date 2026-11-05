@@ -585,9 +585,9 @@ jobs:
           }
           render docker/release-templates/docker-compose.production.yml.tmpl docker-compose.production.yml
           render docker/release-templates/k8s-deployment.yml.tmpl k8s-deployment.yml
-          # Keep NAS compose if present in repo
+          # NAS compose already lives at repo root when present; nothing to copy.
           if [ -f docker-compose.nas.yml ]; then
-            cp docker-compose.nas.yml .
+            echo "Using existing docker-compose.nas.yml"
           fi
           echo "📄 Deployment manifests created from templates"
 
