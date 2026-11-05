@@ -8,13 +8,13 @@ This migration updates the check constraint to allow time entries with
 both project_id and client_id as NULL when source='auto' (for auto-imported
 entries from calendar integrations).
 """
+
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
-revision = '089_allow_auto_entries_no_project'
-down_revision = '088_salesman_splitting_reports'
+revision = "089_allow_auto_entries_no_project"
+down_revision = "088_salesman_splitting_reports"
 branch_labels = None
 depends_on = None
 
@@ -24,15 +24,15 @@ def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
-    if 'time_entries' not in inspector.get_table_names():
+    if "time_entries" not in inspector.get_table_names():
         return
 
     conn = op.get_bind()
-    is_sqlite = conn.dialect.name == 'sqlite'
-    
+    is_sqlite = conn.dialect.name == "sqlite"
+
     # Drop existing constraint
     try:
-        op.drop_constraint('chk_time_entries_project_or_client', 'time_entries', type_='check')
+        op.drop_constraint("chk_time_entries_project_or_client", "time_entries", type_="check")
     except Exception:
         # Constraint might not exist or have different name
         pass
@@ -59,19 +59,19 @@ def downgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
-    if 'time_entries' not in inspector.get_table_names():
+    if "time_entries" not in inspector.get_table_names():
         return
 
     # Drop new constraint
     try:
-        op.drop_constraint('chk_time_entries_project_or_client', 'time_entries', type_='check')
+        op.drop_constraint("chk_time_entries_project_or_client", "time_entries", type_="check")
     except Exception:
         pass
 
     # Recreate original constraint
     conn = op.get_bind()
-    is_sqlite = conn.dialect.name == 'sqlite'
-    
+    is_sqlite = conn.dialect.name == "sqlite"
+
     if not is_sqlite:
         try:
             op.execute("""

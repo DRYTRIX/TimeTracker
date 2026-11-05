@@ -84,7 +84,7 @@ jobs:
       
       - name: Validate database migrations
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
         run: |
@@ -135,7 +135,7 @@ jobs:
 
       - name: Initialize database schema for tests
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
         run: |
@@ -145,7 +145,7 @@ jobs:
       
       - name: Run complete test suite
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
           PYTHONPATH: ${{ github.workspace }}

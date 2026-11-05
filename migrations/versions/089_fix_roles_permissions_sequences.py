@@ -8,12 +8,13 @@ This migration fixes the PostgreSQL sequence issue where roles and permissions
 tables had explicit IDs inserted (1-5 for roles, 1-50 for permissions) but the
 sequences were not updated, causing duplicate key errors when creating new records.
 """
+
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '089_fix_role_perm_sequences'
-down_revision = '088_salesman_splitting_reports'
+revision = "089_fix_role_perm_sequences"
+down_revision = "088_salesman_splitting_reports"
 branch_labels = None
 depends_on = None
 
@@ -21,13 +22,13 @@ depends_on = None
 def upgrade():
     """Fix sequences for roles and permissions tables"""
     connection = op.get_bind()
-    is_postgresql = connection.dialect.name == 'postgresql'
-    
+    is_postgresql = connection.dialect.name == "postgresql"
+
     # SQLite doesn't use sequences - it uses AUTOINCREMENT which is automatically managed
     # This migration only applies to PostgreSQL
     if not is_postgresql:
         return
-    
+
     # Fix roles sequence
     # Create sequence if it doesn't exist, link it to the table, then set it to max_id + 1
     connection.execute(sa.text("""
@@ -52,7 +53,7 @@ def upgrade():
                 false);
         END $$;
     """))
-    
+
     # Fix permissions sequence
     # Create sequence if it doesn't exist, link it to the table, then set it to max_id + 1
     connection.execute(sa.text("""
@@ -82,4 +83,3 @@ def upgrade():
 def downgrade():
     """No downgrade needed - sequences will be automatically managed"""
     pass
-

@@ -5,16 +5,16 @@ Revises: 067_add_integration_credentials
 Create Date: 2025-01-27
 
 """
+
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
-revision = '068_add_user_password_hash'
+revision = "068_add_user_password_hash"
 # Some older installs have alembic_version set to '067_add_integration_credentials'
 # (while the canonical migration revision is '067_integration_credentials').
 # We add a no-op alias migration to bridge the two.
-down_revision = '067_add_integration_credentials'
+down_revision = "067_add_integration_credentials"
 branch_labels = None
 depends_on = None
 
@@ -22,7 +22,7 @@ depends_on = None
 def _has_column(inspector, table_name: str, column_name: str) -> bool:
     """Check if a column exists in a table"""
     try:
-        return column_name in [col['name'] for col in inspector.get_columns(table_name)]
+        return column_name in [col["name"] for col in inspector.get_columns(table_name)]
     except Exception:
         return False
 
@@ -33,12 +33,12 @@ def upgrade():
     inspector = sa.inspect(bind)
 
     # Ensure users table exists
-    if 'users' not in inspector.get_table_names():
+    if "users" not in inspector.get_table_names():
         return
 
     # Add password_hash column if missing
-    if not _has_column(inspector, 'users', 'password_hash'):
-        op.add_column('users', sa.Column('password_hash', sa.String(length=255), nullable=True))
+    if not _has_column(inspector, "users", "password_hash"):
+        op.add_column("users", sa.Column("password_hash", sa.String(length=255), nullable=True))
 
 
 def downgrade():
@@ -46,10 +46,9 @@ def downgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
-    if 'users' not in inspector.get_table_names():
+    if "users" not in inspector.get_table_names():
         return
 
     # Drop password_hash column if exists
-    if _has_column(inspector, 'users', 'password_hash'):
-        op.drop_column('users', 'password_hash')
-
+    if _has_column(inspector, "users", "password_hash"):
+        op.drop_column("users", "password_hash")

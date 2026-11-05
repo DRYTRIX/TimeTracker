@@ -6,6 +6,7 @@ Create Date: 2026-02-13
 
 Admin-configurable default daily working hours for new users (overtime).
 """
+
 from alembic import op
 import sqlalchemy as sa
 

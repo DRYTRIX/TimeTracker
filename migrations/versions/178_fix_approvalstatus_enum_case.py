@@ -38,32 +38,19 @@ def upgrade():
     if row:
         return
 
-    type_exists = bind.execute(
-        sa.text("SELECT 1 FROM pg_type WHERE typname = 'approvalstatus'")
-    ).fetchone()
+    type_exists = bind.execute(sa.text("SELECT 1 FROM pg_type WHERE typname = 'approvalstatus'")).fetchone()
     if not type_exists:
         return
 
     op.execute("ALTER TABLE time_entry_approvals ALTER COLUMN status DROP DEFAULT")
-    op.execute(
-        "ALTER TABLE time_entry_approvals "
-        "ALTER COLUMN status TYPE VARCHAR(20) USING status::text"
-    )
+    op.execute("ALTER TABLE time_entry_approvals " "ALTER COLUMN status TYPE VARCHAR(20) USING status::text")
     op.execute("UPDATE time_entry_approvals SET status = LOWER(status)")
     op.execute("DROP TYPE IF EXISTS approvalstatus")
+    op.execute("CREATE TYPE approvalstatus AS ENUM " "('pending', 'approved', 'rejected', 'cancelled')")
     op.execute(
-        "CREATE TYPE approvalstatus AS ENUM "
-        "('pending', 'approved', 'rejected', 'cancelled')"
+        "ALTER TABLE time_entry_approvals " "ALTER COLUMN status TYPE approvalstatus " "USING status::approvalstatus"
     )
-    op.execute(
-        "ALTER TABLE time_entry_approvals "
-        "ALTER COLUMN status TYPE approvalstatus "
-        "USING status::approvalstatus"
-    )
-    op.execute(
-        "ALTER TABLE time_entry_approvals "
-        "ALTER COLUMN status SET DEFAULT 'pending'::approvalstatus"
-    )
+    op.execute("ALTER TABLE time_entry_approvals " "ALTER COLUMN status SET DEFAULT 'pending'::approvalstatus")
 
 
 def downgrade():

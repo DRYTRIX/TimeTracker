@@ -6,9 +6,9 @@ Create Date: 2026-03-11
 
 Break time for timers (pause/resume) and manual time entries.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "137_add_break_time"
 down_revision = "136_seed_overtime_leave_type"

@@ -66,6 +66,7 @@ def main():
     except Exception as e:
         print(f"Seed failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

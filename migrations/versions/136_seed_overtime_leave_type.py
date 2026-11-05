@@ -7,9 +7,9 @@ Create Date: 2026-03-11
 Creates a leave type with code 'overtime' if it does not exist, so users can
 request time off from their accumulated overtime (YTD) as paid leave.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "136_seed_overtime_leave_type"
 down_revision = "135_remind_to_log"
@@ -24,21 +24,17 @@ def upgrade():
         return
     # Insert Overtime leave type only if not present (by code)
     if bind.dialect.name == "sqlite":
-        op.execute(
-            sa.text("""
+        op.execute(sa.text("""
                 INSERT INTO leave_types (name, code, is_paid, annual_allowance_hours, accrual_hours_per_month, enabled, created_at, updated_at)
                 SELECT 'Overtime', 'overtime', 1, NULL, NULL, 1, datetime('now'), datetime('now')
                 WHERE NOT EXISTS (SELECT 1 FROM leave_types WHERE code = 'overtime')
-            """)
-        )
+            """))
     else:
-        op.execute(
-            sa.text("""
+        op.execute(sa.text("""
                 INSERT INTO leave_types (name, code, is_paid, annual_allowance_hours, accrual_hours_per_month, enabled, created_at, updated_at)
                 SELECT 'Overtime', 'overtime', true, NULL, NULL, true, now(), now()
                 WHERE NOT EXISTS (SELECT 1 FROM leave_types WHERE code = 'overtime')
-            """)
-        )
+            """))
 
 
 def downgrade():

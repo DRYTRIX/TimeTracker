@@ -62,5 +62,6 @@ class GenericCustomProvider(ProviderBase):
         message_id = None
         if isinstance(data, dict):
             message_id = data.get("message_id") or data.get("messageId") or data.get("id")
-        return ProviderSendResult(message_id=message_id, raw={"forward_response": data, "status_code": resp.status_code})
-
+        return ProviderSendResult(
+            message_id=message_id, raw={"forward_response": data, "status_code": resp.status_code}
+        )

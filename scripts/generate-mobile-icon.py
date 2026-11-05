@@ -4,8 +4,10 @@ Generate mobile app icon (app_icon.png) matching the web app's timetracker-logo-
 Creates a 1024x1024 PNG: gradient rounded rect, white clock circle, hour marks, checkmark.
 Requires: pip install Pillow
 """
+
 import os
 import sys
+
 
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -17,19 +19,21 @@ def main():
         from PIL import Image, ImageDraw
     except ImportError:
         print("Pillow not installed. Run: pip install Pillow")
-        print("Or use ImageMagick: magick app/static/images/timetracker-logo-icon.svg -resize 1024x1024 mobile/assets/icon/app_icon.png")
+        print(
+            "Or use ImageMagick: magick app/static/images/timetracker-logo-icon.svg -resize 1024x1024 mobile/assets/icon/app_icon.png"
+        )
         return 1
 
     os.makedirs(out_dir, exist_ok=True)
 
     # Match SVG: 512 viewBox scaled to 1024 (scale 2)
     size = 1024
-    r_rect = 256   # 128 * 2
+    r_rect = 256  # 128 * 2
     cx, cy = size // 2, size // 2
     r_clock = 360  # 180 * 2
-    stroke_circle = 64   # 32 * 2
-    stroke_mark = 48     # 24 * 2
-    stroke_check = 80    # 40 * 2
+    stroke_circle = 64  # 32 * 2
+    stroke_mark = 48  # 24 * 2
+    stroke_check = 80  # 40 * 2
 
     # 1) Gradient image (linear top-left #4A90E2 to bottom-right #50E3C2)
     grad = Image.new("RGB", (size, size), (0, 0, 0))
@@ -70,6 +74,7 @@ def main():
     base.save(out_path)
     print(f"Created {out_path}")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

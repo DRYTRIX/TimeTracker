@@ -12,6 +12,7 @@ from peppol_bridge.providers.base import ProviderBase, ProviderError
 from peppol_bridge.providers.einvoice import EInvoiceProvider
 from peppol_bridge.providers.generic_custom import GenericCustomProvider
 from peppol_bridge.providers.peppyrus import PeppyrusProvider
+
 _CLIENT_ERROR = "An unexpected error occurred"
 
 
@@ -43,7 +44,12 @@ def _validate_timetracker_contract(payload: Any) -> Tuple[Optional[Dict[str, Any
     document = payload.get("document")
     pl = payload.get("payload")
 
-    if not isinstance(recipient, dict) or not isinstance(sender, dict) or not isinstance(document, dict) or not isinstance(pl, dict):
+    if (
+        not isinstance(recipient, dict)
+        or not isinstance(sender, dict)
+        or not isinstance(document, dict)
+        or not isinstance(pl, dict)
+    ):
         return None, "Missing or invalid recipient/sender/document/payload object"
 
     ubl_xml = pl.get("ubl_xml")
@@ -187,4 +193,3 @@ def create_app() -> Flask:
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8088"))
     create_app().run(host="0.0.0.0", port=port)
-

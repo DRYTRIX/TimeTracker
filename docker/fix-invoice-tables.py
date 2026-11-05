@@ -8,31 +8,32 @@ import os
 import sys
 from sqlalchemy import create_engine, text, inspect
 
+
 def main():
     url = os.getenv("DATABASE_URL", "")
-    
+
     if not url.startswith("postgresql"):
         print("No PostgreSQL database configured")
         return
-    
+
     print(f"Database URL: {url}")
-    
+
     try:
         engine = create_engine(url, pool_pre_ping=True)
         inspector = inspect(engine)
-        
+
         # Check if invoice tables exist
         existing_tables = inspector.get_table_names()
         print(f"Existing tables: {existing_tables}")
-        
-        if 'invoices' in existing_tables and 'invoice_items' in existing_tables:
+
+        if "invoices" in existing_tables and "invoice_items" in existing_tables:
             print("✓ Invoice tables already exist")
             return
-        
+
         print("Creating missing invoice tables...")
-        
+
         # Create invoices table
-        if 'invoices' not in existing_tables:
+        if "invoices" not in existing_tables:
             print("Creating invoices table...")
             create_invoices_sql = """
             CREATE TABLE invoices (
@@ -60,9 +61,9 @@ def main():
                 conn.execute(text(create_invoices_sql))
                 conn.commit()
             print("✓ invoices table created")
-        
+
         # Create invoice_items table
-        if 'invoice_items' not in existing_tables:
+        if "invoice_items" not in existing_tables:
             print("Creating invoice_items table...")
             create_invoice_items_sql = """
             CREATE TABLE invoice_items (
@@ -80,14 +81,16 @@ def main():
                 conn.execute(text(create_invoice_items_sql))
                 conn.commit()
             print("✓ invoice_items table created")
-        
+
         print("✓ All invoice tables created successfully")
-        
+
     except Exception as e:
         print(f"Error creating invoice tables: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

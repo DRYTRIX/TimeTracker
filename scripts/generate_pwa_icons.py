@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate android-chrome-192x192.png and android-chrome-512x512.png for PWA (matches timetracker icon style)."""
+
 import os
 import sys
 
@@ -49,7 +50,11 @@ def build_icon(size: int) -> Image.Image:
     draw.line([(cx + r_clock - stroke_mark, cy), (cx + r_clock, cy)], fill="white", width=max(1, stroke_mark))
 
     draw.line(
-        [(int(390 * scale), int(540 * scale)), (int(510 * scale), int(660 * scale)), (int(730 * scale), int(440 * scale))],
+        [
+            (int(390 * scale), int(540 * scale)),
+            (int(510 * scale), int(660 * scale)),
+            (int(730 * scale), int(440 * scale)),
+        ],
         fill="white",
         width=max(1, stroke_check),
         joint="curve",

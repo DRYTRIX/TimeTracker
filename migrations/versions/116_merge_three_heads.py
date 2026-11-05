@@ -9,12 +9,12 @@ Merge revision to resolve multiple heads:
 - 100_gantt_colors_modules
 - 115_add_exclude_weekends
 """
+
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
-revision = '116_merge_three_heads'
-down_revision = ('090_add_push_subscriptions', '100_gantt_colors_modules', '115_add_exclude_weekends')
+revision = "116_merge_three_heads"
+down_revision = ("090_add_push_subscriptions", "100_gantt_colors_modules", "115_add_exclude_weekends")
 branch_labels = None
 depends_on = None
 

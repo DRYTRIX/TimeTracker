@@ -275,7 +275,7 @@ jobs:
       - uses: ./.github/actions/setup-python-env
       - name: Run test shard
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
           SECRET_KEY: test-secret-key-for-ci
@@ -462,7 +462,7 @@ jobs:
         run: |
           docker run -d --name timetracker-e2e --network host \
             -e SECRET_KEY=ci-e2e-secret-key-not-for-production \
-            -e DATABASE_URL=postgresql://timetracker:timetracker@localhost:5432/timetracker \
+            -e DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker \
             -e ADMIN_USERNAME=e2eadmin \
             -e ADMIN_PASSWORD="$E2E_ADMIN_PASSWORD" \
             -e TZ=UTC \

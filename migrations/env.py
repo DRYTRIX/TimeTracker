@@ -15,17 +15,14 @@ config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
-logger = logging.getLogger('alembic.env')
+logger = logging.getLogger("alembic.env")
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.metadata
-config.set_main_option(
-    'sqlalchemy.url',
-    str(current_app.extensions['migrate'].db.get_engine().url).replace(
-        '%', '%%'))
-target_metadata = current_app.extensions['migrate'].db.metadata
+config.set_main_option("sqlalchemy.url", str(current_app.extensions["migrate"].db.get_engine().url).replace("%", "%%"))
+target_metadata = current_app.extensions["migrate"].db.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -46,9 +43,7 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True
-    )
+    context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -82,16 +77,12 @@ def run_migrations_online():
             # Prefer information_schema, which is reliable across SQLAlchemy versions.
             current_len = None
             try:
-                res = connection.execute(
-                    sa.text(
-                        """
+                res = connection.execute(sa.text("""
                         SELECT character_maximum_length
                         FROM information_schema.columns
                         WHERE table_name = 'alembic_version'
                           AND column_name = 'version_num'
-                        """
-                    )
-                ).scalar()
+                        """)).scalar()
                 if isinstance(res, int):
                     current_len = res
             except Exception:
@@ -100,11 +91,7 @@ def run_migrations_online():
             if current_len is not None and current_len >= min_len:
                 return
 
-            connection.execute(
-                sa.text(
-                    f"ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR({min_len})"
-                )
-            )
+            connection.execute(sa.text(f"ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR({min_len})"))
             try:
                 connection.commit()
             except Exception:
@@ -112,13 +99,9 @@ def run_migrations_online():
                 pass
 
             if current_len is not None:
-                logger.info(
-                    f"Expanded alembic_version.version_num from {current_len} to {min_len}"
-                )
+                logger.info(f"Expanded alembic_version.version_num from {current_len} to {min_len}")
             else:
-                logger.info(
-                    f"Ensured alembic_version.version_num is at least VARCHAR({min_len})"
-                )
+                logger.info(f"Ensured alembic_version.version_num is at least VARCHAR({min_len})")
         except Exception as e:
             logger.warning(f"Could not expand alembic_version.version_num: {e}")
 
@@ -126,13 +109,13 @@ def run_migrations_online():
     # when there are no changes to the schema
     # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
     def process_revision_directives(context, revision, directives):
-        if getattr(config.cmd_opts, 'autogenerate', False):
+        if getattr(config.cmd_opts, "autogenerate", False):
             script = directives[0]
             if script.upgrade_ops.is_empty():
                 directives[:] = []
-                logger.info('No changes in schema detected.')
+                logger.info("No changes in schema detected.")
 
-    connectable = current_app.extensions['migrate'].db.get_engine()
+    connectable = current_app.extensions["migrate"].db.get_engine()
 
     try:
         # CRITICAL FIX: Use connection that supports explicit commits for DDL
@@ -147,14 +130,14 @@ def run_migrations_online():
                 target_metadata=target_metadata,
                 process_revision_directives=process_revision_directives,
                 transaction_per_migration=False,  # Single transaction for all migrations
-                **current_app.extensions['migrate'].configure_args
+                **current_app.extensions["migrate"].configure_args,
             )
 
             # Run migrations - context.begin_transaction() handles the transaction
             # But we need to ensure the connection itself commits
             with context.begin_transaction():
                 context.run_migrations()
-            
+
             # CRITICAL: Explicitly commit the connection transaction
             # context.begin_transaction() may commit its transaction, but the connection
             # transaction might still need explicit commit to persist to database
@@ -163,27 +146,29 @@ def run_migrations_online():
                 connection.commit()
             else:
                 logger.info("Connection transaction already committed/closed")
-            
+
             # Verify commit worked by checking if tables exist
             try:
                 from sqlalchemy import inspect
+
                 inspector = inspect(connection)
                 tables = inspector.get_table_names()
                 logger.info(f"Post-migration verification: Found {len(tables)} tables in database")
-                if 'alembic_version' in tables:
+                if "alembic_version" in tables:
                     logger.info("✓ alembic_version table exists - migrations persisted successfully")
                 else:
                     logger.error("✗ alembic_version table missing - migrations may not have persisted")
             except Exception as verify_error:
                 logger.warning(f"Could not verify migration persistence: {verify_error}")
-                
+
         finally:
             # Always close the connection
             connection.close()
-                
+
     except Exception as e:
         # Log the full error with traceback for debugging
         import traceback
+
         logger.error(f"Migration failed with error: {e}")
         logger.error(f"Traceback:\n{traceback.format_exc()}")
         # Re-raise to ensure the migration command fails properly
@@ -205,6 +190,7 @@ if context.is_offline_mode():
         run_migrations_offline()
     except Exception as e:
         import traceback
+
         logger.error(f"Migration failed (offline mode) with error: {e}")
         logger.error(f"Traceback:\n{traceback.format_exc()}")
         raise
@@ -217,6 +203,7 @@ else:
         run_migrations_online()
     except Exception as e:
         import traceback
+
         logger.error(f"Migration failed (online mode) with error: {e}")
         logger.error(f"Traceback:\n{traceback.format_exc()}")
         raise

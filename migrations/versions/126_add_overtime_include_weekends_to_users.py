@@ -6,6 +6,7 @@ Create Date: 2026-02-13
 
 User preference: when False, weekend hours are always counted as overtime.
 """
+
 from alembic import op
 import sqlalchemy as sa
 

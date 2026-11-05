@@ -5,9 +5,9 @@ Revises: 128_add_invoices_zugferd_pdf
 Create Date: 2026-02-28
 
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "129_add_task_tags"
 down_revision = "128_add_invoices_zugferd_pdf"

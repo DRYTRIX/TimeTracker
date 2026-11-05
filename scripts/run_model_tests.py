@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Simple test runner to check model tests. Run from project root: python scripts/run_model_tests.py"""
+
 import os
 import subprocess
 import sys
@@ -10,9 +11,7 @@ _project_root = os.path.dirname(_script_dir)
 os.chdir(_project_root)
 
 result = subprocess.run(
-    [sys.executable, "-m", "pytest", "-m", "unit and models", "-v", "--tb=short"],
-    capture_output=True,
-    text=True
+    [sys.executable, "-m", "pytest", "-m", "unit and models", "-v", "--tb=short"], capture_output=True, text=True
 )
 
 with open("test_results_model.txt", "w", encoding="utf-8") as f:
@@ -23,4 +22,3 @@ with open("test_results_model.txt", "w", encoding="utf-8") as f:
 
 print("Test results written to test_results_model.txt")
 print(f"Exit code: {result.returncode}")
-

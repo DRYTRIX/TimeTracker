@@ -86,7 +86,9 @@ def upgrade():
             "payroll_sync_logs",
             sa.Column("id", sa.Integer(), primary_key=True),
             sa.Column("provider", sa.String(length=40), nullable=False),
-            sa.Column("integration_id", sa.Integer(), sa.ForeignKey("integrations.id", ondelete="SET NULL"), nullable=True),
+            sa.Column(
+                "integration_id", sa.Integer(), sa.ForeignKey("integrations.id", ondelete="SET NULL"), nullable=True
+            ),
             sa.Column("period_start", sa.Date(), nullable=False),
             sa.Column("period_end", sa.Date(), nullable=False),
             sa.Column("status", sa.String(length=40), nullable=False, server_default="pending"),
@@ -101,7 +103,10 @@ def upgrade():
         )
 
     if "api_tokens" in tables and not _has_column(inspector, "api_tokens", "client_id"):
-        op.add_column("api_tokens", sa.Column("client_id", sa.Integer(), sa.ForeignKey("clients.id", ondelete="CASCADE"), nullable=True))
+        op.add_column(
+            "api_tokens",
+            sa.Column("client_id", sa.Integer(), sa.ForeignKey("clients.id", ondelete="CASCADE"), nullable=True),
+        )
         op.create_index("ix_api_tokens_client_id", "api_tokens", ["client_id"])
 
 

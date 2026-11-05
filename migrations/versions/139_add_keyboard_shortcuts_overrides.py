@@ -6,9 +6,9 @@ Create Date: 2026-03-16
 
 Stores JSON dict { "shortcut_id": "normalized_key" }. None/empty = use defaults.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "139_keyboard_shortcuts"
 down_revision = "138_add_break_rules"

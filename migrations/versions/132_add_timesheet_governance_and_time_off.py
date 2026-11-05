@@ -8,7 +8,6 @@ Create Date: 2026-03-05
 from alembic import op
 import sqlalchemy as sa
 
-
 revision = "132_add_timesheet_governance_and_time_off"
 down_revision = "131_add_donation_variant"
 branch_labels = None
@@ -46,7 +45,9 @@ def upgrade():
             sa.Column("close_reason", sa.Text(), nullable=True),
             sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
             sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-            sa.UniqueConstraint("user_id", "period_type", "period_start", "period_end", name="uq_timesheet_period_user_range"),
+            sa.UniqueConstraint(
+                "user_id", "period_type", "period_start", "period_end", name="uq_timesheet_period_user_range"
+            ),
         )
         op.create_index("ix_timesheet_period_user_status", "timesheet_periods", ["user_id", "status"], unique=False)
 
@@ -90,7 +91,12 @@ def upgrade():
             sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
             sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         )
-        op.create_index("ix_time_off_user_status_dates", "time_off_requests", ["user_id", "status", "start_date", "end_date"], unique=False)
+        op.create_index(
+            "ix_time_off_user_status_dates",
+            "time_off_requests",
+            ["user_id", "status", "start_date", "end_date"],
+            unique=False,
+        )
 
     if "company_holidays" not in existing:
         op.create_table(

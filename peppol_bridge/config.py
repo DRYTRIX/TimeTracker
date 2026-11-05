@@ -53,4 +53,3 @@ def load_config() -> BridgeConfig:
         generic_forward_url=generic_forward_url or None,
         generic_forward_token=generic_forward_token,
     )
-

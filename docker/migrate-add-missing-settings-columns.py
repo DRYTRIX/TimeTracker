@@ -9,10 +9,11 @@ import sys
 import time
 from sqlalchemy import create_engine, text, inspect
 
+
 def wait_for_database(url, max_attempts=30, delay=2):
     """Wait for database to be ready"""
     print(f"Waiting for database to be ready...")
-    
+
     for attempt in range(max_attempts):
         try:
             engine = create_engine(url, pool_pre_ping=True)
@@ -27,13 +28,14 @@ def wait_for_database(url, max_attempts=30, delay=2):
             else:
                 print("Database not ready after waiting, exiting...")
                 sys.exit(1)
-    
+
     return None
+
 
 def add_missing_columns(engine):
     """Add missing company branding columns to settings table"""
     print("Adding missing company branding columns to settings table...")
-    
+
     # SQL statements to add missing columns
     add_columns_sql = """
     -- Add company branding columns
@@ -58,55 +60,78 @@ def add_missing_columns(engine):
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS quote_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL;
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS quote_start_number INTEGER DEFAULT 1 NOT NULL;
     """
-    
+
     try:
         with engine.connect() as conn:
             # Execute the SQL statements
             conn.execute(text(add_columns_sql))
             conn.commit()
-        
+
         print("✓ Missing columns added successfully")
         return True
-        
+
     except Exception as e:
         print(f"✗ Error adding missing columns: {e}")
         return False
 
+
 def verify_columns(engine):
     """Verify that all required columns exist in settings table"""
     print("Verifying settings table columns...")
-    
+
     try:
         inspector = inspect(engine)
-        columns = [col['name'] for col in inspector.get_columns('settings')]
-        
+        columns = [col["name"] for col in inspector.get_columns("settings")]
+
         required_columns = [
-            'id', 'timezone', 'currency', 'rounding_minutes', 'single_active_timer',
-            'allow_self_register', 'idle_timeout_minutes', 'backup_retention_days',
-            'backup_time', 'export_delimiter', 'company_name', 'company_address',
-            'company_email', 'company_phone', 'company_website', 'company_logo_filename',
-            'company_tax_id', 'company_bank_info', 'invoice_prefix', 'invoice_number_pattern', 'invoice_start_number',
-            'invoice_terms', 'invoice_notes', 'quote_prefix', 'quote_number_pattern', 'quote_start_number',
-            'created_at', 'updated_at'
+            "id",
+            "timezone",
+            "currency",
+            "rounding_minutes",
+            "single_active_timer",
+            "allow_self_register",
+            "idle_timeout_minutes",
+            "backup_retention_days",
+            "backup_time",
+            "export_delimiter",
+            "company_name",
+            "company_address",
+            "company_email",
+            "company_phone",
+            "company_website",
+            "company_logo_filename",
+            "company_tax_id",
+            "company_bank_info",
+            "invoice_prefix",
+            "invoice_number_pattern",
+            "invoice_start_number",
+            "invoice_terms",
+            "invoice_notes",
+            "quote_prefix",
+            "quote_number_pattern",
+            "quote_start_number",
+            "created_at",
+            "updated_at",
         ]
-        
+
         missing_columns = [col for col in required_columns if col not in columns]
-        
+
         if missing_columns:
             print(f"✗ Missing columns: {missing_columns}")
             return False
         else:
             print("✓ All required columns exist")
             return True
-            
+
     except Exception as e:
         print(f"✗ Error verifying columns: {e}")
         return False
 
+
 def update_existing_settings(engine):
     """Update existing settings with default values if they don't have company branding"""
     print("Updating existing settings with default company branding...")
-    
+
     update_sql = """
     UPDATE settings SET 
         company_name = COALESCE(company_name, 'Your Company Name'),
@@ -127,55 +152,57 @@ def update_existing_settings(engine):
         quote_start_number = COALESCE(quote_start_number, 1)
     WHERE id = (SELECT id FROM settings LIMIT 1);
     """
-    
+
     try:
         with engine.connect() as conn:
             conn.execute(text(update_sql))
             conn.commit()
-        
+
         print("✓ Existing settings updated successfully")
         return True
-        
+
     except Exception as e:
         print(f"✗ Error updating existing settings: {e}")
         return False
 
+
 def main():
     """Main function"""
     url = os.getenv("DATABASE_URL", "")
-    
+
     if not url.startswith("postgresql"):
         print("No PostgreSQL database configured, skipping migration")
         return
-    
+
     print(f"Database URL: {url}")
-    
+
     # Wait for database to be ready
     engine = wait_for_database(url)
-    
+
     # Check if migration is needed
     if verify_columns(engine):
         print("All required columns already exist, no migration needed")
         return
-    
+
     print("Migration needed, starting column addition...")
-    
+
     # Add missing columns
     if not add_missing_columns(engine):
         print("Failed to add missing columns")
         sys.exit(1)
-    
+
     # Update existing settings with defaults
     if not update_existing_settings(engine):
         print("Failed to update existing settings")
         sys.exit(1)
-    
+
     # Verify everything was added
     if verify_columns(engine):
         print("✓ Migration completed successfully")
     else:
         print("✗ Migration failed - columns still missing")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

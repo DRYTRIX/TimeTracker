@@ -7,9 +7,9 @@ Create Date: 2026-02-06
 Adds settings.date_format and settings.time_format columns so admins can
 configure the system-wide default date/time display format.
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision = "119_add_settings_date_time_format"

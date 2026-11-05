@@ -41,4 +41,3 @@ class ProviderBase:
         and fatal_rules (list of {id, message}) when the AP reports a failure.
         """
         raise ProviderError(f"Status lookup not supported by provider '{self.name}'")
-

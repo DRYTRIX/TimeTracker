@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """Simple script to run tests and display results"""
+
 import sys
 import os
 
@@ -16,20 +17,13 @@ if __name__ == "__main__":
     print("Running TimeTracker Tests")
     print("=" * 70)
     print()
-    
+
     # Run pytest with arguments
-    exit_code = pytest.main([
-        "tests/",
-        "-v",
-        "--tb=short",
-        "-ra",
-        "--color=no"
-    ])
-    
+    exit_code = pytest.main(["tests/", "-v", "--tb=short", "-ra", "--color=no"])
+
     print()
     print("=" * 70)
     print(f"Tests completed with exit code: {exit_code}")
     print("=" * 70)
-    
-    sys.exit(exit_code)
 
+    sys.exit(exit_code)

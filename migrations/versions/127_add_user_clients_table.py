@@ -6,6 +6,7 @@ Create Date: 2026-02-16
 
 Allows assigning clients to users (e.g. subcontractors) so they only see those clients/projects.
 """
+
 from alembic import op
 import sqlalchemy as sa
 

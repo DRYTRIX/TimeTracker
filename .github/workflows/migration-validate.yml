@@ -43,13 +43,16 @@ jobs:
         env:
           FLASK_APP: app.py
           FLASK_ENV: testing
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
         run: |
           set -e
           echo "🔍 Checking for a single Alembic migration head..."
-          HEADS=$(flask db heads 2>/dev/null | sed '/^$/d' | wc -l)
+          # Do not discard stderr: app-load failures (e.g. missing DB driver) must
+          # surface instead of being misreported as "0 heads".
+          HEADS_OUTPUT=$(flask db heads)
+          echo "$HEADS_OUTPUT"
+          HEADS=$(echo "$HEADS_OUTPUT" | sed '/^$/d' | wc -l)
           echo "Alembic heads found: $HEADS"
-          flask db heads || true
           if [ "$HEADS" -ne 1 ]; then
             echo "❌ Expected exactly one Alembic head, found $HEADS"
             echo "Create a merge migration before merging this PR."
@@ -82,7 +85,7 @@ jobs:
       - name: Validate migration consistency
         if: steps.migration_check.outputs.migration_changes == 'true'
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -245,7 +248,7 @@ jobs:
       - name: Test migration rollback safety
         if: steps.migration_check.outputs.migration_changes == 'true'
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
         run: |
@@ -323,7 +326,7 @@ jobs:
       - name: Test migration with sample data
         if: steps.migration_check.outputs.migration_changes == 'true'
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
         run: |
@@ -391,7 +394,7 @@ jobs:
       - name: Generate migration report
         if: steps.migration_check.outputs.migration_changes == 'true'
         env:
-          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
         run: |

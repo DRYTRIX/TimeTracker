@@ -27,6 +27,10 @@ updates:
     labels:
       - dependencies
       - javascript
+    # Tailwind v4 drops the CLI binary and requires a CSS/config rewrite; stay on v3.
+    ignore:
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /desktop

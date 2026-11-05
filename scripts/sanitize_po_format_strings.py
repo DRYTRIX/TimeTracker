@@ -9,6 +9,7 @@ brace placeholders {name}, which causes gettext to raise at runtime
 Usage (repo root, venv with polib):
   python scripts/sanitize_po_format_strings.py translations/pt/LC_MESSAGES/messages.po
 """
+
 from __future__ import annotations
 
 import argparse
@@ -44,8 +45,7 @@ def _safe_percent(msgid: str, msgstr: str) -> bool:
         return True
     # Positional %s / %d / %(no) — approximate count of conversion specs
     pat = re.compile(
-        r"(?<!%)(?:%%)*(?:%(?!%))(?!\()"
-        r"(?:\d+\$)?[-#+0 ]*(?:\*|\d+)?(?:\.(?:\*|\d+))?[hlL]?[diouxXeEfFgGcrsa%]"
+        r"(?<!%)(?:%%)*(?:%(?!%))(?!\()" r"(?:\d+\$)?[-#+0 ]*(?:\*|\d+)?(?:\.(?:\*|\d+))?[hlL]?[diouxXeEfFgGcrsa%]"
     )
     nm, ns = len(pat.findall(msgid)), len(pat.findall(msgstr))
     if nm == 0:

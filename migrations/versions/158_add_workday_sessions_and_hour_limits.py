@@ -116,7 +116,13 @@ def downgrade():
         if "users" in inspector.get_table_names() and _has_column(inspector, "users", col):
             op.drop_column("users", col)
 
-    for col in ("hour_limits_enabled", "hour_limit_email_enabled", "hour_limit_enforcement", "weekly_hour_limit", "daily_hour_limit"):
+    for col in (
+        "hour_limits_enabled",
+        "hour_limit_email_enabled",
+        "hour_limit_enforcement",
+        "weekly_hour_limit",
+        "daily_hour_limit",
+    ):
         if "settings" in inspector.get_table_names() and _has_column(inspector, "settings", col):
             op.drop_column("settings", col)
 

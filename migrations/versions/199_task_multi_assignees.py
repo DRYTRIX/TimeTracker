@@ -91,9 +91,7 @@ def upgrade():
     # Backfill from legacy assigned_to columns
     inspector = inspect(bind)
     if _has_column(inspector, "tasks", "assigned_to"):
-        op.execute(
-            sa.text(
-                """
+        op.execute(sa.text("""
                 INSERT INTO task_assignees (task_id, user_id, created_at)
                 SELECT id, assigned_to, CURRENT_TIMESTAMP
                 FROM tasks
@@ -102,18 +100,14 @@ def upgrade():
                       SELECT 1 FROM task_assignees ta
                       WHERE ta.task_id = tasks.id AND ta.user_id = tasks.assigned_to
                   )
-                """
-            )
-        )
+                """))
         _drop_fk_on_column(inspector, "tasks", "assigned_to")
         _drop_indexes_on_column(inspector, "tasks", "assigned_to")
         op.drop_column("tasks", "assigned_to")
 
     inspector = inspect(bind)
     if _has_column(inspector, "recurring_tasks", "assigned_to"):
-        op.execute(
-            sa.text(
-                """
+        op.execute(sa.text("""
                 INSERT INTO recurring_task_assignees (recurring_task_id, user_id, created_at)
                 SELECT id, assigned_to, CURRENT_TIMESTAMP
                 FROM recurring_tasks
@@ -123,9 +117,7 @@ def upgrade():
                       WHERE rta.recurring_task_id = recurring_tasks.id
                         AND rta.user_id = recurring_tasks.assigned_to
                   )
-                """
-            )
-        )
+                """))
         _drop_fk_on_column(inspector, "recurring_tasks", "assigned_to")
         _drop_indexes_on_column(inspector, "recurring_tasks", "assigned_to")
         op.drop_column("recurring_tasks", "assigned_to")
@@ -137,14 +129,10 @@ def downgrade():
 
     if not _has_column(inspector, "tasks", "assigned_to"):
         op.add_column("tasks", sa.Column("assigned_to", sa.Integer(), nullable=True))
-        op.create_foreign_key(
-            None, "tasks", "users", ["assigned_to"], ["id"], ondelete="SET NULL"
-        )
+        op.create_foreign_key(None, "tasks", "users", ["assigned_to"], ["id"], ondelete="SET NULL")
         op.create_index("ix_tasks_assigned_to", "tasks", ["assigned_to"])
         if _has_table(inspector, "task_assignees"):
-            op.execute(
-                sa.text(
-                    """
+            op.execute(sa.text("""
                     UPDATE tasks
                     SET assigned_to = (
                         SELECT ta.user_id FROM task_assignees ta
@@ -152,9 +140,7 @@ def downgrade():
                         ORDER BY ta.id ASC
                         LIMIT 1
                     )
-                    """
-                )
-            )
+                    """))
 
     inspector = inspect(bind)
     if not _has_column(inspector, "recurring_tasks", "assigned_to"):
@@ -162,9 +148,7 @@ def downgrade():
         op.create_foreign_key(None, "recurring_tasks", "users", ["assigned_to"], ["id"])
         op.create_index("ix_recurring_tasks_assigned_to", "recurring_tasks", ["assigned_to"])
         if _has_table(inspector, "recurring_task_assignees"):
-            op.execute(
-                sa.text(
-                    """
+            op.execute(sa.text("""
                     UPDATE recurring_tasks
                     SET assigned_to = (
                         SELECT rta.user_id FROM recurring_task_assignees rta
@@ -172,9 +156,7 @@ def downgrade():
                         ORDER BY rta.id ASC
                         LIMIT 1
                     )
-                    """
-                )
-            )
+                    """))
 
     if _has_table(inspector, "task_assignees"):
         op.drop_table("task_assignees")

@@ -1,5 +1,10 @@
 [tool.black]
 line-length = 120
+extend-exclude = '''
+/(
+  mobile/.*/ephemeral
+)/
+'''
 
 [tool.isort]
 profile = "black"

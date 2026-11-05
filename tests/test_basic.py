@@ -245,14 +245,15 @@ def test_testing_config_respects_database_url():
     """
     import os
 
-    from app.config import TestingConfig
+    from app.config import TestingConfig, normalize_database_url
 
     config = TestingConfig()
 
     # Verify that the config uses the DATABASE_URL if set, otherwise defaults to SQLite
     if "DATABASE_URL" in os.environ:
-        # In CI/CD or when DATABASE_URL is explicitly set
-        assert config.SQLALCHEMY_DATABASE_URI == os.environ["DATABASE_URL"]
+        # In CI/CD or when DATABASE_URL is explicitly set (bare postgresql:// is
+        # normalized to postgresql+psycopg2:// for SQLAlchemy 2.1 + psycopg2).
+        assert config.SQLALCHEMY_DATABASE_URI == normalize_database_url(os.environ["DATABASE_URL"])
     else:
         # Local development/testing without DATABASE_URL
         assert config.SQLALCHEMY_DATABASE_URI == "sqlite:///:memory:"

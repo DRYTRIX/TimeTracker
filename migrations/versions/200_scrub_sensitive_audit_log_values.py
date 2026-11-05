@@ -46,14 +46,12 @@ def upgrade():
     placeholders = ", ".join(f":f{i}" for i in range(len(_SENSITIVE_FIELD_NAMES)))
     params = {f"f{i}": name for i, name in enumerate(_SENSITIVE_FIELD_NAMES)}
     bind.execute(
-        text(
-            f"""
+        text(f"""
             UPDATE audit_logs
             SET old_value = NULL, new_value = NULL
             WHERE field_name IN ({placeholders})
               AND (old_value IS NOT NULL OR new_value IS NOT NULL)
-            """
-        ),
+            """),
         params,
     )
 

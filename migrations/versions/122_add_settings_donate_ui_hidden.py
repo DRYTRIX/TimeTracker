@@ -6,9 +6,9 @@ Create Date: 2026-02-08
 
 When True, donate/support UI is hidden for all users (verified in Admin).
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "122_add_settings_donate_ui_hidden"
 down_revision = "121_add_ui_show_donate_system_id"

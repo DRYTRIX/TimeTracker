@@ -9,14 +9,15 @@ from app import db
 from app.models import KanbanColumn
 from sqlalchemy import text
 
+
 def upgrade():
     """Create kanban_columns table and initialize default columns"""
-    
+
     print("Migration 019: Creating kanban_columns table...")
-    
+
     # Check if table already exists
     inspector = db.inspect(db.engine)
-    if 'kanban_columns' in inspector.get_table_names():
+    if "kanban_columns" in inspector.get_table_names():
         print("✓ kanban_columns table already exists")
     else:
         # Create the table
@@ -42,7 +43,7 @@ def upgrade():
             db.session.rollback()
             print(f"✗ Error creating kanban_columns table: {e}")
             return False
-    
+
     # Initialize default columns
     print("Migration 019: Initializing default kanban columns...")
     try:
@@ -61,15 +62,16 @@ def upgrade():
         db.session.rollback()
         print(f"✗ Error initializing default kanban columns: {e}")
         return False
-    
+
     print("Migration 019 completed successfully")
     return True
 
+
 def downgrade():
     """Remove kanban_columns table"""
-    
+
     print("Migration 019: Rolling back kanban_columns table...")
-    
+
     try:
         db.session.execute(text("DROP TABLE IF EXISTS kanban_columns"))
         db.session.commit()
@@ -78,13 +80,15 @@ def downgrade():
         db.session.rollback()
         print(f"✗ Error dropping kanban_columns table: {e}")
         return False
-    
+
     print("Migration 019 rollback completed")
     return True
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Run migration when executed directly
     from app import create_app
+
     app = create_app()
     with app.app_context():
         print("Running Migration 019: Kanban Column Customization")
@@ -94,4 +98,3 @@ if __name__ == '__main__':
             print("\nMigration completed successfully!")
         else:
             print("\nMigration failed!")
-

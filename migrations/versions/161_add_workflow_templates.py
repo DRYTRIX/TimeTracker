@@ -116,9 +116,7 @@ def upgrade():
 
     # Seed templates using first admin user if available (is_admin is a model property, not a column)
     conn = op.get_bind()
-    admin_row = conn.execute(
-        sa.text(
-            """
+    admin_row = conn.execute(sa.text("""
             SELECT u.id FROM users u
             WHERE u.role = 'admin'
                OR EXISTS (
@@ -128,9 +126,7 @@ def upgrade():
                )
             ORDER BY u.id
             LIMIT 1
-            """
-        )
-    ).fetchone()
+            """)).fetchone()
     if not admin_row:
         admin_row = conn.execute(sa.text("SELECT id FROM users ORDER BY id LIMIT 1")).fetchone()
     if admin_row:
@@ -138,16 +134,14 @@ def upgrade():
         now = datetime.utcnow()
         for tpl in SEED_TEMPLATES:
             conn.execute(
-                sa.text(
-                    """
+                sa.text("""
                     INSERT INTO workflow_templates
                     (name, description, category, tags, trigger_type, trigger_conditions, actions,
                      is_public, created_by, usage_count, created_at, updated_at)
                     VALUES
                     (:name, :description, :category, :tags, :trigger_type, :trigger_conditions, :actions,
                      true, :created_by, 0, :now, :now)
-                    """
-                ),
+                    """),
                 {
                     "name": tpl["name"],
                     "description": tpl["description"],

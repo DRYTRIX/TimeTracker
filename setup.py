@@ -6,8 +6,8 @@ This allows the app to be installed as a package for testing.
 from setuptools import setup, find_packages
 
 setup(
-    name='timetracker',
-    version='5.18.5',
+    name="timetracker",
+    version="5.18.5",
     packages=find_packages(),
     include_package_data=True,
     package_data={
@@ -20,5 +20,5 @@ setup(
         # Core requirements are in requirements.txt
         # This file is mainly for making the app importable during testing
     ],
-    python_requires='>=3.11',
+    python_requires=">=3.11",
 )

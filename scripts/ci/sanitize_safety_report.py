@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Rewrite absolute workspace paths in a Safety --save-json report to repo-relative paths."""
+
 from __future__ import annotations
 
 import json

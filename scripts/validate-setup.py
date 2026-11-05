@@ -12,12 +12,13 @@ from pathlib import Path
 
 class Colors:
     """ANSI color codes for terminal output"""
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
+
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[94m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
 
 
 def print_header(text):
@@ -74,12 +75,13 @@ def check_python_package(package_name):
 
 def run_command(command, description):
     """Run a command and check if it succeeds
-    
+
     Args:
         command: Command string or list of command arguments
         description: Human-readable description
     """
     import shlex
+
     try:
         # If command is a string, split it safely
         if isinstance(command, str):
@@ -90,13 +92,8 @@ def run_command(command, description):
                 cmd_list = command.split()
         else:
             cmd_list = command
-        
-        result = subprocess.run(
-            cmd_list,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
+
+        result = subprocess.run(cmd_list, capture_output=True, text=True, timeout=30)
         if result.returncode == 0:
             print_success(f"{description}: OK")
             return True
@@ -116,136 +113,130 @@ def run_command(command, description):
 def main():
     """Main validation function"""
     print_header("TimeTracker CI/CD Setup Validation")
-    
+
     # Track results
-    checks = {
-        'workflows': [],
-        'tests': [],
-        'config': [],
-        'docs': [],
-        'python': []
-    }
-    
+    checks = {"workflows": [], "tests": [], "config": [], "docs": [], "python": []}
+
     # 1. Check GitHub Actions workflows
     print_header("1. GitHub Actions Workflows")
     workflows = [
-        '.github/workflows/ci-comprehensive.yml',
-        '.github/workflows/cd-development.yml',
-        '.github/workflows/cd-release.yml',
-        '.github/workflows/docker-publish.yml',
-        '.github/workflows/migration-check.yml',
+        ".github/workflows/ci-comprehensive.yml",
+        ".github/workflows/cd-development.yml",
+        ".github/workflows/cd-release.yml",
+        ".github/workflows/docker-publish.yml",
+        ".github/workflows/migration-check.yml",
     ]
-    
+
     for workflow in workflows:
-        checks['workflows'].append(check_file_exists(workflow))
-    
+        checks["workflows"].append(check_file_exists(workflow))
+
     # 2. Check test files
     print_header("2. Test Files")
     test_files = [
-        'tests/conftest.py',
-        'tests/test_basic.py',
-        'tests/test_routes.py',
-        'tests/test_models_comprehensive.py',
-        'tests/test_security.py',
-        'tests/test_analytics.py',
-        'tests/test_invoices.py',
+        "tests/conftest.py",
+        "tests/test_basic.py",
+        "tests/test_routes.py",
+        "tests/test_models_comprehensive.py",
+        "tests/test_security.py",
+        "tests/test_analytics.py",
+        "tests/test_invoices.py",
     ]
-    
+
     for test_file in test_files:
-        checks['tests'].append(check_file_exists(test_file))
-    
+        checks["tests"].append(check_file_exists(test_file))
+
     # 3. Check configuration files
     print_header("3. Configuration Files")
     config_files = [
-        ('pytest.ini', True),
-        ('requirements-test.txt', True),
-        ('.pre-commit-config.yaml', False),
-        ('Makefile', False),
-        ('.gitignore', True),
+        ("pytest.ini", True),
+        ("requirements-test.txt", True),
+        (".pre-commit-config.yaml", False),
+        ("Makefile", False),
+        (".gitignore", True),
     ]
-    
+
     for config_file, required in config_files:
-        checks['config'].append(check_file_exists(config_file, required))
-    
+        checks["config"].append(check_file_exists(config_file, required))
+
     # 4. Check documentation
     print_header("4. Documentation")
     docs = [
-        'CI_CD_DOCUMENTATION.md',
-        'CI_CD_QUICK_START.md',
-        'CI_CD_IMPLEMENTATION_SUMMARY.md',
+        "CI_CD_DOCUMENTATION.md",
+        "CI_CD_QUICK_START.md",
+        "CI_CD_IMPLEMENTATION_SUMMARY.md",
     ]
-    
+
     for doc in docs:
-        checks['docs'].append(check_file_exists(doc))
-    
+        checks["docs"].append(check_file_exists(doc))
+
     # 5. Check Python dependencies
     print_header("5. Python Dependencies")
     packages = [
-        'pytest',
-        'flask',
-        'sqlalchemy',
+        "pytest",
+        "flask",
+        "sqlalchemy",
     ]
-    
+
     for package in packages:
-        checks['python'].append(check_python_package(package))
-    
+        checks["python"].append(check_python_package(package))
+
     # 6. Check Python test dependencies
     print_header("6. Test Dependencies")
     test_packages = [
-        'pytest',
-        'pytest_cov',
-        'pytest_flask',
-        'black',
-        'flake8',
-        'bandit',
+        "pytest",
+        "pytest_cov",
+        "pytest_flask",
+        "black",
+        "flake8",
+        "bandit",
     ]
-    
+
     test_deps_ok = True
     for package in test_packages:
-        if not check_python_package(package.replace('_', '-')):
+        if not check_python_package(package.replace("_", "-")):
             test_deps_ok = False
-    
+
     if not test_deps_ok:
         print_info("Install test dependencies: pip install -r requirements-test.txt")
-    
+
     # 7. Run quick tests
     print_header("7. Quick Test Validation")
-    
+
     # Check if pytest can discover tests
-    if run_command(['pytest', '--collect-only', '-q'], 'Test discovery'):
+    if run_command(["pytest", "--collect-only", "-q"], "Test discovery"):
         print_info("Tests can be discovered successfully")
-    
+
     # Try to run smoke tests (if they exist)
-    if run_command(['pytest', '-m', 'smoke', '--co', '-q'], 'Smoke test discovery'):
+    if run_command(["pytest", "-m", "smoke", "--co", "-q"], "Smoke test discovery"):
         print_info("Smoke tests are properly marked")
-    
+
     # 8. Check Docker setup
     print_header("8. Docker Configuration")
     docker_files = [
-        ('Dockerfile', True),
-        ('docker-compose.yml', True),
-        ('.dockerignore', False),
+        ("Dockerfile", True),
+        ("docker-compose.yml", True),
+        (".dockerignore", False),
     ]
-    
+
     for docker_file, required in docker_files:
         check_file_exists(docker_file, required)
-    
+
     # 9. Check helper scripts
     print_header("9. Helper Scripts")
     scripts = [
-        'scripts/run-tests.sh',
-        'scripts/run-tests.bat',
+        "scripts/run-tests.sh",
+        "scripts/run-tests.bat",
     ]
-    
+
     for script in scripts:
         check_file_exists(script, required=False)
-    
+
     # 10. Summary
     print_header("Validation Summary")
-    
+
     total_checks = sum(len(v) for v in checks.values())
     passed_checks = sum(sum(v) for v in checks.values())
-    
+
     print(f"\n{Colors.BOLD}Results:{Colors.ENDC}")
     print(f"  Workflows:      {sum(checks['workflows'])}/{len(checks['workflows'])}")
     print(f"  Tests:          {sum(checks['tests'])}/{len(checks['tests'])}")
@@ -253,7 +244,7 @@ def main():
     print(f"  Documentation:  {sum(checks['docs'])}/{len(checks['docs'])}")
     print(f"  Python deps:    {sum(checks['python'])}/{len(checks['python'])}")
     print(f"\n{Colors.BOLD}Total:          {passed_checks}/{total_checks}{Colors.ENDC}")
-    
+
     if passed_checks == total_checks:
         print(f"\n{Colors.GREEN}{Colors.BOLD}✓ All checks passed! CI/CD setup is complete.{Colors.ENDC}")
         print(f"\n{Colors.BOLD}Next steps:{Colors.ENDC}")
@@ -271,7 +262,7 @@ def main():
         return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         sys.exit(main())
     except KeyboardInterrupt:
@@ -280,4 +271,3 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"\n{Colors.RED}Validation failed with error: {e}{Colors.ENDC}")
         sys.exit(1)
-

@@ -5,9 +5,9 @@ Revises: 139_keyboard_shortcuts
 Create Date: 2026-03-16
 
 """
+
 from alembic import op
 import sqlalchemy as sa
-
 
 revision = "140_client_portal_dashboard_prefs"
 down_revision = "139_keyboard_shortcuts"

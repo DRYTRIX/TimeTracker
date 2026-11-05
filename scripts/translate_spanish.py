@@ -6,6 +6,7 @@ Script to complete Spanish translations by translating all empty msgstr entries.
 import re
 from pathlib import Path
 
+
 def translate_to_spanish(english_text):
     """
     Translate English text to Spanish.
@@ -137,76 +138,77 @@ def translate_to_spanish(english_text):
         "Mileage entry marked as reimbursed": "Entrada de kilometraje marcada como reembolsada",
         "Error marking mileage entry as reimbursed": "Error al marcar la entrada de kilometraje como reembolsada",
     }
-    
+
     # Check if we have a direct translation
     if english_text in translations:
         return translations[english_text]
-    
+
     # Handle format strings with %(variable)s
-    if '%(' in english_text:
+    if "%(" in english_text:
         # For format strings, we need to preserve the format specifiers
         # This is a simplified approach - in production you'd want more sophisticated handling
         return english_text  # Return as-is for now, will need manual translation
-    
+
     # For other strings, return empty to indicate manual translation needed
     return ""
+
 
 def translate_po_file(po_file_path):
     """Translate all empty msgstr entries in a .po file."""
     po_file = Path(po_file_path)
-    
+
     if not po_file.exists():
         print(f"Error: File not found: {po_file_path}")
         return
-    
+
     # Read the file
-    with open(po_file, 'r', encoding='utf-8') as f:
+    with open(po_file, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     # Pattern to match msgid followed by empty msgstr
     # Handle both single-line and multi-line msgid
     pattern = r'(msgid\s+"[^"]*"\s*(?:\n"[^"]*")*)\n(msgstr\s+"")'
-    
+
     def replace_empty_translation(match):
         msgid_block = match.group(1)
         # Extract the actual msgid text
-        msgid_lines = msgid_block.split('\n')
-        msgid_text = ''
+        msgid_lines = msgid_block.split("\n")
+        msgid_text = ""
         for line in msgid_lines:
-            if line.startswith('msgid '):
+            if line.startswith("msgid "):
                 msgid_text += line[6:].strip('"')
             elif line.startswith('"'):
                 msgid_text += line.strip('"')
-        
+
         # Translate
         translation = translate_to_spanish(msgid_text)
-        
+
         if translation:
             return f'{msgid_block}\nmsgstr "{translation}"'
         else:
             # Return as-is if no translation found
             return match.group(0)
-    
+
     # Replace empty translations
     new_content = re.sub(pattern, replace_empty_translation, content)
-    
+
     # Also handle multiline msgid with empty msgstr
     # This is more complex and might need a proper PO file parser
-    
+
     # Write back
     if new_content != content:
         # Backup
-        backup_path = po_file.with_suffix('.po.backup')
+        backup_path = po_file.with_suffix(".po.backup")
         po_file.rename(backup_path)
         print(f"Backup created: {backup_path}")
-        
+
         # Write new content
-        with open(po_file, 'w', encoding='utf-8') as f:
+        with open(po_file, "w", encoding="utf-8") as f:
             f.write(new_content)
         print(f"Updated: {po_file_path}")
     else:
         print("No changes made")
 
-if __name__ == '__main__':
-    translate_po_file('translations/es/LC_MESSAGES/messages.po')
 
+if __name__ == "__main__":
+    translate_po_file("translations/es/LC_MESSAGES/messages.po")

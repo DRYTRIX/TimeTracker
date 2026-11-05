@@ -81,7 +81,9 @@ def upgrade():
             sa.ForeignKeyConstraint(["workday_session_id"], ["workday_sessions.id"]),
             sa.PrimaryKeyConstraint("id"),
         )
-        op.create_index("ix_attendance_work_periods_attendance_day_id", "attendance_work_periods", ["attendance_day_id"])
+        op.create_index(
+            "ix_attendance_work_periods_attendance_day_id", "attendance_work_periods", ["attendance_day_id"]
+        )
         op.create_index("ix_attendance_work_periods_user_id", "attendance_work_periods", ["user_id"])
         op.create_index("ix_attendance_work_periods_start_time", "attendance_work_periods", ["start_time"])
 
@@ -181,9 +183,7 @@ def upgrade():
 
     # Backfill from existing workday_sessions
     if _has_table(inspector, "workday_sessions") and _has_table(inspector, "daily_attendance_records"):
-        bind.execute(
-            text(
-                """
+        bind.execute(text("""
                 INSERT INTO daily_attendance_records (
                     user_id, work_date, status, total_work_seconds, total_break_seconds,
                     created_at, updated_at
@@ -202,12 +202,8 @@ def upgrade():
                     WHERE dar.user_id = ws.user_id AND dar.work_date = DATE(ws.start_time)
                 )
                 GROUP BY ws.user_id, DATE(ws.start_time)
-                """
-            )
-        )
-        bind.execute(
-            text(
-                """
+                """))
+        bind.execute(text("""
                 INSERT INTO attendance_work_periods (
                     attendance_day_id, user_id, start_time, end_time, duration_seconds,
                     source, auto_closed, notes, workday_session_id, created_at, updated_at
@@ -231,21 +227,15 @@ def upgrade():
                     SELECT 1 FROM attendance_work_periods awp
                     WHERE awp.workday_session_id = ws.id
                 )
-                """
-            )
-        )
-        bind.execute(
-            text(
-                """
+                """))
+        bind.execute(text("""
                 UPDATE daily_attendance_records dar
                 SET total_work_seconds = (
                     SELECT COALESCE(SUM(awp.duration_seconds), 0)
                     FROM attendance_work_periods awp
                     WHERE awp.attendance_day_id = dar.id
                 )
-                """
-            )
-        )
+                """))
 
 
 def downgrade():
