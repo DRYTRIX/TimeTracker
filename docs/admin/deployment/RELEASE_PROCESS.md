@@ -67,6 +67,14 @@ git tag vX.Y.Z && git push origin vX.Y.Z
 
 Actions → **Finalize Release** → `workflow_dispatch` with `cleanup_stale_rc=true` deletes remote `rc/*` branches already merged into `main`.
 
+## Development image (`:develop`)
+
+**CD - Development Build** (`cd-development.yml`) publishes `ghcr.io/drytrix/timetracker:develop` (and Docker Hub when credentials are set) on pushes to `develop` that touch image-affecting paths (`app/`, `migrations/`, `translations/`, `peppol_bridge/`, `docker/`, `nginx/`, Dockerfile, requirements, asset build scripts, etc.).
+
+It does **not** run for pure docs-only pushes. Smoke tests must pass before the image is pushed (override with `force_build` on manual dispatch). In-flight publishes are not cancelled when a newer push arrives.
+
+To refresh `:develop` without a matching path change: **Actions → CD - Development Build → Run workflow**.
+
 ## Obsolete tooling
 
 `scripts/version-manager.sh` is superseded by `scripts/bump_version.py` + the Prepare/Finalize workflows. Prefer the Actions button flow above.

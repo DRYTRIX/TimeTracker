@@ -1,8 +1,10 @@
 # Version Management System
 
-This document describes the comprehensive version management system for TimeTracker that provides flexible versioning for both GitHub releases and build numbers.
+How TimeTracker versions are stored, bumped, and published.
 
-**Canonical bump tool:** [`scripts/bump_version.py`](../../../scripts/bump_version.py) updates `setup.py`, `VERSION`, client manifests, and promotes `CHANGELOG.md` `[Unreleased]`. See [Release Process](RELEASE_PROCESS.md) for the Prepare Release → merge → tag flow.
+**Canonical release how-to:** [Release Process](RELEASE_PROCESS.md) (Prepare Release → merge `rc/v*` → Finalize tag → CD publish).
+
+**Canonical bump tool:** [`scripts/bump_version.py`](../../../scripts/bump_version.py) updates `setup.py`, `VERSION`, client manifests, and promotes `CHANGELOG.md` `[Unreleased]`.
 
 **For contributors:** Application version is defined in **setup.py** (mirrored by the bump script). Do not hand-edit desktop/mobile versions — run the script. Desktop and mobile build tooling is covered in the [Build Guide](../../../scripts/README-BUILD.md).
 
@@ -10,364 +12,105 @@ This document describes the comprehensive version management system for TimeTrac
 
 ## Overview
 
-The version management system provides multiple ways to set version tags:
+1. **Prepare Release** (`release-prepare.yml`) — Creates `rc/vX.Y.Z`, runs `bump_version.py`, opens a PR to `main`.
+2. **Finalize Release** (`release-finalize.yml`) — On merge of that PR, tags `vX.Y.Z` and back-merges to `develop`.
+3. **CD - Release Build** (`cd-release.yml`) — On `v*.*.*` tags (or manual dispatch), publishes Docker images, client artifacts, and the GitHub Release (notes from `CHANGELOG.md`).
+4. **CD - Development Build** (`cd-development.yml`) — On image-affecting pushes to `develop`, publishes `:develop` (synthetic `dev-<run>-<sha>` version). See [Release Process → Development image](RELEASE_PROCESS.md#development-image-develop).
 
-1. **GitHub Releases** - Automatic versioning when creating releases
-2. **Git Tags** - Manual version tagging for releases
-3. **Build Numbers** - Automatic versioning for branch builds
-4. **Manual Workflow Dispatch** - Custom version input through GitHub Actions
-5. **Local Version Management** - Command-line tools for version management
+Do **not** create production releases via the GitHub “Draft a new release” UI or by running `version-manager.sh` alone — those paths are obsolete for shipping.
 
-## Version Format Support
+## Version format
 
-The system supports various version formats:
+Production releases use semantic versions with a `v` prefix on git tags:
 
-### Semantic Versions
-- `v1.2.3` - Full semantic version (recommended for releases)
-- `1.2.3` - Semantic version without 'v' prefix
-- `v1.2` - Major.Minor version
-- `v1` - Major version only
+- Tag: `v5.19.0`
+- `setup.py` / `VERSION` / clients: `5.19.0` (mobile may append `+build`)
 
-### Build Versions
-- `build-123` - Build number format
-- `main-build-456` - Branch-specific build
-- `feature-build-789` - Feature branch build
+Development images use synthetic versions such as `dev-123-a1b2c3d4` and registry tags `develop`, `dev-<sha>`.
 
-### Pre-release Versions
-- `rc1` - Release candidate
-- `beta1` - Beta version
-- `alpha1` - Alpha version
-- `dev-123` - Development version
+## Files updated by `bump_version.py`
 
-## GitHub Actions Workflow
-
-### Automatic Version Detection
-
-The GitHub Actions workflow automatically determines the version based on the trigger:
-
-1. **Manual Workflow Dispatch** - Uses custom input version
-2. **GitHub Release** - Uses release tag name
-3. **Git Tag** - Uses git tag name
-4. **Branch Push** - Uses branch name + build number
-5. **Fallback** - Uses commit SHA
-
-### Version Priority
-
-```yaml
-# Priority order for version determination:
-# 1. Manual workflow dispatch input
-# 2. GitHub release tag
-# 3. Git tag
-# 4. Branch name with build number
-# 5. Fallback to commit SHA
-```
-
-### Tag Strategy
-
-- **Releases/Tags**: Tagged as both `version` and `latest`
-- **Main Branch Builds**: Tagged as both `version` and `main`
-- **Feature Branches**: Tagged only as `version`
-- **Pull Requests**: Build but don't push (preview only)
-
-## Usage Methods
-
-### 1. GitHub Releases (Recommended)
-
-Create a GitHub release to automatically trigger a build with the release version:
-
-1. Go to GitHub repository → Releases → "Create a new release"
-2. Choose a tag (e.g., `v1.2.3`) or create a new one
-3. Fill in release title and description
-4. Publish the release
-5. GitHub Actions automatically builds and pushes the Docker image
-
-**Result**: Image tagged as `ghcr.io/drytrix/timetracker:v1.2.3` and `ghcr.io/drytrix/timetracker:latest`
-
-### 2. Git Tags
-
-Create a git tag locally and push to trigger a build:
+| File | Role |
+|------|------|
+| `setup.py` | Primary source of truth |
+| `VERSION` | Mirror |
+| `README.md` | “Latest release: vX.Y.Z” line |
+| `CHANGELOG.md` | Promotes `[Unreleased]` → `## [X.Y.Z] - date` |
+| `browser-extension/package.json`, `manifest.json` | Extension version |
+| `desktop/package.json` (+ lock) | Electron app version |
+| `mobile/pubspec.yaml` | Flutter version (`X.Y.Z+build`) |
+| `docs/GAP_ROADMAP.md` | Best-effort mirrors |
 
 ```bash
-# Create and push a tag
-git tag -a v1.2.3 -m "Release 1.2.3"
-git push origin v1.2.3
+python scripts/bump_version.py 5.19.0
+python scripts/bump_version.py --bump patch
+python scripts/bump_version.py --check
+python scripts/bump_version.py --extract-notes 5.19.0
 ```
 
-**Result**: Image tagged as `ghcr.io/drytrix/timetracker:v1.2.3` and `ghcr.io/drytrix/timetracker:latest`
+## GitHub Actions (current)
 
-### 3. Manual Workflow Dispatch
+### Release publish (`cd-release.yml`)
 
-Trigger a build with a custom version through GitHub Actions:
+Triggered by:
 
-1. Go to GitHub repository → Actions → "Build and Publish TimeTracker Docker Image"
-2. Click "Run workflow"
-3. Enter custom version (e.g., `custom-build-123`)
-4. Click "Run workflow"
+1. Push of tag `v*.*.*` (normal path after Finalize)
+2. Manual **workflow_dispatch** with a version that matches `setup.py`
 
-**Result**: Image tagged as `ghcr.io/drytrix/timetracker:custom-build-123`
+Version must match `setup.py`. Tag commits must be ancestors of `main`. Images are tagged with the semver plus `latest` / `stable`.
 
-### 4. Branch Builds
+### Development publish (`cd-development.yml`)
 
-Push to any branch to automatically create a build version:
+Triggered by pushes to `develop` that match the image-affecting path allowlist, or by **workflow_dispatch**. Smoke tests must pass before push (unless `force_build`). In-flight publishes are not cancelled mid-run.
+
+### Manual / emergency tag
+
+Only when automation cannot tag (see [Release Process](RELEASE_PROCESS.md)):
 
 ```bash
-# Push to main branch
-git push origin main
-# Results in: main-build-456 (where 456 is the build number)
-
-# Push to feature branch
-git push origin feature/new-feature
-# Results in: feature-new-feature-build-789
+git checkout main && git pull
+python scripts/bump_version.py --check
+git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
-## Local Version Management
+## Docker image labels
 
-### Installation
+Release and development images include OCI labels (version, revision, source) via `docker/metadata-action` in the CD workflows.
 
-Make the scripts executable:
+## Best practices
 
-```bash
-# Unix/Linux/macOS
-chmod +x scripts/version-manager.sh
-
-# Windows
-# No special action needed, .bat files are executable by default
-```
-
-### Basic Commands
-
-#### Check Current Status
-
-```bash
-# Unix/Linux/macOS
-./scripts/version-manager.sh status
-
-# Windows
-scripts\version-manager.bat status
-```
-
-**Output:**
-```
-=== Version Status ===
-Current branch: main
-Latest tag: v1.2.3
-Commits since last tag: 5
-Current commit: a1b2c3d
-Suggested next version: v1.2.4
-=====================
-```
-
-#### Create a Release Tag
-
-```bash
-# Unix/Linux/macOS
-./scripts/version-manager.sh tag v1.2.4 "Release 1.2.4 with new features"
-
-# Windows
-scripts\version-manager.bat tag v1.2.4 "Release 1.2.4 with new features"
-```
-
-#### Create a Build Tag
-
-```bash
-# Unix/Linux/macOS
-./scripts/version-manager.sh build 123
-
-# Windows
-scripts\version-manager.bat build 123
-```
-
-#### List All Tags
-
-```bash
-# Unix/Linux/macOS
-./scripts/version-manager.sh list
-
-# Windows
-scripts\version-manager.bat list
-```
-
-#### Get Version Suggestions
-
-```bash
-# Unix/Linux/macOS
-./scripts/version-manager.sh suggest
-
-# Windows
-scripts\version-manager.bat suggest
-```
-
-### Advanced Usage
-
-#### Create Tag Without Pushing
-
-```bash
-./scripts/version-manager.sh tag v1.2.4 --no-push
-```
-
-#### Custom Build Number
-
-```bash
-./scripts/version-manager.sh build --build-number 999
-```
-
-#### Show Tag Information
-
-```bash
-# Show latest tag info
-./scripts/version-manager.sh info
-
-# Show specific tag info
-./scripts/version-manager.sh info v1.2.3
-```
-
-## Docker Image Labels
-
-All Docker images include comprehensive metadata labels:
-
-```dockerfile
---label "org.opencontainers.image.version=$VERSION"
---label "org.opencontainers.image.revision=${{ github.sha }}"
---label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
---label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}"
-```
-
-## Workflow Examples
-
-### Release Workflow
-
-1. **Develop features** on feature branches
-2. **Merge to main** when ready
-3. **Create release tag**:
-   ```bash
-   ./scripts/version-manager.sh tag v1.3.0 "Major feature release"
-   ```
-4. **Push tag** to trigger GitHub Actions
-5. **Create GitHub release** for the tag
-6. **Docker image** automatically built and pushed
-
-### Development Workflow
-
-1. **Work on feature branch**:
-   ```bash
-   git checkout -b feature/new-feature
-   # ... make changes ...
-   git push origin feature/new-feature
-   ```
-2. **Automatic build** with version like `feature-new-feature-build-123`
-3. **Test the image** before merging
-4. **Merge to main** when ready
-5. **Create release tag** for production
-
-### Hotfix Workflow
-
-1. **Create hotfix branch**:
-   ```bash
-   git checkout -b hotfix/critical-fix
-   # ... fix the issue ...
-   git push origin hotfix/critical-fix
-   ```
-2. **Test the build** with version like `hotfix-critical-fix-build-456`
-3. **Create hotfix release**:
-   ```bash
-   ./scripts/version-manager.sh tag v1.2.4 "Critical security fix"
-   ```
-
-## Best Practices
-
-### Version Naming
-
-- **Use semantic versioning** for releases (`v1.2.3`)
-- **Use descriptive names** for feature branches
-- **Include build numbers** for development builds
-- **Be consistent** with naming conventions
-
-### Tag Management
-
-- **Create tags locally** before pushing
-- **Use meaningful commit messages** for tags
-- **Push tags immediately** after creation
-- **Clean up old tags** periodically
-
-### Release Process
-
-- **Test thoroughly** before creating releases
-- **Use release candidates** for major versions
-- **Document changes** in release notes
-- **Tag from main branch** only
+- Use **semantic versioning** for releases (`v1.2.3`)
+- Keep release notes in **`CHANGELOG.md` `[Unreleased]`** before Prepare Release
+- Run **`python scripts/bump_version.py --check`** locally when touching version files
+- Prefer **Prepare/Finalize** over hand-tagging
+- Tag production releases from **`main`** only (via the rc merge)
 
 ## Troubleshooting
 
-### Common Issues
-
-#### Tag Already Exists
+### Tag already exists
 
 ```bash
-# Delete local tag
+# Prefer a new patch/minor instead of moving tags.
+# Only delete/recreate in true emergency (coordinate with CD):
 git tag -d v1.2.3
-
-# Delete remote tag
 git push origin --delete v1.2.3
-
-# Recreate tag
-./scripts/version-manager.sh tag v1.2.3
 ```
 
-#### Build Not Triggered
+### Release build not triggered after Finalize
 
-- Check if the tag was pushed to remote
-- Verify GitHub Actions permissions
-- Check workflow file syntax
-- Ensure tag format is valid
+- Prefer `RELEASE_PAT` or a GitHub App so the tag push can trigger `cd-release.yml` (`GITHUB_TOKEN` alone often will not)
+- Confirm the tag matches `v*.*.*` and the commit is on `main`
+- Check that `setup.py` version matches the tag (without `v`)
 
-#### Version Format Invalid
+### Develop image not updated
 
-The system validates version formats. Common valid formats:
+- Push may not have matched the path filter (docs-only) — use **Actions → CD - Development Build → Run workflow**
+- Smoke tests may have failed — check the run or use `force_build`
+- Confirm Docker Hub credentials if you expect Hub as well as GHCR
 
-```bash
-# Valid
-v1.2.3, 1.2.3, build-123, rc1, beta1
+## Obsolete tooling
 
-# Invalid
-1.2.3.4, v1.2.3.4, build_123, release-1
-```
-
-### Debug Commands
-
-```bash
-# Check git status
-git status
-
-# Check remote tags
-git ls-remote --tags origin
-
-# Check local tags
-git tag -l
-
-# Check GitHub Actions
-# Go to Actions tab in GitHub repository
-```
-
-## Integration with CI/CD
-
-### GitHub Actions
-
-The version management system integrates seamlessly with GitHub Actions:
-
-- **Automatic triggers** on tags and releases
-- **Build number tracking** for continuous builds
-- **Docker image publishing** to GitHub Container Registry
-- **Pull request previews** without publishing
-
-### External CI/CD
-
-For external CI/CD systems, use the version manager scripts:
-
-```bash
-# In CI/CD pipeline
-./scripts/version-manager.sh build $BUILD_NUMBER
-git push origin --tags
-```
+`scripts/version-manager.sh` (and `.bat` / `.ps1` wrappers) only manage git tags. They do **not** bump `setup.py` / clients / CHANGELOG. Prefer `bump_version.py` + Prepare/Finalize.
 
 ## Admin in-app update notification (GitHub releases) {#admin-github-update-notification}
 
@@ -392,12 +135,3 @@ Administrators can be notified in the web UI when a **newer semantic version** e
 | `ENABLE_PRE_RELEASE_NOTIFICATIONS` | `false` | When `true`, consider the newest non-draft release from the paginated releases list (including pre-releases). When `false`, use `releases/latest` (stable only per GitHub’s definition). |
 
 Optional: set `APP_VERSION` (or `GITHUB_TAG`) at deploy time to a semver string so Docker images and CI builds compare correctly against release tags.
-
-## Future Enhancements
-
-- **Version database** for tracking all versions
-- **Release notes generation** from commits
-- **Dependency version tracking** for security updates
-- **Automated changelog** generation
-- **Version compatibility** checking
-- **Rollback support** for failed releases

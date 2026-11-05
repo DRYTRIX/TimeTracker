@@ -7,9 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Public demo (`DEMO_MODE`)** — Skip the setup wizard and seed browseable sample data for public demos; README/demo assets aligned with the live demo.
+- **App shell UX** — Improved UI look, information architecture, and brand consistency across the app shell.
+- **First-run / contributor UX** — Onboarding, empty states, and i18n improvements for new installs and contributors.
+
+### Security
+
+- **SSRF / XSS / mass-assignment / deploy defaults** — Harden outbound URL validation, CORS/Socket.IO, DOM escaping, attachment path jailing, and compose/env credential defaults.
+- **Render health checks** — Tolerate transient connection-refused blips during deploys.
+- **CodeQL follow-ups** — Clear property-injection, stack-trace, and log-injection findings; run helper images as non-root; Dependabot overrides for `follow-redirects` and `minimatch`.
+
+### Fixed
+
+- **Timer** — Bulk entry can add a slot that starts when another entry ends (adjacent slots).
+- **Projects** — Show the new-install empty state when no status filter is set; wrap filter labels/options in gettext.
+- **Web** — Restore `#746` reconnect guards; harden entry/invoice paths; restore curated timezones and template script blocks.
+- **Migrations** — Make late SQLite upgrades batch-safe.
+- **Mobile** — Use named `flutter_local_notifications` APIs after dependency updates.
+- **Docker** — Fix local-test compose build context for the root Dockerfile (#818); restore app boot after Dependabot major bumps.
+- **CI / develop image** — Broaden CD-Development path filters for image-affecting trees and stop cancelling in-flight publishes so `:develop` reaches GHCR/Docker Hub more reliably.
+
 ### Changed
 
 - **CI / releases** — Consolidated PR checks into a single path-aware `ci.yml` with a required `ci-pass` aggregator; Dependabot + nightly dependency audit; automated Prepare/Finalize release workflows (`rc/v*` → tag → publish) and `scripts/bump_version.py` as the version source of truth.
+- **Dependencies** — Large pip, GitHub Actions, npm (root + desktop), and Flutter mobile dependency bumps.
+
+### Documentation
+
+- First-five-minutes checklist after Docker quick start; demo credentials beside the live demo link; refreshed dashboard screenshot; community/discovery funnel tweaks.
+- Release and version docs aligned with Prepare/Finalize + `bump_version.py` (superseding manual GitHub Releases / `version-manager.sh` as the primary path).
 
 ## [5.18.5] - 2026-10-30
 

@@ -35,26 +35,16 @@ docker compose -f docker-compose.nas.yml up -d
 ```
 
 **Latest release: v5.18.5** — see [CHANGELOG.md](CHANGELOG.md).
+
 ### First 5 minutes
 
 1. Open [http://localhost:8080](http://localhost:8080) and create the admin account.
-2. Add a client under **Clients → Create Client**.
-3. Create a project under **Projects → Create Project**.
-4. Start a timer or log time against the project.
-5. Optional: create a draft invoice under **Invoices**.
-
-See [client management](docs/CLIENT_MANAGEMENT_README.md) and [invoicing](docs/INVOICE_FEATURE_README.md) for the detailed flows.
-
+2. [Add a client](docs/CLIENT_MANAGEMENT_README.md) under **Clients → Create Client**.
+3. Create a project under that client (**Projects → Create Project**).
+4. Start a timer or [log time](docs/GETTING_STARTED.md) against the project.
+5. Optional: [generate a draft invoice](docs/INVOICE_FEATURE_README.md) under **Invoices**.
 
 More install paths (HTTPS production, NAS UI paste, cloud): [Install options](#install-options).
-
-### First 5 minutes
-
-1. Open http://localhost:8080 and complete first-login admin setup
-2. [Add a client](docs/CLIENT_MANAGEMENT_README.md)
-3. Create a project under that client
-4. Start a timer or [log time](docs/GETTING_STARTED.md)
-5. (Optional) [Generate a draft invoice](docs/INVOICE_FEATURE_README.md) from tracked time
 
 ---
 
@@ -327,7 +317,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 - **[Uninstall / remove data](UNINSTALL.md)** — Tear down Docker, volumes, and optional AI (Ollama); [AI helper only](UNINSTALL.md#disabling-or-removing-the-ai-helper)
 - **[OIDC/SSO Setup](docs/admin/configuration/OIDC_SETUP.md)** — Enterprise authentication
 - **[Email Configuration](docs/admin/configuration/EMAIL_CONFIGURATION.md)** — Email setup
-- **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Updates and releases
+- **[Release Process](docs/admin/deployment/RELEASE_PROCESS.md)** — Prepare/Finalize releases and version bumps
 
 **For Developers:**
 - **[Contributing](CONTRIBUTING.md)** — How to contribute (quick link)
@@ -379,7 +369,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 
 - **[Project Structure](docs/development/PROJECT_STRUCTURE.md)** — Codebase architecture
 - **[Database Migrations](migrations/README.md)** — Schema management
-- **[Version Management](docs/admin/deployment/VERSION_MANAGEMENT.md)** — Release process
+- **[Release Process](docs/admin/deployment/RELEASE_PROCESS.md)** — Version bumps and publishing · [Version details](docs/admin/deployment/VERSION_MANAGEMENT.md)
 - **[CSRF Configuration](docs/admin/security/CSRF_CONFIGURATION.md)** — Security setup
 - **[CI/CD Setup](docs/cicd/CI_CD_DOCUMENTATION.md)** — Continuous integration
 

@@ -1,6 +1,8 @@
 name: CD - Development Build
 
-# Publish :develop (and sha tags) on every push to develop that touches runtime code.
+# Publish :develop (and sha tags) on every push to develop that touches image contents.
+# Pure docs/markdown-only pushes are skipped; use workflow_dispatch to refresh without a path match.
+# Smoke tests must pass before push unless force_build=true on manual dispatch.
 
 on:
   push:
@@ -8,6 +10,10 @@ on:
     paths:
       - 'app/**'
       - 'migrations/**'
+      - 'translations/**'
+      - 'peppol_bridge/**'
+      - 'docker/**'
+      - 'nginx/**'
       - 'requirements*.txt'
       - 'setup.py'
       - 'Dockerfile'
@@ -17,8 +23,9 @@ on:
       - 'postcss.config.js'
       - '.github/workflows/cd-development.yml'
       - 'babel.cfg'
-      - 'scripts/copy-vendor.mjs'
-      - 'scripts/build-js.mjs'
+      - 'scripts/**'
+      - 'donate_hide_public.pem'
+      - 'env.example'
   workflow_dispatch:
     inputs:
       force_build:
@@ -29,7 +36,8 @@ on:
 
 concurrency:
   group: dev-build-${{ github.ref }}
-  cancel-in-progress: true
+  # Finish in-flight publishes so :develop reaches the registry; newer runs queue.
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -177,4 +185,11 @@ jobs:
             echo "- Version: \`${{ steps.version.outputs.version }}\`"
             echo "- Tags: \`develop\`, \`dev-<sha>\`"
             echo "- GHCR: \`${{ steps.image-name.outputs.IMAGE_NAME_LOWER }}:develop\`"
+            if [ "${{ steps.dockerhub.outputs.enabled }}" = "true" ]; then
+              echo "- Docker Hub: \`${{ env.DOCKERHUB_IMAGE }}:develop\`"
+            else
+              echo "- Docker Hub: skipped (credentials not configured)"
+            fi
+            echo ""
+            echo "Publish is path-filtered and smoke-gated. Manual refresh: Actions → CD - Development Build → Run workflow."
           } >> "$GITHUB_STEP_SUMMARY"
