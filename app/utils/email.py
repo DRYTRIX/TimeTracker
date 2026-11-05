@@ -988,10 +988,22 @@ def send_invoice_email(invoice, recipient_email, sender_user=None, custom_messag
         )
         db.session.add(invoice_email)
 
-        # Update invoice status to 'sent' if it's still 'draft'
-        was_first_send = invoice.status == "draft"
-        if was_first_send:
-            invoice.status = "sent"
+        # Re-attach invoice in case the caller passed a detached instance (common in tests
+        # and after PDF generation commits). Use no_autoflush so the pending
+        # InvoiceEmail insert does not flush while we load the invoice row.
+        from app.models import Invoice as InvoiceModel
+
+        with db.session.no_autoflush:
+            invoice_row = db.session.get(InvoiceModel, invoice.id)
+            if invoice_row is None:
+                invoice_row = db.session.merge(invoice)
+            was_first_send = invoice_row.status == "draft"
+            if was_first_send:
+                invoice_row.status = "sent"
+                try:
+                    invoice.status = "sent"
+                except Exception:
+                    pass
 
         db.session.commit()
 

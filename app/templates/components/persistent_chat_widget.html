@@ -231,7 +231,8 @@ function loadChatWidgetChannels() {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        __ttQuiet: true
     })
     .then(response => {
         if (!response.ok) {
@@ -331,7 +332,8 @@ function loadChatWidgetMessages(channelId) {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
-        }
+        },
+        __ttQuiet: true
     })
     .then(response => {
         if (!response.ok) {

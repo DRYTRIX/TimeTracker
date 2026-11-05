@@ -462,6 +462,13 @@ class TimeTrackingService:
             if not project:
                 return {"success": False, "message": "Invalid project", "error": "invalid_project"}
 
+            if project.status == "archived":
+                return {
+                    "success": False,
+                    "message": "Cannot create time entries for an archived project. Please unarchive the project first.",
+                    "error": "project_archived",
+                }
+
             # Validate task if provided (only valid when project_id is set)
             if task_id:
                 task = Task.query.filter_by(id=task_id, project_id=project_id).first()

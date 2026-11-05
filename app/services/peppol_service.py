@@ -245,6 +245,9 @@ class PeppolService:
         try:
             sender = self._get_sender_party()
             recipient_party, recipient_endpoint_id, recipient_scheme_id = self._get_recipient_party(invoice)
+        except ValueError as e:
+            # Pass through specific validation errors (e.g. missing client Peppol endpoint)
+            return False, None, str(e)
         except Exception:
             current_app.logger.exception("Failed to resolve Peppol parties")
             return False, None, "Failed to resolve Peppol sender or recipient"

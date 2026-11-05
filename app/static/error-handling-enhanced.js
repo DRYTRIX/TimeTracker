@@ -330,9 +330,9 @@ class EnhancedErrorHandler {
             
             .error-retry-btn {
                 padding: 8px 16px;
-                background: rgba(255, 255, 255, 0.2);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.3);
+                background: rgba(148, 163, 184, 0.18);
+                color: inherit;
+                border: 1px solid rgba(148, 163, 184, 0.35);
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 0.875rem;
@@ -342,7 +342,7 @@ class EnhancedErrorHandler {
             }
             
             .error-retry-btn:hover {
-                background: rgba(255, 255, 255, 0.3);
+                background: rgba(148, 163, 184, 0.28);
             }
             
             .error-retry-btn:disabled {
@@ -363,9 +363,9 @@ class EnhancedErrorHandler {
             
             .error-recovery-btn {
                 padding: 6px 12px;
-                background: rgba(255, 255, 255, 0.15);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.25);
+                background: rgba(148, 163, 184, 0.15);
+                color: inherit;
+                border: 1px solid rgba(148, 163, 184, 0.35);
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 0.875rem;
@@ -373,7 +373,7 @@ class EnhancedErrorHandler {
             }
             
             .error-recovery-btn:hover {
-                background: rgba(255, 255, 255, 0.25);
+                background: rgba(148, 163, 184, 0.25);
             }
         `;
         document.head.appendChild(style);
@@ -443,15 +443,18 @@ class EnhancedErrorHandler {
     }
 
     async handleFetchException(error, url, options) {
-        // Network error.
-        // The Response constructor only accepts statuses in [200, 599] — a status
-        // of 0 throws RangeError. Report 503 so callers get a non-ok Response
-        // (same contract as handleFetchError) instead of the handler crashing.
+        // Network error — Response status must be 200–599; use 503 + marker header.
+        // (status 0 throws RangeError). Callers get a non-ok Response instead of
+        // the handler crashing.
         if (!this.isOnline) {
             await this.queueForOffline(url, options);
             return new Response(JSON.stringify({ error: 'Offline' }), {
                 status: 503,
-                statusText: 'Offline'
+                statusText: 'Offline',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-TT-Network-Error': '1'
+                }
             });
         }
 
@@ -462,18 +465,26 @@ class EnhancedErrorHandler {
             console.debug('Suppressed network error during tab-resume grace window:', url);
             return new Response(JSON.stringify({ error: 'Reconnecting' }), {
                 status: 503,
-                statusText: 'Reconnecting'
+                statusText: 'Reconnecting',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-TT-Network-Error': '1'
+                }
             });
         }
 
-        const userFriendlyMessage = this.getUserFriendlyMessage(0, error);
-        const errorId = this.showErrorWithRetry(userFriendlyMessage, 0, () => {
+        const userFriendlyMessage = this.getUserFriendlyMessage(503, error);
+        const errorId = this.showErrorWithRetry(userFriendlyMessage, 503, () => {
             return this.retryFetch(url, options);
         });
 
         return new Response(JSON.stringify({ error: userFriendlyMessage }), {
             status: 503,
-            statusText: 'Network Error'
+            statusText: 'Network Error',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-TT-Network-Error': '1'
+            }
         });
     }
 
