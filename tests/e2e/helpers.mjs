@@ -43,7 +43,18 @@ export function collectPageProblems(page) {
     // about:/data: and intentionally aborted requests are not interesting.
     if (!/^https?:/.test(req.url())) return;
     if (/\/socket\.io\//i.test(req.url())) return;
-    problems.failedRequests.push(`${req.url()} (${req.failure()?.errorText})`);
+    const failure = req.failure()?.errorText || '';
+    // Same-origin ERR_ABORTED is usually navigation cancellation, not a missing CDN.
+    try {
+      const reqHost = new URL(req.url()).host;
+      const pageHost = page.url() && page.url() !== 'about:blank' ? new URL(page.url()).host : null;
+      if (pageHost && reqHost === pageHost && /ERR_ABORTED|NS_BINDING_ABORTED|blockedbyclient/i.test(failure)) {
+        return;
+      }
+    } catch (_) {
+      /* ignore URL parse issues */
+    }
+    problems.failedRequests.push(`${req.url()} (${failure})`);
   });
 
   return problems;
