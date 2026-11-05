@@ -34,13 +34,9 @@ class TestClientEventTracking:
         # Note: Event tracking assertions may not pass if tracking is mocked at wrong level
         # This test verifies the route executes successfully
 
-    def test_client_update_tracking(self, client, admin_user, test_client_obj, mock_tracking):
+    def test_client_update_tracking(self, admin_authenticated_client, test_client_obj, mock_tracking):
         """Test that client update events are tracked"""
-        # Login as admin
-        client.post("/login", data={"username": admin_user.username, "password": "admin123"})
-
-        # Update client
-        response = client.post(
+        response = admin_authenticated_client.post(
             f"/clients/{test_client_obj.id}/edit",
             data={"name": "Updated Client", "email": test_client_obj.email},
             follow_redirects=True,
@@ -50,13 +46,9 @@ class TestClientEventTracking:
         assert mock_tracking["log_event"].called
         assert mock_tracking["track_event"].called
 
-    def test_client_archive_tracking(self, client, admin_user, test_client_obj, mock_tracking):
+    def test_client_archive_tracking(self, admin_authenticated_client, test_client_obj, mock_tracking):
         """Test that client archive events are tracked"""
-        # Login as admin
-        client.post("/login", data={"username": admin_user.username, "password": "admin123"})
-
-        # Archive client
-        response = client.post(f"/clients/{test_client_obj.id}/archive", follow_redirects=True)
+        response = admin_authenticated_client.post(f"/clients/{test_client_obj.id}/archive", follow_redirects=True)
 
         # Verify event was logged
         assert mock_tracking["log_event"].called
@@ -66,13 +58,9 @@ class TestClientEventTracking:
 class TestTaskEventTracking:
     """Test event tracking for task operations"""
 
-    def test_task_creation_tracking(self, client, auth_user, test_project, mock_tracking):
+    def test_task_creation_tracking(self, authenticated_client, test_project, mock_tracking):
         """Test that task creation events are tracked"""
-        # Login
-        client.post("/login", data={"username": auth_user.username, "password": "test123"})
-
-        # Create a task
-        response = client.post(
+        response = authenticated_client.post(
             "/tasks/create",
             data={"name": "Test Task", "project_id": test_project.id, "priority": "medium", "status": "todo"},
             follow_redirects=True,
@@ -82,24 +70,18 @@ class TestTaskEventTracking:
         assert mock_tracking["log_event"].called
         assert mock_tracking["track_event"].called
 
-    def test_task_status_change_tracking(self, client, auth_user, test_task, mock_tracking):
+    def test_task_status_change_tracking(self, authenticated_client, test_task, mock_tracking):
         """Test that task status change events are tracked"""
-        # Login
-        client.post("/login", data={"username": auth_user.username, "password": "test123"})
-
-        # Update task status
-        response = client.post(f"/tasks/{test_task.id}/status", data={"status": "in_progress"}, follow_redirects=True)
+        response = authenticated_client.post(
+            f"/tasks/{test_task.id}/status", data={"status": "in_progress"}, follow_redirects=True
+        )
 
         # Verify event was logged
         assert mock_tracking["log_event"].called or True  # May not be called if validation fails
 
-    def test_task_update_tracking(self, client, auth_user, test_task, mock_tracking):
+    def test_task_update_tracking(self, authenticated_client, test_task, mock_tracking):
         """Test that task update events are tracked"""
-        # Login
-        client.post("/login", data={"username": auth_user.username, "password": "test123"})
-
-        # Update task
-        response = client.post(
+        response = authenticated_client.post(
             f"/tasks/{test_task.id}/edit",
             data={
                 "name": "Updated Task",
@@ -117,13 +99,9 @@ class TestTaskEventTracking:
 class TestCommentEventTracking:
     """Test event tracking for comment operations"""
 
-    def test_comment_creation_tracking(self, client, auth_user, test_project, mock_tracking):
+    def test_comment_creation_tracking(self, authenticated_client, test_project, mock_tracking):
         """Test that comment creation events are tracked"""
-        # Login
-        client.post("/login", data={"username": auth_user.username, "password": "test123"})
-
-        # Create a comment
-        response = client.post(
+        response = authenticated_client.post(
             "/comments/create", data={"content": "Test comment", "project_id": test_project.id}, follow_redirects=True
         )
 
@@ -134,38 +112,24 @@ class TestCommentEventTracking:
 class TestAdminTelemetryDashboard:
     """Test admin telemetry dashboard"""
 
-    def test_telemetry_dashboard_access(self, client, admin_user):
+    def test_telemetry_dashboard_access(self, admin_authenticated_client):
         """Test that admin can access telemetry dashboard"""
-        # Login as admin
-        client.post("/login", data={"username": admin_user.username, "password": "admin123"})
-
-        # Access telemetry dashboard
-        response = client.get("/admin/telemetry")
+        response = admin_authenticated_client.get("/admin/telemetry")
         assert response.status_code == 200
         assert b"Telemetry" in response.data or b"telemetry" in response.data.lower()
 
-    def test_telemetry_toggle(self, client, admin_user, installation_config):
+    def test_telemetry_toggle(self, admin_authenticated_client, installation_config):
         """Test toggling telemetry"""
-        # Login as admin
-        client.post("/login", data={"username": admin_user.username, "password": "admin123"})
-
-        # Get initial state
         initial_state = installation_config.get_telemetry_preference()
 
-        # Toggle telemetry
-        response = client.post("/admin/telemetry/toggle", follow_redirects=True)
+        response = admin_authenticated_client.post("/admin/telemetry/toggle", follow_redirects=True)
         assert response.status_code == 200
 
-        # Verify state changed
         new_state = installation_config.get_telemetry_preference()
         assert new_state != initial_state
 
-    def test_non_admin_cannot_access_telemetry(self, client, auth_user):
+    def test_non_admin_cannot_access_telemetry(self, authenticated_client):
         """Test that non-admin cannot access telemetry dashboard"""
-        # Login as regular user
-        client.post("/login", data={"username": auth_user.username, "password": "test123"})
-
-        # Try to access telemetry dashboard
-        response = client.get("/admin/telemetry", follow_redirects=True)
+        response = authenticated_client.get("/admin/telemetry", follow_redirects=True)
         # Should be redirected or show error
         assert response.status_code in [200, 302, 403]

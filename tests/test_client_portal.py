@@ -1370,7 +1370,10 @@ def test_create_notification_emits_to_client_room(app, test_client):
                 message="Test message",
                 send_email=False,
             )
-            mock_socketio.emit.assert_called_once()
-            call_args = mock_socketio.emit.call_args
-            assert call_args[0][0] == "client_notification"
-            assert call_args[1]["room"] == f"client_portal_{test_client.id}"
+            # Service emits client_notification and portal_refresh
+            notification_calls = [
+                c for c in mock_socketio.emit.call_args_list if c.args and c.args[0] == "client_notification"
+            ]
+            assert len(notification_calls) == 1
+            assert notification_calls[0].kwargs["room"] == f"client_portal_{test_client.id}"
+            assert notification_calls[0].args[1]["title"] == "Test"

@@ -239,6 +239,7 @@ scripts/generate_donate_hide_code.py
 mobile/android/app/build/
 mobile/android/.gradle/
 mobile/ios/build/
+mobile/**/ephemeral/
 mobile/ios/Pods/
 mobile/ios/Podfile.lock
 mobile/ios/Podfile.lock.lock

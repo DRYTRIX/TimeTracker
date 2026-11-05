@@ -5,7 +5,7 @@ With the previous default of 50/hour per IP, that alone caused 429s within minut
 """
 
 import pytest
-from flask_limiter.wrappers import LimitGroup
+from flask_limiter import Limit
 
 from app import db, limiter
 from app.models import User
@@ -16,8 +16,8 @@ def _force_strict_default(app, limit="5 per hour"):
     limiter._default_limits = [p.strip() for p in limit.replace(",", ";").split(";") if p.strip()]
     limiter.limit_manager.set_default_limits(
         [
-            LimitGroup(
-                limit_provider=limit,
+            Limit(
+                limit,
                 key_function=limiter._key_func,
             )
         ]

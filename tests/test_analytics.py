@@ -115,9 +115,11 @@ class TestPrometheusMetrics:
 
     def test_metrics_endpoint_exists(self, client):
         """Test that /metrics endpoint exists"""
+        from prometheus_client import CONTENT_TYPE_LATEST
+
         response = client.get("/metrics")
         assert response.status_code == 200
-        assert response.content_type == "text/plain; version=0.0.4; charset=utf-8"
+        assert response.content_type == CONTENT_TYPE_LATEST
 
     def test_metrics_endpoint_format(self, client):
         """Test that /metrics returns Prometheus format"""

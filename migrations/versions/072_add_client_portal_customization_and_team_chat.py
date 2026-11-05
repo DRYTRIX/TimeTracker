@@ -183,7 +183,7 @@ def upgrade():
             sa.Column("client_id", sa.Integer(), nullable=False),
             sa.Column(
                 "status",
-                sa.Enum("pending", "approved", "rejected", "cancelled", name="clientapprovalstatus", create_type=False),
+                sa.Enum("pending", "approved", "rejected", "cancelled", name="clientapprovalstatus"),
                 nullable=False,
             ),
             sa.Column("requested_by", sa.Integer(), nullable=False),

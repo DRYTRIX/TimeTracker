@@ -2,6 +2,8 @@
 Tests for CalDAV calendar integration.
 """
 
+import socket
+
 import pytest
 
 pytestmark = [pytest.mark.integration]
@@ -21,6 +23,16 @@ from app.models import (
     TimeEntry,
     User,
 )
+
+
+@pytest.fixture
+def allow_example_caldav_dns(monkeypatch):
+    """Resolve mail.example.com to a public IP so outbound URL validation passes in CI."""
+
+    def _fake_getaddrinfo(host, port, *args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 443))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo)
 
 
 @pytest.fixture
@@ -101,7 +113,7 @@ class TestCalDAVClient:
         assert client.verify_ssl is True
 
     @patch("app.integrations.caldav_calendar.requests.request")
-    def test_discover_calendars(self, mock_request):
+    def test_discover_calendars(self, mock_request, allow_example_caldav_dns):
         """Test calendar discovery"""
         # Mock PROPFIND responses
         mock_resp1 = Mock()
@@ -295,7 +307,7 @@ class TestCalDAVRoutes:
         assert response.status_code == 200
         assert b"CalDAV Calendar Setup" in response.data
 
-    def test_caldav_setup_post(self, authenticated_client, test_user, test_project):
+    def test_caldav_setup_post(self, authenticated_client, test_user, test_project, allow_example_caldav_dns):
         """Test CalDAV setup form submission"""
         response = authenticated_client.post(
             url_for("integrations.caldav_setup"),

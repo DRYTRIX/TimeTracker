@@ -5,6 +5,7 @@ Tests for enhanced UI features
 import os
 from pathlib import Path
 
+import pytest
 from flask import url_for
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -348,8 +349,12 @@ class TestStaticFiles:
     def test_design_system_css_exists(self):
         """Test canonical design-system source CSS exists (enhanced-ui consolidated here)."""
         assert os.path.exists("app/static/src/input.css")
-        # Compiled Tailwind output (not a legacy enhanced-ui.css file)
-        assert os.path.exists("app/static/dist/output.css")
+        # Compiled Tailwind output is gitignored and built by the Frontend CI job.
+        # When absent locally/CI test shards, still require templates to reference it.
+        if not os.path.exists("app/static/dist/output.css"):
+            template_hits = list(TEMPLATES_DIR.rglob("*.html"))
+            assert any("output.css" in p.read_text(encoding="utf-8", errors="ignore") for p in template_hits)
+            pytest.skip("app/static/dist/output.css not built in this environment")
 
     def test_primary_brand_color_in_input_css(self):
         """Brand primary in source CSS is #4F46E5"""
