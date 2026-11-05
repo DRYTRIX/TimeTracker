@@ -239,8 +239,8 @@ jobs:
       - name: Extract version from setup.py
         id: extract_version
         run: |
-          # Extract version from setup.py
-          VERSION=$(grep -oP "version='\K[^']+" setup.py)
+          # Extract version from setup.py (single or double quotes)
+          VERSION=$(grep -oP "version=['\"]\K[^'\"]+" setup.py)
 
           if [ -z "$VERSION" ]; then
             echo "❌ ERROR: Could not extract version from setup.py"
