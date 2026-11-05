@@ -6,8 +6,20 @@ from datetime import datetime, timedelta
 
 import pytest
 
+from app import db
 from app.models import Project, TimeEntry, User
 from app.services import TimeTrackingService
+
+
+@pytest.fixture
+def other_user(app):
+    """A second user used to assert access-denied paths."""
+    other = User(username="other_tt_user", role="user", email="other_tt@example.com")
+    other.is_active = True
+    other.set_password("password123")
+    db.session.add(other)
+    db.session.commit()
+    return other
 
 
 class TestTimeTrackingServiceComplete:

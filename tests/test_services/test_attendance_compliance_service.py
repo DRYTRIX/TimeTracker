@@ -7,6 +7,7 @@ import pytest
 from app.models import Settings, User
 from app.models.attendance_compliance import (
     AttendanceBreak,
+    AttendanceCorrection,
     AttendanceCorrectionStatus,
     AttendanceDayStatus,
     AttendanceWorkPeriod,
@@ -26,9 +27,22 @@ def compliance_user(app):
         db.session.add(user)
         db.session.commit()
         yield user
+        # Tear down dependents before deleting the user (FK NOT NULL / ON DELETE SET NULL).
+        from app.models import WorkdaySession
+
+        day_ids = [d.id for d in DailyAttendanceRecord.query.filter_by(user_id=user.id).all()]
+        if day_ids:
+            AttendanceCorrection.query.filter(AttendanceCorrection.attendance_day_id.in_(day_ids)).delete(
+                synchronize_session=False
+            )
         AttendanceBreak.query.filter_by(user_id=user.id).delete()
         AttendanceWorkPeriod.query.filter_by(user_id=user.id).delete()
         DailyAttendanceRecord.query.filter_by(user_id=user.id).delete()
+        TimeOffRequest.query.filter_by(user_id=user.id).delete()
+        AttendanceCorrection.query.filter(
+            (AttendanceCorrection.requested_by == user.id) | (AttendanceCorrection.reviewed_by == user.id)
+        ).delete(synchronize_session=False)
+        WorkdaySession.query.filter_by(user_id=user.id).delete()
         db.session.delete(user)
         db.session.commit()
 

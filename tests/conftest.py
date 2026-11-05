@@ -20,7 +20,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 
-from app import create_app, db
+from app import create_app, db, limiter
 
 
 # Enable SQLite foreign key enforcement (including ON DELETE CASCADE).
@@ -1193,6 +1193,78 @@ def installation_config(temp_dir):
 
     # Restore original config directory
     InstallationConfig.CONFIG_DIR = original_config_dir
+
+
+# ============================================================================
+# Rate limiter isolation (Flask-Limiter 4 keeps process-global state)
+# ============================================================================
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter_after_test():
+    """Clear in-memory rate-limit counters so xdist workers don't leak 429s across tests."""
+    yield
+    try:
+        limiter.reset()
+    except Exception:
+        pass
+
+
+@pytest.fixture
+def force_strict_rate_limit(app):
+    """Temporarily tighten the global default rate limit; restore on teardown.
+
+    Used by health/polling exemption tests that need a low budget to prove
+    exemptions work without poisoning later tests on the same worker.
+    """
+    from flask_limiter import Limit
+
+    previous_config = app.config.get("RATELIMIT_DEFAULT")
+    previous_default_limits = list(getattr(limiter, "_default_limits", []) or [])
+    try:
+        previous_manager_limits = list(limiter.limit_manager.default_limits or [])
+    except Exception:
+        previous_manager_limits = []
+
+    def _apply(limit="5 per hour"):
+        app.config["RATELIMIT_DEFAULT"] = limit
+        limiter._default_limits = [p.strip() for p in limit.replace(",", ";").split(";") if p.strip()]
+        limiter.limit_manager.set_default_limits(
+            [
+                Limit(
+                    limit,
+                    key_function=limiter._key_func,
+                )
+            ]
+        )
+        try:
+            limiter.reset()
+        except Exception:
+            pass
+
+    yield _apply
+
+    # Restore previous defaults so subsequent tests keep the app's configured budget.
+    if previous_config is None:
+        app.config.pop("RATELIMIT_DEFAULT", None)
+    else:
+        app.config["RATELIMIT_DEFAULT"] = previous_config
+    limiter._default_limits = previous_default_limits
+    try:
+        limiter.limit_manager.set_default_limits(previous_manager_limits)
+    except Exception:
+        raw = app.config.get("RATELIMIT_DEFAULT") or ""
+        parts = [p.strip() for p in str(raw).replace(",", ";").split(";") if p.strip()]
+        try:
+            limiter.limit_manager.set_default_limits(
+                [Limit(p, key_function=limiter._key_func) for p in parts] if parts else []
+            )
+        except Exception:
+            pass
+    try:
+        limiter.reset()
+    except Exception:
+        pass
 
 
 # ============================================================================

@@ -309,13 +309,13 @@ class TestArchivedProjectValidation:
         assert b"Cannot create time entries for an archived project" in response.data
 
     @pytest.mark.routes
-    def test_archived_projects_not_in_active_list(self, authenticated_client, app, test_client, admin_user):
+    def test_archived_projects_not_in_active_list(self, authenticated_client, app, test_client, admin_user, user):
         """Test that archived projects don't appear in timer dropdown"""
         from app import db
 
-        # Create and archive a project
-        archived_project = Project(name="Archived Project", client_id=test_client.id)
-        active_project = Project(name="Active Project", client_id=test_client.id)
+        # created_by must be the logged-in user so scope (view_own_projects) includes them
+        archived_project = Project(name="Archived Project", client_id=test_client.id, created_by=user.id)
+        active_project = Project(name="Active Project", client_id=test_client.id, created_by=user.id)
 
         db.session.add_all([archived_project, active_project])
         db.session.commit()

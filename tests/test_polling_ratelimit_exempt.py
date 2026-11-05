@@ -5,33 +5,15 @@ With the previous default of 50/hour per IP, that alone caused 429s within minut
 """
 
 import pytest
-from flask_limiter import Limit
 
-from app import db, limiter
+from app import db
 from app.models import User
 
 
-def _force_strict_default(app, limit="5 per hour"):
-    app.config["RATELIMIT_DEFAULT"] = limit
-    limiter._default_limits = [p.strip() for p in limit.replace(",", ";").split(";") if p.strip()]
-    limiter.limit_manager.set_default_limits(
-        [
-            Limit(
-                limit,
-                key_function=limiter._key_func,
-            )
-        ]
-    )
-    try:
-        limiter.reset()
-    except Exception:
-        pass
-
-
 @pytest.mark.routes
-def test_timer_status_polling_exempt_from_default_rate_limit(app, authenticated_client):
+def test_timer_status_polling_exempt_from_default_rate_limit(app, authenticated_client, force_strict_rate_limit):
     """Authenticated /timer/status stays 200 past a strict global default."""
-    _force_strict_default(app, "5 per hour")
+    force_strict_rate_limit("5 per hour")
     for i in range(20):
         response = authenticated_client.get(
             "/timer/status",
@@ -41,9 +23,9 @@ def test_timer_status_polling_exempt_from_default_rate_limit(app, authenticated_
 
 
 @pytest.mark.routes
-def test_api_timer_status_polling_exempt_from_default_rate_limit(app, authenticated_client):
+def test_api_timer_status_polling_exempt_from_default_rate_limit(app, authenticated_client, force_strict_rate_limit):
     """Authenticated /api/timer/status stays 200 past a strict global default."""
-    _force_strict_default(app, "5 per hour")
+    force_strict_rate_limit("5 per hour")
     for i in range(20):
         response = authenticated_client.get(
             "/api/timer/status",
@@ -53,9 +35,9 @@ def test_api_timer_status_polling_exempt_from_default_rate_limit(app, authentica
 
 
 @pytest.mark.routes
-def test_api_notifications_exempt_from_default_rate_limit(app, authenticated_client):
+def test_api_notifications_exempt_from_default_rate_limit(app, authenticated_client, force_strict_rate_limit):
     """Idle.js polls /api/notifications; must not be rate-limited by the default."""
-    _force_strict_default(app, "5 per hour")
+    force_strict_rate_limit("5 per hour")
     for i in range(20):
         response = authenticated_client.get(
             "/api/notifications",
@@ -65,18 +47,18 @@ def test_api_notifications_exempt_from_default_rate_limit(app, authenticated_cli
 
 
 @pytest.mark.routes
-def test_service_worker_exempt_from_default_rate_limit(app, client):
+def test_service_worker_exempt_from_default_rate_limit(app, client, force_strict_rate_limit):
     """PWA service-worker updates must not return 429 under a strict default."""
-    _force_strict_default(app, "5 per hour")
+    force_strict_rate_limit("5 per hour")
     for i in range(20):
         response = client.get("/service-worker.js")
         assert response.status_code == 200, f"request {i + 1} got {response.status_code}"
 
 
 @pytest.mark.routes
-def test_rate_limit_json_429_for_accept_json(app, client):
+def test_rate_limit_json_429_for_accept_json(app, client, force_strict_rate_limit):
     """Fetch/XHR clients prefer JSON; 429 must not be an HTML error page."""
-    _force_strict_default(app, "3 per hour")
+    force_strict_rate_limit("3 per hour")
 
     last = None
     for _ in range(10):
@@ -93,9 +75,9 @@ def test_rate_limit_json_429_for_accept_json(app, client):
 
 
 @pytest.mark.routes
-def test_rate_limit_keyed_per_authenticated_user(app, client, user):
+def test_rate_limit_keyed_per_authenticated_user(app, client, user, force_strict_rate_limit):
     """Two logged-in users behind the same IP get separate rate-limit buckets."""
-    _force_strict_default(app, "3 per hour")
+    force_strict_rate_limit("3 per hour")
 
     other = User(username="otheruser767", role="user", email="other767@example.com")
     other.set_password("password123")

@@ -53,22 +53,23 @@ def test_invoice(app, test_user, test_project, test_client):
         client_email=test_client.email,
         due_date=date.today() + timedelta(days=30),
         created_by=test_user.id,
-        status="draft",
-        subtotal=Decimal("1000.00"),
         tax_rate=Decimal("20.00"),
-        tax_amount=Decimal("200.00"),
-        total_amount=Decimal("1200.00"),
         currency_code="EUR",
     )
+    # Invoice.__init__ ignores most kwargs; set billing fields explicitly.
+    invoice.status = "draft"
+    invoice.client_email = test_client.email
+    invoice.subtotal = Decimal("1000.00")
+    invoice.tax_amount = Decimal("200.00")
+    invoice.total_amount = Decimal("1200.00")
     db.session.commit()
 
-    # Add invoice item
-    item = InvoiceItemFactory(
+    # Add invoice item (total is computed by InvoiceItem.__init__)
+    InvoiceItemFactory(
         invoice_id=invoice.id,
         description="Test Service",
         quantity=Decimal("10.00"),
         unit_price=Decimal("100.00"),
-        total_amount=Decimal("1000.00"),
     )
     db.session.commit()
 
@@ -77,8 +78,8 @@ def test_invoice(app, test_user, test_project, test_client):
 
 @pytest.fixture
 def mock_pdf_generator():
-    """Mock PDF generator"""
-    with patch("app.utils.email.InvoicePDFGenerator") as mock_gen:
+    """Mock PDF generator (imported lazily inside send_invoice_email)."""
+    with patch("app.utils.pdf_generator.InvoicePDFGenerator") as mock_gen:
         mock_instance = MagicMock()
         mock_instance.generate_pdf.return_value = b"fake_pdf_bytes"
         mock_gen.return_value = mock_instance
@@ -115,9 +116,10 @@ class TestSendInvoiceEmail:
             assert "successfully" in message.lower()
             assert mock_mail_send.called
 
-            # Verify invoice status was updated
-            db.session.refresh(test_invoice)
-            assert test_invoice.status == "sent"
+            # send_invoice_email commits; re-fetch rather than refresh a detached instance
+            invoice = db.session.get(Invoice, test_invoice.id)
+            assert invoice is not None
+            assert invoice.status == "sent"
 
     def test_send_invoice_email_with_custom_message(
         self, app, test_invoice, test_user, mock_pdf_generator, mock_mail_send
@@ -146,14 +148,14 @@ class TestSendInvoiceEmail:
             current_app.config["MAIL_SERVER"] = "smtp.test.com"
             current_app.config["MAIL_DEFAULT_SENDER"] = "noreply@test.com"
 
-            # Mock PDF generator to fail
-            with patch("app.utils.email.InvoicePDFGenerator") as mock_gen:
+            # Mock PDF generator to fail (patched at import source — email imports lazily)
+            with patch("app.utils.pdf_generator.InvoicePDFGenerator") as mock_gen:
                 mock_instance = MagicMock()
                 mock_instance.generate_pdf.side_effect = Exception("PDF generation failed")
                 mock_gen.return_value = mock_instance
 
                 # Mock fallback generator to also fail
-                with patch("app.utils.email.InvoicePDFGeneratorFallback") as mock_fallback:
+                with patch("app.utils.pdf_generator_fallback.InvoicePDFGeneratorFallback") as mock_fallback:
                     mock_fallback_instance = MagicMock()
                     mock_fallback_instance.generate_pdf.side_effect = Exception("Fallback failed")
                     mock_fallback.return_value = mock_fallback_instance
@@ -213,19 +215,22 @@ class TestSendInvoiceEmail:
             current_app.config["MAIL_SERVER"] = "smtp.test.com"
             current_app.config["MAIL_DEFAULT_SENDER"] = "noreply@test.com"
 
-            # Ensure invoice is in draft status
-            test_invoice.status = "draft"
+            # Ensure invoice is in draft status (re-fetch so the instance is session-bound)
+            invoice = db.session.get(Invoice, test_invoice.id)
+            assert invoice is not None
+            invoice.status = "draft"
             db.session.commit()
 
             success, invoice_email, message = send_invoice_email(
-                invoice=test_invoice, recipient_email="client@test.com", sender_user=test_user
+                invoice=invoice, recipient_email="client@test.com", sender_user=test_user
             )
 
             assert success is True
 
-            # Verify status was updated
-            db.session.refresh(test_invoice)
-            assert test_invoice.status == "sent"
+            # Verify status was updated (re-fetch after send commits)
+            invoice = db.session.get(Invoice, test_invoice.id)
+            assert invoice is not None
+            assert invoice.status == "sent"
 
     def test_send_invoice_email_does_not_update_non_draft_status(
         self, app, test_invoice, test_user, mock_pdf_generator, mock_mail_send
@@ -235,19 +240,22 @@ class TestSendInvoiceEmail:
             current_app.config["MAIL_SERVER"] = "smtp.test.com"
             current_app.config["MAIL_DEFAULT_SENDER"] = "noreply@test.com"
 
-            # Set invoice to 'sent' status
-            test_invoice.status = "sent"
+            # Set invoice to 'sent' status (re-fetch so the instance is session-bound)
+            invoice = db.session.get(Invoice, test_invoice.id)
+            assert invoice is not None
+            invoice.status = "sent"
             db.session.commit()
 
             success, invoice_email, message = send_invoice_email(
-                invoice=test_invoice, recipient_email="client@test.com", sender_user=test_user
+                invoice=invoice, recipient_email="client@test.com", sender_user=test_user
             )
 
             assert success is True
 
             # Verify status remained 'sent'
-            db.session.refresh(test_invoice)
-            assert test_invoice.status == "sent"
+            invoice = db.session.get(Invoice, test_invoice.id)
+            assert invoice is not None
+            assert invoice.status == "sent"
 
     def test_send_invoice_email_with_email_template(
         self, app, test_invoice, test_user, mock_pdf_generator, mock_mail_send

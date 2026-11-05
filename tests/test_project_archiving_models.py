@@ -315,12 +315,12 @@ class TestProjectArchiveProperties:
         project.archive(user_id=temp_user_id, reason="Test")
         db.session.commit()
 
-        # Delete the user
+        # Delete the user — FK is ON DELETE SET NULL
         db.session.delete(temp_user)
         db.session.commit()
+        db.session.refresh(project)
 
-        # archived_by should still be set but user query returns None
-        assert project.archived_by == temp_user_id
+        assert project.archived_by is None
         assert project.archived_by_user is None
 
 
@@ -422,14 +422,14 @@ class TestProjectArchiveEdgeCases:
         assert project.archived_reason == special_reason
 
     def test_archive_with_invalid_user_id(self, app, project):
-        """Test that archiving with non-existent user_id still works"""
+        """Archiving with a non-existent user_id violates the users FK.
+
+        Project.archive() commits internally, so the IntegrityError surfaces there.
+        """
+        from sqlalchemy.exc import IntegrityError
+
         from app import db
 
-        # Use a user ID that doesn't exist
-        project.archive(user_id=999999, reason="Test")
-        db.session.commit()
-
-        assert project.status == "archived"
-        assert project.archived_by == 999999
-        # archived_by_user should return None for invalid ID
-        assert project.archived_by_user is None
+        with pytest.raises(IntegrityError):
+            project.archive(user_id=999999, reason="Test")
+        db.session.rollback()

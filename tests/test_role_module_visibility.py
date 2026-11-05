@@ -15,7 +15,8 @@ def test_module_registry_hides_module_if_all_roles_hide(app, user):
     db.session.add(r)
     db.session.commit()
 
-    user.add_role(r)
+    # Replace seeded roles so analytics is hidden by every assigned role.
+    user.roles = [r]
     db.session.commit()
 
     assert ModuleRegistry.is_enabled("analytics", settings, user) is False
