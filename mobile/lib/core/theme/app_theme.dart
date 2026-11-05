@@ -39,17 +39,22 @@ class AppTheme {
     required Brightness brightness,
     required ColorScheme colorScheme,
   }) {
-    final base = ThemeData(brightness: brightness, useMaterial3: true).textTheme;
-    final themed = GoogleFonts.interTextTheme(base).apply(
+    // Prefer fontFamily over GoogleFonts.interTextTheme: google_fonts 9.x pulls
+    // material_ui's TextTheme type which conflicts with Flutter's TextTheme.
+    final base = ThemeData(
+      brightness: brightness,
+      useMaterial3: true,
+      fontFamily: GoogleFonts.inter().fontFamily,
+    ).textTheme.apply(
       bodyColor: colorScheme.onSurface,
       displayColor: colorScheme.onSurface,
     );
     // Nudge key sizes/weights to feel more modern/consistent.
-    return themed.copyWith(
-      titleLarge: themed.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-      titleMedium: themed.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-      titleSmall: themed.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-      labelLarge: themed.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+    return base.copyWith(
+      titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+      titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w600),
     );
   }
 
