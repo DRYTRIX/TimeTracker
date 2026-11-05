@@ -136,6 +136,8 @@ jobs:
           for line in body.splitlines():
               s = line.strip()
               if re.search(r"\b(op|batch_op)\.", s):
+                  # Normalize Alembic naming helpers so dep-skew does not look like drift.
+                  s = re.sub(r"\b(?:batch_)?op\.f\((['\"])(.*?)\1\)", r"\1\2\1", s)
                   ops.append(s)
           open(sys.argv[2], "w", encoding="utf-8").write("\n".join(ops) + ("\n" if ops else ""))
           PY
@@ -197,17 +199,21 @@ jobs:
 
           echo ""
           echo "=== Autogenerate on PR base ($BASE_SHA) ==="
-          # Swap only models + migrations so metadata comparison stays on the same
-          # installed deps (reinstalling base requirements changes Alembic naming
-          # helpers like batch_op.f(...) and creates false "new drift").
-          # Keep PR schemas/routes so Flask can still import (e.g. marshmallow 4).
-          git checkout "$BASE_SHA" -- app/models migrations
+          # Swap full app + migrations for an accurate metadata baseline, but keep the
+          # PR virtualenv (reinstalling base deps changes Alembic naming helpers and
+          # creates false "new drift"). Patch obsolete marshmallow kwargs so Flask
+          # can import base schemas under marshmallow 4+.
+          git checkout "$BASE_SHA" -- app migrations
+          if grep -Rql --include='*.py' 'missing=' app/schemas 2>/dev/null; then
+            echo "Patching marshmallow missing= → load_default= for base import compatibility"
+            find app/schemas -name '*.py' -print0 | xargs -0 sed -i 's/missing=/load_default=/g'
+          fi
           reset_db
           capture_autogenerate "test_consistency_base" "$BASE_OPS"
           echo "Base op count: $(grep -c . "$BASE_OPS" || true)"
 
           # Restore PR tree and re-apply PR migrations for subsequent workflow steps
-          git checkout "$PR_SHA" -- app/models migrations
+          git checkout "$PR_SHA" -- app migrations
           reset_db
           echo "Re-applying PR migrations after base comparison..."
           if ! flask db upgrade; then
