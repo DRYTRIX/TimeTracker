@@ -30,8 +30,7 @@ dependencies:
   flutter_foreground_task: ^8.17.0
 
   # Notifications
-  # Pin: 23+ switched several APIs to named-only parameters.
-  flutter_local_notifications: 22.3.3
+  flutter_local_notifications: ^22.3.3
   permission_handler: ^13.0.2
   # Optional FCM for idle "Still working?" wake-up (Issue #722). Requires
   # google-services.json / GoogleService-Info.plist when building with Firebase.
