@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CI / releases** — Consolidated PR checks into a single path-aware `ci.yml` with a required `ci-pass` aggregator; Dependabot + nightly dependency audit; automated Prepare/Finalize release workflows (`rc/v*` → tag → publish) and `scripts/bump_version.py` as the version source of truth.
 
+### Fixed
+
+- **Invoices** — Deleting a draft invoice (single or bulk) now gives back the prepaid hours it used; before, fully prepaid time entries stayed non-billable and invoicing the same entries again failed on a unique constraint.
+
 ## [5.18.5] - 2026-10-30
 
 ### Security
