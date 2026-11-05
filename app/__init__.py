@@ -38,11 +38,11 @@ class PathExemptCSRFProtect(CSRFProtect):
     Do not broaden this to all of /api/ — kiosk and import stay cookie/CSRF protected.
     """
 
-    def protect(self):
+    def protect(self, apply_exemptions=False):
         path = request.path or ""
         if path == "/api/v1" or path.startswith("/api/v1/"):
             return
-        return super().protect()
+        return super().protect(apply_exemptions=apply_exemptions)
 
 
 def _rate_limit_key():

@@ -3,7 +3,8 @@
 {% block title %}{{ _('Calendar') }} - {{ app_name }}{% endblock %}
 
 {% block extra_css %}
-{# FullCalendar v6 injects its own styles from the JS bundle; no separate stylesheet. #}
+{# FullCalendar v7 ships styles separately; skeleton.css is the base grid/layout sheet. #}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/fullcalendar/skeleton.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}">
 <style>
 .event-modal-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
@@ -351,7 +352,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='vendor/fullcalendar/index.global.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/temporal-polyfill/global.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/fullcalendar/global.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
   const calendarEl = document.getElementById('calendar');

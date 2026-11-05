@@ -51,12 +51,17 @@ const ASSETS = [
 
   ['sortablejs/Sortable.min.js', 'sortablejs/Sortable.min.js'],
 
-  ['fullcalendar/index.global.min.js', 'fullcalendar/index.global.min.js'],
+  // FullCalendar v7: index.global.min.js was renamed to all/global.js; styles are no
+  // longer injected from the JS bundle. temporal-polyfill is a peer dependency and
+  // must be loaded before the calendar script in templates.
+  ['temporal-polyfill/global.js', 'temporal-polyfill/global.js'],
+  ['fullcalendar/all/global.js', 'fullcalendar/global.js'],
+  ['fullcalendar/skeleton.css', 'fullcalendar/skeleton.css'],
 
-  ['frappe-gantt/dist/frappe-gantt.min.js', 'frappe-gantt/frappe-gantt.min.js'],
+  ['frappe-gantt/dist/frappe-gantt.umd.js', 'frappe-gantt/frappe-gantt.min.js'],
   ['frappe-gantt/dist/frappe-gantt.css', 'frappe-gantt/frappe-gantt.css'],
 
-  ['animejs/lib/anime.min.js', 'animejs/anime.min.js'],
+  ['animejs/dist/bundles/anime.umd.min.js', 'animejs/anime.min.js'],
 
   // Inter was previously @import-ed from fonts.bunny.net inside input.css, which meant
   // every page load reached out to a third party. @font-face rules in input.css now

@@ -1349,14 +1349,14 @@
         })();
 
         try {
-            if (typeof anime !== 'undefined') {
-                anime({
-                    targets: '.animated-card',
+            if (typeof anime !== 'undefined' && typeof anime.animate === 'function') {
+                const { animate, stagger } = anime;
+                animate('.animated-card', {
                     translateY: [20, 0],
                     opacity: [0, 1],
-                    delay: (window.anime && anime.stagger) ? anime.stagger(100) : undefined,
+                    delay: stagger ? stagger(100) : undefined,
                     duration: 500,
-                    easing: 'easeOutQuad'
+                    ease: 'outQuad',
                 });
             }
         } catch(e) { /* no-op if animation lib missing */ }
