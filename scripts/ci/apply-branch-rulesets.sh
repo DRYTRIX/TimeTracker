@@ -4,6 +4,10 @@
 #
 # Note: rc/** intentionally allows branch deletion so release-finalize can
 # remove rc/vX.Y.Z after merge. develop/main block deletion.
+#
+# develop intentionally omits the pull_request rule so maintainers can push
+# directly; ci-pass still gates non-bypass updates/merges. Repository admins
+# bypass so bootstrap pushes and hotfixes are not blocked by missing checks.
 set -euo pipefail
 
 REPO="${GITHUB_REPOSITORY:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
@@ -40,16 +44,6 @@ create_or_update "CI gate (develop)" "$(cat <<'JSON'
     {"type": "deletion"},
     {"type": "non_fast_forward"},
     {
-      "type": "pull_request",
-      "parameters": {
-        "required_approving_review_count": 0,
-        "dismiss_stale_reviews_on_push": false,
-        "require_code_owner_review": false,
-        "require_last_push_approval": false,
-        "required_review_thread_resolution": false
-      }
-    },
-    {
       "type": "required_status_checks",
       "parameters": {
         "strict_required_status_checks_policy": false,
@@ -58,7 +52,13 @@ create_or_update "CI gate (develop)" "$(cat <<'JSON'
       }
     }
   ],
-  "bypass_actors": []
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ]
 }
 JSON
 )"
