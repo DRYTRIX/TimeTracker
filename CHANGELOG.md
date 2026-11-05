@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.19.0] - 2026-11-05
 ### Added
 
 - **Public demo (`DEMO_MODE`)** — Skip the setup wizard and seed browseable sample data for public demos; README/demo assets aligned with the live demo.
