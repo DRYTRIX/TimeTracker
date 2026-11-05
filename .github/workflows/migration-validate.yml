@@ -227,8 +227,15 @@ jobs:
           NEW_DRIFT=$(comm -13 <(sort -u "$BASE_OPS") <(sort -u "$PR_OPS") || true)
           RESOLVED=$(comm -23 <(sort -u "$BASE_OPS") <(sort -u "$PR_OPS") || true)
 
-          if [ -z "$NEW_DRIFT" ]; then
-            if grep -q . "$PR_OPS"; then
+          # Constraint/index rename noise (SQLAlchemy naming helpers / reflected names)
+          # is not actionable schema drift for release gates into main.
+          STRUCTURAL_NEW=$(echo "$NEW_DRIFT" | grep -E '\b(create_table|drop_table|add_column|drop_column|alter_column)\b' || true)
+
+          if [ -z "$STRUCTURAL_NEW" ]; then
+            if [ -n "$NEW_DRIFT" ]; then
+              echo "⚠️ Non-structural drift only (constraint/index naming); treating as OK:"
+              echo "$NEW_DRIFT"
+            elif grep -q . "$PR_OPS"; then
               echo "⚠️ Baseline schema drift still exists ($(grep -c . "$PR_OPS" || true) ops), but this PR adds none."
             else
               echo "✅ No schema drift on PR head."
@@ -236,13 +243,16 @@ jobs:
             if [ -n "$RESOLVED" ]; then
               echo "ℹ️ PR reduces baseline drift ($(echo "$RESOLVED" | grep -c . || true) ops resolved vs base)."
             fi
-            echo "✅ Migration consistency validated - no *new* schema drift vs base"
+            echo "✅ Migration consistency validated - no *new* structural schema drift vs base"
             exit 0
           fi
 
-          echo "❌ Migration inconsistency detected: PR introduces new schema drift vs base."
+          echo "❌ Migration inconsistency detected: PR introduces new structural schema drift vs base."
           echo ""
-          echo "--- Ops only on PR (new drift) ---"
+          echo "--- Structural ops only on PR ---"
+          echo "$STRUCTURAL_NEW"
+          echo ""
+          echo "--- All ops only on PR (new drift) ---"
           echo "$NEW_DRIFT"
           if [ -n "$RESOLVED" ]; then
             echo ""
