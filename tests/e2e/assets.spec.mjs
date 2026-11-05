@@ -11,9 +11,9 @@ import { collectPageProblems, login } from './helpers.mjs';
  * a bad grouping fails at runtime, not at build time).
  */
 
-/** Generous enough to avoid flakiness, tight enough to catch a regression. */
+/** Budget applies to hashed dashboard bundles under /static/dist/. */
 const MAX_JS_BYTES = 900_000;
-const MAX_JS_REQUESTS = 24;
+const MAX_JS_REQUESTS = 16;
 
 test('dashboard stays within its JavaScript budget', async ({ page }) => {
   test.skip(!(await login(page)), 'E2E_USERNAME not configured');
@@ -23,8 +23,8 @@ test('dashboard stays within its JavaScript budget', async ({ page }) => {
 
   page.on('response', async (response) => {
     const url = response.url();
-    // Only ship-time static JS; ignore extension/devtools and one-off API payloads.
-    if (!/\/static\/.+\.js(\?|$)/.test(url)) return;
+    // Lock in the concatenated /static/dist bundles; vendor and page scripts are separate.
+    if (!/\/static\/dist\/.+\.js(\?|$)/.test(url)) return;
     requests += 1;
     try {
       bytes += (await response.body()).length;
@@ -35,8 +35,8 @@ test('dashboard stays within its JavaScript budget', async ({ page }) => {
 
   await page.goto('/', { waitUntil: 'load' });
 
-  expect(requests, `too many JS requests (${requests})`).toBeLessThanOrEqual(MAX_JS_REQUESTS);
-  expect(bytes, `JS payload grew to ${bytes} bytes`).toBeLessThanOrEqual(MAX_JS_BYTES);
+  expect(requests, `too many dist JS requests (${requests})`).toBeLessThanOrEqual(MAX_JS_REQUESTS);
+  expect(bytes, `dist JS payload grew to ${bytes} bytes`).toBeLessThanOrEqual(MAX_JS_BYTES);
 });
 
 test('bundles execute and expose their globals', async ({ page }) => {
