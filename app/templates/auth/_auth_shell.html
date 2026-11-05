@@ -33,7 +33,8 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-    <div class="min-h-screen flex items-center justify-center px-4 {% block auth_outer_class %}{% endblock %}">
+    <a href="#mainContentAnchor" class="sr-only focus:not-sr-only focus-ring absolute left-2 top-2 z-[1000] px-3 py-2 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded">{{ _('Skip to content') }}</a>
+    <div id="mainContentAnchor" class="min-h-screen flex items-center justify-center px-4 {% block auth_outer_class %}{% endblock %}">
         {% block auth_layout %}
         <div class="{% block auth_card_class %}w-full max-w-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg overflow-hidden p-6 sm:p-8{% endblock %}">
             {% block brand_header %}

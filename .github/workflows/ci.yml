@@ -288,6 +288,14 @@ jobs:
             --cov-report=term-missing \
             --junitxml=junit-${{ matrix.shard }}.xml \
             --maxfail=10
+      - name: Prepare coverage data artifact
+        if: always()
+        run: |
+          if [ -f .coverage ]; then
+            mv .coverage "coverage-${{ matrix.shard }}.dat"
+          else
+            echo "No .coverage file produced by shard ${{ matrix.shard }}"
+          fi
       - name: Upload coverage shard
         if: always()
         uses: actions/upload-artifact@v7
@@ -295,6 +303,7 @@ jobs:
           name: coverage-shard-${{ matrix.shard }}
           path: |
             coverage-${{ matrix.shard }}.xml
+            coverage-${{ matrix.shard }}.dat
             junit-${{ matrix.shard }}.xml
           if-no-files-found: warn
 
@@ -318,36 +327,17 @@ jobs:
       - name: Combine and enforce coverage
         run: |
           set -euo pipefail
-          # Merge cobertura XMLs via coverage.py if .coverage files exist; otherwise
-          # use the first shard XML and report. Shards emit XML only — re-run a
-          # lightweight combine of XML via pycobertura-style check isn't needed.
-          # Enforce using the average line-rate across shards.
-          python - <<'PY'
-          import xml.etree.ElementTree as ET
-          from pathlib import Path
-          files = sorted(Path("coverage-shards").glob("coverage-*.xml"))
-          if not files:
-              raise SystemExit("No coverage XML shards found")
-          rates = []
-          for f in files:
-              root = ET.parse(f).getroot()
-              # cobertura: line-rate on root or packages
-              rate = root.attrib.get("line-rate")
-              if rate is None:
-                  lines_valid = int(root.attrib.get("lines-valid") or 0)
-                  lines_covered = int(root.attrib.get("lines-covered") or 0)
-                  rate = (lines_covered / lines_valid) if lines_valid else 0.0
-              else:
-                  rate = float(rate)
-              rates.append(rate)
-              print(f"{f.name}: {rate*100:.1f}%")
-          avg = sum(rates) / len(rates)
-          print(f"Average line coverage: {avg*100:.1f}%")
-          threshold = 0.40
-          if avg < threshold:
-              raise SystemExit(f"Coverage {avg*100:.1f}% below {threshold*100:.0f}% gate")
-          print(f"✅ Coverage gate passed (>= {threshold*100:.0f}%)")
-          PY
+          shopt -s nullglob
+          data_files=(coverage-shards/coverage-*.dat)
+          if [ ${#data_files[@]} -eq 0 ]; then
+            echo "No coverage data files found; falling back to XML average is not supported"
+            ls -la coverage-shards || true
+            exit 1
+          fi
+          coverage combine --keep "${data_files[@]}"
+          coverage report --fail-under=40 | tee /tmp/coverage-report.txt | tail -n 5
+          coverage xml -o coverage-shards/coverage.xml
+          echo "✅ Coverage gate passed (>= 40%)"
       - name: Upload combined junit
         if: always()
         uses: actions/upload-artifact@v7
@@ -457,14 +447,16 @@ jobs:
       - run: npm install
       - run: npx playwright install --with-deps chromium
       - name: Start app for e2e
-        env:
-          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD || 'e2e-local-password-123' }}
         run: |
+          mkdir -p "$RUNNER_TEMP/tt-install"
+          echo '{"setup_complete": true}' > "$RUNNER_TEMP/tt-install/installation.json"
+          chmod -R a+rwX "$RUNNER_TEMP/tt-install"
           docker run -d --name timetracker-e2e --network host \
+            -v "$RUNNER_TEMP/tt-install:/e2e-install" \
+            -e INSTALLATION_CONFIG_DIR=/e2e-install \
             -e SECRET_KEY=ci-e2e-secret-key-not-for-production \
             -e DATABASE_URL=postgresql+psycopg2://timetracker:timetracker@localhost:5432/timetracker \
-            -e ADMIN_USERNAME=e2eadmin \
-            -e ADMIN_PASSWORD="$E2E_ADMIN_PASSWORD" \
+            -e ADMIN_USERNAMES=e2eadmin \
             -e TZ=UTC \
             timetracker:ci
           for i in $(seq 1 60); do
