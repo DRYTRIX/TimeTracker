@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CI / releases** — Consolidated PR checks into a single path-aware `ci.yml` with a required `ci-pass` aggregator; Dependabot + nightly dependency audit; automated Prepare/Finalize release workflows (`rc/v*` → tag → publish) and `scripts/bump_version.py` as the version source of truth.
 
+### Fixed
+
+- **Payments** — Changing a completed payment to refunded, failed or pending through the API now takes it out of the invoice's amount paid; before, the invoice kept the old amount and could stay fully paid.
+
 ## [5.18.5] - 2026-10-30
 
 ### Security
