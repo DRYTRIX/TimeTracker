@@ -11,41 +11,41 @@ dependencies:
     sdk: flutter
   
   # State Management
-  flutter_riverpod: ^2.4.9
+  flutter_riverpod: ^3.4.3
   
   # HTTP Client
-  dio: ^5.4.0
+  dio: ^5.11.1
   
   # Local Database
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  path_provider: ^2.1.1
+  path_provider: ^2.1.6
   
   # Secure Storage
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^10.3.4
   
   # Background Tasks
-  workmanager: ^0.9.0+3
+  workmanager: ^0.10.10
   flutter_foreground_task: ^8.17.0
   
   # Notifications
-  flutter_local_notifications: ^17.2.1
-  permission_handler: ^11.1.0
+  flutter_local_notifications: ^22.3.3
+  permission_handler: ^13.0.2
   # Optional FCM for idle "Still working?" wake-up (Issue #722). Requires
   # google-services.json / GoogleService-Info.plist when building with Firebase.
   firebase_core: ^3.8.1
   firebase_messaging: ^15.1.6
 
   # UI Components
-  intl: ^0.18.1
+  intl: ^0.20.3
   table_calendar: ^3.0.9
   
   # Utilities
-  shared_preferences: ^2.2.2
-  connectivity_plus: ^5.0.2
+  shared_preferences: ^2.5.6
+  connectivity_plus: ^7.3.1
   timeago: ^3.6.1
-  package_info_plus: ^8.0.0
-  google_fonts: ^8.0.0
+  package_info_plus: ^9.0.1
+  google_fonts: ^8.2.1
   share_plus: ^10.0.0
   geolocator: ^13.0.2
 
@@ -55,7 +55,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.7
   flutter_launcher_icons: ^0.14.0
