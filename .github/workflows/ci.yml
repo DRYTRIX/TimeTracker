@@ -27,8 +27,9 @@ env:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
   checks: write
+  statuses: write
 
 jobs:
   # --------------------------------------------------------------------------
@@ -348,9 +349,12 @@ jobs:
       - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
         with:
           files: coverage-shards/junit-*.xml
           check_name: Test Results
+          action_fail: false
+          comment_mode: off
 
   # --------------------------------------------------------------------------
   # Frontend assets

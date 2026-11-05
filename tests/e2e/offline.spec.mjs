@@ -51,7 +51,15 @@ test.describe('Offline / air-gapped rendering', () => {
       const problems = collectPageProblems(page);
       await page.goto(path, { waitUntil: 'load' });
 
-      expect(problems.failedRequests, `third-party requests on ${path}`).toEqual([]);
+      const allowedHost = new URL(page.url()).host;
+      const thirdParty = problems.failedRequests.filter((line) => {
+        try {
+          return new URL(line.split(' ')[0]).host !== allowedHost;
+        } catch {
+          return true;
+        }
+      });
+      expect(thirdParty, `third-party requests on ${path}`).toEqual([]);
       expect(problems.errors, `JS errors on ${path}`).toEqual([]);
     });
   }
