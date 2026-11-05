@@ -5,9 +5,9 @@ This script ensures proper database initialization with enhanced schema verifica
 """
 
 import os
+import subprocess
 import sys
 import time
-import subprocess
 import traceback
 
 

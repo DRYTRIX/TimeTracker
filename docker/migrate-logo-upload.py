@@ -5,7 +5,8 @@ Migration script to update logo system from file paths to file uploads
 
 import os
 import sys
-from sqlalchemy import create_engine, text, MetaData, Table, Column, String
+
+from sqlalchemy import Column, MetaData, String, Table, create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 

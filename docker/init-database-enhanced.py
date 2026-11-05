@@ -8,7 +8,8 @@ import os
 import sys
 import time
 import traceback
-from sqlalchemy import create_engine, text, inspect, MetaData
+
+from sqlalchemy import MetaData, create_engine, inspect, text
 from sqlalchemy.exc import OperationalError, ProgrammingError
 
 
@@ -346,8 +347,8 @@ def insert_initial_data(engine):
 
     try:
         # Check if initial data has already been seeded
-        import sys
         import os
+        import sys
 
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

@@ -6,7 +6,8 @@ Run this to add the new fields for invoice PDF generation
 
 import os
 import sys
-from sqlalchemy import create_engine, text, inspect
+
+from sqlalchemy import create_engine, inspect, text
 
 
 def main():

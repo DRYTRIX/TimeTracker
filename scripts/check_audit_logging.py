@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 """Script to check if audit logging is working"""
 
-import sys
 import os
+import sys
 
 # Add the parent directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app import create_app, db
-from app.models.audit_log import AuditLog
-from app.models import TimeEntry, User
-from app.utils.audit import check_audit_table_exists, reset_audit_table_cache
 from sqlalchemy import inspect as sqlalchemy_inspect
+
+from app import create_app, db
+from app.models import TimeEntry, User
+from app.models.audit_log import AuditLog
+from app.utils.audit import check_audit_table_exists, reset_audit_table_cache
 
 
 def check_audit_setup():
@@ -46,6 +47,7 @@ def check_audit_setup():
         print("\n2. Checking event listener registration...")
         from sqlalchemy import event
         from sqlalchemy.orm import Session
+
         from app.utils import audit
 
         # Check if the event listener is registered

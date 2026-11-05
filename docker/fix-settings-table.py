@@ -6,6 +6,7 @@ Run this to immediately resolve the database schema mismatch
 
 import os
 import sys
+
 from sqlalchemy import create_engine, text
 
 

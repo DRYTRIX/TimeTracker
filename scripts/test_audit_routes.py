@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Test script to verify audit log routes are registered"""
 
-import sys
 import os
+import sys
 
 # Add the parent directory to the path so we can import app
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

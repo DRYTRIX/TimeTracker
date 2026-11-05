@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 """Script to check and verify audit_logs table setup"""
 
-import sys
 import os
+import sys
 
 # Add the parent directory to the path so we can import app
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from sqlalchemy import inspect as sqlalchemy_inspect
+
 from app import create_app, db
 from app.models.audit_log import AuditLog
-from sqlalchemy import inspect as sqlalchemy_inspect
 
 
 def check_audit_table():

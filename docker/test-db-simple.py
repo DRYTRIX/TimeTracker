@@ -5,8 +5,9 @@ Simple database connection test script
 
 import os
 import sys
-import psycopg2
 from urllib.parse import urlparse
+
+import psycopg2
 
 
 def test_database_connection():

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Simple script to run tests and display results"""
 
-import sys
 import os
+import sys
 
 # Add the project root to the path (parent of scripts/)
 _script_dir = os.path.dirname(os.path.abspath(__file__))

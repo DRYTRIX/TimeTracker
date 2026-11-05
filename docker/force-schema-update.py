@@ -7,7 +7,8 @@ This script forces the addition of missing columns to existing tables
 import os
 import sys
 import time
-from sqlalchemy import create_engine, text, inspect
+
+from sqlalchemy import create_engine, inspect, text
 
 
 def wait_for_database(url, max_attempts=30, delay=2):

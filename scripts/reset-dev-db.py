@@ -53,10 +53,12 @@ def main():
     print()
 
     try:
+        from flask_migrate import current, downgrade, history, upgrade
+        from sqlalchemy import inspect as sqlalchemy_inspect
+        from sqlalchemy import text
+
         from app import create_app, db
-        from flask_migrate import downgrade, upgrade, current, history
         from app.models import Settings, User
-        from sqlalchemy import text, inspect as sqlalchemy_inspect
 
         app = create_app()
 

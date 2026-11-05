@@ -5,9 +5,9 @@ This avoids any shell script issues and runs everything in Python
 """
 
 import os
+import subprocess
 import sys
 import time
-import subprocess
 
 
 def main():

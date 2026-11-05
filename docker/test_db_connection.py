@@ -5,10 +5,11 @@ This script tests database connectivity to help debug connection issues
 """
 
 import os
-import sys
-import psycopg2
 import sqlite3
+import sys
 from datetime import datetime
+
+import psycopg2
 
 
 def test_postgresql_connection(db_url):

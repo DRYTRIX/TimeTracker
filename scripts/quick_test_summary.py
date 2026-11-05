@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Quick test summary - runs each test file and shows results"""
 
-import sys
 import os
 import subprocess
+import sys
 
 _script_dir = os.path.dirname(os.path.abspath(__file__))
 _project_root = os.path.dirname(_script_dir)

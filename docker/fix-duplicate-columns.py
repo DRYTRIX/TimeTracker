@@ -6,6 +6,7 @@ This script will remove the old company_logo_path column and keep only company_l
 
 import os
 import sys
+
 from sqlalchemy import create_engine, text
 
 

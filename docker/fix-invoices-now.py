@@ -5,8 +5,8 @@ Run this script to create the missing tables right now
 """
 
 import os
-import sys
 import subprocess
+import sys
 
 
 def main():

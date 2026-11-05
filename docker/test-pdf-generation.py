@@ -11,7 +11,7 @@ import sys
 def test_weasyprint():
     """Test if WeasyPrint is available and working"""
     try:
-        from weasyprint import HTML, CSS
+        from weasyprint import CSS, HTML
 
         print("✓ WeasyPrint is available")
         return True
@@ -27,8 +27,8 @@ def test_reportlab():
     """Test if ReportLab is available and working"""
     try:
         from reportlab.lib.pagesizes import A4
-        from reportlab.platypus import SimpleDocTemplate, Paragraph
         from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import Paragraph, SimpleDocTemplate
 
         print("✓ ReportLab is available")
         return True

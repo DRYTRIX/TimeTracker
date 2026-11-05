@@ -3,7 +3,7 @@ Setup configuration for TimeTracker application.
 This allows the app to be installed as a package for testing.
 """
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="timetracker",

@@ -9,7 +9,8 @@ import os
 import sys
 import time
 import traceback
-from sqlalchemy import create_engine, text, inspect
+
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import OperationalError, ProgrammingError
 
 
@@ -150,7 +151,7 @@ def initialize_database(engine):
 
         # Import Flask app and initialize database
         from app import create_app, db
-        from app.models import User, Project, TimeEntry, Settings
+        from app.models import Project, Settings, TimeEntry, User
 
         print("Creating Flask app...")
         app = create_app()

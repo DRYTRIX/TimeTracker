@@ -5,12 +5,13 @@ This avoids shell script line ending issues and provides better error handling
 """
 
 import os
+import subprocess
 import sys
 import time
-import subprocess
 import traceback
-import psycopg2
 from urllib.parse import urlparse
+
+import psycopg2
 
 
 def log(message):

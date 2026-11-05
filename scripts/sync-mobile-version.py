@@ -5,8 +5,8 @@ This ensures the mobile app uses the same version as the main application.
 """
 
 import os
-import sys
 import re
+import sys
 
 
 def get_version_from_setup():

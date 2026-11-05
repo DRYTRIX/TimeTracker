@@ -4,8 +4,8 @@ Script to fix placeholder names in translation files.
 Preserves original English placeholder names (like %(error)s) in all translations.
 """
 
-import sys
 import re
+import sys
 from pathlib import Path
 
 try:

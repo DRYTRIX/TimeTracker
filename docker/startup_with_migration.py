@@ -4,15 +4,16 @@ Enhanced Startup Script with Automatic Migration Detection
 This script automatically detects database state and chooses the correct migration strategy
 """
 
+import logging
 import os
+import sqlite3
+import subprocess
 import sys
 import time
-import subprocess
-import sqlite3
-import psycopg2
-from pathlib import Path
 from datetime import datetime
-import logging
+from pathlib import Path
+
+import psycopg2
 
 # Configure logging
 try:

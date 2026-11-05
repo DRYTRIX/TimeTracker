@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Run each test file individually and report results"""
 
-import sys
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 # Run from project root (parent of scripts/)

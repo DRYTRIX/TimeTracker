@@ -4,13 +4,14 @@ Automated Changelog Generator for TimeTracker
 Generates changelogs from git commits and GitHub issues/PRs
 """
 
-import os
-import sys
-import subprocess
 import argparse
+import os
 import re
+import subprocess
+import sys
 from datetime import datetime
-from typing import List, Dict, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
+
 import requests
 
 

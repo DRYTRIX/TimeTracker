@@ -6,7 +6,8 @@ Simple script to fix the missing task_id column
 import os
 import sys
 import time
-from sqlalchemy import create_engine, text, inspect
+
+from sqlalchemy import create_engine, inspect, text
 
 
 def fix_schema():

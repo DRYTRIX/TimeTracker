@@ -4,8 +4,9 @@ Time Tracker Application Entry Point
 """
 
 import os
+
 from app import create_app, db
-from app.models import User, Project, TimeEntry, Task, Settings, Invoice, InvoiceItem, Client
+from app.models import Client, Invoice, InvoiceItem, Project, Settings, Task, TimeEntry, User
 
 app = create_app()
 

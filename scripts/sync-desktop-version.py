@@ -4,10 +4,10 @@ Sync version from setup.py to desktop/package.json
 This ensures the Electron app uses the same version as the main application.
 """
 
-import os
-import sys
 import json
+import os
 import re
+import sys
 
 
 def get_version_from_setup():

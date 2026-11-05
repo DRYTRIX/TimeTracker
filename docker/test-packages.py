@@ -5,8 +5,8 @@ Run this to check if WeasyPrint dependencies are installed
 """
 
 import os
-import sys
 import subprocess
+import sys
 
 
 def check_package(package_name):

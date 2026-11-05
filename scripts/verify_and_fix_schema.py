@@ -10,10 +10,11 @@ Usage:
 
 import os
 import sys
-from sqlalchemy import create_engine, inspect, text, MetaData
+
+from sqlalchemy import MetaData, create_engine, inspect, text
+from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.schema import CreateTable
-from sqlalchemy.dialects import postgresql, sqlite
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -182,8 +183,8 @@ def main():
             app = create_app()
             with app.app_context():
                 # Import all models dynamically from app.models
-                from app.models import __all__ as model_names
                 import app.models as models_module
+                from app.models import __all__ as model_names
 
                 # Get all model classes
                 models = []

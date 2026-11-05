@@ -6,7 +6,8 @@ This script should be run after updating the application code but before startin
 
 import os
 import sys
-from sqlalchemy import create_engine, text, inspect
+
+from sqlalchemy import create_engine, inspect, text
 
 
 def wait_for_database(url, max_attempts=30, delay=2):

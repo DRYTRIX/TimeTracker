@@ -4,13 +4,13 @@ Version Manager for TimeTracker
 This script helps manage version tags for releases and builds
 """
 
-import os
-import sys
-import subprocess
 import argparse
-from datetime import datetime
+import os
 import re
 import shlex
+import subprocess
+import sys
+from datetime import datetime
 
 
 class VersionManager:

@@ -82,7 +82,7 @@ repos:
 default_language_version:
   python: python3.11
 
-# Skip certain files/directories
+# Skip certain files/directories (prefix match — do not anchor with $)
 exclude: |
   (?x)^(
     migrations/|
@@ -94,5 +94,5 @@ exclude: |
     \.pytest_cache/|
     __pycache__/|
     mobile/.*/ephemeral/
-  )$
+  )
 

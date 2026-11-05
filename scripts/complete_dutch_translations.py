@@ -9,8 +9,8 @@ import sys
 from pathlib import Path
 
 try:
-    from babel.messages.pofile import read_po, write_po
     from babel.messages.catalog import Message
+    from babel.messages.pofile import read_po, write_po
 except ImportError:
     print("Error: Babel library not found. Please install it with: pip install Babel")
     sys.exit(1)

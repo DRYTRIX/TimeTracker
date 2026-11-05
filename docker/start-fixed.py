@@ -5,12 +5,13 @@ This script ensures proper database initialization order and handles errors grac
 """
 
 import os
+import subprocess
 import sys
 import time
-import subprocess
 import traceback
-import psycopg2
 from urllib.parse import urlparse
+
+import psycopg2
 
 
 def _truthy(v: str) -> bool:
@@ -180,8 +181,9 @@ def detect_corrupted_database_state(app):
     Returns: (is_corrupted: bool, reason: str)
     """
     try:
-        from app import db
         from sqlalchemy import text
+
+        from app import db
 
         with app.app_context():
             # Check PostgreSQL
@@ -259,8 +261,9 @@ def cleanup_corrupted_database_state(app):
     db_url = os.getenv("DATABASE_URL", "")
 
     try:
-        from app import db
         from sqlalchemy import text
+
+        from app import db
 
         with app.app_context():
             if db_url.startswith("postgresql"):
@@ -341,6 +344,7 @@ def run_migrations():
 
     try:
         from flask_migrate import upgrade
+
         from app import create_app
 
         app = create_app()
@@ -367,8 +371,9 @@ def run_migrations():
                 # Postgres: one replica runs upgrade; others block on the lock then
                 # re-check (upgrade is idempotent). SQLite / non-Postgres: no lock.
                 if _is_pg:
-                    from app import db as _db
                     from sqlalchemy import text as _text
+
+                    from app import db as _db
 
                     migration_lock_conn = _db.engine.connect()
                     log(
@@ -397,8 +402,9 @@ def run_migrations():
 
                 # Sanity: show which DB we're connected to before migrating
                 try:
-                    from app import db as _db
                     from sqlalchemy import text as _text
+
+                    from app import db as _db
 
                     if _is_pg:
                         cur_db = _db.session.execute(_text("select current_database()")).scalar()
@@ -420,8 +426,9 @@ def run_migrations():
 
                 # CRITICAL: Verify migrations actually created tables (detect transaction rollback issues)
                 try:
-                    from app import db as _db
                     from sqlalchemy import text as _text
+
+                    from app import db as _db
 
                     if _is_pg:
                         cur_db = _db.session.execute(_text("select current_database()")).scalar()
@@ -523,8 +530,9 @@ def verify_core_tables(app):
     """Verify core application tables exist after migrations (fail-fast)."""
     log("Verifying core database tables exist...", "INFO")
     try:
-        from app import db
         from sqlalchemy import text
+
+        from app import db
 
         with app.app_context():
             # Core tables required for the app to function

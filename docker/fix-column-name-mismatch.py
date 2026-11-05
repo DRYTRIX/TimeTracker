@@ -6,6 +6,7 @@ The database has 'company_logo_path' but the application expects 'company_logo_f
 
 import os
 import sys
+
 from sqlalchemy import create_engine, text
 
 

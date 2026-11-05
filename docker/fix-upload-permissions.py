@@ -5,8 +5,8 @@ This script will ensure the upload directories have proper permissions for file 
 """
 
 import os
-import sys
 import stat
+import sys
 
 
 def main():

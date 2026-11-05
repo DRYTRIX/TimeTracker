@@ -5,11 +5,11 @@ This script should be run INSIDE your Docker container
 """
 
 import os
-import sys
+import re
+import shlex
 import stat
 import subprocess
-import shlex
-import re
+import sys
 
 
 def run_command(cmd, description):

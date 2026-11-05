@@ -5,7 +5,8 @@ Test script to verify database schema
 
 import os
 import sys
-from sqlalchemy import create_engine, text, inspect
+
+from sqlalchemy import create_engine, inspect, text
 
 
 def test_schema():

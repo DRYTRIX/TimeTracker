@@ -7,7 +7,8 @@ This script creates tables and initial data without depending on Flask models
 import os
 import sys
 import time
-from sqlalchemy import create_engine, text, inspect
+
+from sqlalchemy import create_engine, inspect, text
 
 
 def wait_for_database(url, max_attempts=30, delay=2):
@@ -272,8 +273,8 @@ def insert_initial_data(engine):
 
     try:
         # Check if initial data has already been seeded
-        import sys
         import os
+        import sys
 
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

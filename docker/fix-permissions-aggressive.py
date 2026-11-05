@@ -5,10 +5,10 @@ This script will fix file upload permissions by changing ownership and permissio
 """
 
 import os
-import sys
+import shlex
 import stat
 import subprocess
-import shlex
+import sys
 
 
 def run_command(cmd, description):

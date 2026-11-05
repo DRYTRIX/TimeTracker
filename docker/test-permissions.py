@@ -4,10 +4,10 @@ Test script to check current permissions in Docker container
 Run this to see what's wrong with the upload directories
 """
 
-import os
-import stat
-import pwd
 import grp
+import os
+import pwd
+import stat
 
 
 def get_user_info():

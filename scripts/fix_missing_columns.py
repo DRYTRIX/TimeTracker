@@ -9,6 +9,7 @@ Usage:
 
 import os
 import sys
+
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import OperationalError
 

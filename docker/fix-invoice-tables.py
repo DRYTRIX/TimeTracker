@@ -6,7 +6,8 @@ Run this if the database is missing invoice tables
 
 import os
 import sys
-from sqlalchemy import create_engine, text, inspect
+
+from sqlalchemy import create_engine, inspect, text
 
 
 def main():
