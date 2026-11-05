@@ -271,14 +271,26 @@ def test_child_template_blocks_exist_in_base():
 
 @pytest.mark.integration
 @pytest.mark.routes
-def test_manual_entry_project_gated_on_client_and_modal_rate(app, authenticated_client, project):
+def test_manual_entry_project_gated_on_client_and_modal_rate(app, authenticated_client, user, project):
     """Manual entry follows the client -> project -> task cascade (#728).
 
     - Project picker is disabled until a client is selected.
     - Inline create-project modal carries a client default rate and a locked
       client display so the project attaches to the chosen client.
     - Client options expose data-default-rate for the JS prefill.
+
+    Uses two active clients so #789 single-client auto-select does not apply.
     """
+    with app.app_context():
+        second = Client(
+            name="Second Client",
+            email="second@example.com",
+            created_by=user.id,
+        )
+        second.status = "active"
+        db.session.add(second)
+        db.session.commit()
+
     manual = authenticated_client.get("/timer/manual")
     assert manual.status_code == 200
     html = manual.get_data(as_text=True)

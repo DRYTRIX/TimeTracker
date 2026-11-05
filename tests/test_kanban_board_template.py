@@ -46,6 +46,7 @@ def test_spec_from_column_captures_fields(app):
             "color": "warning",
             "position": 2,
             "is_complete_state": False,
+            "wip_limit": None,
         }
 
 

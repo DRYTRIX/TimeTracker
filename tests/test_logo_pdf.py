@@ -15,8 +15,8 @@ from app.models import Invoice, Settings
 from app.utils.pdf_generator import InvoicePDFGenerator
 
 
-def test_logo_setup():
-    """Test if logo is properly configured"""
+def run_logo_setup():
+    """Test if logo is properly configured (manual diagnostic; not a pytest test)."""
     print("=" * 60)
     print("LOGO CONFIGURATION TEST")
     print("=" * 60)
@@ -93,8 +93,8 @@ def test_logo_setup():
         return True
 
 
-def test_pdf_generation():
-    """Test PDF generation with logo"""
+def run_pdf_generation():
+    """Test PDF generation with logo (manual diagnostic; not a pytest test)."""
     print("\n" + "=" * 60)
     print("PDF GENERATION TEST")
     print("=" * 60)
@@ -154,10 +154,10 @@ def main():
     """Run all tests"""
     print("\n🔍 TimeTracker PDF Logo Diagnostic Tool\n")
 
-    logo_ok = test_logo_setup()
+    logo_ok = run_logo_setup()
 
     if logo_ok:
-        pdf_ok = test_pdf_generation()
+        pdf_ok = run_pdf_generation()
 
         if pdf_ok:
             print("\n" + "=" * 60)
