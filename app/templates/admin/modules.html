@@ -130,7 +130,7 @@
                 </select>
             </div>
         </div>
-        
+
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h2 class="text-lg font-semibold">{{ _('Module Visibility') }}</h2>
@@ -178,7 +178,7 @@
         <div class="mb-4 space-y-3">
             <div class="flex gap-3 flex-wrap">
                 <div class="flex-1 min-w-[200px]">
-                    <input type="text" id="module-search" placeholder="{{ _('Search modules...') }}" 
+                    <input type="text" id="module-search" placeholder="{{ _('Search modules...') }}"
                         class="w-full form-input text-sm" oninput="filterModules()">
                 </div>
                 <select id="category-filter" class="form-input text-sm" onchange="filterModules()">
@@ -240,11 +240,11 @@
                         <span class="text-xs text-gray-500 dark:text-gray-400">({{ modules|length }})</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="event.stopPropagation(); enableCategoryModules('{{ category.value }}')" 
+                        <button type="button" onclick="event.stopPropagation(); enableCategoryModules('{{ category.value }}')"
                             class="text-xs px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800">
                             {{ _('Enable All') }}
                         </button>
-                        <button type="button" onclick="event.stopPropagation(); disableCategoryModules('{{ category.value }}')" 
+                        <button type="button" onclick="event.stopPropagation(); disableCategoryModules('{{ category.value }}')"
                             class="text-xs px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800">
                             {{ _('Disable All') }}
                         </button>
@@ -255,14 +255,14 @@
                         {% for module in modules %}
                         {% set _module_enabled = module.id not in _d %}
                         {% set _has_deps = module.dependencies|length > 0 %}
-                        <div class="module-card border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:shadow-md transition-shadow {% if not _module_enabled %}opacity-60{% endif %}" 
-                            data-module-id="{{ module.id }}" 
-                            data-module-name="{{ module.name|lower }}" 
+                        <div class="module-card border border-gray-200 dark:border-gray-700 rounded-lg p-3 hover:shadow-md transition-shadow {% if not _module_enabled %}opacity-60{% endif %}"
+                            data-module-id="{{ module.id }}"
+                            data-module-name="{{ module.name|lower }}"
                             data-category="{{ category.value }}"
                             data-has-deps="{{ _has_deps|lower }}">
                             <div class="flex items-start gap-3">
-                                <input type="checkbox" 
-                                    name="module_enabled_{{ module.id }}" 
+                                <input type="checkbox"
+                                    name="module_enabled_{{ module.id }}"
                                     id="module_enabled_{{ module.id }}"
                                     {% if _module_enabled %}checked{% endif %}
                                     class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 module-checkbox"
@@ -397,10 +397,10 @@ function getDependentModules(moduleId) {
 function toggleCategory(categoryValue, forceOpen = false) {
     const category = document.querySelector(`.module-category[data-category="${categoryValue}"]`);
     if (!category) return;
-    
+
     const content = category.querySelector('.category-content');
     const chevron = category.querySelector('.category-chevron');
-    
+
     if (forceOpen || content.classList.contains('hidden')) {
         content.classList.remove('hidden');
         if (chevron) chevron.classList.add('rotate-180');
@@ -416,41 +416,41 @@ function filterModules() {
     const categoryFilter = document.getElementById('category-filter')?.value || '';
     const showDisabledOnly = document.getElementById('show-disabled-only')?.checked || false;
     const showWithDeps = document.getElementById('show-with-deps')?.checked || false;
-    
+
     const moduleCards = document.querySelectorAll('.module-card');
     const categories = document.querySelectorAll('.module-category');
-    
+
     let visibleCount = 0;
-    
+
     moduleCards.forEach(card => {
         const moduleName = card.getAttribute('data-module-name') || '';
         const category = card.getAttribute('data-category') || '';
         const hasDeps = card.getAttribute('data-has-deps') === 'true';
         const checkbox = card.querySelector('.module-checkbox');
         const isDisabled = !checkbox?.checked;
-        
+
         let visible = true;
-        
+
         // Search filter
         if (searchTerm && !moduleName.includes(searchTerm)) {
             visible = false;
         }
-        
+
         // Category filter
         if (categoryFilter && category !== categoryFilter) {
             visible = false;
         }
-        
+
         // Show disabled only
         if (showDisabledOnly && !isDisabled) {
             visible = false;
         }
-        
+
         // Show with dependencies
         if (showWithDeps && !hasDeps) {
             visible = false;
         }
-        
+
         if (visible) {
             card.style.display = '';
             visibleCount++;
@@ -458,14 +458,14 @@ function filterModules() {
             card.style.display = 'none';
         }
     });
-    
+
     // Show/hide categories based on visible modules
     categories.forEach(category => {
         const categoryValue = category.getAttribute('data-category');
-        const visibleCards = Array.from(category.querySelectorAll('.module-card')).filter(card => 
+        const visibleCards = Array.from(category.querySelectorAll('.module-card')).filter(card =>
             card.style.display !== 'none'
         );
-        
+
         if (visibleCards.length === 0 && (categoryFilter && categoryValue !== categoryFilter)) {
             category.style.display = 'none';
         } else {
@@ -479,7 +479,7 @@ function updateModuleCounts() {
     const checkboxes = document.querySelectorAll('.module-checkbox');
     let enabled = 0;
     let disabled = 0;
-    
+
     checkboxes.forEach(checkbox => {
         if (checkbox.checked) {
             enabled++;
@@ -487,10 +487,10 @@ function updateModuleCounts() {
             disabled++;
         }
     });
-    
+
     const enabledEl = document.getElementById('enabled-count');
     const disabledEl = document.getElementById('disabled-count');
-    
+
     if (enabledEl) enabledEl.textContent = enabled;
     if (disabledEl) disabledEl.textContent = disabled;
 }
@@ -499,7 +499,7 @@ function updateModuleCounts() {
 function validateModuleDependencies(moduleId) {
     const checkbox = document.getElementById(`module_enabled_${moduleId}`);
     if (!checkbox) return;
-    
+
     // If unchecking (disabling)
     if (!checkbox.checked) {
         const dependents = getDependentModules(moduleId);
@@ -507,12 +507,12 @@ function validateModuleDependencies(moduleId) {
             const depCheckbox = document.getElementById(`module_enabled_${depId}`);
             return depCheckbox && depCheckbox.checked;
         });
-        
+
         if (enabledDependents.length > 0) {
             // Show warning
             const impactPreview = document.getElementById('impact-preview');
             const impactList = document.getElementById('impact-list');
-            
+
             if (impactPreview && impactList) {
                 impactList.innerHTML = enabledDependents.map(depId => {
                     const depName = moduleNames[depId] || depId;
@@ -520,7 +520,7 @@ function validateModuleDependencies(moduleId) {
                 }).join('');
                 impactPreview.classList.remove('hidden');
             }
-            
+
             // Highlight dependent modules
             enabledDependents.forEach(depId => {
                 const depCard = document.querySelector(`.module-card[data-module-id="${depId}"]`);
@@ -542,7 +542,7 @@ function hideImpactPreview() {
     if (impactPreview) {
         impactPreview.classList.add('hidden');
     }
-    
+
     // Remove highlights
     document.querySelectorAll('.module-card').forEach(card => {
         card.classList.remove('border-yellow-400', 'bg-yellow-50', 'dark:bg-yellow-900/20');
@@ -571,7 +571,7 @@ function disableAllModules() {
 function enableCategoryModules(categoryValue) {
     const category = document.querySelector(`.module-category[data-category="${categoryValue}"]`);
     if (!category) return;
-    
+
     category.querySelectorAll('.module-checkbox').forEach(checkbox => {
         checkbox.checked = true;
     });
@@ -582,14 +582,14 @@ function enableCategoryModules(categoryValue) {
 function disableCategoryModules(categoryValue) {
     const category = document.querySelector(`.module-category[data-category="${categoryValue}"]`);
     if (!category) return;
-    
+
     const checkboxes = Array.from(category.querySelectorAll('.module-checkbox'));
     const willDisable = checkboxes.filter(cb => cb.checked);
-    
+
     if (willDisable.length > 0 && !confirm(`{{ _("Disable") }} ${willDisable.length} {{ _("module(s) in this category?") }}`)) {
         return;
     }
-    
+
     checkboxes.forEach(checkbox => {
         checkbox.checked = false;
     });
@@ -604,14 +604,14 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', function(e) {
             const checkboxes = document.querySelectorAll('.module-checkbox');
             const disabled = [];
-            
+
             checkboxes.forEach(checkbox => {
                 if (!checkbox.checked) {
                     const moduleId = checkbox.id.replace('module_enabled_', '');
                     disabled.push(moduleId);
                 }
             });
-            
+
             // Validate dependencies
             const errors = [];
             for (const moduleId of disabled) {
@@ -620,15 +620,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     const depCheckbox = document.getElementById(`module_enabled_${depId}`);
                     return depCheckbox && depCheckbox.checked && !disabled.includes(depId);
                 });
-                
+
                 if (enabledDependents.length > 0) {
                     const moduleName = moduleNames[moduleId] || moduleId;
                     const depNames = enabledDependents.map(depId => moduleNames[depId] || depId).join(', ');
-                    
+
                     errors.push(`Cannot disable "${moduleName}" because these modules depend on it: ${depNames}`);
                 }
             }
-            
+
             if (errors.length > 0) {
                 e.preventDefault();
                 alert('{{ _("Validation errors:") }}\n\n' + errors.join('\n'));

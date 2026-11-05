@@ -19,13 +19,13 @@ function clearItemContent() {
     currentItem = null;
     currentStockLevels = [];
     lastAdjustment = null;
-    
+
     // Hide sections
     const itemSection = document.getElementById('item-section');
     const operationsSection = document.getElementById('operations-section');
     const stockLevelsDiv = document.getElementById('stock-levels');
     const loadingSkeleton = document.getElementById('item-loading-skeleton');
-    
+
     if (itemSection) {
         itemSection.style.display = 'none';
         // Clear all item detail fields
@@ -35,7 +35,7 @@ function clearItemContent() {
         const itemUnit = document.getElementById('item-unit');
         const itemUnitDisplay = document.getElementById('item-unit-display');
         const itemCategory = document.getElementById('item-category');
-        
+
         if (itemName) itemName.textContent = '';
         if (itemSku) itemSku.textContent = '';
         if (itemBarcode) itemBarcode.textContent = '—';
@@ -43,31 +43,31 @@ function clearItemContent() {
         if (itemUnitDisplay) itemUnitDisplay.textContent = '—';
         if (itemCategory) itemCategory.textContent = '—';
     }
-    
+
     if (operationsSection) {
         operationsSection.style.display = 'none';
     }
-    
+
     if (stockLevelsDiv) {
         stockLevelsDiv.innerHTML = '';
     }
-    
+
     if (loadingSkeleton) {
         loadingSkeleton.classList.add('hidden');
     }
-    
+
     // Hide undo button
     const undoBtn = document.getElementById('adjust-undo-btn');
     if (undoBtn) {
         undoBtn.classList.add('hidden');
     }
-    
+
     // Reset form values
     const adjustQuantity = document.getElementById('adjust-quantity');
     if (adjustQuantity) {
         adjustQuantity.value = '0';
     }
-    
+
     const transferQuantity = document.getElementById('transfer-quantity');
     if (transferQuantity) {
         transferQuantity.value = '1';
@@ -113,16 +113,16 @@ if ('BarcodeDetector' in window) {
             console.warn('Item lookup by ID not implemented, need barcode');
         }
     };
-    
+
     // Placeholder functions that will be replaced when the full script loads
     window.toggleCameraScanner = function() {
         console.warn('toggleCameraScanner not yet loaded');
     };
-    
+
     window.stopCameraScanner = function() {
         console.warn('stopCameraScanner not yet loaded');
     };
-    
+
     window.stopTimer = function() {
         console.warn('stopTimer not yet loaded');
     };
@@ -156,19 +156,19 @@ document.addEventListener('DOMContentLoaded', function() {
     barcodeInput.addEventListener('input', function() {
         clearTimeout(inputTimeout);
         const barcode = this.value.trim();
-        
+
         // Clear status and content if input is cleared
         const statusDiv = document.getElementById('barcode-status');
         if (!barcode && statusDiv) {
             statusDiv.innerHTML = '';
             statusDiv.className = '';
         }
-        
+
         // Clear item content when input is cleared
         if (!barcode) {
             clearItemContent();
         }
-        
+
         // If barcode is long enough and looks like a barcode, try lookup after delay
         // Also check if it's different from last lookup to avoid duplicate lookups
         if (barcode.length >= 8 && barcode !== lastLookupBarcode) {
@@ -191,22 +191,22 @@ async function lookupBarcode(barcode, retryCount = 0) {
 
     const barcodeInput = document.getElementById('barcode-input');
     const statusDiv = document.getElementById('barcode-status');
-    
+
     // Clear previous item content immediately - MUST be synchronous
     clearItemContent();
-    
+
     // Show loading skeleton
     const loadingSkeleton = document.getElementById('item-loading-skeleton');
     if (loadingSkeleton) {
         loadingSkeleton.classList.remove('hidden');
     }
-    
+
     // Show loading
     if (statusDiv) {
         statusDiv.innerHTML = '<div class="flex items-center justify-center gap-2 text-primary"><i class="fas fa-spinner fa-spin"></i><span>Looking up...</span></div>';
         statusDiv.className = 'bg-primary/10 dark:bg-primary/20 text-primary rounded-xl p-3 border border-primary/20';
     }
-    
+
     // Disable input
     if (barcodeInput) {
         barcodeInput.disabled = true;
@@ -216,7 +216,7 @@ async function lookupBarcode(barcode, retryCount = 0) {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
+
         const response = await fetch('/api/kiosk/barcode-lookup', {
             method: 'POST',
             headers: {
@@ -227,7 +227,7 @@ async function lookupBarcode(barcode, retryCount = 0) {
             signal: controller.signal,
             body: JSON.stringify({ barcode: barcode })
         });
-        
+
         clearTimeout(timeoutId);
 
         if (!response.ok) {
@@ -241,15 +241,15 @@ async function lookupBarcode(barcode, retryCount = 0) {
         }
 
         const data = await response.json();
-        
+
         // Hide loading skeleton
         const loadingSkeleton = document.getElementById('item-loading-skeleton');
         if (loadingSkeleton) {
             loadingSkeleton.classList.add('hidden');
         }
-        
+
         displayItem(data.item, data.stock_levels);
-        
+
         if (statusDiv) {
             statusDiv.innerHTML = '<div class="flex items-center justify-center gap-2 text-green-600 dark:text-green-400"><i class="fas fa-check-circle"></i><span>Item found</span></div>';
             statusDiv.className = 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl p-3 border border-green-200 dark:border-green-800';
@@ -260,13 +260,13 @@ async function lookupBarcode(barcode, retryCount = 0) {
         }
     } catch (error) {
         console.error('Barcode lookup error:', error);
-        const errorMessage = error.name === 'AbortError' 
-            ? 'Request timed out. Please try again.' 
+        const errorMessage = error.name === 'AbortError'
+            ? 'Request timed out. Please try again.'
             : (error.message || 'Item not found');
-        
+
         // Clear all content on error
         clearItemContent();
-            
+
         if (statusDiv) {
             statusDiv.innerHTML = '<div class="flex items-center justify-center gap-2 text-red-600 dark:text-red-400"><i class="fas fa-exclamation-circle"></i><span>' + errorMessage + '</span></div>';
             statusDiv.className = 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl p-3 border border-red-200 dark:border-red-800';
@@ -298,7 +298,7 @@ function displayItem(item, stockLevels) {
     // Check if we're on the scan tab before showing content
     const barcodeSection = document.getElementById('barcode-scanner-section');
     const isScanTab = barcodeSection && barcodeSection.style.display !== 'none';
-    
+
     // Only show content if we're on the scan tab
     if (!isScanTab) {
         return; // Don't display if not on scan tab
@@ -331,7 +331,7 @@ function displayItem(item, stockLevels) {
     const stockLevelsDiv = document.getElementById('stock-levels');
     if (stockLevelsDiv) {
         if (stockLevels && stockLevels.length > 0) {
-            stockLevelsDiv.innerHTML = '<div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><i class="fas fa-warehouse text-primary"></i></div><h4 class="text-lg font-bold text-gray-900 dark:text-white">Stock Levels</h4></div>' + 
+            stockLevelsDiv.innerHTML = '<div class="flex items-center gap-3 mb-6"><div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><i class="fas fa-warehouse text-primary"></i></div><h4 class="text-lg font-bold text-gray-900 dark:text-white">Stock Levels</h4></div>' +
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
                 stockLevels.map(stock => {
                     const isLowStock = stock.quantity_available <= 0;
@@ -341,12 +341,12 @@ function displayItem(item, stockLevels) {
                     const statusIconColor = isLowStock ? 'text-red-600 dark:text-red-400' : (isMediumStock ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400');
                     const statusTextColor = isLowStock ? 'text-red-600 dark:text-red-400' : (isMediumStock ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400');
                     const statusDotColor = isLowStock ? 'bg-red-500' : (isMediumStock ? 'bg-yellow-500' : 'bg-green-500');
-                    
+
                     // Calculate progress percentage (assuming max stock of 1000 for visualization, or use a reasonable max)
                     const maxStock = Math.max(stock.quantity_on_hand, 100, 1000);
                     const progressPercent = Math.min((stock.quantity_on_hand / maxStock) * 100, 100);
                     const availablePercent = Math.min((stock.quantity_available / maxStock) * 100, 100);
-                    
+
                     return `
                     <div class="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900/50 border-2 ${statusBorder} rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
                         <div class="flex items-center justify-between mb-4">
@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (adjustForm) {
         adjustForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             if (!currentItem) {
                 showError('Please scan an item first');
                 return;
@@ -442,17 +442,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const submitIcon = document.getElementById('adjust-submit-icon');
             const submitText = document.getElementById('adjust-submit-text');
             const submitSpinner = document.getElementById('adjust-submit-spinner');
-            
+
             if (submitBtn) {
                 submitBtn.disabled = true;
                 if (submitIcon) submitIcon.classList.add('hidden');
                 if (submitText) submitText.textContent = 'Processing...';
                 if (submitSpinner) submitSpinner.classList.remove('hidden');
             }
-            
+
             // Store current state for undo
             const previousQuantity = currentStockLevels.find(s => s.warehouse_id === parseInt(warehouseId))?.quantity_on_hand || 0;
-            
+
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
                 const response = await fetch('/api/kiosk/adjust-stock', {
@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 const data = await response.json();
-                
+
                 // Store adjustment for undo
                 lastAdjustment = {
                     movement_id: data.movement_id,
@@ -486,24 +486,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     adjustment_quantity: quantity,
                     new_quantity: data.new_quantity
                 };
-                
+
                 // Show undo button
                 const undoBtn = document.getElementById('adjust-undo-btn');
                 if (undoBtn) {
                     undoBtn.classList.remove('hidden');
                 }
-                
+
                 // Update aria-live region
                 const ariaLive = document.getElementById('aria-live-status');
                 if (ariaLive) {
                     ariaLive.textContent = data.message || 'Stock adjusted successfully';
                 }
-                
+
                 showSuccess(data.message || 'Stock adjusted successfully');
-                
+
                 // Reset form
                 document.getElementById('adjust-quantity').value = '0';
-                
+
                 // Refresh stock levels
                 if (currentItem.barcode) {
                     lookupBarcode(currentItem.barcode);
@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (transferForm) {
         transferForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             if (!currentItem) {
                 showError('Please scan an item first');
                 return;
@@ -557,14 +557,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const submitIcon = document.getElementById('transfer-submit-icon');
             const submitText = document.getElementById('transfer-submit-text');
             const submitSpinner = document.getElementById('transfer-submit-spinner');
-            
+
             if (submitBtn) {
                 submitBtn.disabled = true;
                 if (submitIcon) submitIcon.classList.add('hidden');
                 if (submitText) submitText.textContent = 'Processing...';
                 if (submitSpinner) submitSpinner.classList.remove('hidden');
             }
-            
+
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
                 const response = await fetch('/api/kiosk/transfer-stock', {
@@ -588,18 +588,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 const data = await response.json();
-                
+
                 // Update aria-live region
                 const ariaLive = document.getElementById('aria-live-status');
                 if (ariaLive) {
                     ariaLive.textContent = data.message || 'Stock transferred successfully';
                 }
-                
+
                 showSuccess(data.message || 'Stock transferred successfully');
-                
+
                 // Reset form
                 document.getElementById('transfer-quantity').value = '1';
-                
+
                 // Refresh stock levels
                 if (currentItem.barcode) {
                     lookupBarcode(currentItem.barcode);
@@ -622,13 +622,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Handle undo button
     const undoBtn = document.getElementById('adjust-undo-btn');
     if (undoBtn) {
         undoBtn.addEventListener('click', async function() {
             if (!lastAdjustment) return;
-            
+
             if (!window.showConfirm || !(await window.showConfirm('Are you sure you want to undo the last adjustment?', {
                 title: 'Undo Adjustment',
                 confirmText: 'Undo',
@@ -637,10 +637,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }))) {
                 return;
             }
-            
+
             // Reverse the adjustment
             const reverseQuantity = -lastAdjustment.adjustment_quantity;
-            
+
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
                 const response = await fetch('/api/kiosk/adjust-stock', {
@@ -657,17 +657,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         reason: 'Undo previous adjustment'
                     })
                 });
-                
+
                 if (!response.ok) {
                     const error = await response.json();
                     throw new Error(error.error || 'Failed to undo adjustment');
                 }
-                
+
                 const data = await response.json();
                 showSuccess('Adjustment undone successfully');
                 lastAdjustment = null;
                 undoBtn.classList.add('hidden');
-                
+
                 // Refresh stock levels
                 if (currentItem && currentItem.barcode) {
                     lookupBarcode(currentItem.barcode);
@@ -706,7 +706,7 @@ function showErrorWithRetry(message, retryCallback) {
         `;
         document.body.appendChild(errorDiv);
         setTimeout(() => errorDiv.remove(), 10000);
-        
+
         // Update aria-live alert
         const ariaAlert = document.getElementById('aria-live-alert');
         if (ariaAlert) {
@@ -724,7 +724,7 @@ function showError(message) {
     // Use toast notifications if available, otherwise create simple notification
     if (window.showToast) {
         window.showToast(message, 'error');
-        
+
         // Update aria-live alert
         const ariaAlert = document.getElementById('aria-live-alert');
         if (ariaAlert) {
@@ -739,10 +739,10 @@ function showError(message) {
             errorDiv.className = 'fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50';
             document.body.appendChild(errorDiv);
         }
-        
+
         errorDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>' + message;
         errorDiv.style.display = 'block';
-        
+
         setTimeout(() => {
             errorDiv.style.display = 'none';
         }, 5000);
@@ -765,10 +765,10 @@ function showSuccess(message) {
             successDiv.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50';
             document.body.appendChild(successDiv);
         }
-        
+
         successDiv.innerHTML = '<i class="fas fa-check-circle mr-2"></i>' + message;
         successDiv.style.display = 'block';
-        
+
         setTimeout(() => {
             successDiv.style.display = 'none';
         }, 3000);
@@ -782,9 +782,9 @@ async function toggleCameraScanner() {
     const container = document.getElementById('camera-scanner-container');
     const preview = document.getElementById('camera-preview');
     const btn = document.getElementById('camera-scan-btn');
-    
+
     if (!container || !preview) return;
-    
+
     if (cameraScannerActive) {
         stopCameraScanner();
     } else {
@@ -801,7 +801,7 @@ async function toggleCameraScanner() {
         } catch (e) {
             console.warn('Could not check camera settings:', e);
         }
-        
+
         try {
             // Request camera access
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -811,16 +811,16 @@ async function toggleCameraScanner() {
                     height: { ideal: 720 }
                 }
             });
-            
+
             cameraStream = stream;
             preview.srcObject = stream;
             container.classList.remove('hidden');
             cameraScannerActive = true;
-            
+
             if (btn) {
                 btn.classList.add('text-primary');
             }
-            
+
             // Start scanning
             startCameraScanning(preview);
         } catch (error) {
@@ -837,24 +837,24 @@ function stopCameraScanner() {
     const container = document.getElementById('camera-scanner-container');
     const preview = document.getElementById('camera-preview');
     const btn = document.getElementById('camera-scan-btn');
-    
+
     if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
         cameraStream = null;
     }
-    
+
     if (preview) {
         preview.srcObject = null;
     }
-    
+
     if (container) {
         container.classList.add('hidden');
     }
-    
+
     if (btn) {
         btn.classList.remove('text-primary');
     }
-    
+
     cameraScannerActive = false;
 }
 
@@ -863,19 +863,19 @@ function stopCameraScanner() {
  */
 function startCameraScanning(videoElement) {
     if (!videoElement) return;
-    
+
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    
+
     function scanFrame() {
         if (!cameraScannerActive || !videoElement.videoWidth) {
             return;
         }
-        
+
         canvas.width = videoElement.videoWidth;
         canvas.height = videoElement.videoHeight;
         context.drawImage(videoElement, 0, 0);
-        
+
         if (barcodeDetector) {
             // Use native BarcodeDetector API
             barcodeDetector.detect(canvas)
@@ -908,13 +908,13 @@ function startCameraScanning(videoElement) {
                 }
             }
         }
-        
+
         // Continue scanning
         if (cameraScannerActive) {
             requestAnimationFrame(scanFrame);
         }
     }
-    
+
     // Start scanning loop
     scanFrame();
 }
@@ -927,4 +927,3 @@ window.stopCameraScanner = stopCameraScanner;
 // Make functions globally available
 window.lookupBarcode = lookupBarcode;
 window.clearItemContent = clearItemContent;
-

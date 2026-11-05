@@ -123,7 +123,7 @@ class OfflineSyncManager {
             try {
                 const transaction = this.db.transaction(['syncQueue'], 'readonly');
                 const store = transaction.objectStore('syncQueue');
-                
+
                 // Check if the index exists
                 if (!store.indexNames.contains('processed')) {
                     // If index doesn't exist, count manually
@@ -143,13 +143,13 @@ class OfflineSyncManager {
                     request.onerror = () => reject(request.error);
                     return;
                 }
-                
+
                 const index = store.index('processed');
                 // IndexedDB doesn't support boolean values in IDBKeyRange, so we use a cursor approach
                 // Iterate through all items and filter for processed === false
                 const request = index.openCursor();
                 let count = 0;
-                
+
                 request.onsuccess = (event) => {
                     const cursor = event.target.result;
                     if (cursor) {
@@ -162,7 +162,7 @@ class OfflineSyncManager {
                         resolve(count);
                     }
                 };
-                
+
                 request.onerror = () => {
                     // Fallback: count manually if index query fails
                     const fallbackRequest = store.openCursor();
@@ -191,7 +191,7 @@ class OfflineSyncManager {
     // Helper function to format dates to ISO 8601
     formatDateToISO(dateValue) {
         if (!dateValue) return null;
-        
+
         // If it's already a string in ISO format, return as is
         if (typeof dateValue === 'string') {
             // Check if it's already in ISO format
@@ -209,7 +209,7 @@ class OfflineSyncManager {
             }
             return dateValue;
         }
-        
+
         // If it's a Date object, convert to ISO string
         if (dateValue instanceof Date) {
             if (isNaN(dateValue.getTime())) {
@@ -218,7 +218,7 @@ class OfflineSyncManager {
             }
             return dateValue.toISOString();
         }
-        
+
         // Fallback: try to create a Date object
         try {
             const date = new Date(dateValue);
@@ -228,7 +228,7 @@ class OfflineSyncManager {
         } catch (e) {
             console.error('[OfflineSync] Error formatting date:', dateValue, e);
         }
-        
+
         return null;
     }
 
@@ -331,7 +331,7 @@ class OfflineSyncManager {
                 // Format dates to ISO 8601
                 const startTimeISO = this.formatDateToISO(entry.start_time);
                 const endTimeISO = this.formatDateToISO(entry.end_time);
-                
+
                 if (!startTimeISO) {
                     console.error('[OfflineSync] Invalid start_time format:', entry.start_time);
                     continue;
@@ -493,7 +493,7 @@ class OfflineSyncManager {
             try {
                 const transaction = this.db.transaction([storeName], 'readonly');
                 const store = transaction.objectStore(storeName);
-                
+
                 // Check if the index exists
                 if (!store.indexNames.contains('synced')) {
                     // If index doesn't exist, filter manually
@@ -506,13 +506,13 @@ class OfflineSyncManager {
                     request.onerror = () => reject(request.error);
                     return;
                 }
-                
+
                 const index = store.index('synced');
                 // IndexedDB doesn't support boolean values in IDBKeyRange, so we use a cursor approach
                 // Iterate through all items and filter for synced === false
                 const request = index.openCursor();
                 const results = [];
-                
+
                 request.onsuccess = (event) => {
                     const cursor = event.target.result;
                     if (cursor) {
@@ -525,7 +525,7 @@ class OfflineSyncManager {
                         resolve(results);
                     }
                 };
-                
+
                 request.onerror = () => {
                     // Fallback: filter manually if index query fails
                     const fallbackRequest = store.getAll();
@@ -568,7 +568,7 @@ class OfflineSyncManager {
                         } else if (storeName === 'projects') {
                             queueType = 'project';
                         }
-                        
+
                         const queueRequest = index.openCursor(IDBKeyRange.only(queueType));
                         queueRequest.onsuccess = (event) => {
                             const cursor = event.target.result;
@@ -600,7 +600,7 @@ class OfflineSyncManager {
             try {
                 const transaction = this.db.transaction(['syncQueue'], 'readwrite');
                 const store = transaction.objectStore('syncQueue');
-                
+
                 // Check if the index exists
                 if (!store.indexNames.contains('processed')) {
                     // If index doesn't exist, iterate manually
@@ -622,7 +622,7 @@ class OfflineSyncManager {
                     request.onerror = () => reject(request.error);
                     return;
                 }
-                
+
                 const index = store.index('processed');
                 // IndexedDB doesn't support boolean values in IDBKeyRange, so we use a cursor approach
                 const request = index.openCursor();
@@ -645,7 +645,7 @@ class OfflineSyncManager {
                     };
                     fallbackRequest.onerror = () => reject(fallbackRequest.error);
                 };
-                
+
                 request.onsuccess = async (event) => {
                     const cursor = event.target.result;
                     if (cursor) {
@@ -677,7 +677,7 @@ class OfflineSyncManager {
         const indicatorText = document.getElementById('offline-indicator-text');
         const indicatorIcon = document.getElementById('offline-indicator-icon');
         const syncButton = document.getElementById('offline-sync-button');
-        
+
         if (indicator) {
             if (!isOnline) {
                 indicator.classList.remove('hidden');
@@ -925,4 +925,3 @@ class OfflineSyncManager {
 
 // Initialize singleton
 window.offlineSyncManager = new OfflineSyncManager();
-

@@ -18,13 +18,13 @@
 <div class="max-w-4xl mx-auto">
     <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" novalidate data-validate-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <!-- Trip Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-info-circle mr-2"></i>Trip Information
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="trip_date" class="form-label">
@@ -34,7 +34,7 @@
                            value="{{ mileage.trip_date.strftime('%Y-%m-%d') if mileage else '' }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
                 </div>
-                
+
                 <div>
                     <label for="currency_code" class="form-label">
                         Currency
@@ -46,7 +46,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div class="md:col-span-2">
                     <label for="purpose" class="form-label">
                         Purpose <span class="text-red-500">*</span>
@@ -56,7 +56,7 @@
                            placeholder="{{ _('e.g., Client meeting, Site visit') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div class="md:col-span-2">
                     <label for="description" class="form-label">
                         Description
@@ -67,13 +67,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Route Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-route mr-2"></i>Route Details
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="start_location" class="form-label">
@@ -84,7 +84,7 @@
                            placeholder="{{ _('e.g., Office, Home') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="end_location" class="form-label">
                         End Location <span class="text-red-500">*</span>
@@ -94,7 +94,7 @@
                            placeholder="{{ _('e.g., Client site, Airport') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="distance_km" class="form-label">
                         Distance (km) <span class="text-red-500">*</span>
@@ -104,7 +104,7 @@
                            placeholder="0.00"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="rate_per_km" class="form-label">
                         Rate per km <span class="text-red-500">*</span>
@@ -115,7 +115,7 @@
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                     <p class="text-xs text-gray-500 mt-1">Standard rate: €0.30/km</p>
                 </div>
-                
+
                 <div>
                     <label for="start_odometer" class="form-label">
                         Start Odometer (optional)
@@ -125,7 +125,7 @@
                            placeholder="{{ _('e.g., 12345') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="end_odometer" class="form-label">
                         End Odometer (optional)
@@ -135,7 +135,7 @@
                            placeholder="{{ _('e.g., 12400') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div class="md:col-span-2 flex items-center">
                     <input type="checkbox" name="is_round_trip" id="is_round_trip"
                            {% if mileage and mileage.is_round_trip %}checked{% endif %}
@@ -146,7 +146,7 @@
                     </label>
                 </div>
             </div>
-            
+
             <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <p class="text-sm text-blue-800 dark:text-blue-200">
                     <i class="fas fa-calculator mr-1"></i>
@@ -154,13 +154,13 @@
                 </p>
             </div>
         </div>
-        
+
         <!-- Vehicle Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-car mr-2"></i>Vehicle Information
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label for="vehicle_type" class="form-label">
@@ -175,7 +175,7 @@
                         <option value="truck" {% if mileage and mileage.vehicle_type == 'truck' %}selected{% endif %}>Truck</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="vehicle_description" class="form-label">
                         Vehicle Make/Model
@@ -185,7 +185,7 @@
                            placeholder="{{ _('e.g., VW Golf') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="license_plate" class="form-label">
                         License Plate
@@ -197,13 +197,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Project & Client -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-project-diagram mr-2"></i>Association
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="project_id" class="form-label">
@@ -219,7 +219,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="client_id" class="form-label">
                         Client
@@ -228,7 +228,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Notes -->
         <div class="mb-6">
             <label for="notes" class="form-label">
@@ -238,7 +238,7 @@
                       placeholder="{{ _('Additional notes...') }}"
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ mileage.notes if mileage else '' }}</textarea>
         </div>
-        
+
         <!-- Create Expense Option -->
         {% if not mileage %}
         <div class="mb-6">
@@ -252,14 +252,14 @@
             </div>
         </div>
         {% endif %}
-        
+
         <!-- Actions -->
         <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <a href="{{ url_for('mileage.view_mileage', mileage_id=mileage.id) if mileage else url_for('mileage.list_mileage') }}" 
+            <a href="{{ url_for('mileage.view_mileage', mileage_id=mileage.id) if mileage else url_for('mileage.list_mileage') }}"
                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <i class="fas fa-times mr-2"></i>Cancel
             </a>
-            
+
             <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-save mr-2"></i>{{ 'Update Mileage' if mileage else 'Create Mileage Entry' }}
             </button>
@@ -274,12 +274,12 @@ function updateAmount() {
     const rate = parseFloat(document.getElementById('rate_per_km').value) || 0;
     const isRoundTrip = document.getElementById('is_round_trip').checked;
     const currency = document.getElementById('currency_code').value;
-    
+
     let amount = distance * rate;
     if (isRoundTrip) {
         amount *= 2;
     }
-    
+
     document.getElementById('calculated_amount').textContent = amount.toFixed(2);
     document.getElementById('amount_currency').textContent = currency;
 }
@@ -299,4 +299,3 @@ updateAmount();
 </script>
 
 {% endblock %}
-

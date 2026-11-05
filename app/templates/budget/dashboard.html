@@ -29,7 +29,7 @@
         <h3 class="text-3xl font-bold" id="totalUnacknowledged">{{ alert_stats.total_unacknowledged }}</h3>
         <p class="text-sm opacity-90">{{ _('Unacknowledged Alerts') }}</p>
     </div>
-    
+
     <!-- Critical Alerts -->
     <div class="bg-gradient-to-br from-red-500 to-pink-600 p-6 rounded-lg shadow-lg animated-card text-white">
         <div class="flex items-center justify-between mb-2">
@@ -38,7 +38,7 @@
         <h3 class="text-3xl font-bold" id="criticalAlerts">{{ alert_stats.critical_alerts }}</h3>
         <p class="text-sm opacity-90">{{ _('Critical Alerts') }}</p>
     </div>
-    
+
     <!-- Projects with Budgets -->
     <div class="bg-gradient-to-br from-blue-500 to-cyan-600 p-6 rounded-lg shadow-lg animated-card text-white">
         <div class="flex items-center justify-between mb-2">
@@ -47,7 +47,7 @@
         <h3 class="text-3xl font-bold" id="totalProjects">{{ projects|length }}</h3>
         <p class="text-sm opacity-90">{{ _('Projects with Budgets') }}</p>
     </div>
-    
+
     <!-- Warning Alerts -->
     <div class="bg-gradient-to-br from-amber-400 to-yellow-500 p-6 rounded-lg shadow-lg animated-card text-white">
         <div class="flex items-center justify-between mb-2">
@@ -87,11 +87,11 @@
                     </p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2 flex-shrink-0">
-                    <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=alert.project_id) }}" 
+                    <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=alert.project_id) }}"
                        class="bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-dark transition">
                         <i class="fas fa-eye"></i> {{ _('View') }}
                     </a>
-                    <button class="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition acknowledge-alert" 
+                    <button class="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition acknowledge-alert"
                             data-alert-id="{{ alert.id }}">
                         <i class="fas fa-check"></i> {{ _('Acknowledge') }}
                     </button>
@@ -167,7 +167,7 @@
                         {% endif %}
                     </td>
                     <td class="p-4" data-label="Actions">
-                        <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.project_id) }}" 
+                        <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.project_id) }}"
                            class="bg-primary text-white px-3 py-1.5 rounded text-sm hover:bg-primary-dark transition">
                             <i class="fas fa-chart-line"></i> {{ _('Details') }}
                         </a>
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Acknowledge alert handlers
     document.querySelectorAll('.acknowledge-alert').forEach(button => {
         button.addEventListener('click', function() {
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
             acknowledgeAlert(alertId);
         });
     });
-    
+
     function acknowledgeAlert(alertId) {
         fetch(`/api/budget/alerts/${alertId}/acknowledge`, {
             method: 'POST',
@@ -226,13 +226,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     alertElement.style.transition = 'all 0.3s ease';
                     setTimeout(() => alertElement.remove(), 300);
                 }
-                
+
                 // Update counters
                 const unacknowledgedCount = document.getElementById('totalUnacknowledged');
                 if (unacknowledgedCount) {
                     unacknowledgedCount.textContent = Math.max(0, parseInt(unacknowledgedCount.textContent) - 1);
                 }
-                
+
                 // Show success notification
                 showNotification('{{ _("Alert acknowledged successfully") }}', 'success');
             }
@@ -242,20 +242,20 @@ document.addEventListener('DOMContentLoaded', function() {
             showNotification('{{ _("Failed to acknowledge alert") }}', 'error');
         });
     }
-    
+
     // Refresh button handler
     document.getElementById('refreshData')?.addEventListener('click', function() {
         this.querySelector('i').classList.add('fa-spin');
         location.reload();
     });
-    
+
     function showNotification(message, type) {
         // Create toast notification
         const toast = document.createElement('div');
         toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
         toast.textContent = message;
         document.body.appendChild(toast);
-        
+
         setTimeout(() => {
             toast.style.opacity = '0';
             toast.style.transition = 'opacity 0.3s ease';

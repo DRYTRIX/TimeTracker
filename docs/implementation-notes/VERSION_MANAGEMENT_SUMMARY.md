@@ -20,32 +20,32 @@ Added `_get_version_from_setup()` function that:
 def _get_version_from_setup():
     """
     Get the application version from setup.py.
-    
+
     This is the authoritative source for version information.
     Reads setup.py at runtime to get the current version.
-    
+
     Returns:
         str: Application version (e.g., "3.0.0")
     """
     import os
     import re
-    
+
     try:
         # Get path to setup.py (root of project)
         setup_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'setup.py')
-        
+
         # Read setup.py
         with open(setup_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        
+
         # Extract version using regex
         version_match = re.search(r'version\s*=\s*[\'"]([^\'"]+)[\'"]', content)
-        
+
         if version_match:
             return version_match.group(1)
     except Exception:
         pass
-    
+
     # Fallback version if setup.py can't be read
     return "3.0.0"
 ```
@@ -246,4 +246,3 @@ If `setup.py` can't be read:
 ---
 
 **All changes tested and working!** 🎉
-

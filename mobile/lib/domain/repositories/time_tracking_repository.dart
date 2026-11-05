@@ -356,12 +356,12 @@ class TimeTrackingRepository {
       final timeEntries = entries
           .map((e) => TimeEntry.fromJson(e as Map<String, dynamic>))
           .toList();
-      
+
       // Cache entries
       for (final entry in timeEntries) {
         await LocalStorage.saveTimeEntry(entry);
       }
-      
+
       return timeEntries;
     } catch (e) {
       // Return cached entries on error

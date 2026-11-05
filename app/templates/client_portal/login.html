@@ -55,7 +55,7 @@
                     {% if request.args.get('next') %}
                     <input type="hidden" name="next" value="{{ request.args.get('next')|e }}">
                     {% endif %}
-                    
+
                     <label for="username" class="block mb-2 text-sm font-medium">{{ _('Username') }}</label>
                     <div class="relative">
                         <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark"></i>

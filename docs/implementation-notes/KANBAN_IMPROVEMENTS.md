@@ -106,4 +106,3 @@ The kanban board now provides a much more professional and pleasant user experie
 - Smoother interactions
 - More modern aesthetics
 - Improved usability
-

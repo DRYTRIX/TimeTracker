@@ -68,10 +68,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const today = new Date();
     const startDate = new Date(today);
     startDate.setMonth(startDate.getMonth() - 3);
-    
+
     document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
     document.getElementById('endDate').value = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
+
     loadGanttChart();
 });
 
@@ -79,12 +79,12 @@ async function loadGanttChart() {
     const projectId = document.getElementById('projectFilter').value;
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
-    
+
     const params = new URLSearchParams();
     if (projectId) params.append('project_id', projectId);
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
-    
+
     try {
         const response = await fetch(`{{ url_for('gantt.gantt_data') }}?${params}`);
         const data = await response.json();
@@ -129,16 +129,16 @@ async function loadGanttChart() {
             styleEl.textContent = rules.join('\n');
             document.head.appendChild(styleEl);
         }
-        
+
         // Destroy existing chart
         if (ganttChart) {
             ganttChart = null;
         }
-        
+
         // Create new chart
         const container = document.getElementById('gantt-chart');
         container.innerHTML = ''; // Clear container
-        
+
         ganttChart = new Gantt('#gantt-chart', tasks, {
             header_height: 50,
             column_width: 30,
@@ -171,14 +171,13 @@ async function loadGanttChart() {
                 console.log('View mode changed:', mode);
             }
         });
-        
+
     } catch (error) {
         console.error('Error loading Gantt chart:', error);
-        document.getElementById('gantt-chart').innerHTML = 
+        document.getElementById('gantt-chart').innerHTML =
             '<div class="text-center text-red-600 py-8">Error loading Gantt chart. Please try again.</div>';
     }
 }
 </script>
 
 {% endblock %}
-

@@ -307,9 +307,9 @@ function toggleFilterVisibility() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
     const isCollapsed = filterBody.classList.contains('filter-collapsed');
-    
+
     if (isCollapsed) {
         // Show filters
         filterBody.classList.remove('filter-collapsed');
@@ -355,16 +355,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // Invoices Filter Handler - AJAX filtering
 (function() {
     'use strict';
-    
+
     let filterTimeout = null;
     let searchTimeout = null;
-    
+
     function getFilterParams() {
         const form = document.getElementById('invoicesFilterForm');
         if (!form) return {};
-        
+
         const params = {};
-        
+
         // Get search input value directly
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
@@ -373,46 +373,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 params.search = searchValue;
             }
         }
-        
+
         // Get status from hidden input
         const statusInput = form.querySelector('#statusFilter');
         if (statusInput && statusInput.value) {
             params.status = statusInput.value;
         }
-        
+
         // Get payment status
         const paymentStatusSelect = form.querySelector('[name="payment_status"]');
         if (paymentStatusSelect && paymentStatusSelect.value) {
             params.payment_status = paymentStatusSelect.value;
         }
-        
+
         return params;
     }
-    
+
     function buildFilterUrl() {
         const params = getFilterParams();
         const queryString = new URLSearchParams(params).toString();
         return `/invoices?${queryString}`;
     }
-    
+
     function applyFilters() {
         const url = buildFilterUrl();
         const container = document.getElementById('invoicesListContainer');
-        
+
         if (!container) {
             console.error('invoicesListContainer not found');
             return;
         }
-        
+
         // Show loading state
         container.style.opacity = '0.5';
         container.style.pointerEvents = 'none';
-        
+
         // Update URL
         if (window.history && window.history.pushState) {
             window.history.pushState({}, '', url);
         }
-        
+
         // Fetch filtered results
         fetch(url, {
             method: 'GET',
@@ -431,9 +431,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(html => {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html.trim();
-            
+
             const newContainer = tempDiv.querySelector('#invoicesListContainer');
-            
+
             if (newContainer) {
                 container.innerHTML = newContainer.innerHTML;
             } else {
@@ -460,24 +460,24 @@ document.addEventListener('DOMContentLoaded', function() {
             container.style.pointerEvents = '';
         });
     }
-    
+
     // Export function for status filter buttons
     window.applyInvoiceFilters = applyFilters;
-    
+
     function debouncedApplyFilters(delay = 100) {
         if (filterTimeout) {
             clearTimeout(filterTimeout);
         }
         filterTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     function debouncedSearch(delay = 500) {
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
         searchTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('invoicesFilterForm');
@@ -485,21 +485,21 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Invoices filter form not found');
             return;
         }
-        
+
         // Auto-submit on dropdown changes
         form.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', () => {
                 debouncedApplyFilters(100);
             });
         });
-        
+
         // Auto-submit on search input (debounced)
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             searchInput.addEventListener('input', () => {
                 debouncedSearch(500);
             });
-            
+
             // Submit on Enter
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -511,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         // Prevent form submission (use AJAX instead)
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -541,7 +541,7 @@ function updateBulkDeleteButton() {
     const count = checkboxes.length;
     const btn = document.getElementById('bulkActionsBtn');
     const countSpan = document.getElementById('selectedCount');
-    
+
     if (countSpan) countSpan.textContent = count;
     if (btn) btn.disabled = count === 0;
 }
@@ -556,7 +556,7 @@ function openMenu(triggerEl, menuId) {
     const willOpen = menu.classList.contains('hidden');
     closeAllMenus();
     if (!willOpen) return;
-    
+
     // Position menu (dropup if not enough space below)
     menu.style.top = '';
     menu.style.bottom = '';
@@ -600,15 +600,15 @@ function closeBulkDeleteDialog() {
 function submitBulkDelete() {
     const form = document.getElementById('confirmBulkDelete-form');
     if (!form) return;
-    
+
     form.querySelectorAll('input[name="invoice_ids[]"]').forEach(input => input.remove());
-    
+
     const checkboxes = document.querySelectorAll('.invoice-checkbox:checked');
     if (checkboxes.length === 0) {
         alert('Please select at least one invoice to delete.');
         return;
     }
-    
+
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -616,7 +616,7 @@ function submitBulkDelete() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     // Show loading state
     const btn = document.getElementById('bulkActionsBtn');
     let originalHTML = '';
@@ -624,14 +624,14 @@ function submitBulkDelete() {
         originalHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
-        
+
         // Re-enable after timeout (safety fallback)
         setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.disabled = false;
         }, 10000);
     }
-    
+
     // Submit the form - routes are already implemented
     form.submit();
 }
@@ -666,7 +666,7 @@ function toggleInvoiceReferenceField() {
     const statusSelect = document.getElementById('bulkStatusSelect');
     const referenceField = document.getElementById('invoiceReferenceField');
     if (!statusSelect || !referenceField) return;
-    
+
     if (statusSelect.value === 'paid') {
         referenceField.classList.remove('hidden');
     } else {
@@ -677,27 +677,27 @@ function toggleInvoiceReferenceField() {
 function submitBulkStatus() {
     const statusSelect = document.getElementById('bulkStatusSelect');
     if (!statusSelect) return;
-    
+
     const status = statusSelect.value;
     if (!status) {
         alert('Please select a status');
         return;
     }
-    
+
     const form = document.getElementById('bulkStatusForm');
     if (!form) return;
-    
+
     const statusValueInput = document.getElementById('bulkStatusValue');
     if (statusValueInput) {
         statusValueInput.value = status;
     }
-    
+
     // Clear existing invoice_reference input if any
     const existingRefInput = form.querySelector('input[name="invoice_reference"]');
     if (existingRefInput) {
         existingRefInput.remove();
     }
-    
+
     // Add invoice reference if provided and status is paid
     const referenceInput = document.getElementById('bulkInvoiceReference');
     if (status === 'paid' && referenceInput && referenceInput.value.trim()) {
@@ -707,17 +707,17 @@ function submitBulkStatus() {
         refInput.value = referenceInput.value.trim();
         form.appendChild(refInput);
     }
-    
+
     // Clear existing hidden inputs
     form.querySelectorAll('input[name="invoice_ids[]"]').forEach(input => input.remove());
-    
+
     // Add selected invoice IDs to form
     const checkboxes = document.querySelectorAll('.invoice-checkbox:checked');
     if (checkboxes.length === 0) {
         alert('Please select at least one invoice to update.');
         return;
     }
-    
+
     // Show loading state
     const btn = document.getElementById('bulkActionsBtn');
     let originalHTML = '';
@@ -725,14 +725,14 @@ function submitBulkStatus() {
         originalHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
-        
+
         // Re-enable after timeout (safety fallback)
         setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.disabled = false;
         }, 10000);
     }
-    
+
     checkboxes.forEach(cb => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -740,7 +740,7 @@ function submitBulkStatus() {
         input.value = cb.value;
         form.appendChild(input);
     });
-    
+
     // Submit the form - routes are already implemented
     form.submit();
 }
@@ -765,7 +765,7 @@ function showExportLoading(link) {
     const originalHTML = link.innerHTML;
     link.classList.add('pointer-events-none', 'opacity-60');
     link.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> <span class="export-text">Exporting...</span>';
-    
+
     // Reset after 5 seconds (fallback)
     setTimeout(() => {
         link.innerHTML = originalHTML;

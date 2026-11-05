@@ -144,7 +144,7 @@
                     </form>
         </div>
     </div>
-    
+
     <!-- Sidebar -->
     <div class="lg:col-span-1">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm space-y-4 text-sm" data-testid="task-create-tips">
@@ -311,15 +311,15 @@
     .card-header {
         padding: 1rem 1rem 0.75rem 1rem;
     }
-    
+
     .p-6 {
         padding: 0.75rem 1rem;
     }
-    
+
     .tip-item:hover {
         transform: none;
     }
-    
+
     .priority-guide-item:hover,
     .status-guide-item:hover {
         background-color: transparent;
@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const editorEl = document.getElementById('description_editor');
         if (editorEl) { editorEl.style.display = 'none'; }
     }
-    
+
     // Form submission enhancement
     form.addEventListener('submit', function(e) {
         const name = nameInput.value.trim();
@@ -448,14 +448,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
         submitBtn.disabled = true;
-        
+
         // Re-enable after a delay (in case of validation errors)
         setTimeout(() => {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }, 5000);
     });
-    
+
     // Real-time validation feedback
     nameInput.addEventListener('input', function() {
         if (this.value.trim()) {

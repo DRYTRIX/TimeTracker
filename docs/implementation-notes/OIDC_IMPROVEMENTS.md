@@ -326,4 +326,3 @@ To test the OIDC improvements:
 - Unverified token decoding is only for debugging and doesn't affect authentication
 - All OIDC routes require admin authentication
 - OIDC subject (sub) values are displayed in user details for audit purposes
-

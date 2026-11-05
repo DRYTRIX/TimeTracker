@@ -22,7 +22,7 @@ def force_fresh(f):
 
 class KanbanColumn(db.Model):
     # ... existing code ...
-    
+
     @classmethod
     @force_fresh
     def get_active_columns(cls):
@@ -68,10 +68,10 @@ def list_tasks():
     db.session.commit()  # Commit any pending transactions
     db.session.expire_all()  # Clear cache
     db.session.close()  # Close session
-    
+
     # Get fresh data
     kanban_columns = KanbanColumn.get_active_columns()
-    
+
     # ... rest of route
 ```
 
@@ -180,4 +180,3 @@ docker logs timetracker_app_1 | grep -i "kanban\|column"
 ```
 
 Let me know which one you want to try first!
-

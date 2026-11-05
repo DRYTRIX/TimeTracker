@@ -34,7 +34,7 @@
                             </a>
                         </h3>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Requested by') }}: {{ approval.requester.username if approval.requester else 'N/A' }} • 
+                            {{ _('Requested by') }}: {{ approval.requester.username if approval.requester else 'N/A' }} •
                             {{ approval.time_entry.duration_hours|round(2) }} {{ _('hours') }}
                         </p>
                         {% if approval.time_entry.project %}
@@ -96,7 +96,7 @@
                             </a>
                         </h3>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Status') }}: 
+                            {{ _('Status') }}:
                             <span class="px-2 py-1 rounded text-xs font-medium
                                 {% if request.status.value == 'pending' %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200
                                 {% elif request.status.value == 'approved' %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200
@@ -253,4 +253,3 @@ document.addEventListener('click', function(e) {
 });
 </script>
 {% endblock %}
-

@@ -147,4 +147,3 @@ docker run -e POSTHOG_API_KEY="custom" IMAGE
 ---
 
 **That's it!** Your official builds now have analytics configured while respecting user privacy. 🎉
-

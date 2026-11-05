@@ -118,7 +118,7 @@ class ToastNotificationManager {
 
         const toastId = Date.now() + Math.random();
         const toast = this.createToast(config, toastId);
-        
+
         this.toasts.set(toastId, {
             element: toast,
             config: config,
@@ -212,7 +212,7 @@ class ToastNotificationManager {
             minWidth: '0',
             paddingRight: '0'
         });
-        
+
         if (config.title) {
             const title = document.createElement('div');
             title.className = 'tt-toast-title';
@@ -448,7 +448,7 @@ class ToastNotificationManager {
             const titles = window.i18n.toast;
             return titles[type] || titles.info || 'Information';
         }
-        
+
         // Fallback to English if translations not loaded
         const titles = {
             success: 'Success',
@@ -502,14 +502,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // ONLY convert flash messages from the special container, not all alerts
     const flashContainer = document.getElementById('flash-messages-container');
     if (!flashContainer) return;
-    
+
     const alerts = flashContainer.querySelectorAll('.alert');
-    
+
     alerts.forEach(alert => {
         // Get message from data attribute or text content
         let message = alert.getAttribute('data-toast-message') || alert.textContent.trim();
         if (!message) return;
-        
+
         // Ensure message is a string (handle objects that might have been passed)
         if (typeof message !== 'string') {
             try {
@@ -538,5 +538,3 @@ document.addEventListener('DOMContentLoaded', function() {
         alert.classList.add('toast-converted');
     });
 });
-
-

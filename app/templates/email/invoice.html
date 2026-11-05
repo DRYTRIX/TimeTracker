@@ -62,12 +62,12 @@
     <div class="header">
         <h1>{{ _('Invoice') }} {{ invoice.invoice_number }}</h1>
     </div>
-    
+
     <div class="content">
         <p>Hello,</p>
-        
+
         <p>Please find attached invoice <strong>{{ invoice.invoice_number }}</strong> for your records.</p>
-        
+
         <div class="invoice-details">
             <table>
                 <tr>
@@ -88,19 +88,19 @@
                 </tr>
             </table>
         </div>
-        
+
         {% if custom_message %}
         <div class="custom-message">
             <p><strong>Message:</strong></p>
             <p>{{ custom_message }}</p>
         </div>
         {% endif %}
-        
+
         <p>Please remit payment by the due date.</p>
-        
+
         <p>Thank you for your business!</p>
     </div>
-    
+
     <div class="footer">
         <p><strong>{{ company_name }}</strong></p>
         <p>TimeTracker - Time Tracking & Project Management</p>
@@ -108,4 +108,3 @@
     </div>
 </body>
 </html>
-

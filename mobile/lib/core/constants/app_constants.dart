@@ -3,14 +3,14 @@ class AppConstants {
   static const String apiVersion = 'v1';
   static const String defaultSyncInterval = '60'; // seconds
   static const int timerPollInterval = 5; // seconds
-  
+
   // Storage Keys
   static const String boxTimeEntries = 'time_entries';
   static const String boxProjects = 'projects';
   static const String boxTasks = 'tasks';
   static const String boxSyncQueue = 'sync_queue';
   static const String boxFavorites = 'favorites';
-  
+
   // Routes
   static const String routeSplash = '/';
   static const String routeLogin = '/login';
@@ -20,7 +20,7 @@ class AppConstants {
   static const String routeTasks = '/tasks';
   static const String routeTimeEntries = '/time-entries';
   static const String routeSettings = '/settings';
-  
+
   // Notification IDs
   static const int notificationTimerRunning = 1;
   static const int notificationSyncStatus = 2;
@@ -39,7 +39,7 @@ class AppConstants {
   static const String idleReminderChannelName = 'Idle reminder';
   static const String idleReminderChannelDescription =
       'Asks if you are still working when the timer is idle';
-  
+
   // Time Formats
   static const String timeFormat24h = 'HH:mm:ss';
   static const String timeFormat12h = 'hh:mm:ss a';

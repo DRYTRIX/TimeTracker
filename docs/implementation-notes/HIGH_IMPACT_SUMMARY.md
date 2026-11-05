@@ -100,15 +100,15 @@ Three **game-changing productivity features** are now live in your TimeTracker a
 
 ### Make Any Input Searchable:
 ```html
-<input type="text" 
-       class="form-control" 
+<input type="text"
+       class="form-control"
        data-enhanced-search='{"endpoint": "/api/search", "minChars": 2}'
        placeholder="Search...">
 ```
 
 ### Enhance Any Table:
 ```html
-<table class="table" 
+<table class="table"
        data-enhanced-table='{
            "sortable": true,
            "filterable": true,
@@ -386,4 +386,3 @@ These are production-ready foundations that can be extended based on your needs!
 ---
 
 **Press `?` for command palette or `Ctrl+K` for search to see the magic! ✨**
-

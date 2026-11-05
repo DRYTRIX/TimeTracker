@@ -78,7 +78,7 @@ def detect_database_state(db_url):
             # Check if alembic_version table exists
             cursor.execute("""
                 SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
+                    SELECT FROM information_schema.tables
                     WHERE table_name = 'alembic_version'
                 )
             """)
@@ -86,9 +86,9 @@ def detect_database_state(db_url):
 
             # Get list of existing tables
             cursor.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' 
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
                 ORDER BY table_name
             """)
             existing_tables = [row[0] for row in cursor.fetchall()]
@@ -338,8 +338,8 @@ def verify_database_integrity(db_url):
 
             # Check if key tables exist
             cursor.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
+                SELECT table_name
+                FROM information_schema.tables
                 WHERE table_name IN ('users', 'projects', 'time_entries')
                 AND table_schema = 'public'
             """)
@@ -366,7 +366,7 @@ def verify_database_integrity(db_url):
 
             # Check if key tables exist
             cursor.execute("""
-                SELECT name FROM sqlite_master 
+                SELECT name FROM sqlite_master
                 WHERE type='table' AND name IN ('users', 'projects', 'time_entries')
             """)
             key_tables = [row[0] for row in cursor.fetchall()]

@@ -19,13 +19,13 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="md:col-span-2">
                 <label for="name" class="block text-sm font-medium mb-2">{{ _('Deal Name') }} *</label>
                 <input type="text" name="name" id="name" value="{{ deal.name if deal else '' }}" class="form-input" required>
             </div>
-            
+
             <div>
                 <label for="client_id" class="block text-sm font-medium mb-2">{{ _('Client') }}</label>
                 <select name="client_id" id="client_id" class="form-input">
@@ -35,7 +35,7 @@
                     {% endfor %}
                 </select>
             </div>
-            
+
             <div>
                 <label for="contact_id" class="block text-sm font-medium mb-2">{{ _('Contact') }}</label>
                 <select name="contact_id" id="contact_id" class="form-input">
@@ -47,7 +47,7 @@
                     {% endif %}
                 </select>
             </div>
-            
+
             <div>
                 <label for="stage" class="block text-sm font-medium mb-2">{{ _('Stage') }} *</label>
                 <select name="stage" id="stage" class="form-input" required>
@@ -56,12 +56,12 @@
                     {% endfor %}
                 </select>
             </div>
-            
+
             <div>
                 <label for="value" class="block text-sm font-medium mb-2">{{ _('Deal Value') }}</label>
                 <input type="number" step="0.01" name="value" id="value" value="{{ '%.2f'|format(deal.value) if deal and deal.value else '' }}" class="form-input">
             </div>
-            
+
             <div>
                 <label for="currency_code" class="block text-sm font-medium mb-2">{{ _('Currency') }}</label>
                 <select name="currency_code" id="currency_code" class="form-input">
@@ -70,17 +70,17 @@
                     <option value="GBP" {% if deal and deal.currency_code == 'GBP' %}selected{% endif %}>GBP</option>
                 </select>
             </div>
-            
+
             <div>
                 <label for="probability" class="block text-sm font-medium mb-2">{{ _('Win Probability') }} (%)</label>
                 <input type="number" min="0" max="100" name="probability" id="probability" value="{{ deal.probability if deal else 50 }}" class="form-input" required>
             </div>
-            
+
             <div>
                 <label for="expected_close_date" class="block text-sm font-medium mb-2">{{ _('Expected Close Date') }}</label>
                 <input type="date" name="expected_close_date" id="expected_close_date" value="{{ deal.expected_close_date.strftime('%Y-%m-%d') if deal and deal.expected_close_date else '' }}" class="form-input">
             </div>
-            
+
             {% if quotes %}
             <div>
                 <label for="related_quote_id" class="block text-sm font-medium mb-2">{{ _('Related Quote') }}</label>
@@ -92,18 +92,18 @@
                 </select>
             </div>
             {% endif %}
-            
+
             <div class="md:col-span-2">
                 <label for="description" class="block text-sm font-medium mb-2">{{ _('Description') }}</label>
                 <textarea name="description" id="description" rows="4" class="form-input">{{ deal.description if deal else '' }}</textarea>
             </div>
-            
+
             <div class="md:col-span-2">
                 <label for="notes" class="block text-sm font-medium mb-2">{{ _('Notes') }}</label>
                 <textarea name="notes" id="notes" rows="4" class="form-input">{{ deal.notes if deal else '' }}</textarea>
             </div>
         </div>
-        
+
         <div class="mt-6 flex flex-wrap gap-2">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 {{ _('Save Deal') }}
@@ -115,4 +115,3 @@
     </form>
 </div>
 {% endblock %}
-

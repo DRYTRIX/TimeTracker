@@ -445,13 +445,13 @@ GET /api/export/history
 - **Solution**: Ensure every row has a project_name value
 
 **Problem**: Toggl/Harvest import fails
-- **Solution**: 
+- **Solution**:
   - Verify API credentials are correct
   - Check date range is valid
   - Ensure you have access to the workspace/account
 
 **Problem**: Import stuck in "processing" status
-- **Solution**: 
+- **Solution**:
   - Wait a few minutes (large imports take time)
   - Check Import History for errors
   - Try re-importing with smaller date range
@@ -651,4 +651,3 @@ For additional help:
 - Backup/restore functionality
 - Migration wizard
 - Import/export history tracking
-

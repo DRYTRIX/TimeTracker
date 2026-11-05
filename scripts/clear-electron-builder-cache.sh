@@ -32,7 +32,7 @@ echo ""
 
 if [ -d "$CACHE_DIR" ]; then
     echo "Removing cache directories..."
-    
+
     # Remove winCodeSign cache (causes symlink issues on Windows)
     if [ -d "$CACHE_DIR/winCodeSign" ]; then
         echo "  Removing winCodeSign cache..."
@@ -41,7 +41,7 @@ if [ -d "$CACHE_DIR" ]; then
             echo "  You may need to run as Administrator (Windows)"
         }
     fi
-    
+
     echo ""
     echo "[OK] Cache cleared"
 else

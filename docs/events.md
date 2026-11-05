@@ -378,4 +378,3 @@ Maintain a changelog of event schema changes:
 **Document Owner**: Product & Engineering Team  
 **Last Updated**: 2025-10-20  
 **Review Cycle**: Quarterly
-

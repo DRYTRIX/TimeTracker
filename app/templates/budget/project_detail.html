@@ -8,11 +8,11 @@
         <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Budget Analysis & Forecasting') }}</p>
     </div>
     <div class="flex gap-2 mt-2 md:mt-0">
-        <a href="{{ url_for('budget_alerts.budget_dashboard') }}" 
+        <a href="{{ url_for('budget_alerts.budget_dashboard') }}"
            class="bg-card-light dark:bg-card-dark px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition">
             <i class="fas fa-arrow-left"></i> {{ _('Back to Dashboard') }}
         </a>
-        <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
+        <a href="{{ url_for('projects.view_project', project_id=project.id) }}"
            class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition">
             <i class="fas fa-eye"></i> {{ _('View Project') }}
         </a>
@@ -29,7 +29,7 @@
         <h3 class="text-3xl font-bold">{{ budget_status.budget_amount|format_currency }}</h3>
         <p class="text-sm opacity-90">{{ _('Total Budget') }}</p>
     </div>
-    
+
     <!-- Consumed -->
     <div class="bg-gradient-to-br from-yellow-400 to-orange-500 p-6 rounded-lg shadow-lg animated-card text-white">
         <div class="flex items-center justify-between mb-2">
@@ -38,7 +38,7 @@
         <h3 class="text-3xl font-bold">{{ budget_status.consumed_amount|format_currency }}</h3>
         <p class="text-sm opacity-90">{{ _('Consumed') }} ({{ "%.1f"|format(budget_status.consumed_percentage) }}%)</p>
     </div>
-    
+
     <!-- Remaining -->
     <div class="bg-gradient-to-br {% if budget_status.remaining_amount >= 0 %}from-green-500 to-emerald-600{% else %}from-red-500 to-pink-600{% endif %} p-6 rounded-lg shadow-lg animated-card text-white">
         <div class="flex items-center justify-between mb-2">
@@ -47,7 +47,7 @@
         <h3 class="text-3xl font-bold">{{ (budget_status.remaining_amount|abs)|format_currency }}</h3>
         <p class="text-sm opacity-90">{% if budget_status.remaining_amount >= 0 %}{{ _('Remaining') }}{% else %}{{ _('Over Budget') }}{% endif %}</p>
     </div>
-    
+
     <!-- Status -->
     <div class="bg-gradient-to-br {% if budget_status.status == 'over_budget' %}from-red-500 to-pink-600{% elif budget_status.status == 'critical' %}from-orange-500 to-amber-600{% elif budget_status.status == 'warning' %}from-yellow-400 to-amber-500{% else %}from-green-500 to-emerald-600{% endif %} p-6 rounded-lg shadow-lg animated-card text-white">
         <div class="flex items-center justify-between mb-2">
@@ -109,7 +109,7 @@
         </p>
         {% endif %}
     </div>
-    
+
     <!-- Completion Estimate -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
         <h2 class="text-lg font-semibold mb-4 flex items-center">
@@ -124,7 +124,7 @@
                     {{ completion_estimate.estimated_completion_date }}
                 </h2>
                 <p class="text-xl">
-                    <span class="font-semibold">{{ completion_estimate.days_remaining }}</span> 
+                    <span class="font-semibold">{{ completion_estimate.days_remaining }}</span>
                     <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('days remaining') }}</span>
                 </p>
             </div>
@@ -279,7 +279,7 @@
                         {{ _('Created') }}: {{ alert.created_at|user_datetime }}
                     </p>
                 </div>
-                <button class="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition flex-shrink-0 acknowledge-alert" 
+                <button class="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition flex-shrink-0 acknowledge-alert"
                         data-alert-id="{{ alert.id }}">
                     <i class="fas fa-check"></i> {{ _('Acknowledge') }}
                 </button>
@@ -300,12 +300,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cost Trend Chart
     {% if cost_trends and cost_trends.periods %}
     const ctx = document.getElementById('costTrendChart').getContext('2d');
-    
+
     // Check if dark mode is enabled
     const isDarkMode = document.documentElement.classList.contains('dark');
     const textColor = isDarkMode ? '#9ca3af' : '#6b7280';
     const gridColor = isDarkMode ? '#374151' : '#e5e7eb';
-    
+
     const costTrendChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -376,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     {% endif %}
-    
+
     // Acknowledge alert handlers
     document.querySelectorAll('.acknowledge-alert').forEach(button => {
         button.addEventListener('click', function() {
@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
             acknowledgeAlert(alertId);
         });
     });
-    
+
     function acknowledgeAlert(alertId) {
         fetch(`/api/budget/alerts/${alertId}/acknowledge`, {
             method: 'POST',
@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     alertElement.style.transition = 'all 0.3s ease';
                     setTimeout(() => alertElement.remove(), 300);
                 }
-                
+
                 // Show success notification
                 showNotification('{{ _("Alert acknowledged successfully") }}', 'success');
             }
@@ -414,14 +414,14 @@ document.addEventListener('DOMContentLoaded', function() {
             showNotification('{{ _("Failed to acknowledge alert") }}', 'error');
         });
     }
-    
+
     function showNotification(message, type) {
         // Create toast notification
         const toast = document.createElement('div');
         toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
         toast.textContent = message;
         document.body.appendChild(toast);
-        
+
         setTimeout(() => {
             toast.style.opacity = '0';
             toast.style.transition = 'opacity 0.3s ease';

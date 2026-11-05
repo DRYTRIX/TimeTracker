@@ -96,7 +96,7 @@
             <canvas id="userActivityChart"></canvas>
         </div>
     </div>
-    
+
     <!-- Project Status Chart -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="font-semibold mb-3 flex items-center gap-2">
@@ -107,7 +107,7 @@
             <canvas id="projectStatusChart"></canvas>
         </div>
     </div>
-    
+
     <!-- Time Entry Trends Chart -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <h3 class="font-semibold mb-3 flex items-center gap-2">
@@ -137,7 +137,7 @@
                 <div class="text-xs text-green-600 dark:text-green-400">{{ _('Connected') }}</div>
             </div>
         </div>
-        
+
         <!-- OIDC Status -->
         <div class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg">
             <div class="w-10 h-10 {% if oidc_configured %}bg-green-500/10 dark:bg-green-500/20{% else %}bg-gray-500/10 dark:bg-gray-500/20{% endif %} rounded-full flex items-center justify-center">
@@ -150,7 +150,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- OIDC Users -->
         {% if oidc_enabled %}
         <div class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg">
@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const isDark = document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#E5E7EB' : '#1F2937';
     const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    
+
     const commonOptions = {
         responsive: true,
         maintainAspectRatio: false,
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     };
-    
+
     // User Activity Chart
     {% if chart_data and chart_data.user_activity %}
     const userActivityCtx = document.getElementById('userActivityChart');
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     {% endif %}
-    
+
     // Project Status Chart
     {% if chart_data and chart_data.project_status %}
     const projectStatusCtx = document.getElementById('projectStatusChart');
@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const projectStatusData = {{ chart_data.project_status|tojson }};
         const labels = Object.keys(projectStatusData);
         const values = Object.values(projectStatusData);
-        
+
         new Chart(projectStatusCtx, {
             type: 'doughnut',
             data: {
@@ -361,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     {% endif %}
-    
+
     // Time Entry Trends Chart
     {% if chart_data and chart_data.time_entries_daily %}
     const timeEntryCtx = document.getElementById('timeEntryChart');

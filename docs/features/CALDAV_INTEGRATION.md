@@ -163,4 +163,3 @@ For issues or questions:
 2. Review server logs for connection issues
 3. Test connection using the "Test Connection" button
 4. Contact your system administrator if problems persist
-

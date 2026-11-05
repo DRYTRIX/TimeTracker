@@ -215,25 +215,25 @@
             // Force both to be hidden first
             themeToggleDarkIcon.classList.add('hidden');
             themeToggleLightIcon.classList.add('hidden');
-            
+
             // Show the correct icon based on current theme
-            const isDark = localStorage.getItem('color-theme') === 'dark' || 
+            const isDark = localStorage.getItem('color-theme') === 'dark' ||
                           (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-            
+
             if (isDark) {
                 themeToggleLightIcon.classList.remove('hidden');
             } else {
                 themeToggleDarkIcon.classList.remove('hidden');
             }
         }
-        
+
         // Run initialization
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initThemeToggle);
         } else {
             initThemeToggle();
         }
-        
+
         var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
         var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
 
@@ -269,7 +269,7 @@
                         newTheme = 'dark';
                     }
                 }
-                
+
                 // Save to database if user is logged in
                 {% if current_user.is_authenticated %}
                 fetch('/api/theme', {
@@ -361,7 +361,7 @@
                     barcodeSection.style.display = 'none';
                 }
             }
-            
+
             // Hide operations section for scan tab, show for others
             const operationsSection = document.getElementById('operations-section');
             if (operationsSection) {
@@ -371,13 +371,13 @@
                     operationsSection.style.display = 'block';
                 }
             }
-            
+
             // Hide all tab contents
             const tabContents = document.querySelectorAll('.kiosk-tab-content');
             tabContents.forEach(c => {
                 c.style.display = 'none';
             });
-            
+
             // Clear any item display when switching to scan
             if (tabName === 'scan') {
                 // Use the centralized clear function if available
@@ -399,20 +399,20 @@
                     barcodeStatus.className = '';
                 }
             }
-            
+
             // Remove active state from all tabs
             const tabButtons = document.querySelectorAll('.kiosk-tab');
             tabButtons.forEach(t => {
                 t.classList.remove('border-primary', 'text-primary');
                 t.classList.add('border-transparent', 'text-gray-600', 'dark:text-gray-400');
             });
-            
+
             // Show the target tab content
             const targetContent = document.getElementById('tab-' + tabName);
             if (targetContent) {
                 targetContent.style.display = 'block';
             }
-            
+
             // Activate the corresponding tab button
             tabButtons.forEach(t => {
                 if (t.getAttribute('data-tab') === tabName) {
@@ -420,7 +420,7 @@
                     t.classList.add('border-primary', 'text-primary');
                 }
             });
-            
+
             // Update navigation menu active state - clear ALL classes first
             const navItems = document.querySelectorAll('nav a.nav-link');
             navItems.forEach(item => {
@@ -433,7 +433,7 @@
                 // Add default inactive state
                 item.classList.add('text-gray-700', 'dark:text-gray-300', 'border-transparent');
             });
-            
+
             // Find and activate the corresponding nav item
             const navItem = Array.from(navItems).find(item => {
                 const tabAttr = item.getAttribute('data-tab');
@@ -450,7 +450,7 @@
         // Make functions globally available immediately
         window.toggleFullscreen = toggleFullscreen;
         window.switchToTab = switchToTab;
-        
+
         // Global confirmation dialog (matching main app)
         window.showConfirm = function(message, opts){
             try {
@@ -511,4 +511,3 @@
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
-

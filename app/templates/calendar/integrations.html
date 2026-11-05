@@ -40,7 +40,7 @@
                         <span class="px-2 py-1 text-xs rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{{ _('Inactive') }}</span>
                         {% endif %}
                     </div>
-                    
+
                     {% if integration.calendar_name %}
                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">
                         <i class="fas fa-calendar mr-1"></i>{{ integration.calendar_name }}
@@ -50,7 +50,7 @@
                         <i class="fas fa-calendar mr-1"></i>{{ integration.config.get('calendar_id') }}
                     </p>
                     {% endif %}
-                    
+
                     {% if integration.last_sync_at %}
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
                         {{ _('Last synced') }}: {{ integration.last_sync_at|user_datetime }}
@@ -65,7 +65,7 @@
                     </p>
                     {% endif %}
                 </div>
-                
+
                 <div class="flex gap-2">
                     {% if integration.provider in ['google_calendar', 'outlook_calendar'] %}
                     <a href="{{ url_for('integrations.view_integration', integration_id=integration.id) }}" class="inline-flex items-center justify-center min-w-[44px] min-h-[44px] text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20" title="{{ _('Manage Integration') }}">
@@ -104,4 +104,3 @@
     </ul>
 </div>
 {% endblock %}
-

@@ -198,4 +198,3 @@ with query_timer("get_user_projects"):
 
 **Last Updated:** 2025-01-27  
 **Next Review:** After migrating invoices routes
-

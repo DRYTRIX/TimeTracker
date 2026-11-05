@@ -117,11 +117,11 @@ def verify_webhook_signature(payload, signature, secret):
         payload.encode('utf-8'),
         hashlib.sha256
     ).hexdigest()
-    
+
     # Remove 'sha256=' prefix if present
     if signature.startswith('sha256='):
         signature = signature[7:]
-    
+
     return hmac.compare_digest(expected_signature, signature)
 ```
 
@@ -317,25 +317,25 @@ def verify_signature(payload, signature):
         payload.encode('utf-8'),
         hashlib.sha256
     ).hexdigest()
-    
+
     if signature.startswith('sha256='):
         signature = signature[7:]
-    
+
     return hmac.compare_digest(expected, signature)
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     signature = request.headers.get('X-Webhook-Signature')
     event_type = request.headers.get('X-Webhook-Event')
-    
+
     if not verify_signature(request.data.decode('utf-8'), signature):
         return jsonify({'error': 'Invalid signature'}), 401
-    
+
     payload = request.get_json()
-    
+
     # Handle event
     print(f"Received {event_type}: {payload}")
-    
+
     return jsonify({'status': 'ok'}), 200
 ```
 
@@ -384,4 +384,3 @@ def webhook():
 - [REST API Documentation](REST_API.md)
 - [Activity Logging](activity_feed.md)
 - [API Authentication](API_AUTHENTICATION.md)
-

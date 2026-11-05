@@ -31,7 +31,7 @@
                             <label for="name" class="form-label">
                                 <i class="fas fa-tag mr-2 text-primary"></i>{{ _('Task Name') }} <span class="text-red-500">*</span>
                             </label>
-                            <input type="text" class="form-input" id="name" name="name" 
+                            <input type="text" class="form-input" id="name" name="name"
                                    value="{{ task.name }}" placeholder="{{ _('Enter a descriptive task name') }}" required>
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Choose a clear, descriptive name that explains what needs to be done') }}</p>
                         </div>
@@ -198,14 +198,14 @@
                             {{ task.status_display }}
                         </span>
                     </div>
-                    
+
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Current Priority') }}</small>
                         <span class="priority-badge priority-{{ task.priority }}">
                             {{ task.priority_display }}
                         </span>
                     </div>
-                    
+
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Project') }}</small>
                         <div class="flex items-center">
@@ -215,7 +215,7 @@
                             <span>{{ task.project.name }}</span>
                         </div>
                     </div>
-                    
+
                     {% if task.assignees %}
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Currently Assigned To') }}</small>
@@ -227,7 +227,7 @@
                         </div>
                     </div>
                     {% endif %}
-                    
+
                     {% if task.due_date %}
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Current Due Date') }}</small>
@@ -241,7 +241,7 @@
                         </div>
                     </div>
                     {% endif %}
-                    
+
                     {% if task.estimated_hours %}
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Current Estimate') }}</small>
@@ -253,7 +253,7 @@
                         </div>
                     </div>
                     {% endif %}
-                    
+
                     {% if task.total_hours > 0 %}
                     <div class="task-info-item mb-3">
                         <small class="text-text-muted-light dark:text-text-muted-dark block mb-1">{{ _('Actual Hours') }}</small>
@@ -288,13 +288,13 @@
                         <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-primary text-primary hover:bg-primary/10">
                             <i class="fas fa-eye mr-2"></i>{{ _('View Task') }}
                         </a>
-                        
+
                         {% if task.status == 'todo' or task.status == 'in_progress' %}
                         <a href="{{ url_for('timer.start_timer_for_project', project_id=task.project_id, task_id=task.id) }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
                             <i class="fas fa-play mr-2"></i>{{ _('Start Timer') }}
                         </a>
                         {% endif %}
-                        
+
                         <a href="{{ url_for('tasks.list_tasks') }}" class="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
                             <i class="fas fa-list mr-2"></i>{{ _('Back to Tasks') }}
                         </a>
@@ -319,7 +319,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="tip-item mb-3">
                         <div class="flex items-start">
                             <div class="rounded-full flex items-center justify-center mr-2" style="width: 24px; height: 24px;">
@@ -331,7 +331,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="tip-item">
                         <div class="flex items-start">
                             <div class="rounded-full flex items-center justify-center mr-2" style="width: 24px; height: 24px;">
@@ -472,11 +472,11 @@
     .card-header {
         padding: 1rem 1rem 0.75rem 1rem;
     }
-    
+
     .p-6 {
         padding: 0.75rem 1rem;
     }
-    
+
     .task-info-item:hover,
     .tip-item:hover {
         transform: none;
@@ -586,7 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const editorEl = document.getElementById('description_editor');
         if (editorEl) { editorEl.style.display = 'none'; }
     }
-    
+
     // Form submission enhancement
     form.addEventListener('submit', function(e) {
         const name = nameInput.value.trim();
@@ -600,20 +600,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (mdEditor && descriptionInput) {
             try { descriptionInput.value = mdEditor.getMarkdown(); } catch (err) {}
         }
-        
+
         // Show loading state
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>{{ _('Updating...') }}';
         submitBtn.disabled = true;
-        
+
         // Re-enable after a delay (in case of validation errors)
         setTimeout(() => {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }, 5000);
     });
-    
+
     // Real-time validation feedback
     nameInput.addEventListener('input', function() {
         if (this.value.trim()) {
@@ -623,11 +623,11 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.remove('is-valid');
         }
     });
-    
+
     // Highlight current values
     const currentStatus = '{{ task.status }}';
     const currentPriority = '{{ task.priority }}';
-    
+
     // Add visual indicators for current values
     if (statusSelect) {
         statusSelect.addEventListener('change', function() {
@@ -639,7 +639,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     if (prioritySelect) {
         prioritySelect.addEventListener('change', function() {
             this.classList.remove('border-green-500', 'border-yellow-500');

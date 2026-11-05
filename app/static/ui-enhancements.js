@@ -101,7 +101,7 @@
 
                     menuItem.appendChild(iconEl);
                     menuItem.appendChild(labelEl);
-                    
+
                     if (item.action) {
                         menuItem.addEventListener('click', function() {
                             executeContextAction(item.action, element);
@@ -205,7 +205,7 @@
         const form = document.createElement('form');
         form.method = method;
         form.action = url;
-        
+
         // Add CSRF token
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
         if (csrfToken) {
@@ -308,7 +308,7 @@
      */
     function updateBulkSelection(checkbox) {
         const itemId = checkbox.value;
-        
+
         if (checkbox.checked) {
             selectedItems.add(itemId);
             checkbox.closest('tr')?.classList.add('table-row-selected');
@@ -330,7 +330,7 @@
         }
 
         const countEl = document.getElementById('bulkActionsCount');
-        
+
         if (countEl) {
             countEl.textContent = count;
         }
@@ -350,7 +350,7 @@
         if (selectAll) {
             const allCheckboxes = document.querySelectorAll('.task-checkbox');
             const checkedCount = document.querySelectorAll('.task-checkbox:checked').length;
-            
+
             if (checkedCount === 0) {
                 selectAll.checked = false;
                 selectAll.indeterminate = false;
@@ -422,7 +422,7 @@
             const button = e.target.closest('button, .btn, a[class*="btn"]');
             if (button && !button.classList.contains('btn-press')) {
                 button.classList.add('btn-press');
-                
+
                 // Remove class after animation
                 setTimeout(() => {
                     button.classList.remove('btn-press');
@@ -455,10 +455,10 @@
     function showSuccessCheckmark(element) {
         const checkmark = document.createElement('span');
         checkmark.className = 'success-checkmark';
-        
+
         // Insert checkmark after element
         element.parentNode.insertBefore(checkmark, element.nextSibling);
-        
+
         // Remove after animation
         setTimeout(() => {
             checkmark.style.opacity = '0';
@@ -502,7 +502,7 @@
     function addButtonLoading(button) {
         button.classList.add('btn-loading');
         button.disabled = true;
-        
+
         // Store original content
         if (!button.dataset.originalContent) {
             button.dataset.originalContent = button.innerHTML;
@@ -515,7 +515,7 @@
     function removeButtonLoading(button) {
         button.classList.remove('btn-loading');
         button.disabled = false;
-        
+
         // Restore original content
         if (button.dataset.originalContent) {
             button.innerHTML = button.dataset.originalContent;
@@ -580,4 +580,3 @@
     };
 
 })();
-

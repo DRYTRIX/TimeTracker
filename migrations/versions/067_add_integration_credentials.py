@@ -32,7 +32,7 @@ def upgrade():
 
     # Set default empty values for existing rows
     op.execute("""
-        UPDATE settings 
+        UPDATE settings
         SET jira_client_id = '',
             jira_client_secret = '',
             slack_client_id = '',

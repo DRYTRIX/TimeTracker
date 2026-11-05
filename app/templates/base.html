@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Professional time tracking and project management">
     <meta name="theme-color" content="#4F46E5">
-    
+
     <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="{% block og_title %}{{ app_name }} - Professional Time Tracking{% endblock %}">
@@ -15,7 +15,7 @@
     <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='images/og-image.png', _external=True) }}{% endblock %}">
     <meta property="og:url" content="{{ request.url }}">
     <meta property="og:site_name" content="{{ app_name }}">
-    
+
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{% block twitter_title %}{{ app_name }} - Professional Time Tracking{% endblock %}">
@@ -351,7 +351,7 @@
 
             // Mobile toggle with backdrop and proper close handlers
             let backdrop = null;
-            
+
             function createBackdrop() {
                 if (!backdrop) {
                     backdrop = document.createElement('div');
@@ -359,37 +359,37 @@
                     backdrop.className = 'fixed inset-0 bg-black/50 z-40 md:hidden';
                     backdrop.style.display = 'none';
                     document.body.appendChild(backdrop);
-                    
+
                     // Close sidebar when clicking backdrop
                     backdrop.addEventListener('click', closeMobileSidebar);
                 }
                 return backdrop;
             }
-            
+
             function openMobileSidebar() {
                 const isSmallScreen = window.innerWidth < 768; // md breakpoint
                 if (!isSmallScreen) return;
-                
+
                 sidebar.classList.remove('hidden');
                 sidebar.style.zIndex = '50';
-                
+
                 const bd = createBackdrop();
                 bd.style.display = 'block';
             }
-            
+
             function closeMobileSidebar() {
                 sidebar.classList.add('hidden');
                 sidebar.style.zIndex = '10';
-                
+
                 if (backdrop) {
                     backdrop.style.display = 'none';
                 }
             }
-            
+
             function isSmallScreen() {
                 return window.innerWidth < 768; // md breakpoint
             }
-            
+
             // Mobile toggle button
             mobileBtn && mobileBtn.addEventListener('click', function(e){
                 e.stopPropagation();
@@ -399,21 +399,21 @@
                     closeMobileSidebar();
                 }
             });
-            
+
             // Close sidebar when clicking outside (on small screens)
             document.addEventListener('click', function(e) {
                 if (!isSmallScreen()) return;
                 if (sidebar.classList.contains('hidden')) return;
-                
+
                 // Don't close if clicking inside sidebar or on mobile button
                 const clickedInside = sidebar.contains(e.target);
                 const clickedMobileBtn = mobileBtn && mobileBtn.contains(e.target);
-                
+
                 if (!clickedInside && !clickedMobileBtn) {
                     closeMobileSidebar();
                 }
             });
-            
+
             // Close sidebar when clicking on navigation links only (on small screens).
             // Do not close when clicking dropdown toggles (section headings) so the user can expand and then select a sub-item.
             if (sidebar) {
@@ -430,7 +430,7 @@
                     });
                 });
             }
-            
+
             // Handle window resize - close sidebar if window becomes large
             let resizeTimeout;
             window.addEventListener('resize', function() {
@@ -456,7 +456,7 @@
             (function() {
                 const SIDEBAR_SCROLL_KEY = 'sidebar-scroll-position';
                 const LAST_URL_KEY = 'last-navigation-url';
-                
+
                 // Save sidebar scroll position before navigation
                 function saveSidebarScroll() {
                     if (sidebar && !isSmallScreen()) {
@@ -469,7 +469,7 @@
                         }
                     }
                 }
-                
+
                 // Restore sidebar scroll position after page load
                 function restoreSidebarScroll() {
                     if (sidebar && !isSmallScreen()) {
@@ -477,7 +477,7 @@
                             const savedScroll = localStorage.getItem(SIDEBAR_SCROLL_KEY);
                             const lastUrl = localStorage.getItem(LAST_URL_KEY);
                             const currentUrl = window.location.pathname;
-                            
+
                             // Only restore if we're on the same section (admin pages, etc.)
                             // This prevents restoring scroll when navigating to completely different sections
                             if (savedScroll && lastUrl && currentUrl) {
@@ -488,7 +488,7 @@
                                     (lastUrl.startsWith('/timer') && currentUrl.startsWith('/timer')) ||
                                     (lastUrl.startsWith('/reports') && currentUrl.startsWith('/reports'))
                                 );
-                                
+
                                 if (sameSection) {
                                     // Small delay to ensure DOM is ready
                                     setTimeout(() => {
@@ -501,7 +501,7 @@
                         }
                     }
                 }
-                
+
                 // Save scroll position when clicking navigation links
                 if (sidebar) {
                     const navLinks = sidebar.querySelectorAll('a[href]');
@@ -511,7 +511,7 @@
                         });
                     });
                 }
-                
+
                 // Restore scroll position on page load
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', restoreSidebarScroll);
@@ -524,12 +524,12 @@
             (function() {
                 const MAIN_SCROLL_KEY = 'main-content-scroll-position';
                 const NAVIGATION_TYPE_KEY = 'navigation-type';
-                
+
                 // Use browser's scroll restoration if available
                 if ('scrollRestoration' in history) {
                     history.scrollRestoration = 'manual';
                 }
-                
+
                 // Save main content scroll position before navigation
                 function saveMainScroll() {
                     try {
@@ -541,13 +541,13 @@
                         // Ignore storage errors
                     }
                 }
-                
+
                 // Restore main content scroll position after page load
                 function restoreMainScroll() {
                     try {
                         const navType = sessionStorage.getItem(NAVIGATION_TYPE_KEY);
                         const savedScroll = localStorage.getItem(MAIN_SCROLL_KEY);
-                        
+
                         // Only restore scroll for back/forward navigation or same-section navigation
                         // For fresh navigations, let browser handle it naturally
                         if (navType === 'back-forward' && savedScroll) {
@@ -559,7 +559,7 @@
                             // For same-section navigation, restore scroll
                             const lastUrl = localStorage.getItem('last-navigation-url');
                             const currentUrl = window.location.pathname;
-                            
+
                             if (lastUrl && currentUrl) {
                                 const sameSection = (
                                     (lastUrl.startsWith('/admin') && currentUrl.startsWith('/admin')) ||
@@ -567,7 +567,7 @@
                                     (lastUrl.startsWith('/timer') && currentUrl.startsWith('/timer')) ||
                                     (lastUrl.startsWith('/reports') && currentUrl.startsWith('/reports'))
                                 );
-                                
+
                                 if (sameSection) {
                                     setTimeout(() => {
                                         window.scrollTo(0, parseInt(savedScroll, 10) || 0);
@@ -575,14 +575,14 @@
                                 }
                             }
                         }
-                        
+
                         // Clear navigation type after processing
                         sessionStorage.removeItem(NAVIGATION_TYPE_KEY);
                     } catch(e) {
                         // Ignore storage errors
                     }
                 }
-                
+
                 // Detect back/forward navigation
                 window.addEventListener('popstate', function() {
                     try {
@@ -591,7 +591,7 @@
                         // Ignore storage errors
                     }
                 });
-                
+
                 // Save scroll position when clicking navigation links
                 document.addEventListener('click', function(e) {
                     const link = e.target.closest('a[href]');
@@ -614,7 +614,7 @@
                         }
                     }
                 });
-                
+
                 // Restore scroll position on page load
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', restoreMainScroll);
@@ -781,7 +781,7 @@
             }
             const dropdown = document.getElementById(id);
             const isCurrentlyHidden = dropdown.classList.contains('hidden');
-            
+
             // Define nested dropdowns and their parent dropdowns
             // All admin submenus should keep the parent adminDropdown open
             // pdfDropdown is directly under adminDropdown so it opens without needing System Settings open
@@ -795,7 +795,7 @@
                 'adminMaintenanceDropdown': 'adminDropdown',
                 'reportsDropdown': 'financeDropdown'  // Reports is nested under Finance
             };
-            
+
             // Prevent parent dropdowns from closing when clicking inside nested dropdowns
             // Add click handlers to nested dropdowns to stop propagation
             if (id in nestedDropdowns) {
@@ -810,10 +810,10 @@
                     nestedDropdown.addEventListener('click', nestedDropdown._stopPropagationHandler);
                 }
             }
-            
+
             // If this is a nested dropdown, don't close its parent
             const parentDropdown = nestedDropdowns[id];
-            
+
             // Special handling for reportsDropdown: keep it open if already open and on a reports page
             if (id === 'reportsDropdown' && !isCurrentlyHidden) {
                 // Check if we're on a reports page by checking the current URL
@@ -824,11 +824,11 @@
                     return;
                 }
             }
-            
+
             // Close all other top-level dropdowns in the sidebar (accordion behavior)
             // Note: Nested dropdowns (like pdfDropdown) are not in this list, so they work independently
             const allSidebarDropdowns = ['workDropdown', 'financeDropdown', 'adminDropdown', 'crmDropdown', 'toolsDropdown'];
-            
+
             // Build a list of all ancestor dropdowns that should stay open
             const ancestorsToKeepOpen = [];
             if (parentDropdown) {
@@ -839,7 +839,7 @@
                     ancestorsToKeepOpen.push(grandparent);
                 }
             }
-            
+
             allSidebarDropdowns.forEach(dropdownId => {
                 // Don't close if this dropdown is an ancestor of the nested dropdown being opened
                 if (ancestorsToKeepOpen.includes(dropdownId)) {
@@ -868,7 +868,7 @@
                     }
                 }
             });
-            
+
             // Toggle the clicked dropdown
             if (isCurrentlyHidden) {
                 dropdown.classList.remove('hidden');
@@ -891,7 +891,7 @@
             } else {
                 dropdown.classList.add('hidden');
             }
-            
+
             // Rotate chevron icon for visual feedback
             const btn = document.querySelector(`[data-dropdown="${id}"]`);
             if (btn) {
@@ -917,19 +917,19 @@
                 e.stopPropagation();
             }
         });
-        
+
         // Prevent parent dropdowns from closing when clicking inside nested dropdowns
         // This handles clicks on links and other elements inside nested dropdowns
         document.addEventListener('click', function(e) {
             // Check if the click is inside a nested dropdown
-            const clickedInsideNested = e.target.closest('#pdfDropdown') || 
+            const clickedInsideNested = e.target.closest('#pdfDropdown') ||
                                        e.target.closest('#reportsDropdown') ||
                                        e.target.closest('#adminUserMgmtDropdown') ||
                                        e.target.closest('#adminSecurityDropdown') ||
                                        e.target.closest('#adminIntegrationsDropdown') ||
                                        e.target.closest('#adminDataDropdown') ||
                                        e.target.closest('#adminMaintenanceDropdown');
-            
+
             if (clickedInsideNested) {
                 // Find the parent dropdown and keep it open
                 const nestedDropdowns = {
@@ -942,7 +942,7 @@
                     'adminMaintenanceDropdown': 'adminDropdown',
                     'reportsDropdown': 'financeDropdown'
                 };
-                
+
                 // Find which nested dropdown was clicked
                 let clickedDropdownId = null;
                 for (const [nestedId, parentId] of Object.entries(nestedDropdowns)) {
@@ -951,7 +951,7 @@
                         break;
                     }
                 }
-                
+
                 if (clickedDropdownId && nestedDropdowns[clickedDropdownId]) {
                     const parentId = nestedDropdowns[clickedDropdownId];
                     const parentDropdown = document.getElementById(parentId);
@@ -969,19 +969,19 @@
             }
         }, true); // Use capture phase to catch events early
     </script>
-    
+
     <!-- Enhanced UI Scripts -->
     <script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.js') }}"></script>
     <script src="{{ asset_url('core-d') }}"></script>
     <!-- Onboarding: onboarding.js = core tour runner + restartTour(); onboarding-enhanced.js = enhanced steps/tooltips. Use restartTour() or window.onboardingManager to restart tour. -->
-    
+
     <!-- Shared utilities (must load before keyboard shortcuts) -->
     {% if keyboard_shortcuts_config %}
     <script nonce="{{ csp_nonce() }}">window.__KEYBOARD_SHORTCUTS_CONFIG__ = {{ keyboard_shortcuts_config | tojson }};</script>
     {% endif %}
     <!-- Advanced Features -->
     <script src="{{ asset_url('core-e') }}"></script>
-    
+
     <script nonce="{{ csp_nonce() }}">
         // ttConfirm / ttAlert loaded from confirm-dialog.js (core-a1 bundle).
         function closeAllMenus(){
@@ -1023,7 +1023,7 @@
         });
         // Close on Escape
         document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeAllMenus(); });
-        
+
         // Support Banner Logic with Smart Prompts
         function dismissSupportBanner() {
             const banner = document.getElementById('supportBanner');
@@ -1038,7 +1038,7 @@
                 } catch(e) {}
             }
         }
-        
+
 function trackBannerImpression(source) {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
             fetch('{{ url_for("main.track_support_impression") }}', {
@@ -1065,11 +1065,11 @@ function trackBannerImpression(source) {
                 // Silently fail if tracking doesn't work
             });
         }
-        
+
         function trackDonationClick(source) {
             // Get CSRF token from meta tag
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-            
+
             fetch('{{ url_for("main.track_donation_click") }}', {
                 method: 'POST',
                 headers: {
@@ -1084,7 +1084,7 @@ function trackBannerImpression(source) {
                 // Silently fail if tracking doesn't work
             });
         }
-        
+
         function shouldShowSupportBanner() {
             try {
                 // Check if dismissed recently (14 days)
@@ -1096,7 +1096,7 @@ function trackBannerImpression(source) {
                         return false;
                     }
                 }
-                
+
                 // Check if user clicked donation link recently (14 days)
                 const lastClick = localStorage.getItem('donationLinkClicked');
                 if (lastClick) {
@@ -1106,7 +1106,7 @@ function trackBannerImpression(source) {
                         return false;
                     }
                 }
-                
+
                 return true;
             } catch(e) {
                 return true; // Show by default if localStorage fails
@@ -1130,11 +1130,11 @@ function trackBannerImpression(source) {
                 return 1;
             }
         }
-        
+
         function updateBannerMessage(seenCount) {
             const bannerTitle = document.getElementById('bannerTitle');
             const bannerMessage = document.getElementById('bannerMessage');
-            
+
             if (!bannerTitle || !bannerMessage) return;
 
             const count = typeof seenCount === 'number' ? seenCount : getSupportBannerSeenCount();
@@ -1167,7 +1167,7 @@ function trackBannerImpression(source) {
             }
             bannerMessage.textContent = '{{ _("Support its development — or remove prompts forever with a key.") }}';
         }
-        
+
 // Show support banner if conditions are met
         // Check immediately to reserve space and prevent layout shift
         (function() {
@@ -1179,12 +1179,12 @@ function trackBannerImpression(source) {
             if (shouldShowSupportBanner()) {
                 const seenCount = incrementSupportBannerSeenCount();
                 updateBannerMessage(seenCount);
-                
+
                 // Reserve space immediately by removing height constraints
                 // This prevents layout shift when banner becomes visible
                 banner.classList.remove('max-h-0', 'overflow-hidden');
                 // Space is now reserved, content just invisible
-                
+
                 // Show banner with a slight delay for better UX, but space is already reserved
                 setTimeout(() => {
                     banner.classList.remove('opacity-0', 'invisible');
@@ -1200,7 +1200,7 @@ function trackBannerImpression(source) {
                 banner.classList.add('max-h-0', 'overflow-hidden');
             }
         })();
-        
+
         // Track donation link clicks
         document.addEventListener('click', function(e) {
             const link = e.target.closest('a[href*="buymeacoffee.com"], a[href*="paypal.com/donate"]');
@@ -1211,9 +1211,9 @@ function trackBannerImpression(source) {
             }
         });
     </script>
-    
+
     <script src="{{ asset_url('core-f') }}"></script>
-    
+
     <!-- User Stats for Smart Banner -->
     {% if current_user.is_authenticated %}
     <script nonce="{{ csp_nonce() }}">
@@ -1224,8 +1224,8 @@ function trackBannerImpression(source) {
         };
     </script>
     {% endif %}
-    
-    
+
+
 <!-- Global donation tracking and A/B variant -->
     <script nonce="{{ csp_nonce() }}">
         window.supportAbVariant = {{ (support_ab_variant or 'control')|tojson }};
@@ -1241,7 +1241,7 @@ function trackBannerImpression(source) {
             {% endif %}
         }
     </script>
-    
+
     {# Issue #728: searchable combobox + inline create (available on all authenticated pages) #}
     <script nonce="{{ csp_nonce() }}">
         window.ttCreateLabels = {
@@ -1265,4 +1265,3 @@ function trackBannerImpression(source) {
     {% endif %}
 </body>
 </html>
-

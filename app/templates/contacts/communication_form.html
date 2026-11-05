@@ -22,7 +22,7 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label for="type" class="block text-sm font-medium mb-2">{{ _('Type') }} *</label>
@@ -34,7 +34,7 @@
                     <option value="message">{{ _('Message') }}</option>
                 </select>
             </div>
-            
+
             <div>
                 <label for="direction" class="block text-sm font-medium mb-2">{{ _('Direction') }} *</label>
                 <select name="direction" id="direction" class="form-input" required>
@@ -42,17 +42,17 @@
                     <option value="inbound">{{ _('Inbound') }}</option>
                 </select>
             </div>
-            
+
             <div class="md:col-span-2">
                 <label for="subject" class="block text-sm font-medium mb-2">{{ _('Subject') }}</label>
                 <input type="text" name="subject" id="subject" class="form-input">
             </div>
-            
+
             <div>
                 <label for="communication_date" class="block text-sm font-medium mb-2">{{ _('Date') }} *</label>
                 <input type="datetime-local" name="communication_date" id="communication_date" class="form-input user-datetime-input" required>
             </div>
-            
+
             <div>
                 <label for="status" class="block text-sm font-medium mb-2">{{ _('Status') }}</label>
                 <select name="status" id="status" class="form-input">
@@ -62,18 +62,18 @@
                     <option value="cancelled">{{ _('Cancelled') }}</option>
                 </select>
             </div>
-            
+
             <div>
                 <label for="follow_up_date" class="block text-sm font-medium mb-2">{{ _('Follow-up Date') }}</label>
                 <input type="datetime-local" name="follow_up_date" id="follow_up_date" class="form-input user-datetime-input">
             </div>
-            
+
             <div class="md:col-span-2">
                 <label for="content" class="block text-sm font-medium mb-2">{{ _('Content/Notes') }}</label>
                 <textarea name="content" id="content" rows="6" class="form-input"></textarea>
             </div>
         </div>
-        
+
         <div class="mt-6 flex flex-wrap gap-2">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 {{ _('Save Communication') }}
@@ -91,4 +91,3 @@
 document.getElementById('communication_date').value = new Date().toISOString().slice(0, 16);
 </script>
 {% endblock %}
-

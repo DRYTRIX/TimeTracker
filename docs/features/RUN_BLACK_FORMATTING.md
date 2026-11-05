@@ -88,4 +88,3 @@ pip install black && black app/
 ```
 
 That's it! 🎉
-

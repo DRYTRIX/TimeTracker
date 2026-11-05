@@ -245,7 +245,7 @@
     </div>
     {% endif %}
     <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-        <div class="h-full bg-primary rounded-full transition-all duration-300 {% if percentage is none %}animate-pulse{% endif %}" 
+        <div class="h-full bg-primary rounded-full transition-all duration-300 {% if percentage is none %}animate-pulse{% endif %}"
              style="{% if percentage is not none %}width: {{ percentage }}%{% else %}width: 100%; animation: progress-indeterminate 2s ease-in-out infinite;{% endif %}">
         </div>
     </div>
@@ -561,7 +561,7 @@
 <div class="border-b border-border-light dark:border-border-dark mb-6">
     <nav class="flex space-x-8" aria-label="Tabs">
         {% for item in items %}
-        <a href="{{ item.url }}" 
+        <a href="{{ item.url }}"
            class="py-4 px-1 border-b-2 font-medium text-sm transition-colors {% if item.id == active_tab %}border-primary text-primary{% else %}border-transparent text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark hover:border-gray-300 dark:hover:border-gray-600{% endif %}">
             {% if item.icon %}<i class="{{ item.icon }} mr-2"></i>{% endif %}
             {{ _(item.label) }}
@@ -883,4 +883,3 @@
 </tr>
 {% endfor %}
 {% endmacro %}
-

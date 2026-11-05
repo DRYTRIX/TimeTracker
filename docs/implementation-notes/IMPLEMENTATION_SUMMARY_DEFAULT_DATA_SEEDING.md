@@ -146,7 +146,7 @@ installation_config = get_installation_config()
 
 if not installation_config.is_initial_data_seeded():
     # First time initialization
-    
+
     if project_count == 0:
         # Truly fresh database
         create_default_client()
@@ -295,4 +295,3 @@ The default data seeding behavior has been successfully fixed. Users who delete 
 **Tests**: 10/10 passing  
 **Linter**: No errors  
 **Backward Compatible**: Yes ✅
-

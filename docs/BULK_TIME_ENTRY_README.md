@@ -42,7 +42,7 @@ Users can access the bulk time entry feature through:
 
 1. **Select Project**: Choose the project to log time for
 2. **Select Task** (Optional): Choose a specific task within the project
-3. **Set Date Range**: 
+3. **Set Date Range**:
    - Choose start and end dates
    - Optionally enable "Skip weekends" to exclude Saturdays and Sundays
 4. **Set Time Pattern**:

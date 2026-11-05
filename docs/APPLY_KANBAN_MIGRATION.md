@@ -78,7 +78,7 @@ docker exec -it timetracker_db_1 psql -U timetracker -d timetracker -c "SELECT k
 
 You should see:
 ```
-   key      |    label     
+   key      |    label
 ------------+--------------
  todo       | To Do
  in_progress| In Progress
@@ -119,4 +119,3 @@ The migration was added as:
 - `migrations/versions/019_add_kanban_columns_table.py`
 
 The code is also now resilient to handle missing tables during startup.
-

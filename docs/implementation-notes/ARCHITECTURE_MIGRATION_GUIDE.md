@@ -110,20 +110,20 @@ def create_project():
 def create_project():
     from app.schemas import ProjectCreateSchema
     from app.utils.api_responses import created_response, validation_error_response
-    
+
     schema = ProjectCreateSchema()
     try:
         data = schema.load(request.get_json())
     except ValidationError as err:
         return validation_error_response(err.messages)
-    
+
     service = ProjectService()
     result = service.create_project(
         name=data['name'],
         client_id=data['client_id'],
         created_by=current_user.id
     )
-    
+
     if result['success']:
         return created_response(result['project'].to_dict())
     return error_response(result['message'])
@@ -245,7 +245,7 @@ def create_project():
         data = schema.load(request.get_json())
     except ValidationError as err:
         return validation_error_response(err.messages)
-    
+
     # Use validated data...
 ```
 
@@ -360,7 +360,7 @@ def test_service():
     service = TimeTrackingService()
     service.time_entry_repo = Mock()
     service.project_repo = Mock()
-    
+
     result = service.start_timer(user_id=1, project_id=1)
     assert result['success'] == True
 ```
@@ -372,7 +372,7 @@ def test_repository(db_session):
     repo = TimeEntryRepository()
     timer = repo.create_timer(user_id=1, project_id=1)
     db_session.commit()
-    
+
     active = repo.get_active_timer(1)
     assert active.id == timer.id
 ```
@@ -455,4 +455,3 @@ return error_response(result['message'])
 ---
 
 **Happy migrating!** 🚀
-

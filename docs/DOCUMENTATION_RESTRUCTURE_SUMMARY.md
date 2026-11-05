@@ -67,7 +67,7 @@ TimeTracker/
 - 🛣️ Roadmap and recent features
 - 📚 Links to detailed documentation
 
-**Style**: 
+**Style**:
 - Marketing-focused, not technical
 - Visual and engaging
 - Easy to scan with emojis and formatting
@@ -329,4 +329,3 @@ The project now has **documentation that matches the quality of the product**!
 ---
 
 **Ready to commit these changes!** 🚀
-

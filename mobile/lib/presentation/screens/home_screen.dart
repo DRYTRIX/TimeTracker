@@ -184,7 +184,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
         setState(() {});
       }
     });
-    
+
     // Load data on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(timerProvider.notifier).checkTimerStatus();

@@ -38,7 +38,7 @@
                             {% if task.description %}
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ task.description | truncate(80) }}</p>
                             {% endif %}
-                            
+
                             <div class="flex items-center justify-between text-sm text-text-muted-light dark:text-text-muted-dark">
                                 <span class="text-sm font-semibold px-2 py-1 rounded-full
                                     {% if task.priority == 'urgent' %} bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
@@ -55,7 +55,7 @@
                                 {% endif %}
                             </div>
                         </a>
-                        
+
                         <div class="mt-4 flex justify-between items-center">
                             {% if task.assigned_user %}
                                 {% if task.assigned_user.get_avatar_url() %}
@@ -101,5 +101,3 @@
         {% endfor %}
     </div>
 </div>
-
-

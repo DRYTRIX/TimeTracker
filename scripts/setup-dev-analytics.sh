@@ -58,42 +58,42 @@ SENTRY_TRACES_RATE_DEFAULT = "${SENTRY_RATE}"
 def _get_version_from_setup():
     """
     Get the application version from setup.py.
-    
+
     This is the authoritative source for version information.
     Reads setup.py at runtime to get the current version.
-    
+
     Returns:
         str: Application version (e.g., "3.0.0")
     """
     import os
     import re
-    
+
     try:
         # Get path to setup.py (root of project)
         setup_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'setup.py')
-        
+
         # Read setup.py
         with open(setup_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        
+
         # Extract version using regex
         version_match = re.search(r'version\s*=\s*[\'"]([^\'"]+)[\'"]', content)
-        
+
         if version_match:
             return version_match.group(1)
     except Exception:
         pass
-    
+
     # Fallback version if setup.py can't be read
     return "3.0.0-dev"
 
 
 def get_analytics_config():
     """Get analytics configuration for local development."""
-    
+
     # App version - read from setup.py at runtime
     app_version = _get_version_from_setup()
-    
+
     return {
         "grafana_otlp_endpoint": GRAFANA_OTLP_ENDPOINT_DEFAULT,
         "grafana_otlp_token": GRAFANA_OTLP_TOKEN_DEFAULT,
@@ -116,10 +116,10 @@ echo "✅ Created app/config/analytics_defaults_local.py"
 if ! grep -q "analytics_defaults_local" app/config/__init__.py 2>/dev/null; then
     echo ""
     echo "📝 Updating app/config/__init__.py..."
-    
+
     # Backup original
     cp app/config/__init__.py app/config/__init__.py.backup
-    
+
     # Create new version with local import
     cat > app/config/__init__.py <<'EOF'
 """
@@ -140,7 +140,7 @@ except ImportError:
 
 __all__ = ['get_analytics_config', 'has_analytics_configured']
 EOF
-    
+
     echo "✅ Updated app/config/__init__.py to use local config"
     echo "   (Backup saved as __init__.py.backup)"
 fi
@@ -163,4 +163,3 @@ echo "To revert changes:"
 echo "  rm app/config/analytics_defaults_local.py"
 echo "  mv app/config/__init__.py.backup app/config/__init__.py"
 echo ""
-

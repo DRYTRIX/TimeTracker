@@ -47,11 +47,11 @@
             </button>
         </div>
     </form>
-    
+
     <!-- Export Buttons -->
     <div class="mt-4 flex flex-col gap-3">
         <div class="flex gap-2">
-        <a href="{{ url_for('reports.export_user_excel', user_id=selected_user or '', project_id=selected_project or '', start_date=start_date, end_date=end_date) }}" 
+        <a href="{{ url_for('reports.export_user_excel', user_id=selected_user or '', project_id=selected_project or '', start_date=start_date, end_date=end_date) }}"
            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 inline-flex items-center">
             <i class="fas fa-file-excel mr-2"></i>{{ _('Export to Excel') }}
         </a>
@@ -162,7 +162,7 @@
             {% endfor %}
         </tbody>
     </table>
-    
+
     <!-- Overtime Summary -->
     {% if user_totals %}
     <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md">
@@ -173,8 +173,8 @@
             <div class="ml-3">
                 <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">{{ _('About Overtime Tracking') }}</h3>
                 <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                    Overtime is calculated based on each user's standard working hours per day setting. 
-                    Hours worked beyond the standard are counted as overtime. Users can configure their 
+                    Overtime is calculated based on each user's standard working hours per day setting.
+                    Hours worked beyond the standard are counted as overtime. Users can configure their
                     standard hours in <a href="{{ url_for('user.settings') }}" class="underline hover:text-blue-900 dark:hover:text-blue-100">Settings</a>.
                 </p>
             </div>

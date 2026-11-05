@@ -12,7 +12,7 @@
             <i class="fas fa-edit mr-2"></i>{{ _('Edit Issue') }}
         </a>
         {% if current_user.is_admin %}
-        <form method="POST" action="{{ url_for('issues.delete_issue', issue_id=issue.id) }}" 
+        <form method="POST" action="{{ url_for('issues.delete_issue', issue_id=issue.id) }}"
               onsubmit="event.preventDefault(); window.showConfirm('{{ _('Are you sure you want to delete this issue?') }}', { title: '{{ _('Delete Issue') }}', confirmText: '{{ _('Delete') }}' }).then(ok=>{ if(ok){ this.submit(); } });" class="inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="bg-red-600 text-white px-4 py-2 min-h-[44px] rounded-lg inline-flex items-center">
@@ -106,7 +106,7 @@
                         </form>
                     </div>
                 </div>
-                
+
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Priority') }}:</span>
                     <div class="mt-1">
@@ -121,19 +121,19 @@
                         </form>
                     </div>
                 </div>
-                
+
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Client') }}:</span>
                     <p class="font-medium">{{ issue.client.name }}</p>
                 </div>
-                
+
                 {% if issue.project %}
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Project') }}:</span>
                     <p class="font-medium">{{ issue.project.name }}</p>
                 </div>
                 {% endif %}
-                
+
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Assigned To') }}:</span>
                     <div class="mt-1">
@@ -148,7 +148,7 @@
                         </form>
                     </div>
                 </div>
-                
+
                 {% if issue.submitted_by_client %}
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Submitted By') }}:</span>
@@ -160,19 +160,19 @@
                     </p>
                 </div>
                 {% endif %}
-                
+
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Created') }}:</span>
                     <p class="font-medium">{{ issue.created_at|user_datetime }}</p>
                 </div>
-                
+
                 {% if issue.updated_at != issue.created_at %}
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Last Updated') }}:</span>
                     <p class="font-medium">{{ issue.updated_at|user_datetime }}</p>
                 </div>
                 {% endif %}
-                
+
                 {% if issue.resolved_at %}
                 <div>
                     <span class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Resolved') }}:</span>

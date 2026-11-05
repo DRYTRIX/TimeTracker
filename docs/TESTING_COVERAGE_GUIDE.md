@@ -318,4 +318,3 @@ make test-coverage       # Full coverage with 50% threshold
 make test-coverage-report  # Generate report without failing
 open htmlcov/index.html    # Review coverage
 ```
-

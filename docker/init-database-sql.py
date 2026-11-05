@@ -147,7 +147,7 @@ def create_tables_sql(engine):
         backup_retention_days INTEGER DEFAULT 30 NOT NULL,
         backup_time VARCHAR(5) DEFAULT '02:00' NOT NULL,
         export_delimiter VARCHAR(1) DEFAULT ',' NOT NULL,
-        
+
         -- Company branding for invoices
         company_name VARCHAR(200) DEFAULT 'Your Company Name' NOT NULL,
         company_address TEXT DEFAULT 'Your Company Address' NOT NULL,
@@ -157,7 +157,7 @@ def create_tables_sql(engine):
         company_logo_filename VARCHAR(255) DEFAULT '' NOT NULL,
         company_tax_id VARCHAR(100) DEFAULT '' NOT NULL,
         company_bank_info TEXT DEFAULT '' NOT NULL,
-        
+
         -- Invoice defaults
         invoice_prefix VARCHAR(50) DEFAULT 'INV' NOT NULL,
         invoice_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL,
@@ -169,7 +169,7 @@ def create_tables_sql(engine):
         quote_prefix VARCHAR(50) DEFAULT 'QUO' NOT NULL,
         quote_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL,
         quote_start_number INTEGER DEFAULT 1 NOT NULL,
-        
+
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
     );
@@ -288,7 +288,7 @@ def insert_initial_data(engine):
         # Base SQL for admin user and settings (always run)
         base_sql = f"""
         -- Insert default admin user idempotently
-        INSERT INTO users (username, role, is_active) 
+        INSERT INTO users (username, role, is_active)
         SELECT '{admin_username}', 'admin', true
         WHERE NOT EXISTS (
             SELECT 1 FROM users WHERE username = '{admin_username}'
@@ -296,15 +296,15 @@ def insert_initial_data(engine):
 
         -- Insert default settings only if none exist
         INSERT INTO settings (
-            timezone, currency, rounding_minutes, single_active_timer, allow_self_register, 
-            idle_timeout_minutes, backup_retention_days, backup_time, export_delimiter, 
-            company_name, company_address, company_email, company_phone, company_website, 
-            company_logo_filename, company_tax_id, company_bank_info, invoice_prefix, 
+            timezone, currency, rounding_minutes, single_active_timer, allow_self_register,
+            idle_timeout_minutes, backup_retention_days, backup_time, export_delimiter,
+            company_name, company_address, company_email, company_phone, company_website,
+            company_logo_filename, company_tax_id, company_bank_info, invoice_prefix,
             invoice_start_number, invoice_terms, invoice_notes
-        ) 
-        SELECT 'Europe/Rome', 'EUR', 1, true, true, 30, 30, '02:00', ',', 
-               'Your Company Name', 'Your Company Address', 'info@yourcompany.com', 
-               '+1 (555) 123-4567', 'www.yourcompany.com', '', '', '', 'INV', 1000, 
+        )
+        SELECT 'Europe/Rome', 'EUR', 1, true, true, 30, 30, '02:00', ',',
+               'Your Company Name', 'Your Company Address', 'info@yourcompany.com',
+               '+1 (555) 123-4567', 'www.yourcompany.com', '', '', '', 'INV', 1000,
                'Payment is due within 30 days of invoice date.', 'Thank you for your business!'
         WHERE NOT EXISTS (
             SELECT 1 FROM settings
@@ -336,7 +336,7 @@ def insert_initial_data(engine):
                     );
 
                     -- Insert default project idempotently and link to default client
-                    INSERT INTO projects (name, client, description, billable, status) 
+                    INSERT INTO projects (name, client, description, billable, status)
                     SELECT 'General', 'Default Client', 'Default project for general tasks', true, 'active'
                     WHERE NOT EXISTS (
                         SELECT 1 FROM projects WHERE name = 'General'

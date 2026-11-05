@@ -52,7 +52,7 @@ if docker ps | grep -q timetracker-app; then
     else
         echo "    ✗ Container cannot reach host.docker.internal"
     fi
-    
+
     # Get container IP
     CONTAINER_IP=$(docker exec timetracker-app hostname -I | awk '{print $1}')
     echo "    - Container IP: $CONTAINER_IP"

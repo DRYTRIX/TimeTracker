@@ -63,11 +63,11 @@
                 </div>
                 {% endif %}
             </div>
-            
+
             {% if template.description %}
             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-3 line-clamp-2">{{ template.description }}</p>
             {% endif %}
-            
+
             <div class="flex items-center justify-between text-xs text-text-muted-light dark:text-text-muted-dark mb-3">
                 <span>
                     <i class="fas fa-chart-line mr-1"></i>
@@ -79,7 +79,7 @@
                 </span>
                 {% endif %}
             </div>
-            
+
             <div class="flex gap-2">
                 <a href="{{ url_for('project_templates.create_project_from_template', template_id=template.id) }}" class="flex-1 bg-primary text-white px-3 py-2 rounded-lg hover:bg-primary/90 transition-colors text-center text-sm">
                     <i class="fas fa-plus mr-1"></i>{{ _('Create Project') }}
@@ -91,7 +91,7 @@
         </div>
         {% endfor %}
     </div>
-    
+
     {% if pagination.pages > 1 %}
     <div class="mt-6 flex justify-center">
         <div class="flex gap-2">
@@ -129,4 +129,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

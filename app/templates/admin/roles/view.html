@@ -74,7 +74,7 @@
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-4">{{ _('Permissions') }}</h2>
-    
+
     {% set categories = {} %}
     {% for permission in role.permissions %}
         {% if permission.category not in categories %}
@@ -111,4 +111,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

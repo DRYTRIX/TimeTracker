@@ -135,7 +135,7 @@ def is_telemetry_enabled():
 def track_event(user_id, event_name, properties):
     if not is_telemetry_enabled():
         return  # Stop immediately - no data sent
-    
+
     # Only reached if user opted in
     posthog.capture(...)
 ```
@@ -233,4 +233,3 @@ We are committed to:
 
 **Last updated:** October 2025  
 **Version:** 3.0.0
-

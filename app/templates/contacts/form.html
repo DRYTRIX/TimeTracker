@@ -21,43 +21,43 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label for="first_name" class="block text-sm font-medium mb-2">{{ _('First Name') }} *</label>
                 <input type="text" name="first_name" id="first_name" value="{{ contact.first_name if contact else '' }}" class="form-input" required>
             </div>
-            
+
             <div>
                 <label for="last_name" class="block text-sm font-medium mb-2">{{ _('Last Name') }} *</label>
                 <input type="text" name="last_name" id="last_name" value="{{ contact.last_name if contact else '' }}" class="form-input" required>
             </div>
-            
+
             <div>
                 <label for="email" class="block text-sm font-medium mb-2">{{ _('Email') }}</label>
                 <input type="email" name="email" id="email" value="{{ contact.email if contact else '' }}" class="form-input">
             </div>
-            
+
             <div>
                 <label for="phone" class="block text-sm font-medium mb-2">{{ _('Phone') }}</label>
                 <input type="text" name="phone" id="phone" value="{{ contact.phone if contact else '' }}" class="form-input">
             </div>
-            
+
             <div>
                 <label for="mobile" class="block text-sm font-medium mb-2">{{ _('Mobile') }}</label>
                 <input type="text" name="mobile" id="mobile" value="{{ contact.mobile if contact else '' }}" class="form-input">
             </div>
-            
+
             <div>
                 <label for="title" class="block text-sm font-medium mb-2">{{ _('Title') }}</label>
                 <input type="text" name="title" id="title" value="{{ contact.title if contact else '' }}" class="form-input">
             </div>
-            
+
             <div>
                 <label for="department" class="block text-sm font-medium mb-2">{{ _('Department') }}</label>
                 <input type="text" name="department" id="department" value="{{ contact.department if contact else '' }}" class="form-input">
             </div>
-            
+
             <div>
                 <label for="role" class="block text-sm font-medium mb-2">{{ _('Role') }}</label>
                 <select name="role" id="role" class="form-input">
@@ -67,30 +67,30 @@
                     <option value="technical" {% if contact and contact.role == 'technical' %}selected{% endif %}>{{ _('Technical') }}</option>
                 </select>
             </div>
-            
+
             <div class="md:col-span-2">
                 <label class="flex items-center">
                     <input type="checkbox" name="is_primary" {% if contact and contact.is_primary %}checked{% endif %} class="mr-2">
                     <span class="text-sm">{{ _('Set as primary contact') }}</span>
                 </label>
             </div>
-            
+
             <div class="md:col-span-2">
                 <label for="address" class="block text-sm font-medium mb-2">{{ _('Address') }}</label>
                 <textarea name="address" id="address" rows="3" class="form-input">{{ contact.address if contact else '' }}</textarea>
             </div>
-            
+
             <div class="md:col-span-2">
                 <label for="notes" class="block text-sm font-medium mb-2">{{ _('Notes') }}</label>
                 <textarea name="notes" id="notes" rows="4" class="form-input">{{ contact.notes if contact else '' }}</textarea>
             </div>
-            
+
             <div class="md:col-span-2">
                 <label for="tags" class="block text-sm font-medium mb-2">{{ _('Tags') }} <span class="text-xs text-text-muted-light dark:text-text-muted-dark">(comma-separated)</span></label>
                 <input type="text" name="tags" id="tags" value="{{ contact.tags if contact else '' }}" class="form-input" placeholder="tag1, tag2, tag3">
             </div>
         </div>
-        
+
         <div class="mt-6 flex flex-wrap gap-2">
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 {{ _('Save Contact') }}
@@ -102,4 +102,3 @@
     </form>
 </div>
 {% endblock %}
-

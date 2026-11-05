@@ -327,4 +327,3 @@ rm app/config/analytics_defaults_local.py
 Need help? Check:
 - PostHog docs: https://posthog.com/docs
 - TimeTracker telemetry docs: `docs/all_tracked_events.md`
-

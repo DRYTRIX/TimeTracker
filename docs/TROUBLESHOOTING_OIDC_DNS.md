@@ -7,9 +7,9 @@ When configuring OIDC (OpenID Connect) authentication, you may encounter DNS res
 ### Common Error Messages
 
 ```
-Error loading metadata: HTTPSConnectionPool(host='auth.example.com', port=443): 
-Max retries exceeded with url: /.well-known/openid-configuration 
-(Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object>: 
+Error loading metadata: HTTPSConnectionPool(host='auth.example.com', port=443):
+Max retries exceeded with url: /.well-known/openid-configuration
+(Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object>:
 Failed to resolve 'auth.example.com' ([Errno -2] Name or service not known)"))
 ```
 
@@ -276,7 +276,7 @@ If none of the above solutions work:
 
 TimeTracker includes several enhancements to work around DNS resolution issues:
 
-1. **Multiple Resolution Strategies**: 
+1. **Multiple Resolution Strategies**:
    - Tries `socket.gethostbyname()` first (usually faster)
    - Falls back to `socket.getaddrinfo()` for more robust resolution
    - Can be configured via `OIDC_DNS_RESOLUTION_STRATEGY`

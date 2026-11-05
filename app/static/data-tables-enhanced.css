@@ -219,16 +219,16 @@ table th.sortable-column:hover .sort-indicator {
         gap: 1rem;
         align-items: stretch;
     }
-    
+
     .table-pagination-container > div:first-child {
         width: 100%;
     }
-    
+
     .table-pagination-container > div:last-child {
         width: 100%;
         justify-content: space-between;
     }
-    
+
     .pagination-btn {
         min-width: 2rem;
         height: 2rem;

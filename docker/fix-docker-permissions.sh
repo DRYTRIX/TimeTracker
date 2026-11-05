@@ -48,7 +48,7 @@ for dir in "${UPLOAD_DIRS[@]}"; do
     if [ -d "$dir" ]; then
         echo "Changing ownership of $dir to $CURRENT_USER:$CURRENT_USER"
         chown -R "$CURRENT_USER:$CURRENT_USER" "$dir" 2>/dev/null || echo "  - chown failed, trying with UID"
-        
+
         # If chown fails, try with UID
         chown -R "$CURRENT_UID:$CURRENT_GID" "$dir" 2>/dev/null || echo "  - chown with UID also failed"
     fi
@@ -104,7 +104,7 @@ if $TEST_SUCCESS; then
 else
     echo "=== Some permission tests failed ==="
     echo -e "\nTrying alternative approach..."
-    
+
     # Try to run as root if possible
     if [ "$(id -u)" -eq 0 ]; then
         echo "Running as root, setting permissions..."

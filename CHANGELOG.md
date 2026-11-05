@@ -1144,4 +1144,3 @@ This changelog follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - **Security** — Security-related changes
 
 For release artifacts and tags, see [GitHub Releases](https://github.com/drytrix/TimeTracker/releases).
-

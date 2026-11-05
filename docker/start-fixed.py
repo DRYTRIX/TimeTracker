@@ -554,9 +554,9 @@ def verify_core_tables(app):
                 # Use IN clause with proper parameter binding for PostgreSQL
                 placeholders = ",".join([f":table_{i}" for i in range(len(core_tables))])
                 query = text(f"""
-                    SELECT table_name 
-                    FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
+                    SELECT table_name
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public'
                     AND table_name IN ({placeholders})
                 """)
                 params = {f"table_{i}": table for i, table in enumerate(core_tables)}

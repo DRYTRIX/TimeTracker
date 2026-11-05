@@ -539,7 +539,7 @@ class EnhancedAnalyticsDashboard {
             }
             const data = await response.json();
             const ctx = document.getElementById('hourlyChart').getContext('2d');
-            this.charts.hourly = new Chart(ctx, { type: 'bar', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } }, x: { title: { display: true, text: i18n_analytics.hour_of_day_label || 'Hour of Day' } } } } }); 
+            this.charts.hourly = new Chart(ctx, { type: 'bar', data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: i18n_analytics.hours_label || 'Hours' } }, x: { title: { display: true, text: i18n_analytics.hour_of_day_label || 'Hour of Day' } } } } });
         } catch (error) {
             console.error('Error loading hourly chart:', error);
         }
@@ -710,11 +710,11 @@ class EnhancedAnalyticsDashboard {
                 return;
             }
             const data = await response.json();
-        
+
         // Update summary stats
         document.getElementById('potentialRevenue').textContent = `${this.currency} ${this.formatNumber(data.potential_revenue)}`;
         document.getElementById('collectionRate').textContent = `${data.collection_rate}%`;
-        
+
         const ctx = document.getElementById('revenueVsPaymentsChart').getContext('2d');
         this.charts.revenueVsPayments = new Chart(ctx, {
             type: 'doughnut',
@@ -803,4 +803,3 @@ class EnhancedAnalyticsDashboard {
 document.addEventListener('DOMContentLoaded', () => { new EnhancedAnalyticsDashboard(); });
 </script>
 {% endblock %}
-

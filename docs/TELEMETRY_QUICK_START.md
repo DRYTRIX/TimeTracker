@@ -206,4 +206,3 @@ A: Nothing is sent to external services. Events are still logged locally in `log
 
 **Q: Can I re-run the setup?**
 A: Yes, delete `data/installation.json` and restart the application.
-

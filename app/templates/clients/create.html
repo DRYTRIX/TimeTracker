@@ -108,12 +108,12 @@
                                 {{ definition.label }}
                                 {% if definition.is_mandatory %}<span class="text-red-600 dark:text-red-400">*</span>{% endif %}
                             </label>
-                            <input 
-                                type="text" 
-                                id="custom_field_{{ definition.field_key }}" 
-                                name="custom_field_{{ definition.field_key }}" 
-                                value="{{ request.form.get('custom_field_' + definition.field_key, '') }}" 
-                                placeholder="{{ definition.description or _('Enter value') }}" 
+                            <input
+                                type="text"
+                                id="custom_field_{{ definition.field_key }}"
+                                name="custom_field_{{ definition.field_key }}"
+                                value="{{ request.form.get('custom_field_' + definition.field_key, '') }}"
+                                placeholder="{{ definition.description or _('Enter value') }}"
                                 class="form-input w-full"
                                 {% if definition.is_mandatory %}required{% endif %}
                             >

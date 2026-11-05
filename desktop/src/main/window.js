@@ -78,7 +78,7 @@ function createWindow(options = {}) {
   // Create splash screen first (only if splash.html exists)
   const splashPath = path.join(__dirname, 'splash/splash.html');
   const showSplash = options.showSplash !== false;
-  
+
   if (showSplash && fs.existsSync(splashPath)) {
     splashWindow = new BrowserWindow({
       width: 500,

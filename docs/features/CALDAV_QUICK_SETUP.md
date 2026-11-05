@@ -53,7 +53,7 @@
    - For Zimbra: Your email password or app-specific password
    - For Nextcloud: Your Nextcloud password or app password
 
-3. **Verify SSL**: 
+3. **Verify SSL**:
    - ✅ Checked (recommended): For servers with valid SSL certificates
    - ❌ Unchecked: Only if using self-signed certificates
 
@@ -92,7 +92,7 @@
 
 **Problem**: You need at least one active project before setting up CalDAV.
 
-**Solution**: 
+**Solution**:
 1. Go to **Projects** → **Create Project**
 2. Create at least one project
 3. Return to CalDAV setup
@@ -101,7 +101,7 @@
 
 **Problem**: You must provide at least one URL.
 
-**Solution**: 
+**Solution**:
 - Enter either the **Server URL** (for automatic discovery) or **Calendar URL** (direct connection)
 - Server URL is recommended for first-time setup
 
@@ -171,4 +171,3 @@ After setup:
 - ✅ Set up regular syncs (manual for now)
 
 For more details, see [CALDAV_INTEGRATION.md](CALDAV_INTEGRATION.md).
-

@@ -160,7 +160,7 @@ If the issue persists, check:
    ```bash
    # PostgreSQL
    docker-compose exec db psql -U timetracker -d timetracker -c "\dt"
-   
+
    # Or check from app container
    docker-compose exec app python -c "from app import create_app, db; app = create_app(); app.app_context().push(); print(db.engine.table_names())"
    ```

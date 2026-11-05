@@ -95,4 +95,3 @@ All improvements are complete and ready for:
 ---
 
 **Everything is done!** 🎉
-

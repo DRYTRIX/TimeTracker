@@ -42,8 +42,8 @@ def upgrade():
     if not is_sqlite:
         try:
             op.execute("""
-                ALTER TABLE time_entries 
-                ADD CONSTRAINT chk_time_entries_project_or_client 
+                ALTER TABLE time_entries
+                ADD CONSTRAINT chk_time_entries_project_or_client
                 CHECK (project_id IS NOT NULL OR client_id IS NOT NULL OR source = 'auto')
             """)
         except Exception as e:
@@ -75,8 +75,8 @@ def downgrade():
     if not is_sqlite:
         try:
             op.execute("""
-                ALTER TABLE time_entries 
-                ADD CONSTRAINT chk_time_entries_project_or_client 
+                ALTER TABLE time_entries
+                ADD CONSTRAINT chk_time_entries_project_or_client
                 CHECK (project_id IS NOT NULL OR client_id IS NOT NULL)
             """)
         except Exception:

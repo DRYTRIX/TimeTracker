@@ -39,7 +39,7 @@ function parseCommandLineArgs(args = process.argv.slice(1)) {
       console.warn(`Invalid server URL provided: ${serverUrl}`);
     }
   }
-  
+
   // Also check environment variable
   if (process.env.TIMETRACKER_SERVER_URL) {
     try {
@@ -206,7 +206,7 @@ app.whenReady().then(() => {
   } catch (e) {
     console.warn('TimeTracker: could not register powerMonitor resume:', e.message);
   }
-  
+
   // Listen for timer status updates from renderer (via IPC)
   ipcMain.on('timer:status-update', (event, data) => {
     if (idleMonitor) idleMonitor.onTimerStatusUpdate(data);
@@ -240,7 +240,7 @@ app.whenReady().then(() => {
   ipcMain.on('idle:stop', () => {
     if (idleMonitor) idleMonitor.confirmStop();
   });
-  
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow({ showSplash: false });
@@ -306,7 +306,7 @@ ipcMain.on('timer:start', async (event, data) => {
   // For now, just notify renderer
   currentTimer = { ...data, startTime: new Date() };
   sendToMainWindow('timer:start', currentTimer);
-  
+
   // Start polling timer status
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {

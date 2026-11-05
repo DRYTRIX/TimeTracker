@@ -48,7 +48,7 @@ def add_missing_columns(engine):
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_logo_filename VARCHAR(255) DEFAULT '' NOT NULL;
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_tax_id VARCHAR(100) DEFAULT '' NOT NULL;
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS company_bank_info TEXT DEFAULT '' NOT NULL;
-    
+
     -- Add invoice default columns
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_prefix VARCHAR(50) DEFAULT 'INV' NOT NULL;
     ALTER TABLE settings ADD COLUMN IF NOT EXISTS invoice_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL;
@@ -134,7 +134,7 @@ def update_existing_settings(engine):
     print("Updating existing settings with default company branding...")
 
     update_sql = """
-    UPDATE settings SET 
+    UPDATE settings SET
         company_name = COALESCE(company_name, 'Your Company Name'),
         company_address = COALESCE(company_address, 'Your Company Address'),
         company_email = COALESCE(company_email, 'info@yourcompany.com'),

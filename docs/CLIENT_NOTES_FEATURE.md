@@ -89,25 +89,25 @@ You can toggle the importance of a note in two ways:
 
 ### Client Preferences
 ```
-Example: "Client prefers morning meetings (before 11 AM). 
+Example: "Client prefers morning meetings (before 11 AM).
 Doesn't like phone calls - always use email."
 ```
 
 ### Special Requirements
 ```
-Example: "All invoices must be sent to finance@client.com 
+Example: "All invoices must be sent to finance@client.com
 in addition to the main contact. Net 45 payment terms."
 ```
 
 ### Project History
 ```
-Example: "Previous project had scope creep issues. 
+Example: "Previous project had scope creep issues.
 Make sure to clearly define deliverables upfront."
 ```
 
 ### Communication Notes
 ```
-Example: "Decision maker is Jane (CEO), but contact person 
+Example: "Decision maker is Jane (CEO), but contact person
 is Bob (Project Manager). Include both on important emails."
 ```
 
@@ -412,4 +412,3 @@ Contributions to improve the Client Notes feature are welcome! Please:
 ---
 
 **[← Back to Documentation Home](README.md)**
-

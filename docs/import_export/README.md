@@ -88,18 +88,18 @@ docs/
 def import_from_new_source(user_id, credentials, start_date, end_date, import_record):
     """Import from new time tracker"""
     import_record.start_processing()
-    
+
     try:
         # Fetch data from API
         data = fetch_from_api(credentials)
-        
+
         # Process each record
         for record in data:
             # Create TimeEntry
             time_entry = TimeEntry(...)
             db.session.add(time_entry)
             import_record.update_progress(...)
-        
+
         db.session.commit()
         import_record.complete()
     except Exception as e:
@@ -111,7 +111,7 @@ def import_from_new_source(user_id, credentials, start_date, end_date, import_re
 def import_new_source():
     data = request.get_json()
     # ... validation ...
-    
+
     import_record = DataImport(
         user_id=current_user.id,
         import_type='new_source',
@@ -119,7 +119,7 @@ def import_new_source():
     )
     db.session.add(import_record)
     db.session.commit()
-    
+
     summary = import_from_new_source(...)
     return jsonify({'success': True, 'import_id': import_record.id})
 
@@ -313,4 +313,3 @@ Website Redesign,Acme Corp,Development,2024-01-15 14:00:00,2024-01-15 17:30:00,3
 ## License
 
 Same as TimeTracker application.
-

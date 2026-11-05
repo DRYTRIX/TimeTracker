@@ -19,7 +19,7 @@ mkdir -p "$CERT_DIR"
 # Check if certificates already exist
 if [ -f "$CERT_FILE" ] && [ -f "$KEY_FILE" ]; then
     echo "✅ Certificates already exist, skipping generation"
-    
+
     # Check if they're about to expire (less than 30 days)
     if command -v openssl >/dev/null 2>&1; then
         EXPIRY=$(openssl x509 -enddate -noout -in "$CERT_FILE" 2>/dev/null | cut -d= -f2)
@@ -109,4 +109,3 @@ echo "For trusted certificates (no warnings), use mkcert:"
 echo "   bash setup-https-mkcert.sh"
 echo ""
 echo "=========================================="
-

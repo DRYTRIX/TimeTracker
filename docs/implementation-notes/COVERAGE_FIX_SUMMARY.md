@@ -313,4 +313,3 @@ Common questions answered in `docs/TESTING_COVERAGE_GUIDE.md`:
 3. What's a good coverage percentage?
 4. Should I aim for 100% coverage?
 5. How do CI/CD workflows use coverage?
-

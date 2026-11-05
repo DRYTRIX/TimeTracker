@@ -260,4 +260,3 @@ def barcode_lookup():
 ## Documentation
 
 See `docs/KIOSK_MODE_INVENTORY_ANALYSIS.md` for detailed analysis and implementation guide.
-

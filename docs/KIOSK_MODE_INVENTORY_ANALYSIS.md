@@ -173,16 +173,16 @@ def kiosk_dashboard():
     """Main kiosk interface"""
     if not current_user.is_authenticated:
         return redirect(url_for('kiosk.kiosk_login'))
-    
+
     # Get active timer
     active_timer = current_user.active_timer
-    
+
     # Get default warehouse (from user preference or first active)
     default_warehouse = get_default_warehouse(current_user.id)
-    
+
     # Get recent items (last scanned/used)
     recent_items = get_recent_items(current_user.id, limit=10)
-    
+
     return render_template('kiosk/dashboard.html',
                          active_timer=active_timer,
                          default_warehouse=default_warehouse,
@@ -200,7 +200,7 @@ def kiosk_login():
                 return redirect(url_for('kiosk.kiosk_dashboard'))
             else:
                 flash('User not found', 'error')
-    
+
     users = User.query.filter_by(is_active=True).order_by(User.username).all()
     return render_template('kiosk/login.html', users=users)
 
@@ -216,25 +216,25 @@ def barcode_lookup():
     """Look up stock item by barcode"""
     data = request.get_json()
     barcode = data.get('barcode', '').strip()
-    
+
     if not barcode:
         return jsonify({'error': 'Barcode required'}), 400
-    
+
     # Search by barcode first
     item = StockItem.query.filter_by(barcode=barcode, is_active=True).first()
-    
+
     # If not found, try SKU
     if not item:
         item = StockItem.query.filter_by(sku=barcode.upper(), is_active=True).first()
-    
+
     if not item:
         return jsonify({'error': 'Item not found'}), 404
-    
+
     # Get stock levels across warehouses
     stock_levels = WarehouseStock.query.filter_by(
         stock_item_id=item.id
     ).all()
-    
+
     return jsonify({
         'item': {
             'id': item.id,
@@ -261,16 +261,16 @@ def barcode_lookup():
 def adjust_stock():
     """Quick stock adjustment from kiosk"""
     data = request.get_json()
-    
+
     stock_item_id = data.get('stock_item_id')
     warehouse_id = data.get('warehouse_id')
     quantity = Decimal(str(data.get('quantity', 0)))
     reason = data.get('reason', 'Kiosk adjustment')
     notes = data.get('notes', '')
-    
+
     if not stock_item_id or not warehouse_id:
         return jsonify({'error': 'Item and warehouse required'}), 400
-    
+
     # Record movement
     movement, updated_stock = StockMovement.record_movement(
         movement_type='adjustment',
@@ -282,9 +282,9 @@ def adjust_stock():
         notes=notes,
         update_stock=True
     )
-    
+
     db.session.commit()
-    
+
     return jsonify({
         'success': True,
         'movement_id': movement.id,
@@ -296,13 +296,13 @@ def adjust_stock():
 def transfer_stock():
     """Transfer stock between warehouses"""
     data = request.get_json()
-    
+
     stock_item_id = data.get('stock_item_id')
     from_warehouse_id = data.get('from_warehouse_id')
     to_warehouse_id = data.get('to_warehouse_id')
     quantity = Decimal(str(data.get('quantity', 0)))
     notes = data.get('notes', '')
-    
+
     # Create outbound movement
     out_movement, out_stock = StockMovement.record_movement(
         movement_type='transfer',
@@ -314,7 +314,7 @@ def transfer_stock():
         notes=notes,
         update_stock=True
     )
-    
+
     # Create inbound movement
     in_movement, in_stock = StockMovement.record_movement(
         movement_type='transfer',
@@ -326,9 +326,9 @@ def transfer_stock():
         notes=notes,
         update_stock=True
     )
-    
+
     db.session.commit()
-    
+
     return jsonify({
         'success': True,
         'from_quantity': float(out_stock.quantity_on_hand),
@@ -343,7 +343,7 @@ def kiosk_start_timer():
     project_id = data.get('project_id')
     task_id = data.get('task_id')
     notes = data.get('notes', '')
-    
+
     # Reuse existing timer logic
     from app.routes.timer import start_timer_logic
     return start_timer_logic(project_id, task_id, notes)
@@ -420,7 +420,7 @@ async function lookupBarcode(barcode) {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({barcode: barcode})
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             displayItem(data.item, data.stock_levels);
@@ -654,4 +654,3 @@ function stopTimer() {
 Kiosk Mode with inventory and barcode scanning would be a powerful addition to TimeTracker, especially for warehouse operations. The combination of inventory management and time tracking in a single, touch-optimized interface makes it ideal for shared warehouse terminals.
 
 The implementation leverages existing inventory infrastructure while adding specialized kiosk workflows optimized for speed and ease of use.
-

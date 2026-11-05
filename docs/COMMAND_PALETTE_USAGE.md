@@ -172,4 +172,3 @@ If you have suggestions for new commands or improvements to the command palette,
 ---
 
 **Pro Tip:** Use the command palette regularly to speed up your workflow. Most power users find they can navigate 2-3x faster using keyboard shortcuts compared to clicking through menus!
-

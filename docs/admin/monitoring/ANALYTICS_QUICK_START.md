@@ -327,4 +327,3 @@ Your analytics are now configured. TimeTracker will:
 
 **Last Updated:** 2025-10-20  
 **Version:** 1.0
-

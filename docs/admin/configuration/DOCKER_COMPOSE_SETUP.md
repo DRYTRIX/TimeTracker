@@ -275,5 +275,3 @@ For CSRF and cookie issues behind proxies, see `docs/CSRF_CONFIGURATION.md`.
    - `ADMIN_USERNAMES` is set in your `.env` file before starting containers
    - Database initialization completed successfully (check logs)
    - If using `AUTH_METHOD=local`, the default admin user has no password initially. On first login, enter the admin username and choose any password (minimum 8 characters)—it will be set and you will be logged in. There is no default password documented because you define it yourself on first use.
-
-

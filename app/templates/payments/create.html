@@ -14,19 +14,19 @@
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
         <form method="POST" action="{{ url_for('payments.create_payment') }}" novalidate data-validate-form>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Invoice Selection -->
                 <div class="md:col-span-2">
                     <label for="invoice_id" class="form-label">
                         Invoice <span class="text-red-500">*</span>
                     </label>
-                    <select name="invoice_id" id="invoice_id" required 
+                    <select name="invoice_id" id="invoice_id" required
                             class="form-input"
                             onchange="updateInvoiceDetails(this)">
                         <option value="">Select an invoice</option>
                         {% for invoice in invoices %}
-                        <option value="{{ invoice.id }}" 
+                        <option value="{{ invoice.id }}"
                                 data-total="{{ invoice.total_amount }}"
                                 data-paid="{{ invoice.amount_paid or 0 }}"
                                 data-outstanding="{{ invoice.outstanding_amount }}"
@@ -169,21 +169,21 @@
 function updateInvoiceDetails(select) {
     const selectedOption = select.options[select.selectedIndex];
     const detailsDiv = document.getElementById('invoice-details');
-    
+
     if (selectedOption.value) {
         const total = selectedOption.dataset.total;
         const paid = selectedOption.dataset.paid;
         const outstanding = selectedOption.dataset.outstanding;
         const currency = selectedOption.dataset.currency;
-        
+
         document.getElementById('invoice-total').textContent = `${total} ${currency}`;
         document.getElementById('invoice-paid').textContent = `${paid} ${currency}`;
         document.getElementById('invoice-outstanding').textContent = `${outstanding} ${currency}`;
-        
+
         // Update amount field with outstanding amount
         document.getElementById('amount').value = outstanding;
         document.getElementById('currency').value = currency;
-        
+
         detailsDiv.style.display = 'block';
     } else {
         detailsDiv.style.display = 'none';
@@ -199,4 +199,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

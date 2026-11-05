@@ -35,4 +35,3 @@ services:
       - SESSION_COOKIE_SECURE=true
       - CSRF_COOKIE_SECURE=true
     restart: unless-stopped
-

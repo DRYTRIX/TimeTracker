@@ -89,20 +89,20 @@
         <h1>📊 {{ _('Your Weekly Summary') }}</h1>
         <p>{{ start_date }} to {{ end_date }}</p>
     </div>
-    
+
     <div class="content">
         <p>Hello {{ user.display_name }},</p>
-        
+
         <p>Here's your time tracking summary for the past week:</p>
-        
+
         <div class="summary-box">
             <p>Total Hours Worked</p>
             <h2>{{ "%.1f"|format(hours_worked) }}</h2>
             <p>hours</p>
         </div>
-        
+
         <h3 style="margin-top: 30px;">{{ _('Hours by Project') }}</h3>
-        
+
         <div class="projects-table">
             <table>
                 <thead>
@@ -121,9 +121,9 @@
                 </tbody>
             </table>
         </div>
-        
+
         <p style="margin-top: 20px;">Keep up the great work! 🎉</p>
-        
+
         {% if reports_url %}
         <center>
             <a href="{{ reports_url }}" class="button">
@@ -132,11 +132,10 @@
         </center>
         {% endif %}
     </div>
-    
+
     <div class="footer">
         <p>TimeTracker - Time Tracking & Project Management</p>
         <p>To manage your notification preferences, visit your user settings.</p>
     </div>
 </body>
 </html>
-

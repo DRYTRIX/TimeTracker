@@ -34,14 +34,14 @@
             <label for="date_from" class="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                 <i class="fas fa-calendar-alt mr-1 text-primary"></i>{{ _('From Date') }}
             </label>
-            <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}" 
+            <input type="date" name="date_from" id="date_from" value="{{ date_from or '' }}"
                    class="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-primary transition-all">
         </div>
         <div>
             <label for="date_to" class="block text-sm font-semibold text-text-light dark:text-text-dark mb-2">
                 <i class="fas fa-calendar-check mr-1 text-primary"></i>{{ _('To Date') }}
             </label>
-            <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}" 
+            <input type="date" name="date_to" id="date_to" value="{{ date_to or '' }}"
                    class="w-full px-4 py-2.5 bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary focus:border-primary transition-all">
         </div>
         <div class="flex items-end">
@@ -137,7 +137,7 @@
             </tbody>
         </table>
     </div>
-    
+
     <!-- Summary Footer -->
     <div class="bg-background-light dark:bg-background-dark border-t border-border-light dark:border-border-dark px-6 py-4">
         <div class="flex flex-wrap items-center justify-between gap-4">
@@ -173,7 +173,7 @@
             {% endif %}
         </p>
         {% if selected_project_id or date_from or date_to %}
-        <a href="{{ url_for('client_portal.time_entries') }}" 
+        <a href="{{ url_for('client_portal.time_entries') }}"
            class="inline-flex items-center px-5 py-2.5 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors">
             <i class="fas fa-times mr-2"></i>
             {{ _('Clear Filters') }}

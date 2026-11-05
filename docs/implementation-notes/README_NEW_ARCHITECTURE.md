@@ -153,4 +153,3 @@ def start_timer():
 ---
 
 **All improvements complete and ready to use!** 🎉
-

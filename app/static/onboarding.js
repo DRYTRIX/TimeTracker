@@ -38,7 +38,7 @@ class OnboardingManager {
         this.steps = steps;
         this.createOverlay();
         this.createTooltip();
-        
+
         // Add resize handler to handle window resizing during tour
         this.resizeHandler = () => {
             if (window.innerWidth <= 768) {
@@ -47,7 +47,7 @@ class OnboardingManager {
             }
         };
         window.addEventListener('resize', this.resizeHandler);
-        
+
         this.showStep(0);
     }
 
@@ -108,11 +108,11 @@ class OnboardingManager {
                     animation: fadeIn 0.3s ease-out;
                     pointer-events: none;
                 }
-                
+
                 .onboarding-overlay * {
                     pointer-events: none;
                 }
-                
+
                 .onboarding-highlight {
                     position: fixed;
                     border: 4px solid #4F46E5;
@@ -123,13 +123,13 @@ class OnboardingManager {
                     transition: all 0.3s ease-out;
                     pointer-events: none;
                     background: transparent;
-                    box-shadow: 
+                    box-shadow:
                         0 0 0 0 rgba(59, 130, 246, 0),
                         0 0 20px rgba(59, 130, 246, 0.6),
                         0 0 40px rgba(59, 130, 246, 0.4),
                         inset 0 0 20px rgba(59, 130, 246, 0.2);
                 }
-                
+
                 .onboarding-highlight::before {
                     content: '';
                     position: fixed;
@@ -140,7 +140,7 @@ class OnboardingManager {
                     mask: radial-gradient(ellipse at center, transparent 0%, transparent 100%);
                     -webkit-mask: radial-gradient(ellipse at center, transparent 0%, transparent 100%);
                 }
-                
+
                 .onboarding-overlay {
                     position: fixed;
                     inset: 0;
@@ -150,7 +150,7 @@ class OnboardingManager {
                     animation: fadeIn 0.3s ease-out;
                     pointer-events: none;
                 }
-                
+
                 .onboarding-mask {
                     position: fixed;
                     inset: 0;
@@ -159,7 +159,7 @@ class OnboardingManager {
                     pointer-events: none;
                     transition: all 0.3s ease-out;
                 }
-                
+
                 .onboarding-tooltip {
                     position: fixed;
                     background: white;
@@ -175,7 +175,7 @@ class OnboardingManager {
                     transition: opacity 0.2s ease-out;
                     pointer-events: auto;
                 }
-                
+
                 /* Mobile responsive styles (for future use if tour is enabled on mobile) */
                 @media (max-width: 768px) {
                     .onboarding-tooltip {
@@ -189,67 +189,67 @@ class OnboardingManager {
                         bottom: 20px !important;
                         transform: translateY(0) !important;
                     }
-                    
+
                     .onboarding-tooltip-header {
                         margin-bottom: 10px;
                     }
-                    
+
                     .onboarding-tooltip-title {
                         font-size: 16px;
                     }
-                    
+
                     .onboarding-tooltip-body {
                         font-size: 14px;
                         margin-bottom: 16px;
                     }
-                    
+
                     .onboarding-tooltip-footer {
                         flex-direction: column;
                         gap: 12px;
                     }
-                    
+
                     .onboarding-tooltip-buttons {
                         width: 100%;
                         flex-direction: column;
                     }
-                    
+
                     .onboarding-btn {
                         width: 100%;
                         padding: 12px 16px;
                     }
-                    
+
                     .onboarding-tooltip-progress {
                         text-align: center;
                         width: 100%;
                     }
                 }
-                
+
                 .onboarding-tooltip * {
                     pointer-events: auto;
                 }
-                
+
                 .dark .onboarding-tooltip {
                     background: #2d3748;
                     color: #e2e8f0;
                 }
-                
+
                 .onboarding-tooltip-header {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                     margin-bottom: 12px;
                 }
-                
+
                 .onboarding-tooltip-title {
                     font-size: 18px;
                     font-weight: 600;
                     color: #1e293b;
                 }
-                
+
                 .dark .onboarding-tooltip-title {
                     color: #e2e8f0;
                 }
-                
+
                 .onboarding-tooltip-close {
                     background: none;
                     border: none;
@@ -263,21 +263,21 @@ class OnboardingManager {
                     align-items: center;
                     justify-content: center;
                 }
-                
+
                 .onboarding-tooltip-close:hover {
                     color: #ef4444;
                 }
-                
+
                 .onboarding-tooltip-body {
                     color: #64748b;
                     line-height: 1.6;
                     margin-bottom: 20px;
                 }
-                
+
                 .dark .onboarding-tooltip-body {
                     color: #94a3b8;
                 }
-                
+
                 .onboarding-tooltip-body kbd {
                     display: inline-block;
                     padding: 2px 6px;
@@ -289,38 +289,38 @@ class OnboardingManager {
                     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
                     color: #334155;
                 }
-                
+
                 .dark .onboarding-tooltip-body kbd {
                     background: #1e293b;
                     border-color: #334155;
                     color: #e2e8f0;
                 }
-                
+
                 .onboarding-tooltip-body strong {
                     color: #1e293b;
                     font-weight: 600;
                 }
-                
+
                 .dark .onboarding-tooltip-body strong {
                     color: #e2e8f0;
                 }
-                
+
                 .onboarding-tooltip-footer {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                 }
-                
+
                 .onboarding-tooltip-progress {
                     font-size: 14px;
                     color: #9ca3af;
                 }
-                
+
                 .onboarding-tooltip-buttons {
                     display: flex;
                     gap: 8px;
                 }
-                
+
                 .onboarding-btn {
                     padding: 8px 16px;
                     border-radius: 6px;
@@ -330,39 +330,39 @@ class OnboardingManager {
                     border: none;
                     font-size: 14px;
                 }
-                
+
                 .onboarding-btn-skip {
                     background: #f3f4f6;
                     color: #6b7280;
                 }
-                
+
                 .dark .onboarding-btn-skip {
                     background: #374151;
                     color: #9ca3af;
                 }
-                
+
                 .onboarding-btn-skip:hover {
                     background: #e5e7eb;
                 }
-                
+
                 .dark .onboarding-btn-skip:hover {
                     background: #4b5563;
                 }
-                
+
                 .onboarding-btn-primary {
                     background: #4F46E5;
                     color: white;
                 }
-                
+
                 .onboarding-btn-primary:hover {
                     background: #2563eb;
                 }
-                
+
                 @keyframes fadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                
+
                 @keyframes slideInUp {
                     from {
                         opacity: 0;
@@ -401,10 +401,10 @@ class OnboardingManager {
 
         // Find target element with better selector handling
         let target = null;
-        
+
         // Try to find the element
         const elements = document.querySelectorAll(step.target);
-        
+
         if (elements.length === 0) {
             console.warn(`Onboarding target not found: ${step.target}`);
             // Try once more after a short delay in case element is still loading
@@ -420,41 +420,41 @@ class OnboardingManager {
             }, 200);
             return;
         }
-        
+
         // If multiple elements found, prefer visible ones or first one
         for (const el of elements) {
             const rect = el.getBoundingClientRect();
             const style = window.getComputedStyle(el);
             // Check if element is visible (not hidden by display:none or visibility:hidden)
-            if (rect.width > 0 && rect.height > 0 && 
-                style.display !== 'none' && 
+            if (rect.width > 0 && rect.height > 0 &&
+                style.display !== 'none' &&
                 style.visibility !== 'hidden' &&
                 style.opacity !== '0') {
                 target = el;
                 break;
             }
         }
-        
+
         // If no visible element found, use first one anyway
         if (!target && elements.length > 0) {
             target = elements[0];
-            
+
             // Try to make it visible if it's in a hidden dropdown
             const dropdown = target.closest('[id*="Dropdown"]');
             if (dropdown && dropdown.classList.contains('hidden')) {
                 dropdown.classList.remove('hidden');
             }
         }
-        
+
         if (!target) {
             console.warn(`Onboarding target not accessible: ${step.target}`);
             this.showStep(index + 1);
             return;
         }
-        
+
         this.displayStep(target, step, index);
     }
-    
+
     /**
      * Display a step for a given target element
      */
@@ -464,7 +464,7 @@ class OnboardingManager {
         if (dropdown && dropdown.classList.contains('hidden')) {
             dropdown.classList.remove('hidden');
         }
-        
+
         // Scroll target into view first
         target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
 
@@ -479,16 +479,16 @@ class OnboardingManager {
                     // Get fresh element position after scroll
                     const finalRect = target.getBoundingClientRect();
                     const style = window.getComputedStyle(target);
-                    
+
                     // Validate that element is actually visible
                     if (finalRect.width === 0 || finalRect.height === 0) {
                         console.warn('Target element has zero dimensions, but continuing anyway');
                         // Don't skip - just proceed with positioning
                     }
-                    
+
                     // Highlight target after content is rendered
                     this.highlightElement(target);
-                    
+
                     // Position tooltip
                     this.positionTooltip(target, step);
                 });
@@ -502,13 +502,13 @@ class OnboardingManager {
     highlightElement(element) {
         let highlight = document.querySelector('.onboarding-highlight');
         let mask = document.querySelector('.onboarding-mask');
-        
+
         if (!highlight) {
             highlight = document.createElement('div');
             highlight.className = 'onboarding-highlight';
             document.body.appendChild(highlight);
         }
-        
+
         if (!mask) {
             mask = document.createElement('div');
             mask.className = 'onboarding-mask';
@@ -525,9 +525,9 @@ class OnboardingManager {
 
         // Use getBoundingClientRect which already accounts for scroll
         const rect = element.getBoundingClientRect();
-        
+
         const padding = 10;
-        
+
         // Calculate highlight position
         const highlightTop = Math.round(rect.top - padding);
         const highlightLeft = Math.round(rect.left - padding);
@@ -543,7 +543,7 @@ class OnboardingManager {
         highlight.style.display = 'block';
         highlight.style.zIndex = '10000';
         highlight.style.visibility = 'visible';
-        
+
         // Create a mask that reveals the highlighted area
         // Use CSS radial gradient for the cutout
         const centerX = rect.left + rect.width / 2;
@@ -551,7 +551,7 @@ class OnboardingManager {
         // Make cutout larger than the highlight for better visibility
         const ellipseWidth = Math.max(highlightWidth * 2, 200);
         const ellipseHeight = Math.max(highlightHeight * 2, 200);
-        
+
         // Apply mask to overlay mask element using CSS radial gradient
         // In CSS mask-image: white/opaque = visible (shows), black/transparent = hidden (hides)
         // We want: hide overlay at center (reveal element), show overlay at edges (cover everything else)
@@ -566,7 +566,7 @@ class OnboardingManager {
             overlayMask.style.maskPosition = '0 0';
             overlayMask.style.maskRepeat = 'no-repeat';
         }
-        
+
         // Also apply mask to the base overlay
         const baseOverlay = document.querySelector('.onboarding-overlay');
         if (baseOverlay) {
@@ -587,13 +587,13 @@ class OnboardingManager {
         if (this._skipPending) return;
         // Get element position first - getBoundingClientRect already accounts for scroll
         const rect = element.getBoundingClientRect();
-        
+
         // Validate element is visible
         if (rect.width === 0 || rect.height === 0) {
             console.warn('Cannot position tooltip: element has zero dimensions');
             return;
         }
-        
+
         // Ensure tooltip is positioned off-screen for measurement
         this.tooltip.style.position = 'fixed';
         this.tooltip.style.top = '-9999px';
@@ -602,10 +602,10 @@ class OnboardingManager {
         this.tooltip.style.display = 'block';
         this.tooltip.style.opacity = '0';
         this.tooltip.style.transform = 'scale(0)';
-        
+
         // Force a reflow to ensure tooltip is rendered
         void this.tooltip.offsetWidth;
-        
+
         // Now measure the tooltip
         const tooltipRect = this.tooltip.getBoundingClientRect();
         const position = step.position || 'bottom';
@@ -613,7 +613,7 @@ class OnboardingManager {
         // If tooltip has no dimensions, use default dimensions
         const tooltipWidth = tooltipRect.width > 0 ? tooltipRect.width : 400;
         const tooltipHeight = tooltipRect.height > 0 ? tooltipRect.height : 200;
-        
+
         let top, left;
 
         // Calculate position based on preference
@@ -693,10 +693,10 @@ class OnboardingManager {
      */
     updateTooltip(step, index) {
         const isLast = index === this.steps.length - 1;
-        
+
         // Store reference to manager for event handlers
         const manager = this;
-        
+
         this.tooltip.innerHTML = `
             <div class="onboarding-tooltip-header">
                 <h3 class="onboarding-tooltip-title">${step.title}</h3>
@@ -726,7 +726,7 @@ class OnboardingManager {
                 </div>
             </div>
         `;
-        
+
         // Attach event listeners using event delegation
         this.tooltip.querySelectorAll('[data-action]').forEach(btn => {
             const action = btn.getAttribute('data-action');
@@ -794,7 +794,7 @@ class OnboardingManager {
         if (this.tooltip) {
             this.tooltip.style.zIndex = '1502';
         }
-        
+
         const confirmed = await showConfirm(
             'Are you sure you want to skip the tour? You can restart it later from the Help menu.',
             {
@@ -804,7 +804,7 @@ class OnboardingManager {
                 variant: 'warning'
             }
         );
-        
+
         // Restore original z-index values
         if (mask) {
             if (originalMaskZ) {
@@ -834,7 +834,7 @@ class OnboardingManager {
                 this.tooltip.style.zIndex = '';
             }
         }
-        
+
         if (confirmed) {
             this.complete();
         }
@@ -928,4 +928,3 @@ function restartTour() {
     window.onboardingManager.reset();
     window.onboardingManager.init(defaultTourSteps);
 }
-

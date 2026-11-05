@@ -19,13 +19,13 @@ wait_for_database() {
     local db_url="$1"
     local max_retries=30
     local retry_delay=2
-    
+
     log "Waiting for database to be available..."
     log "Database URL: $db_url"
-    
+
     for attempt in $(seq 1 $max_retries); do
         log "Attempt $attempt/$max_retries to connect to database..."
-        
+
         if [[ "$db_url" == postgresql* ]]; then
             if python -c "
 import psycopg2
@@ -50,14 +50,14 @@ except Exception as e:
                 return 0
             fi
         fi
-        
+
         log "Database not ready (attempt $attempt/$max_retries)"
         if [[ $attempt -lt $max_retries ]]; then
             log "Waiting $retry_delay seconds before next attempt..."
             sleep $retry_delay
         fi
     done
-    
+
     log "✗ Database is not available after maximum retries"
     return 1
 }
@@ -65,10 +65,10 @@ except Exception as e:
 # Main execution
 main() {
     log "=== TimeTracker Docker Entrypoint ==="
-    
+
     # Set environment variables
     export FLASK_APP=${FLASK_APP:-/app/app.py}
-    
+
     # Get database URL from environment
     local db_url="${DATABASE_URL}"
     if [[ -z "$db_url" ]]; then
@@ -77,19 +77,19 @@ main() {
         env | grep -E "(DATABASE|FLASK|PYTHON)" | sort
         exit 1
     fi
-    
+
     log "Database URL: $db_url"
-    
+
     # Wait for database to be available
     if ! wait_for_database "$db_url"; then
         log "✗ Failed to connect to database"
         exit 1
     fi
-    
+
     # Check if migrations directory exists
     if [[ -d "/app/migrations" ]]; then
         log "Migrations directory exists, checking status..."
-        
+
         # Try to apply any pending migrations
         if command -v flask >/dev/null 2>&1; then
             log "Applying pending migrations..."
@@ -103,7 +103,7 @@ main() {
         fi
     else
         log "No migrations directory found, initializing..."
-        
+
         if command -v flask >/dev/null 2>&1; then
             if flask db init; then
                 log "✓ Migrations initialized"
@@ -124,10 +124,10 @@ main() {
             log "⚠ Flask CLI not available, skipping migration setup"
         fi
     fi
-    
+
     log "=== Startup Complete ==="
     log "Starting TimeTracker application..."
-    
+
     # Execute the command passed to the container
     exec "$@"
 }

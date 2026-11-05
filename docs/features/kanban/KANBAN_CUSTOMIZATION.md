@@ -267,4 +267,3 @@ Possible future improvements:
 - CSRF protection on all forms
 - XSS protection on user-provided labels
 - System columns cannot be deleted to maintain data integrity
-

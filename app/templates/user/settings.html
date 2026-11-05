@@ -37,7 +37,7 @@
 
     <form method="POST" class="space-y-8">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        
+
         <!-- Profile Information -->
         <details class="bg-card-light dark:bg-card-dark rounded-lg shadow-md group" open>
             <summary class="flex items-center justify-between p-6 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
@@ -47,7 +47,7 @@
                 <i class="fas fa-chevron-down text-gray-400 dark:text-gray-500 transition-transform group-open:rotate-180 md:hidden" aria-hidden="true"></i>
             </summary>
             <div class="px-6 pb-6">
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="form-label">
@@ -57,7 +57,7 @@
                            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 cursor-not-allowed">
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Username cannot be changed') }}</p>
                 </div>
-                
+
                 <div>
                     <label for="full_name" class="form-label">
                         {{ _('Full Name') }}
@@ -65,7 +65,7 @@
                     <input type="text" id="full_name" name="full_name" value="{{ user.full_name or '' }}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                 </div>
-                
+
                 <div class="md:col-span-2">
                     <label for="email" class="form-label">
                         {{ _('Email Address') }}
@@ -100,10 +100,10 @@
                 <i class="fas fa-chevron-down text-gray-400 dark:text-gray-500 transition-transform group-open:rotate-180 md:hidden" aria-hidden="true"></i>
             </summary>
             <div class="px-6 pb-6">
-            
+
             <div class="space-y-2">
                 <label for="email_notifications" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <input type="checkbox" id="email_notifications" name="email_notifications" 
+                    <input type="checkbox" id="email_notifications" name="email_notifications"
                            {% if user.email_notifications %}checked{% endif %}
                            class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0">
                     <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
@@ -111,7 +111,7 @@
                         <span class="block text-xs text-gray-500 dark:text-gray-400">{{ _('Master switch for all email notifications') }}</span>
                     </span>
                 </label>
-                
+
                 <div class="ml-4 sm:ml-8 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
                     <label for="notification_overdue_invoices" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <input type="checkbox" id="notification_overdue_invoices" name="notification_overdue_invoices"
@@ -121,7 +121,7 @@
                             {{ _('Overdue Invoice Notifications') }}
                         </span>
                     </label>
-                    
+
                     <label for="notification_task_assigned" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <input type="checkbox" id="notification_task_assigned" name="notification_task_assigned"
                                {% if user.notification_task_assigned %}checked{% endif %}
@@ -130,7 +130,7 @@
                             {{ _('Task Assignment Notifications') }}
                         </span>
                     </label>
-                    
+
                     <label for="notification_task_comments" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <input type="checkbox" id="notification_task_comments" name="notification_task_comments"
                                {% if user.notification_task_comments %}checked{% endif %}
@@ -139,7 +139,7 @@
                             {{ _('Comment & Mention Notifications') }}
                         </span>
                     </label>
-                    
+
                     <label for="notification_weekly_summary" class="flex items-center min-h-[44px] cursor-pointer rounded-lg px-2 -mx-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                         <input type="checkbox" id="notification_weekly_summary" name="notification_weekly_summary"
                                {% if user.notification_weekly_summary %}checked{% endif %}
@@ -284,7 +284,7 @@
                         <option value="dark" {% if user.theme_preference == 'dark' %}selected{% endif %}>🌙 {{ _('Dark') }}</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="preferred_language" class="form-label">
                         {{ _('Language') }}
@@ -367,10 +367,10 @@
                 <i class="fas fa-lock mr-1"></i>{{ _('Rounding is enforced by your administrator. Personal preferences are preserved and will apply again if the policy is unlocked.') }}
             </div>
             {% endif %}
-            
+
             <div class="space-y-4">
                 <label for="time_rounding_enabled" class="flex items-center min-h-[44px] {% if rounding_enforced %}cursor-not-allowed opacity-70{% else %}cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50{% endif %} rounded-lg px-2 -mx-2">
-                    <input type="checkbox" id="time_rounding_enabled" name="time_rounding_enabled" 
+                    <input type="checkbox" id="time_rounding_enabled" name="time_rounding_enabled"
                            {% if rounding_enforced %}{% if rounding_policy.enabled %}checked{% endif %} disabled{% elif user.time_rounding_enabled %}checked{% endif %}
                            class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                            onchange="toggleRoundingOptions()">
@@ -379,7 +379,7 @@
                         <span class="block text-xs text-gray-500 dark:text-gray-400">{{ _('Round time entries to configured intervals') }}</span>
                     </span>
                 </label>
-                
+
                 <div id="rounding-options" class="ml-8 space-y-4 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
                     <div>
                         <label for="time_rounding_minutes" class="form-label">
@@ -394,7 +394,7 @@
                         </select>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Time entries will be rounded to this interval') }}</p>
                     </div>
-                    
+
                     <div>
                         <label for="time_rounding_method" class="form-label">
                             {{ _('Rounding Method') }}
@@ -424,7 +424,7 @@
                         </select>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Short entries are raised to this billable minimum after rounding') }}</p>
                     </div>
-                    
+
                     <!-- Example visualization -->
                     <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
                         <p class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
@@ -469,14 +469,14 @@
                     </label>
                 </div>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="overtime-daily-fields" style="display: {% if getattr(user, 'overtime_calculation_mode', 'daily') != 'weekly' %}grid{% else %}none{% endif %};">
                 <div>
                     <label for="standard_hours_per_day" class="form-label">
                         {{ _('Standard Hours Per Day') }}
                     </label>
                     <div class="relative">
-                        <input type="number" id="standard_hours_per_day" name="standard_hours_per_day" 
+                        <input type="number" id="standard_hours_per_day" name="standard_hours_per_day"
                                value="{{ user.standard_hours_per_day }}"
                                min="0.5" max="24" step="0.5"
                                class="w-full px-3 py-2 pr-16 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
@@ -491,7 +491,7 @@
                         {{ _('Standard Hours Per Week') }}
                     </label>
                     <div class="relative">
-                        <input type="number" id="standard_hours_per_week" name="standard_hours_per_week" 
+                        <input type="number" id="standard_hours_per_week" name="standard_hours_per_week"
                                value="{{ user.standard_hours_per_week or '' }}"
                                min="1" max="168" step="0.5" placeholder="{{ (user.standard_hours_per_day or 8) * 5 }}"
                                class="w-full px-3 py-2 pr-16 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
@@ -500,7 +500,7 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('e.g. 20 for a part-time week, 40 for full-time') }}</p>
                 </div>
             </div>
-                
+
             <div class="flex items-center bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md mt-4" id="overtime-how-daily" style="display: {% if getattr(user, 'overtime_calculation_mode', 'daily') != 'weekly' %}block{% else %}none{% endif %};">
                 <div>
                     <p class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
@@ -582,7 +582,7 @@
                 <i class="fas fa-chevron-down text-gray-400 dark:text-gray-500 transition-transform group-open:rotate-180 md:hidden" aria-hidden="true"></i>
             </summary>
             <div class="px-6 pb-6">
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="timezone" class="form-label">
@@ -596,7 +596,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="date_format" class="form-label">
                         {{ _('Date Format') }}
@@ -610,7 +610,7 @@
                         <option value="DD.MM.YYYY" {% if user.date_format == 'DD.MM.YYYY' %}selected{% endif %}>DD.MM.YYYY (22.01.2025)</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="time_format" class="form-label">
                         {{ _('Time Format') }}
@@ -622,7 +622,7 @@
                         <option value="12h" {% if user.time_format == '12h' %}selected{% endif %}>12-hour (2:30 PM)</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="week_start_day" class="form-label">
                         {{ _('Week Starts On') }}
@@ -707,7 +707,7 @@ function toggleRoundingOptions() {
     const enabledEl = document.getElementById('time_rounding_enabled');
     const enabled = roundingEnforced ? true : enabledEl.checked;
     const options = document.getElementById('rounding-options');
-    
+
     if (enabled) {
         options.style.opacity = '1';
         options.querySelectorAll('select').forEach(select => {
@@ -736,12 +736,12 @@ function updateRoundingExample() {
     const minimumEl = document.getElementById('time_rounding_minimum_minutes');
     const minimum = minimumEl ? parseInt(minimumEl.value) || 0 : 0;
     const exampleDiv = document.getElementById('rounding-example');
-    
+
     if (!enabled) {
         exampleDiv.innerHTML = '<p>{{ _("Time rounding is disabled. All times will be recorded exactly as tracked.") }}</p>';
         return;
     }
-    
+
     if (minutes === 1 && method !== 'boundary') {
         let msg = '<p>{{ _("No personal interval — the admin Rounding (Minutes) setting is used when set above 1.") }}</p>';
         if (minimum > 0) {
@@ -769,11 +769,11 @@ function updateRoundingExample() {
         `;
         return;
     }
-    
+
     // Calculate examples
     const testDuration = 62; // 62 minutes = 1h 2min
     let rounded;
-    
+
     if (method === 'up') {
         rounded = Math.ceil(testDuration / minutes) * minutes;
     } else if (method === 'down') {
@@ -784,7 +784,7 @@ function updateRoundingExample() {
     if (minimum > 0) {
         rounded = Math.max(rounded, minimum);
     }
-    
+
     exampleDiv.innerHTML = `
         <p><strong>{{ _("Actual time:") }}</strong> ${formatTime(testDuration)} → <strong>{{ _("Rounded:") }}</strong> ${formatTime(rounded)}</p>
         <p class="text-xs opacity-75">{{ _("With ") }}${minutes}{{ _(" minute intervals") }}</p>
@@ -830,4 +830,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

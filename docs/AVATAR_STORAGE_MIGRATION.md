@@ -186,4 +186,3 @@ If you encounter any issues with the avatar migration:
 
 **Last Updated:** October 2025  
 **Applies to:** TimeTracker v2.x and later
-

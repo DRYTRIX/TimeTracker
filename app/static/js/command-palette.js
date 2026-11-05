@@ -441,4 +441,3 @@ import { commandScore } from 'cmdk/command-score';
 
   init();
 })();
-

@@ -10,8 +10,8 @@ All enhanced features are automatically loaded via `base.html`. No additional se
 
 ### Import Components
 ```jinja
-{% from "components/ui.html" import 
-    page_header, breadcrumb_nav, stat_card, empty_state, 
+{% from "components/ui.html" import
+    page_header, breadcrumb_nav, stat_card, empty_state,
     loading_spinner, skeleton_card, badge, button, progress_bar,
     alert, modal, data_table, tabs, timeline_item %}
 ```
@@ -108,8 +108,8 @@ All enhanced features are automatically loaded via `base.html`. No additional se
 
 ### Live Search
 ```html
-<input type="search" 
-       data-live-search 
+<input type="search"
+       data-live-search
        placeholder="Search..." />
 ```
 
@@ -233,9 +233,9 @@ window.undoManager.undo();
 
 ### Enable Auto-Save
 ```html
-<form data-auto-save 
+<form data-auto-save
       data-auto-save-key="my-form"
-      action="/save" 
+      action="/save"
       method="POST">
     <!-- Form fields -->
 </form>
@@ -499,4 +499,3 @@ Ensure `window.toastManager` is initialized (automatic on page load).
 **Last Updated**: October 2025  
 **Version**: 3.0.0  
 **Quick Reference**: Always up-to-date
-

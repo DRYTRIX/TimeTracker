@@ -301,7 +301,7 @@
         flex-direction: column;
         align-items: stretch;
     }
-    
+
     .canvas-header h3 {
         margin-bottom: 0.5rem;
     }
@@ -355,7 +355,7 @@
         gap: 0.5rem;
         width: 100%;
     }
-    
+
     .page-size-help {
         display: none;
     }
@@ -425,12 +425,12 @@
         width: 100%;
         justify-content: flex-start;
     }
-    
+
     .canvas-toolbar button {
         min-width: 36px;
         padding: 0.5rem;
     }
-    
+
     .canvas-toolbar #zoom-display {
         margin-left: 0.5rem !important;
         font-size: 0.813rem !important;
@@ -1181,12 +1181,12 @@
         max-height: 100%;
         border-radius: 0;
     }
-    
+
     .preview-modal-header {
         padding: 0.75rem 1rem;
         flex-wrap: wrap;
     }
-    
+
     .preview-toolbar {
         order: 3;
         width: 100%;
@@ -1194,23 +1194,23 @@
         padding-top: 0.5rem;
         border-top: 1px solid #e5e7eb;
     }
-    
+
     .dark .preview-toolbar {
         border-top-color: #4b5563;
     }
-    
+
     .preview-controls-bar {
         flex-direction: column;
         align-items: stretch;
         gap: 0.75rem;
     }
-    
+
     .preview-controls-left,
     .preview-controls-right {
         flex-wrap: wrap;
         justify-content: center;
     }
-    
+
     .preview-zoom-slider-wrapper {
         width: 100%;
         min-width: auto;
@@ -1581,16 +1581,16 @@
     .action-bar {
         gap: 0.5rem;
     }
-    
+
     .action-bar .btn {
         font-size: 0.813rem;
         padding: 0.5rem 0.625rem;
     }
-    
+
     .action-bar .btn i {
         margin-right: 0.25rem !important;
     }
-    
+
     .action-bar label.inline-flex {
         font-size: 0.813rem;
         margin-left: 0 !important;
@@ -1675,7 +1675,7 @@
 <div class="info-box">
     <p>
         <i class="fas fa-info-circle mr-2"></i>
-        <strong>{{ _('How to use:') }}</strong> 
+        <strong>{{ _('How to use:') }}</strong>
         {{ _('Click elements from the left sidebar to add them to the canvas. Click elements to select and customize them in the properties panel. Use the alignment tools and keyboard shortcuts for faster editing.') }}
     </p>
     <p style="margin-top: 0.5rem; font-size: 0.813rem;">
@@ -1751,12 +1751,12 @@
             <i class="fas fa-cube"></i>
             {{ _('Toolbox') }}
         </h3>
-        
+
         <!-- Search Box -->
         <div class="search-box">
             <input type="text" id="sidebar-search" placeholder="{{ _('Search elements & variables...') }}">
         </div>
-        
+
         <!-- Tabs -->
         <div class="sidebar-tabs">
             <div class="sidebar-tab active" data-tab="elements">
@@ -1766,7 +1766,7 @@
                 <i class="fas fa-code mr-1"></i>{{ _('Variables') }}
             </div>
         </div>
-        
+
         <!-- Sidebar Content -->
         <div class="sidebar-content">
             <!-- Elements Tab -->
@@ -1798,7 +1798,7 @@
                         <span>{{ _('Circle') }}</span>
             </div>
         </div>
-        
+
         <div class="element-group">
             <div class="element-group-title">{{ _('Company Info') }}</div>
             <div class="element-item" data-type="logo">
@@ -1834,7 +1834,7 @@
                 <span>{{ _('Tax ID') }}</span>
             </div>
         </div>
-        
+
         <div class="element-group">
             <div class="element-group-title">{{ _('Invoice Data') }}</div>
             <div class="element-item" data-type="invoice-number">
@@ -1894,7 +1894,7 @@
                 <span>{{ _('Terms') }}</span>
             </div>
         </div>
-        
+
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Payment & Project') }}</div>
                     <div class="element-item" data-type="payment-date">
@@ -1930,7 +1930,7 @@
                         <span>{{ _('Client Phone') }}</span>
                     </div>
                 </div>
-                
+
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Advanced') }}</div>
                     <div class="element-item" data-type="qr-code">
@@ -1967,7 +1967,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Variables Tab -->
             <div id="tab-variables" class="tab-pane">
                 <div class="element-group">
@@ -2017,7 +2017,7 @@
                         <div class="variable-desc">{{ _('Terms & conditions') }}</div>
                     </div>
                 </div>
-                
+
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Client Fields') }}</div>
                     <div class="variable-item" data-variable="invoice.client_name">
@@ -2041,7 +2041,7 @@
                         <div class="variable-desc">{{ _('Client phone number') }}</div>
                     </div>
                 </div>
-                
+
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Payment Fields') }}</div>
                     <div class="variable-item" data-variable="invoice.payment_status">
@@ -2073,7 +2073,7 @@
                         <div class="variable-desc">{{ _('Payment notes') }}</div>
                     </div>
                 </div>
-                
+
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Project Fields') }}</div>
                     <div class="variable-item" data-variable="invoice.project.name">
@@ -2093,7 +2093,7 @@
                         <div class="variable-desc">{{ _('Project billing reference') }}</div>
                     </div>
                 </div>
-                
+
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Company/Settings Fields') }}</div>
                     <div class="variable-item" data-variable="settings.company_name">
@@ -2133,7 +2133,7 @@
                         <div class="variable-desc">{{ _('Default invoice notes') }}</div>
                     </div>
                 </div>
-                
+
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Date/Time Fields') }}</div>
                     <div class="variable-item" data-variable="format_date(now)">
@@ -2149,7 +2149,7 @@
                         <div class="variable-desc">{{ _('Invoice last update date') }}</div>
                     </div>
                 </div>
-                
+
                 <div class="element-group">
                     <div class="element-group-title">{{ _('Invoice Items Loop') }}</div>
                     <div class="variable-item" data-variable="for-loop-start-all">
@@ -2296,7 +2296,7 @@
                 <label for="template-date-format">
                     {{ _('Date Format') }}
                 </label>
-                <input type="text" id="template-date-format" class="form-input" value="{{ date_format if date_format else '%d.%m.%Y' }}" 
+                <input type="text" id="template-date-format" class="form-input" value="{{ date_format if date_format else '%d.%m.%Y' }}"
                        style="font-size: 0.813rem; font-family: monospace;"
                        placeholder="%d.%m.%Y">
                 <p>
@@ -2352,7 +2352,7 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        
+
         <!-- Enhanced Body with Controls -->
         <div class="preview-modal-body">
             <!-- Controls Bar -->
@@ -2385,7 +2385,7 @@
                 </div>
             </div>
             <div id="preview-template-fallback-notice" class="preview-template-fallback-notice" style="display: none;" role="status" aria-live="polite"></div>
-            
+
             <!-- Content Wrapper -->
             <div class="preview-content-wrapper" id="preview-content-wrapper">
                 <!-- Loading State -->
@@ -2398,7 +2398,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Error State -->
                 <div class="preview-error" id="preview-error" style="display: none;">
                     <div class="preview-error-content">
@@ -2415,7 +2415,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Preview Frame -->
                 <div class="preview-frame-wrapper" id="preview-frame-wrapper">
                     <iframe id="preview-frame" style="width: 100%; height: 100%; border: none; display: block; background: transparent;" title="{{ _('PDF Preview') }}"></iframe>
@@ -2654,13 +2654,13 @@ function ensureTableGroupNames(layerRef, bgRef) {
 function getElementBoundingBox(element) {
     // Get element's bounding box in page coordinates
     if (!element) return null;
-    
+
     const box = element.getClientRect();
     const x = element.x();
     const y = element.y();
     const width = box.width || element.width() || 0;
     const height = box.height || element.height() || 0;
-    
+
     // For groups, get the actual bounding box
     if (element.className === 'Group' || element.getType() === 'Group') {
         const groupBox = element.getClientRect();
@@ -2673,7 +2673,7 @@ function getElementBoundingBox(element) {
             bottom: groupBox.y + groupBox.height
         };
     }
-    
+
     return {
         x: x,
         y: y,
@@ -2691,17 +2691,17 @@ function checkPageBoundaries(element) {
     const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
     const pageWidth = dimensions.width;
     const pageHeight = dimensions.height;
-    
+
     const box = getElementBoundingBox(element);
     if (!box) return { isValid: true, overflowLeft: 0, overflowRight: 0, overflowTop: 0, overflowBottom: 0 };
-    
+
     const overflowLeft = Math.max(0, -box.x);
     const overflowRight = Math.max(0, box.right - pageWidth);
     const overflowTop = Math.max(0, -box.y);
     const overflowBottom = Math.max(0, box.bottom - pageHeight);
-    
+
     const isValid = overflowLeft === 0 && overflowRight === 0 && overflowTop === 0 && overflowBottom === 0;
-    
+
     return {
         isValid: isValid,
         overflowLeft: overflowLeft,
@@ -2715,26 +2715,26 @@ function checkPageBoundaries(element) {
 function checkOverlaps(element, allElements) {
     // Check if element overlaps with other elements
     if (!element || !allElements) return [];
-    
+
     const elementBox = getElementBoundingBox(element);
     if (!elementBox) return [];
-    
+
     const overlaps = [];
-    
+
     for (let i = 0; i < allElements.length; i++) {
         const otherElement = allElements[i];
         const elementName = otherElement.attrs && otherElement.attrs.name;
-        if (otherElement === element || 
-            elementName === 'background' || 
+        if (otherElement === element ||
+            elementName === 'background' ||
             elementName === 'page-border' ||
             elementName === 'smart-guide' ||
             otherElement.className === 'Transformer') {
             continue;
         }
-        
+
         const otherBox = getElementBoundingBox(otherElement);
         if (!otherBox) continue;
-        
+
         // Check for bounding box intersection
         const intersects = !(
             elementBox.right < otherBox.x ||
@@ -2742,13 +2742,13 @@ function checkOverlaps(element, allElements) {
             elementBox.bottom < otherBox.y ||
             elementBox.y > otherBox.bottom
         );
-        
+
         if (intersects) {
             // Calculate overlap area
             const overlapX = Math.max(0, Math.min(elementBox.right, otherBox.right) - Math.max(elementBox.x, otherBox.x));
             const overlapY = Math.max(0, Math.min(elementBox.bottom, otherBox.bottom) - Math.max(elementBox.y, otherBox.y));
             const overlapArea = overlapX * overlapY;
-            
+
             overlaps.push({
                 element: otherElement,
                 overlapArea: overlapArea,
@@ -2757,7 +2757,7 @@ function checkOverlaps(element, allElements) {
             });
         }
     }
-    
+
     return overlaps;
 }
 
@@ -2767,7 +2767,7 @@ const maxKonvaLoadAttempts = 100; // 5 seconds max wait
 
 async function initializePDFEditor() {
     konvaLoadAttempts++;
-    
+
     if (typeof Konva === 'undefined') {
         if (konvaLoadAttempts >= maxKonvaLoadAttempts) {
             console.error('❌ Konva.js failed to load after 5 seconds');
@@ -2796,7 +2796,7 @@ async function initializePDFEditor() {
         setTimeout(initializePDFEditor, 50);
         return;
     }
-    
+
     console.log('✅ Konva.js loaded successfully, initializing editor...');
     if (!window.__PDF_EDITOR_HELPERS__) {
         try {
@@ -2811,7 +2811,7 @@ async function initializePDFEditor() {
             };
         }
     }
-    
+
     // Initialize Konva Stage
     const container = document.getElementById('canvas-container');
     // Get page size from selector if available, otherwise use CURRENT_PAGE_SIZE
@@ -2821,19 +2821,19 @@ async function initializePDFEditor() {
     const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
     let width = dimensions.width;
     let height = dimensions.height;
-    
+
     console.log('Initializing canvas with page size:', currentSize, 'dimensions:', width, 'x', height);
-    
+
     let stage = new Konva.Stage({
         container: 'canvas-container',
         width: width,
         height: height,
         draggable: false
     });
-    
+
     let layer = new Konva.Layer();
     stage.add(layer);
-    
+
     // Store elements for export
     const elements = [];
     let selectedElement = null;
@@ -2841,59 +2841,59 @@ async function initializePDFEditor() {
     const gridSize = 10;
     let smartGuidesEnabled = true;
     let rulersEnabled = false;
-    
+
     // Base fit scale (for auto-fitting to container)
     let baseFitScale = 1;
     let zoomScale = 1; // Zoom scale applied on top of base fit scale
-    
+
     // Auto-fit scaling function to fit canvas within container
     function fitCanvasToContainer() {
         if (!container || !stage) return;
-        
+
         // Get container dimensions (accounting for padding/borders)
         const containerRect = container.getBoundingClientRect();
         const containerWidth = containerRect.width - 40; // Account for padding
         const containerHeight = containerRect.height - 40;
-        
+
         // Skip if container not ready
         if (containerWidth <= 0 || containerHeight <= 0) return;
-        
+
         // Get actual page dimensions dynamically from current page size selector
         const currentPageSizeSelector = document.getElementById('page-size-selector');
         const currentPageSize = (currentPageSizeSelector && currentPageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
         const currentDimensions = PAGE_SIZE_DIMENSIONS[currentPageSize] || PAGE_SIZE_DIMENSIONS['A4'];
         const pageWidth = currentDimensions.width;
         const pageHeight = currentDimensions.height;
-        
+
         // Calculate scale to fit within container while maintaining aspect ratio
         const scaleX = containerWidth / pageWidth;
         const scaleY = containerHeight / pageHeight;
         baseFitScale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
-        
+
         // Reset zoom when fitting
         zoomScale = 1;
-        
+
         // Apply base fit scale
         stage.scale({ x: baseFitScale, y: baseFitScale });
-        
+
         // Redraw
         layer.draw();
-        
+
         console.log(`Canvas fitted: scale=${baseFitScale.toFixed(2)}, container=${containerWidth}x${containerHeight}, page=${pageWidth}x${pageHeight}`);
     }
-    
+
     // Fit canvas on initialization (after a short delay to ensure container is rendered)
     setTimeout(() => {
         fitCanvasToContainer();
     }, 100);
-    
+
     // Fit canvas on window resize
     let resizeTimeout;
     window.addEventListener('resize', function() {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(fitCanvasToContainer, 250);
     });
-    
+
     // Add background with grid
     // Use current page size dimensions to ensure correct size
     const currentPageSizeSelector = document.getElementById('page-size-selector');
@@ -2901,7 +2901,7 @@ async function initializePDFEditor() {
     const currentDimensions = PAGE_SIZE_DIMENSIONS[currentPageSize] || PAGE_SIZE_DIMENSIONS['A4'];
     const backgroundWidth = currentDimensions.width;
     const backgroundHeight = currentDimensions.height;
-    
+
     let background = new Konva.Rect({
         x: 0,
         y: 0,
@@ -2911,7 +2911,7 @@ async function initializePDFEditor() {
         name: 'background'
     });
     layer.add(background);
-    
+
     // Add page border to clearly mark page boundaries
     let pageBorder = new Konva.Rect({
         x: 0,
@@ -2927,7 +2927,7 @@ async function initializePDFEditor() {
     });
     layer.add(pageBorder);
     pageBorder.moveToBottom();  // Keep it behind content but visible
-    
+
     // Add grid lines
     function drawGrid() {
         // Get current page size dimensions dynamically (not scaled stage dimensions)
@@ -2936,10 +2936,10 @@ async function initializePDFEditor() {
         const currentDimensions = PAGE_SIZE_DIMENSIONS[currentPageSize] || PAGE_SIZE_DIMENSIONS['A4'];
         const stageWidth = currentDimensions.width;
         const stageHeight = currentDimensions.height;
-        
+
         // Remove old grid if exists
         layer.find('.grid-line').forEach(line => line.destroy());
-        
+
         // Draw vertical lines
         for (let i = 0; i < stageWidth / gridSize; i++) {
             const line = new Konva.Line({
@@ -2952,7 +2952,7 @@ async function initializePDFEditor() {
             layer.add(line);
             line.moveToBottom();
         }
-        
+
         // Draw horizontal lines
         for (let i = 0; i < stageHeight / gridSize; i++) {
             const line = new Konva.Line({
@@ -2965,7 +2965,7 @@ async function initializePDFEditor() {
             layer.add(line);
             line.moveToBottom();
         }
-        
+
         if (background) {
             background.moveToBottom();
         }
@@ -2979,9 +2979,9 @@ async function initializePDFEditor() {
         }
         layer.draw();
     }
-    
+
     drawGrid();
-    
+
     let marqueeSelecting = false;
     let marqueeStart = null;
     const marqueeDiv = document.getElementById('pdf-marquee');
@@ -3041,14 +3041,14 @@ async function initializePDFEditor() {
             applySelection(picked);
         }
     });
-    
+
     // Element templates
     {% raw %}
     const templates = {
         // Basic elements
         'text': { text: 'Sample Text', fontSize: 14, fontFamily: 'Arial' },
         'heading': { text: 'INVOICE', fontSize: 28, fontFamily: 'Arial', fontStyle: 'bold' },
-        
+
         // Company info
         'company-name': { text: '{{ settings.company_name }}', fontSize: 20, fontFamily: 'Arial', fontStyle: 'bold' },
         'company-info': { text: '{{ settings.company_address }}\\n{{ settings.company_email }}\\n{{ settings.company_phone }}', fontSize: 12 },
@@ -3057,7 +3057,7 @@ async function initializePDFEditor() {
         'company-phone': { text: 'Phone: {{ settings.company_phone }}', fontSize: 12 },
         'company-website': { text: '{{ settings.company_website }}', fontSize: 12 },
         'company-tax-id': { text: 'Tax ID: {{ settings.company_tax_id }}', fontSize: 12 },
-        
+
         // Invoice data
         'invoice-number': { text: 'Invoice #: {{ invoice.invoice_number }}', fontSize: 14, fontStyle: 'bold' },
         'invoice-date': { text: 'Date: {{ format_date(invoice.issue_date) }}', fontSize: 12 },
@@ -3071,7 +3071,7 @@ async function initializePDFEditor() {
         'totals': { text: 'Total: {{ format_money(invoice.total_amount) }}', fontSize: 16, fontStyle: 'bold' },
         'notes': { text: 'Notes: {{ invoice.notes }}', fontSize: 11 },
         'terms': { text: 'Terms: {{ invoice.terms }}', fontSize: 10 },
-        
+
         // Payment & Project
         'payment-date': { text: 'Payment Date: {{ format_date(invoice.payment_date) if invoice.payment_date else "Pending" }}', fontSize: 12 },
         'payment-method': { text: 'Payment Method: {{ invoice.payment_method or "N/A" }}', fontSize: 12 },
@@ -3081,7 +3081,7 @@ async function initializePDFEditor() {
         'project-name': { text: 'Project: {{ invoice.project.name }}', fontSize: 12 },
         'client-email': { text: 'Email: {{ invoice.client_email or invoice.client.email }}', fontSize: 12 },
         'client-phone': { text: 'Phone: {{ invoice.client.phone or "" }}', fontSize: 12 },
-        
+
         // Advanced
         'qr-code': { text: '[QR Code: {{ invoice.invoice_number }}]', fontSize: 10 },
         'barcode': { text: '{{ invoice.invoice_number }}', fontSize: 10 },
@@ -3092,27 +3092,27 @@ async function initializePDFEditor() {
         'currency': { text: 'Currency: {{ invoice.currency_code }}', fontSize: 12 }
     };
     {% endraw %}
-    
+
     // Tab switching
     document.querySelectorAll('.sidebar-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             const targetTab = this.dataset.tab;
-            
+
             // Update tabs
             document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
             this.classList.add('active');
-            
+
             // Update content
             document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
             document.getElementById('tab-' + targetTab).classList.add('active');
         });
     });
-    
+
     // Search functionality
     const searchBox = document.getElementById('sidebar-search');
     searchBox.addEventListener('input', function() {
         const searchTerm = this.value.toLowerCase().trim();
-        
+
         // Search in elements tab
         const elementItems = document.querySelectorAll('#tab-elements .element-item');
         elementItems.forEach(item => {
@@ -3123,7 +3123,7 @@ async function initializePDFEditor() {
                 item.style.display = 'none';
             }
         });
-        
+
         // Search in variables tab
         const variableItems = document.querySelectorAll('#tab-variables .variable-item');
         variableItems.forEach(item => {
@@ -3134,7 +3134,7 @@ async function initializePDFEditor() {
                 item.style.display = 'none';
             }
         });
-        
+
         // Show/hide group titles
         document.querySelectorAll('.element-group').forEach(group => {
             const visibleItems = Array.from(group.querySelectorAll('.element-item, .variable-item'))
@@ -3142,13 +3142,13 @@ async function initializePDFEditor() {
             group.style.display = visibleItems.length > 0 ? 'block' : 'none';
         });
     });
-    
+
     // Handle variable clicks (add as custom text)
     document.querySelectorAll('.variable-item').forEach(item => {
         item.addEventListener('click', function() {
             const variable = this.dataset.variable;
             let text;
-            
+
             // Handle special loop variables
             if (variable === 'for-loop-start') {
                 {% raw %}
@@ -3171,16 +3171,16 @@ async function initializePDFEditor() {
                 text = '{{ ' + variable + ' }}';
                 {% endraw %}
             }
-            
+
             addElement('custom-text', 100, 100, text);
         });
     });
-    
+
     // Drag from sidebar
     document.querySelectorAll('.element-item').forEach(item => {
         item.addEventListener('click', function() {
             const type = this.dataset.type;
-            
+
             // Handle custom text with prompt
             if (type === 'custom-text') {
                 {% raw %}
@@ -3191,11 +3191,11 @@ async function initializePDFEditor() {
                 }
                 return;
             }
-            
+
             addElement(type, 100, 100);
         });
     });
-    
+
     function addElement(type, x, y, customText) {
         // Handle custom text
         if (type === 'custom-text' || customText) {
@@ -3210,7 +3210,7 @@ async function initializePDFEditor() {
                 width: 400,
                 name: 'custom-text'
             });
-            
+
             layer.add(text);
             elements.push({ type: 'custom-text', node: text });
             setupSelection(text);
@@ -3218,9 +3218,9 @@ async function initializePDFEditor() {
             scheduleInvoiceEditorHistoryPush();
             return;
         }
-        
+
         const template = templates[type];
-        
+
         // Handle special cases first
             if (type === 'line') {
                 const line = new Konva.Line({
@@ -3237,7 +3237,7 @@ async function initializePDFEditor() {
                 scheduleInvoiceEditorHistoryPush();
                 return;
             }
-        
+
         if (type === 'rectangle') {
             const rect = new Konva.Rect({
                 x: x,
@@ -3257,7 +3257,7 @@ async function initializePDFEditor() {
             scheduleInvoiceEditorHistoryPush();
             return;
         }
-        
+
         if (type === 'circle') {
             const circle = new Konva.Circle({
                 x: x + 50,
@@ -3276,7 +3276,7 @@ async function initializePDFEditor() {
             scheduleInvoiceEditorHistoryPush();
             return;
         }
-        
+
             if (type === 'logo' && LOGO_URL) {
                 Konva.Image.fromURL(LOGO_URL, function(image) {
                     image.setAttrs({
@@ -3295,17 +3295,17 @@ async function initializePDFEditor() {
                 });
                 return;
             }
-        
+
             if (type === 'items-table') {
                 addTable(x, y);
             return;
         }
-        
+
             if (type === 'expenses-table') {
                 addExpensesTable(x, y);
             return;
         }
-        
+
         if (type === 'decorative-image') {
             // Create a placeholder for decorative images
             const placeholder = new Konva.Group({
@@ -3315,11 +3315,11 @@ async function initializePDFEditor() {
                 name: 'decorative-image',
                 imageUrl: '' // Store image URL here
             });
-            
+
             // Ensure name is set via multiple methods for proper serialization
             placeholder.setAttr('name', 'decorative-image');
             placeholder.name('decorative-image');
-            
+
             const rect = new Konva.Rect({
                 x: 0,
                 y: 0,
@@ -3330,7 +3330,7 @@ async function initializePDFEditor() {
                 strokeWidth: 2,
                 dash: [5, 5]
             });
-            
+
             const text = new Konva.Text({
                 x: 10,
                 y: 40,
@@ -3341,7 +3341,7 @@ async function initializePDFEditor() {
                 align: 'center',
                 width: 80
             });
-            
+
             const icon = new Konva.Text({
                 x: 35,
                 y: 15,
@@ -3350,11 +3350,11 @@ async function initializePDFEditor() {
                 width: 30,
                 align: 'center'
             });
-            
+
             placeholder.add(rect);
             placeholder.add(icon);
             placeholder.add(text);
-            
+
             layer.add(placeholder);
             elements.push({ type: 'decorative-image', node: placeholder });
             setupSelection(placeholder);
@@ -3362,10 +3362,10 @@ async function initializePDFEditor() {
             scheduleInvoiceEditorHistoryPush();
             return;
         }
-        
+
         // Handle text-based elements
         if (!template) return;
-        
+
         const text = new Konva.Text({
             x: x,
             y: y,
@@ -3379,7 +3379,7 @@ async function initializePDFEditor() {
             opacity: template.opacity !== undefined ? template.opacity : 1,
             name: type
         });
-        
+
         layer.add(text);
         elements.push({ type: type, node: text, template: template });
         setupSelection(text);
@@ -3388,7 +3388,7 @@ async function initializePDFEditor() {
         layer.draw();
         scheduleInvoiceEditorHistoryPush();
     }
-    
+
     function addTable(x, y) {
         const tableGroup = new Konva.Group({
             x: x,
@@ -3398,7 +3398,7 @@ async function initializePDFEditor() {
         });
         tableGroup.setAttr('name', 'items-table');
         tableGroup.setAttr('pdfTable', 'items-table');
-        
+
         const header = new Konva.Text({
             text: 'Description | Qty | Price | Total',
             fontSize: 12,
@@ -3406,13 +3406,13 @@ async function initializePDFEditor() {
             fill: 'black',
             width: 500
         });
-        
+
         const line = new Konva.Line({
             points: [0, 20, 500, 20],
             stroke: 'black',
             strokeWidth: 1
         });
-        
+
         {% raw %}
         const items = new Konva.Text({
             y: 25,
@@ -3422,7 +3422,7 @@ async function initializePDFEditor() {
             width: 500
         });
         {% endraw %}
-        
+
         tableGroup.add(header, line, items);
         layer.add(tableGroup);
         elements.push({ type: 'items-table', node: tableGroup });
@@ -3436,7 +3436,7 @@ async function initializePDFEditor() {
         layer.draw();
         scheduleInvoiceEditorHistoryPush();
     }
-    
+
     function addExpensesTable(x, y) {
         const tableGroup = new Konva.Group({
             x: x,
@@ -3446,7 +3446,7 @@ async function initializePDFEditor() {
         });
         tableGroup.setAttr('name', 'expenses-table');
         tableGroup.setAttr('pdfTable', 'expenses-table');
-        
+
         const header = new Konva.Text({
             text: 'Expense | Date | Category | Amount',
             fontSize: 12,
@@ -3454,13 +3454,13 @@ async function initializePDFEditor() {
             fill: '#856404',
             width: 500
         });
-        
+
         const line = new Konva.Line({
             points: [0, 20, 500, 20],
             stroke: '#856404',
             strokeWidth: 1
         });
-        
+
         {% raw %}
         const items = new Konva.Text({
             y: 25,
@@ -3470,7 +3470,7 @@ async function initializePDFEditor() {
             width: 500
         });
         {% endraw %}
-        
+
         tableGroup.add(header, line, items);
         layer.add(tableGroup);
         elements.push({ type: 'expenses-table', node: tableGroup });
@@ -3482,7 +3482,7 @@ async function initializePDFEditor() {
         layer.draw();
         scheduleInvoiceEditorHistoryPush();
     }
-    
+
     function setupSelection(node) {
         node.on('click', function(e) {
             // If clicking on a child of a table Group, select the Group instead
@@ -3499,12 +3499,12 @@ async function initializePDFEditor() {
             selectElement(targetNode, e);
             e.cancelBubble = true;
         });
-        
+
         // Add double-click handler for text elements in tables to enable direct editing
         // Check multiple ways to detect Text elements
-        const isTextNode = node.className === 'Text' || (node.getType && node.getType() === 'Text') || 
+        const isTextNode = node.className === 'Text' || (node.getType && node.getType() === 'Text') ||
                           (node.constructor && node.constructor.name === 'Text');
-        if (isTextNode && node.parent && node.parent.attrs && 
+        if (isTextNode && node.parent && node.parent.attrs &&
             (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table')) {
             // Change cursor on hover to indicate editability
             node.on('mouseenter', function() {
@@ -3513,7 +3513,7 @@ async function initializePDFEditor() {
             node.on('mouseleave', function() {
                 stage.container().style.cursor = 'default';
             });
-            
+
             node.on('dblclick', function(e) {
                 // Select the individual text element for editing
                 selectElement(node, null);
@@ -3530,7 +3530,7 @@ async function initializePDFEditor() {
                 }, 150);
             });
         }
-        
+
         // Add snap to grid on drag + optional smart alignment guides
         node.on('dragmove', function() {
             if (snapToGrid) {
@@ -3568,20 +3568,20 @@ async function initializePDFEditor() {
             scheduleInvoiceEditorHistoryPush();
         });
     }
-    
+
     // Warning management functions
     const elementWarnings = new Map(); // Store warnings for each element
     const warningIndicators = new Map(); // Store warning indicators for each element
-    
+
     function checkElementWarnings(element) {
         if (!element || element === background || element.className === 'Transformer') return;
-        
+
         const boundaryCheck = checkPageBoundaries(element);
         const overlaps = checkOverlaps(element, layer.children);
-        
+
         const hasOverflow = !boundaryCheck.isValid;
         const hasOverlap = overlaps.length > 0;
-        
+
         // Store warnings
         elementWarnings.set(element, {
             overflow: hasOverflow,
@@ -3589,27 +3589,27 @@ async function initializePDFEditor() {
             boundaryDetails: boundaryCheck,
             overlaps: overlaps
         });
-        
+
         // Apply visual warnings
         applyVisualWarnings(element, hasOverflow, hasOverlap);
-        
+
         return { hasOverflow, hasOverlap, boundaryCheck, overlaps };
     }
-    
+
     function applyVisualWarnings(element, hasOverflow, hasOverlap) {
         // Remove existing warning names
         if (element.hasName) {
             if (element.hasName('element-overflow')) element.removeName('element-overflow');
             if (element.hasName('element-overlap')) element.removeName('element-overlap');
         }
-        
+
         // Remove existing warning indicator
         const existingIndicator = warningIndicators.get(element);
         if (existingIndicator) {
             existingIndicator.destroy();
             warningIndicators.delete(element);
         }
-        
+
         if (hasOverflow || hasOverlap) {
             // Add warning names for styling
             if (hasOverflow) {
@@ -3618,33 +3618,33 @@ async function initializePDFEditor() {
             if (hasOverlap) {
                 element.addName('element-overlap');
             }
-            
+
             // Warning indicator dots removed - warnings are now only shown in the warning panel
         }
-        
+
         layer.draw();
     }
-    
+
     function updateWarningPanel() {
         const warningPanel = document.getElementById('warning-panel');
         if (!warningPanel) return;
-        
+
         const warningList = document.getElementById('warning-list');
         if (!warningList) return;
-        
+
         warningList.innerHTML = '';
-        
+
         let hasWarnings = false;
         elementWarnings.forEach((warnings, element) => {
             if (warnings.overflow || warnings.overlap) {
                 hasWarnings = true;
                 const item = document.createElement('div');
                 item.className = 'warning-item';
-                
+
                 const elementName = element.attrs.name || element.className || 'Element';
                 let warningText = `${elementName}: `;
                 const issues = [];
-                
+
                 if (warnings.overflow) {
                     const b = warnings.boundaryDetails;
                     if (b.overflowLeft > 0) issues.push(`Overflows left by ${Math.round(b.overflowLeft)}px`);
@@ -3652,30 +3652,30 @@ async function initializePDFEditor() {
                     if (b.overflowTop > 0) issues.push(`Overflows top by ${Math.round(b.overflowTop)}px`);
                     if (b.overflowBottom > 0) issues.push(`Overflows bottom by ${Math.round(b.overflowBottom)}px`);
                 }
-                
+
                 if (warnings.overlap) {
                     issues.push(`Overlaps with ${warnings.overlaps.length} element(s)`);
                 }
-                
+
                 warningText += issues.join(', ');
                 item.textContent = warningText;
-                
+
                 item.addEventListener('click', function() {
                     selectElement(element, null);
                     // Bring element to front without changing stage position
                     element.moveToTop();
                     layer.draw();
                 });
-                
+
                 warningList.appendChild(item);
             }
         });
-        
+
         if (!hasWarnings) {
             warningList.innerHTML = '<div class="warning-list-empty">No warnings</div>';
         }
     }
-    
+
     // Check all elements for warnings
     function checkAllElementWarnings() {
         if (!layer) return;
@@ -3687,12 +3687,12 @@ async function initializePDFEditor() {
         });
         updateWarningPanel();
     }
-    
+
     // Refresh warnings button handler
     document.getElementById('refresh-warnings')?.addEventListener('click', function() {
         checkAllElementWarnings();
     });
-    
+
     // Snap to grid toggle
     document.getElementById('snap-to-grid')?.addEventListener('change', function(e) {
         snapToGrid = e.target.checked;
@@ -3710,7 +3710,7 @@ async function initializePDFEditor() {
         if (h) h.style.display = rulersEnabled ? 'block' : 'none';
         if (v) v.style.display = rulersEnabled ? 'block' : 'none';
     });
-    
+
     let selectedNodes = [];
     function syncSelectedFromNodes() {
         selectedElement = selectedNodes.length ? selectedNodes[0] : null;
@@ -3905,7 +3905,7 @@ async function initializePDFEditor() {
         updateWarningPanel();
         refreshLayersPanel();
     }
-    
+
     function pdfGroupSelection() {
         if (!window.__PDF_EDITOR_HELPERS__ || typeof window.__PDF_EDITOR_HELPERS__.unionClientRect !== 'function') return;
         if (selectedNodes.length < 2) return;
@@ -3987,19 +3987,19 @@ async function initializePDFEditor() {
             console.error('Properties content element not found!');
             return;
         }
-        
+
         if (!node) {
             console.error('Node is null or undefined!');
             propsContent.innerHTML = '<p class="text-sm text-red-500">Error: No element selected</p>';
             return;
         }
-        
+
         const attrs = node.attrs || {};
         // Try multiple ways to detect Text elements for better compatibility
         const className = node.className || (node.getType && node.getType()) || 'Unknown';
-        const isTextElement = className === 'Text' || (node.getType && node.getType() === 'Text') || 
+        const isTextElement = className === 'Text' || (node.getType && node.getType() === 'Text') ||
                              (node.constructor && node.constructor.name === 'Text');
-        
+
         // Debug logging
         console.log('updatePropertiesPanel called:', {
             className: className,
@@ -4010,26 +4010,26 @@ async function initializePDFEditor() {
             attrs: attrs,
             node: node
         });
-        
+
         let html = '<div class="space-y-4">';
-        
+
         // Element type
         html += '<div class="property-group">';
         html += '<div class="property-label">Element Type</div>';
         html += `<input type="text" value="${attrs.name || className}" disabled class="property-input bg-gray-100">`;
         html += '</div>';
-        
+
         // Position
         html += '<div class="property-group">';
         html += '<div class="property-label">Position X</div>';
         html += `<input type="number" id="prop-x" value="${Math.round(attrs.x || 0)}" class="property-input">`;
         html += '</div>';
-        
+
         html += '<div class="property-group">';
         html += '<div class="property-label">Position Y</div>';
         html += `<input type="number" id="prop-y" value="${Math.round(attrs.y || 0)}" class="property-input">`;
         html += '</div>';
-        
+
         // Text-specific properties - check if it's a Text element (even if inside a table group)
         if (isTextElement) {
             // Properly escape text for HTML and convert \n to actual newlines
@@ -4037,7 +4037,7 @@ async function initializePDFEditor() {
             // Use more rows for table items which might be longer
             const isTableText = node.parent && node.parent.attrs && (node.parent.attrs.name === 'items-table' || node.parent.attrs.name === 'expenses-table');
             const textareaRows = isTableText ? 8 : 3;
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Text Content</div>';
             html += `<textarea id="prop-text" class="property-input" rows="${textareaRows}">${textContent}</textarea>`;
@@ -4045,12 +4045,12 @@ async function initializePDFEditor() {
                 html += '<p class="text-xs text-gray-500 mt-1">Double-click table text to edit, or edit here in the properties panel.</p>';
             }
             html += '</div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Font Size</div>';
             html += `<input type="number" id="prop-fontSize" value="${attrs.fontSize || 14}" class="property-input">`;
             html += '</div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Font Family</div>';
             html += `<select id="prop-fontFamily" class="property-input">`;
@@ -4061,7 +4061,7 @@ async function initializePDFEditor() {
             });
             html += '</select>';
             html += '</div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Font Style</div>';
             html += `<select id="prop-fontStyle" class="property-input">`;
@@ -4070,17 +4070,17 @@ async function initializePDFEditor() {
             html += `<option value="italic" ${attrs.fontStyle === 'italic' ? 'selected' : ''}>Italic</option>`;
             html += '</select>';
             html += '</div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Text Color</div>';
             html += `<input type="color" id="prop-fill" value="${rgbToHex(attrs.fill || '#000000')}" class="property-input">`;
             html += '</div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Width</div>';
             html += `<input type="number" id="prop-width" value="${attrs.width || 400}" class="property-input">`;
             html += '</div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">{{ _("Text align") }}</div>';
             html += '<div class="prop-segmented" id="prop-text-align">';
@@ -4099,43 +4099,43 @@ async function initializePDFEditor() {
                 html += '<button type="button" class="prop-valign-btn' + (curVA === v ? ' active' : '') + '" data-valign="' + v + '"><i class="fas fa-' + pair[1] + '"></i></button>';
             });
             html += '</div></div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Opacity</div>';
             html += `<input type="range" id="prop-opacity" min="0" max="1" step="0.1" value="${attrs.opacity !== undefined ? attrs.opacity : 1}" class="property-input">`;
             html += `<span id="opacity-value">${(attrs.opacity !== undefined ? attrs.opacity : 1) * 100}%</span>`;
             html += '</div>';
         }
-        
+
         // Shape-specific properties
         if (className === 'Rect' || className === 'Circle') {
             html += '<div class="property-group">';
             html += '<div class="property-label">Fill Color</div>';
             html += `<input type="color" id="prop-fill" value="${rgbToHex(attrs.fill || '#ffffff')}" class="property-input">`;
             html += '</div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Stroke Color</div>';
             html += `<input type="color" id="prop-stroke" value="${rgbToHex(attrs.stroke || '#000000')}" class="property-input">`;
             html += '</div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Stroke Width</div>';
             html += `<input type="number" id="prop-strokeWidth" value="${attrs.strokeWidth || 1}" class="property-input">`;
             html += '</div>';
-            
+
             if (className === 'Rect') {
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Width</div>';
                 html += `<input type="number" id="prop-width" value="${attrs.width || 100}" class="property-input">`;
                 html += '</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Height</div>';
                 html += `<input type="number" id="prop-height" value="${attrs.height || 100}" class="property-input">`;
                 html += '</div>';
             }
-            
+
             if (className === 'Circle') {
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Radius</div>';
@@ -4143,20 +4143,20 @@ async function initializePDFEditor() {
                 html += '</div>';
             }
         }
-        
+
         // Line-specific properties
         if (className === 'Line') {
             html += '<div class="property-group">';
             html += '<div class="property-label">Stroke Color</div>';
             html += `<input type="color" id="prop-stroke" value="${rgbToHex(attrs.stroke || '#000000')}" class="property-input">`;
             html += '</div>';
-            
+
             html += '<div class="property-group">';
             html += '<div class="property-label">Stroke Width</div>';
             html += `<input type="number" id="prop-strokeWidth" value="${attrs.strokeWidth || 1}" class="property-input">`;
             html += '</div>';
         }
-        
+
         // Decorative image properties
         // Use includes() to handle cases where name might be modified (e.g., 'decorative-image element-overlap')
         if (attrs.name && attrs.name.includes('decorative-image')) {
@@ -4165,13 +4165,13 @@ async function initializePDFEditor() {
             console.log('Properties panel - decorative image URL:', imageUrl);
             html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
             html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Decorative Image</div>';
-            
+
             if (imageUrl && imageUrl.trim() !== '') {
                 html += '<div style="margin-bottom: 1rem;">';
                 html += `<img src="${imageUrl}" alt="Decorative image" style="max-width: 100%; max-height: 150px; border: 1px solid #ddd; border-radius: 4px;">`;
                 html += '</div>';
             }
-            
+
             html += '<div class="property-group">';
             html += '<label for="decorative-image-upload" class="property-label">Upload Image</label>';
             html += '<input type="file" id="decorative-image-upload" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style="display: none;">';
@@ -4180,7 +4180,7 @@ async function initializePDFEditor() {
             html += imageUrl ? '{{ _("Change Image") }}' : '{{ _("Upload Image") }}';
             html += '</button>';
             html += '</div>';
-            
+
             if (imageUrl) {
                 html += '<div class="property-group">';
                 html += '<button type="button" id="btn-remove-decorative-image" class="property-input" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; width: 100%;">';
@@ -4188,11 +4188,11 @@ async function initializePDFEditor() {
                 html += '</button>';
                 html += '</div>';
             }
-            
+
             html += '<input type="hidden" id="prop-image-url" value="' + (imageUrl || '') + '">';
             html += '</div>';
         }
-        
+
         // Group-specific properties (for items-table and expenses-table)
         // Check both className and constructor name for Groups
         const isGroup = className === 'Group' || (node.constructor && node.constructor.name === 'Group');
@@ -4204,41 +4204,41 @@ async function initializePDFEditor() {
             name: attrs.name,
             isTableGroup: isTableGroup
         });
-        
+
         if (isTableGroup) {
             try {
                 // Find child elements - use getChildren() to get direct children
                 const children = node.getChildren();
                 const textElements = children.filter(child => child.className === 'Text');
                 const lineElements = children.filter(child => child.className === 'Line');
-                
+
                 const headerText = textElements[0]; // First text is header
                 const line = lineElements[0];
                 const itemsText = textElements[1]; // Second text is items
-                
+
                 const headerAttrs = headerText ? headerText.attrs : {};
                 const lineAttrs = line ? line.attrs : {};
                 const itemsAttrs = itemsText ? itemsText.attrs : {};
-                
+
                 // Debug logging
                 console.log('Table Group detected:', attrs.name);
                 console.log('Children count:', children.length);
                 console.log('Text elements:', textElements.length);
                 console.log('Line elements:', lineElements.length);
-                
+
                 html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
                 html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Header</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Header Text</div>';
                 html += `<textarea id="prop-table-header-text" class="property-input" rows="2">${(headerAttrs.text || '').replace(/\\n/g, '\n')}</textarea>`;
                 html += '</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Header Font Size</div>';
                 html += `<input type="number" id="prop-table-header-fontSize" value="${headerAttrs.fontSize || 12}" class="property-input">`;
                 html += '</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Header Font Style</div>';
                 html += `<select id="prop-table-header-fontStyle" class="property-input">`;
@@ -4247,58 +4247,58 @@ async function initializePDFEditor() {
                 html += `<option value="italic" ${headerAttrs.fontStyle === 'italic' ? 'selected' : ''}>Italic</option>`;
                 html += '</select>';
                 html += '</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Header Color</div>';
                 html += `<input type="color" id="prop-table-header-fill" value="${rgbToHex(headerAttrs.fill || '#000000')}" class="property-input">`;
                 html += '</div>';
-                
+
                 html += '</div>';
-                
+
                 html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
                 html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Items</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Items Template</div>';
                 html += `<textarea id="prop-table-items-text" class="property-input" rows="4">${(itemsAttrs.text || '').replace(/\\n/g, '\n')}</textarea>`;
                 html += '</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Items Font Size</div>';
                 html += `<input type="number" id="prop-table-items-fontSize" value="${itemsAttrs.fontSize || 11}" class="property-input">`;
                 html += '</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Items Color</div>';
                 html += `<input type="color" id="prop-table-items-fill" value="${rgbToHex(itemsAttrs.fill || '#000000')}" class="property-input">`;
                 html += '</div>';
-                
+
                 html += '</div>';
-                
+
                 html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
                 html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Separator Line</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Line Color</div>';
                 html += `<input type="color" id="prop-table-line-stroke" value="${rgbToHex(lineAttrs.stroke || '#000000')}" class="property-input">`;
                 html += '</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Line Width</div>';
                 html += `<input type="number" id="prop-table-line-strokeWidth" value="${lineAttrs.strokeWidth || 1}" class="property-input">`;
                 html += '</div>';
-                
+
                 html += '</div>';
-                
+
                 html += '<div class="property-group" style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e5e7eb;">';
                 html += '<div class="property-label" style="font-weight: bold; color: #667eea;">Table Dimensions</div>';
-                
+
                 html += '<div class="property-group">';
                 html += '<div class="property-label">Table Width</div>';
                 const tableWidth = headerAttrs.width || itemsAttrs.width || 500;
                 html += `<input type="number" id="prop-table-width" value="${tableWidth}" class="property-input">`;
                 html += '</div>';
-                
+
                 html += '</div>';
             } catch (error) {
                 console.error('Error processing table group:', error);
@@ -4325,7 +4325,7 @@ async function initializePDFEditor() {
             html += '<p class="text-sm text-gray-500 italic mt-2">This is a Group element. If this is a table, make sure it has the name "items-table" or "expenses-table".</p>';
             html += '</div>';
         }
-        
+
         // Layer controls
         html += '<div class="property-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e5e7eb;">';
         html += '<div class="property-label">Layer Order</div>';
@@ -4336,16 +4336,16 @@ async function initializePDFEditor() {
         html += '<button onclick="moveLayer(\'bottom\')" class="btn btn-sm btn-secondary flex-1"><i class="fas fa-angle-double-down"></i></button>';
         html += '</div>';
         html += '</div>';
-        
+
         html += '</div>';
-        
+
         console.log('Setting properties HTML, length:', html.length);
         console.log('HTML preview (first 500 chars):', html.substring(0, 500));
         propsContent.innerHTML = html;
         console.log('Properties HTML set successfully');
         console.log('Properties content element exists:', !!propsContent);
         console.log('Properties content innerHTML length after setting:', propsContent.innerHTML.length);
-        
+
         // Attach event listeners
         try {
             attachPropertyListeners();
@@ -4354,7 +4354,7 @@ async function initializePDFEditor() {
             console.error('Error attaching property listeners:', error);
         }
     }
-    
+
     function rgbToHex(color) {
         if (color.startsWith('#')) return color;
         if (color === 'transparent') return '#ffffff';
@@ -4362,10 +4362,10 @@ async function initializePDFEditor() {
         if (color === 'white') return '#ffffff';
         return color;
     }
-    
+
     function attachPropertyListeners() {
         if (selectedNodes.length !== 1 || !selectedNodes[0]) return;
-        
+
         const propX = document.getElementById('prop-x');
         const propY = document.getElementById('prop-y');
         const propText = document.getElementById('prop-text');
@@ -4379,21 +4379,21 @@ async function initializePDFEditor() {
         const propHeight = document.getElementById('prop-height');
         const propRadius = document.getElementById('prop-radius');
         const propOpacity = document.getElementById('prop-opacity');
-        
+
         if (propX) propX.addEventListener('input', () => { selectedElement.x(parseFloat(propX.value)); layer.draw(); scheduleInvoiceEditorHistoryPush(); });
         if (propY) propY.addEventListener('input', () => { selectedElement.y(parseFloat(propY.value)); layer.draw(); scheduleInvoiceEditorHistoryPush(); });
         if (propText) {
             // Add both input and change listeners to ensure changes are captured
-            propText.addEventListener('input', function() { 
+            propText.addEventListener('input', function() {
                 if (selectedElement && selectedElement.text) {
-                    selectedElement.text(this.value); 
+                    selectedElement.text(this.value);
                     layer.draw();
                     scheduleInvoiceEditorHistoryPush();
                 }
             });
-            propText.addEventListener('change', function() { 
+            propText.addEventListener('change', function() {
                 if (selectedElement && selectedElement.text) {
-                    selectedElement.text(this.value); 
+                    selectedElement.text(this.value);
                     layer.draw();
                     scheduleInvoiceEditorHistoryPush();
                 }
@@ -4453,7 +4453,7 @@ async function initializePDFEditor() {
                 scheduleInvoiceEditorHistoryPush();
             });
         });
-        
+
         // Function to update decorative image element with uploaded image (moved outside to be accessible)
         window.updateDecorativeImageElement = function(element, imageUrl) {
             const elementName = element && element.attrs ? element.attrs.name : '';
@@ -4461,24 +4461,24 @@ async function initializePDFEditor() {
                 // Silently return if element is not a decorative image (this can happen when buttons exist but wrong element is selected)
                 return;
             }
-            
+
             console.log('[INVOICE] updateDecorativeImageElement called with URL:', imageUrl);
-            
+
             // Store image URL in element attributes - use setAttr to ensure it's saved
             element.setAttr('imageUrl', imageUrl || '');
             // Also ensure it's in attrs for proper serialization
             element.attrs.imageUrl = imageUrl || '';
-            
+
             // Verify it was set correctly
             const verifyUrl = element.getAttr('imageUrl') || element.attrs.imageUrl || '';
             console.log('[INVOICE] ✅ imageUrl set and verified:', verifyUrl, 'matches:', verifyUrl === imageUrl);
-            
+
             // Remove existing image if any
             const existingImage = element.findOne('Image');
             if (existingImage) {
                 existingImage.destroy();
             }
-            
+
             // Remove all placeholder elements
             const rect = element.findOne('Rect');
             const allTexts = element.find('Text');
@@ -4488,30 +4488,30 @@ async function initializePDFEditor() {
                     textNode.destroy();
                 }
             });
-            
+
             if (rect) {
                 rect.destroy();
             }
-            
+
             if (imageUrl && imageUrl.trim() !== '') {
                 console.log('Loading image from URL:', imageUrl);
-                
+
                 // Create a temporary image to check if it loads
                 const tempImg = new Image();
                 tempImg.crossOrigin = 'anonymous';
-                
+
                 tempImg.onload = function() {
                     console.log('Image verified, loading into Konva. Dimensions:', tempImg.width, 'x', tempImg.height);
-                    
+
                     // Load and display the actual image
                     Konva.Image.fromURL(imageUrl, function(konvaImage) {
                         console.log('Konva image loaded successfully, dimensions:', konvaImage.width(), 'x', konvaImage.height());
-                        
+
                         // Use actual image dimensions or default to 100x100
                         let width = konvaImage.width() || tempImg.width || 100;
                         let height = konvaImage.height() || tempImg.height || 100;
                         const aspectRatio = width / height;
-                        
+
                         // Scale to fit within 200x200 but maintain aspect ratio
                         const maxSize = 200;
                         if (width > maxSize || height > maxSize) {
@@ -4523,7 +4523,7 @@ async function initializePDFEditor() {
                                 width = maxSize * aspectRatio;
                             }
                         }
-                        
+
                         // Preserve transparency - don't set fill or opacity that would override image alpha
                         konvaImage.setAttrs({
                             x: 0,
@@ -4535,18 +4535,18 @@ async function initializePDFEditor() {
                             visible: true,  // Explicitly make it visible
                             listening: true
                         });
-                        
+
                         // Update group size
                         element.width(width);
                         element.height(height);
                         element.visible(true);  // Ensure group is visible
-                        
+
                         // Add image
                         element.add(konvaImage);
                         layer.draw();
                         stage.draw();
                         console.log('Image added to element, new dimensions:', width, 'x', height);
-                        
+
                         // Force a redraw of the properties panel to show the image
                         if (selectedElement === element) {
                             setTimeout(() => {
@@ -4559,12 +4559,12 @@ async function initializePDFEditor() {
                         ttAlert('Failed to load image into canvas. The image URL is saved but may not display correctly.');
                     });
                 };
-                
+
                 tempImg.onerror = function() {
                     console.error('Failed to load image (onerror):', imageUrl);
                     ttAlert('Failed to load image. Please check the image URL: ' + imageUrl);
                 };
-                
+
                 tempImg.src = imageUrl;
             } else {
                 // Restore placeholder if image removed
@@ -4579,7 +4579,7 @@ async function initializePDFEditor() {
                     dash: [5, 5]
                 });
                 element.add(newRect);
-                
+
                 const newText = new Konva.Text({
                     x: 10,
                     y: 40,
@@ -4591,7 +4591,7 @@ async function initializePDFEditor() {
                     width: 80
                 });
                 element.add(newText);
-                
+
                 const newIcon = new Konva.Text({
                     x: 35,
                     y: 15,
@@ -4601,7 +4601,7 @@ async function initializePDFEditor() {
                     align: 'center'
                 });
                 element.add(newIcon);
-                
+
                 element.width(100);
                 element.height(100);
                 element.visible(true);
@@ -4609,12 +4609,12 @@ async function initializePDFEditor() {
                 stage.draw();
             }
         };
-        
+
         // Decorative image upload handler
         const decorativeImageUpload = document.getElementById('decorative-image-upload');
         const btnUploadDecorativeImage = document.getElementById('btn-upload-decorative-image');
         const btnRemoveDecorativeImage = document.getElementById('btn-remove-decorative-image');
-        
+
         if (btnUploadDecorativeImage) {
             btnUploadDecorativeImage.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -4623,7 +4623,7 @@ async function initializePDFEditor() {
                 console.log('Selected element:', selectedElement);
                 const elementName = selectedElement ? (selectedElement.attrs ? selectedElement.attrs.name : 'no attrs') : 'no element';
                 console.log('Selected element name:', elementName);
-                
+
                 // Only proceed if selected element is a decorative image
                 // Check if name includes 'decorative-image' (it might be 'decorative-image element-overlap' or similar)
                 if (!selectedElement || !selectedElement.attrs || !elementName || !elementName.includes('decorative-image')) {
@@ -4647,12 +4647,12 @@ async function initializePDFEditor() {
             decorativeImageUpload.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
                 console.log('File input change event, file:', file);
                 console.log('Selected element:', selectedElement);
                 const elementName = selectedElement ? (selectedElement.attrs ? selectedElement.attrs.name : 'no attrs') : 'no element';
                 console.log('Selected element name:', elementName);
-                
+
                 // Only proceed if selected element is a decorative image
                 // Check if name includes 'decorative-image' (it might be 'decorative-image element-overlap' or similar)
                 if (!selectedElement || !selectedElement.attrs || !elementName || !elementName.includes('decorative-image')) {
@@ -4660,32 +4660,32 @@ async function initializePDFEditor() {
                     // Silently return - file input might be triggered when wrong element is selected
                     return;
                 }
-                
+
                 // Validate file type
                 const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
                 if (!allowedTypes.includes(file.type)) {
                     ttAlert('{{ _("Only image files (PNG, JPG, JPEG, GIF, WEBP) are allowed") }}');
                     return;
                 }
-                
+
                 // Validate file size (5MB)
                 if (file.size > 5 * 1024 * 1024) {
                     ttAlert('{{ _("File size must be less than 5MB") }}');
                     return;
                 }
-                
+
                 // Upload image
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('csrf_token', '{{ csrf_token() }}');
-                
+
                 // Get fresh references since buttons might be recreated
                 const currentBtnUpload = document.getElementById('btn-upload-decorative-image');
                 if (currentBtnUpload) {
                     currentBtnUpload.disabled = true;
                     currentBtnUpload.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Uploading...") }}';
                 }
-                
+
                 fetch('{{ url_for("admin.upload_template_image") }}', {
                     method: 'POST',
                     body: formData
@@ -4729,7 +4729,7 @@ async function initializePDFEditor() {
                 });
             });
         }
-        
+
         if (btnRemoveDecorativeImage) {
             btnRemoveDecorativeImage.addEventListener('click', () => {
                 // Only proceed if selected element is a decorative image
@@ -4747,7 +4747,7 @@ async function initializePDFEditor() {
                 });
             });
         }
-        
+
         // Table-specific property listeners
         const propTableHeaderText = document.getElementById('prop-table-header-text');
         const propTableHeaderFontSize = document.getElementById('prop-table-header-fontSize');
@@ -4759,7 +4759,7 @@ async function initializePDFEditor() {
         const propTableLineStroke = document.getElementById('prop-table-line-stroke');
         const propTableLineStrokeWidth = document.getElementById('prop-table-line-strokeWidth');
         const propTableWidth = document.getElementById('prop-table-width');
-        
+
         if (propTableHeaderText) {
             propTableHeaderText.addEventListener('input', () => {
                 const headerText = selectedElement.find('Text')[0];
@@ -4770,7 +4770,7 @@ async function initializePDFEditor() {
                 }
             });
         }
-        
+
         if (propTableHeaderFontSize) {
             propTableHeaderFontSize.addEventListener('input', () => {
                 const headerText = selectedElement.find('Text')[0];
@@ -4781,7 +4781,7 @@ async function initializePDFEditor() {
                 }
             });
         }
-        
+
         if (propTableHeaderFontStyle) {
             propTableHeaderFontStyle.addEventListener('change', () => {
                 const headerText = selectedElement.find('Text')[0];
@@ -4792,7 +4792,7 @@ async function initializePDFEditor() {
                 }
             });
         }
-        
+
         if (propTableHeaderFill) {
             propTableHeaderFill.addEventListener('input', () => {
                 const headerText = selectedElement.find('Text')[0];
@@ -4803,7 +4803,7 @@ async function initializePDFEditor() {
                 }
             });
         }
-        
+
         if (propTableItemsText) {
             propTableItemsText.addEventListener('input', () => {
                 const itemsText = selectedElement.find('Text')[1];
@@ -4814,7 +4814,7 @@ async function initializePDFEditor() {
                 }
             });
         }
-        
+
         if (propTableItemsFontSize) {
             propTableItemsFontSize.addEventListener('input', () => {
                 const itemsText = selectedElement.find('Text')[1];
@@ -4825,7 +4825,7 @@ async function initializePDFEditor() {
                 }
             });
         }
-        
+
         if (propTableItemsFill) {
             propTableItemsFill.addEventListener('input', () => {
                 const itemsText = selectedElement.find('Text')[1];
@@ -4836,7 +4836,7 @@ async function initializePDFEditor() {
                 }
             });
         }
-        
+
         if (propTableLineStroke) {
             propTableLineStroke.addEventListener('input', () => {
                 const line = selectedElement.find('Line')[0];
@@ -4847,7 +4847,7 @@ async function initializePDFEditor() {
                 }
             });
         }
-        
+
         if (propTableLineStrokeWidth) {
             propTableLineStrokeWidth.addEventListener('input', () => {
                 const line = selectedElement.find('Line')[0];
@@ -4858,14 +4858,14 @@ async function initializePDFEditor() {
                 }
             });
         }
-        
+
         if (propTableWidth) {
             propTableWidth.addEventListener('input', () => {
                 const width = parseFloat(propTableWidth.value);
                 const headerText = selectedElement.find('Text')[0];
                 const itemsText = selectedElement.find('Text')[1];
                 const line = selectedElement.find('Line')[0];
-                
+
                 if (headerText) headerText.width(width);
                 if (itemsText) itemsText.width(width);
                 if (line) {
@@ -4877,11 +4877,11 @@ async function initializePDFEditor() {
             });
         }
     }
-    
+
     // Layer management functions
     window.moveLayer = function(direction) {
         if (!selectedElement) return;
-        
+
         if (direction === 'up') {
             selectedElement.moveUp();
         } else if (direction === 'down') {
@@ -4891,11 +4891,11 @@ async function initializePDFEditor() {
         } else if (direction === 'bottom') {
             selectedElement.moveToBottom();
         }
-        
+
         layer.draw();
         scheduleInvoiceEditorHistoryPush();
     };
-    
+
     // Toolbar actions
     document.getElementById('btn-delete').addEventListener('click', function() {
         if (selectedElement) {
@@ -4907,7 +4907,7 @@ async function initializePDFEditor() {
             pushInvoiceEditorHistory();
         }
     });
-    
+
     document.getElementById('btn-clear').addEventListener('click', async function() {
         const confirmed = await showConfirm(
             '{{ _("Clear all elements?") }}',
@@ -4947,29 +4947,29 @@ async function initializePDFEditor() {
             layer.draw();
         }
     });
-    
+
     // Zoom controls (zoom scale is declared above with baseFitScale)
     const zoomDisplay = document.getElementById('zoom-display');
-    
+
     function updateZoomDisplay() {
         if (zoomDisplay) {
             const percentage = Math.round((baseFitScale * zoomScale) * 100);
             zoomDisplay.textContent = `${percentage}%`;
         }
     }
-    
+
     // Initialize zoom display after initial fit
     setTimeout(() => {
         updateZoomDisplay();
     }, 150);
-    
+
     document.getElementById('btn-zoom-in').addEventListener('click', function() {
         zoomScale = Math.min(zoomScale + 0.1, 2);
         stage.scale({ x: baseFitScale * zoomScale, y: baseFitScale * zoomScale });
         layer.draw();
         updateZoomDisplay();
     });
-    
+
     document.getElementById('btn-zoom-out').addEventListener('click', function() {
         zoomScale = Math.max(zoomScale - 0.1, 0.5);
         stage.scale({ x: baseFitScale * zoomScale, y: baseFitScale * zoomScale });
@@ -4993,12 +4993,12 @@ async function initializePDFEditor() {
             updateZoomDisplay();
         }, { passive: false });
     }
-    
+
     // Generate preview
     // ============================================
     // Enhanced PDF Preview Modal - Complete Rewrite
     // ============================================
-    
+
     try {
     // State Management
     const previewState = {
@@ -5013,7 +5013,7 @@ async function initializePDFEditor() {
         fitMode: 'auto', // 'auto', 'width', 'height', 'actual'
         pdfPreviewUrl: null
     };
-    
+
     // DOM Elements - with safety checks
     const previewModal = document.getElementById('preview-modal');
     const previewModalOverlay = document.getElementById('preview-modal-overlay');
@@ -5039,12 +5039,12 @@ async function initializePDFEditor() {
     const previewBtnCloseError = document.getElementById('preview-btn-close-error');
     const previewTemplateFallbackNotice = document.getElementById('preview-template-fallback-notice');
     const PREVIEW_FALLBACK_MSG = {{ _('Could not apply unsaved canvas changes to the preview. Showing the last saved template instead.')|tojson }};
-    
+
     // Early return if essential elements are missing
     if (!previewModal || !previewFrame) {
         console.error('Preview modal essential elements not found. Modal may not work correctly.');
     }
-    
+
     // Utility Functions
     function debounce(func, wait) {
         let timeout;
@@ -5057,7 +5057,7 @@ async function initializePDFEditor() {
             timeout = setTimeout(later, wait);
         };
     }
-    
+
     function updateZoomDisplay() {
         if (previewZoomDisplay) {
             previewZoomDisplay.textContent = previewState.zoomLevel + '%';
@@ -5066,11 +5066,11 @@ async function initializePDFEditor() {
             previewZoomSlider.value = previewState.zoomLevel;
         }
     }
-    
+
     function applyZoom() {
         if (!previewFrame || !previewFrame.contentDocument) return;
         const zoom = previewState.zoomLevel / 100;
-        
+
         // Apply zoom to the preview-container inside the iframe, not the wrapper
         const container = previewFrame.contentDocument.querySelector('.preview-container');
         if (container) {
@@ -5078,7 +5078,7 @@ async function initializePDFEditor() {
             // Use top center origin so content expands from top, allowing scrolling to top
             container.style.transformOrigin = 'top center';
         }
-        
+
         // Ensure iframe body and html allow scrolling and can expand
         const iframeDoc = previewFrame.contentDocument;
         const iframeBody = iframeDoc.body;
@@ -5098,40 +5098,40 @@ async function initializePDFEditor() {
             // Remove height constraint to allow expansion
             iframeHtml.style.height = 'auto';
         }
-        
+
         // Reset wrapper transform - we don't want to scale the iframe itself
         if (previewFrameWrapper) {
             previewFrameWrapper.style.transform = 'none';
             previewFrameWrapper.style.transformOrigin = 'initial';
         }
     }
-    
+
     function setZoom(level) {
         previewState.zoomLevel = Math.max(25, Math.min(200, level));
         updateZoomDisplay();
         applyZoom();
     }
-    
+
     function zoomIn() {
         const steps = [25, 50, 75, 100, 125, 150, 175, 200];
         const current = previewState.zoomLevel;
         const next = steps.find(s => s > current) || 200;
         setZoom(next);
     }
-    
+
     function zoomOut() {
         const steps = [25, 50, 75, 100, 125, 150, 175, 200];
         const current = previewState.zoomLevel;
         const next = [...steps].reverse().find(s => s < current) || 25;
         setZoom(next);
     }
-    
+
     function resetZoom() {
         setZoom(100);
         previewState.fitMode = 'auto';
         updateFitButtons();
     }
-    
+
     function fitToPage() {
         // Fit the entire page (both width and height) to fit in viewport
         try {
@@ -5147,12 +5147,12 @@ async function initializePDFEditor() {
             }
             const wrapper = previewFrameWrapper;
             if (!wrapper.parentElement) return;
-            
+
             // Get available dimensions accounting for padding
             const parentPadding = 48; // 1.5rem * 2 = 48px
             const availableWidth = wrapper.parentElement.clientWidth - parentPadding;
             const availableHeight = wrapper.parentElement.clientHeight - parentPadding;
-            
+
             const frameDoc = previewFrame.contentDocument;
             const container = frameDoc.querySelector('.preview-container');
             if (container) {
@@ -5162,7 +5162,7 @@ async function initializePDFEditor() {
                 const currentZoom = previewState.zoomLevel / 100;
                 const baseWidth = containerWidth / (currentZoom || 1);
                 const baseHeight = containerHeight / (currentZoom || 1);
-                
+
                 if (baseWidth > 0 && baseHeight > 0 && availableWidth > 0 && availableHeight > 0) {
                     // Calculate zoom to fit both dimensions with margin
                     const margin = 40; // Margin on all sides
@@ -5183,7 +5183,7 @@ async function initializePDFEditor() {
             updateFitButtons();
         }
     }
-    
+
     function fitToWidth() {
         try {
             if (!previewFrame || !previewFrameWrapper) {
@@ -5198,17 +5198,17 @@ async function initializePDFEditor() {
             }
             const wrapper = previewFrameWrapper;
             if (!wrapper.parentElement) return;
-            
+
             const parentPadding = 48;
             const availableWidth = wrapper.parentElement.clientWidth - parentPadding;
-            
+
             const frameDoc = previewFrame.contentDocument;
             const container = frameDoc.querySelector('.preview-container');
             if (container) {
                 const containerWidth = container.offsetWidth || container.scrollWidth || container.clientWidth;
                 const currentZoom = previewState.zoomLevel / 100;
                 const baseWidth = containerWidth / (currentZoom || 1);
-                
+
                 if (baseWidth > 0 && availableWidth > 0) {
                     const margin = 20;
                     const zoom = ((availableWidth - margin) / baseWidth) * 100;
@@ -5224,7 +5224,7 @@ async function initializePDFEditor() {
             updateFitButtons();
         }
     }
-    
+
     function fitToHeight() {
         try {
             if (!previewFrame || !previewFrameWrapper) {
@@ -5239,17 +5239,17 @@ async function initializePDFEditor() {
             }
             const wrapper = previewFrameWrapper;
             if (!wrapper.parentElement) return;
-            
+
             const parentPadding = 48;
             const availableHeight = wrapper.parentElement.clientHeight - parentPadding;
-            
+
             const frameDoc = previewFrame.contentDocument;
             const container = frameDoc.querySelector('.preview-container');
             if (container) {
                 const containerHeight = container.offsetHeight || container.scrollHeight || container.clientHeight;
                 const currentZoom = previewState.zoomLevel / 100;
                 const baseHeight = containerHeight / (currentZoom || 1);
-                
+
                 if (baseHeight > 0 && availableHeight > 0) {
                     const margin = 20;
                     const zoom = ((availableHeight - margin) / baseHeight) * 100;
@@ -5265,19 +5265,19 @@ async function initializePDFEditor() {
             updateFitButtons();
         }
     }
-    
+
     function actualSize() {
         setZoom(100);
         previewState.fitMode = 'actual';
         updateFitButtons();
     }
-    
+
     function updateFitButtons() {
         const activeClass = 'preview-control-btn-active';
         [previewBtnFitWidth, previewBtnFitHeight, previewBtnActualSize].forEach(btn => {
             if (btn) btn.classList.remove(activeClass);
         });
-        
+
         if (previewState.fitMode === 'width' && previewBtnFitWidth) {
             previewBtnFitWidth.classList.add(activeClass);
         } else if (previewState.fitMode === 'height' && previewBtnFitHeight) {
@@ -5286,14 +5286,14 @@ async function initializePDFEditor() {
             previewBtnActualSize.classList.add(activeClass);
         }
     }
-    
+
     function showLoading() {
         previewState.isLoading = true;
         previewState.hasError = false;
         if (previewLoading) previewLoading.classList.add('active');
         if (previewError) previewError.style.display = 'none';
         if (previewFrame) previewFrame.style.display = 'none';
-        
+
         const progressBar = document.getElementById('preview-loading-progress-bar');
         if (progressBar) {
             progressBar.style.width = '0%';
@@ -5308,13 +5308,13 @@ async function initializePDFEditor() {
             }, 200);
         }
     }
-    
+
     function hideLoading() {
         previewState.isLoading = false;
         if (previewLoading) previewLoading.classList.remove('active');
         if (previewFrame) previewFrame.style.display = 'block';
     }
-    
+
     function showError(message) {
         previewState.hasError = true;
         previewState.errorMessage = message;
@@ -5323,19 +5323,19 @@ async function initializePDFEditor() {
         if (previewLoading) previewLoading.classList.remove('active');
         if (previewFrame) previewFrame.style.display = 'none';
     }
-    
+
     function hideError() {
         previewState.hasError = false;
         if (previewError) previewError.style.display = 'none';
     }
-    
+
     function updatePageSizeBadge(size) {
         if (previewPageSizeBadge) previewPageSizeBadge.textContent = size;
         if (previewPageSizeSelect) {
             previewPageSizeSelect.value = size;
         }
     }
-    
+
     function openPreviewModal() {
         if (!previewModal) {
             console.error('Preview modal element not found');
@@ -5344,7 +5344,7 @@ async function initializePDFEditor() {
         previewState.isOpen = true;
         previewModal.style.display = 'block';
         document.body.style.overflow = 'hidden';
-        
+
         // Sync preview page size with main page size selector
         const mainPageSizeSelector = document.getElementById('page-size-selector');
         if (mainPageSizeSelector) {
@@ -5352,14 +5352,14 @@ async function initializePDFEditor() {
         } else {
             previewState.pageSize = CURRENT_PAGE_SIZE || 'A4';
         }
-        
+
         setZoom(100);
         updatePageSizeBadge(previewState.pageSize);
-        
+
         if (previewPageSizeSelect) {
             previewPageSizeSelect.value = previewState.pageSize;
         }
-        
+
         previewModal.setAttribute('aria-hidden', 'false');
         setTimeout(() => {
             if (previewBtnRefresh) {
@@ -5367,7 +5367,7 @@ async function initializePDFEditor() {
             }
         }, 100);
     }
-    
+
     function closePreviewModal() {
         if (!previewModal) return;
         previewState.isOpen = false;
@@ -5378,7 +5378,7 @@ async function initializePDFEditor() {
             URL.revokeObjectURL(previewState.pdfPreviewUrl);
             previewState.pdfPreviewUrl = null;
         }
-        
+
         // Cancel any ongoing requests
         if (previewState.currentRequest && typeof previewState.currentRequest.abort === 'function') {
             try {
@@ -5388,13 +5388,13 @@ async function initializePDFEditor() {
             }
             previewState.currentRequest = null;
         }
-        
+
         hideError();
         hideLoading();
         previewState.isFullscreen = false;
         updateFullscreenButton();
     }
-    
+
     function toggleFullscreen() {
         if (!document.fullscreenElement) {
             const modalContent = document.querySelector('.preview-modal-content');
@@ -5420,7 +5420,7 @@ async function initializePDFEditor() {
             });
         }
     }
-    
+
     function updateFullscreenButton() {
         if (!previewBtnFullscreen) return;
         const icon = previewBtnFullscreen.querySelector('i');
@@ -5434,7 +5434,7 @@ async function initializePDFEditor() {
             }
         }
     }
-    
+
     async function loadPreview(pageSize = null) {
         if (pageSize) {
             previewState.pageSize = pageSize;
@@ -5444,10 +5444,10 @@ async function initializePDFEditor() {
                 previewPageSizeSelect.value = pageSize;
             }
         }
-        
+
         showLoading();
         hideError();
-        
+
         // Preview POST includes current canvas as template_json when the modal page size matches the editor.
         // The invoice preview endpoint prefers that form JSON over the database so unsaved edits show up.
         const gen = generateCode();
@@ -5464,7 +5464,7 @@ async function initializePDFEditor() {
                 previewTemplateFallbackNotice.style.display = 'none';
             }
         }
-        
+
         const fd = new FormData();
         fd.append('html', html);
         fd.append('css', css);
@@ -5473,19 +5473,19 @@ async function initializePDFEditor() {
         const mainPageSizeSelector = document.getElementById('page-size-selector');
         const currentMainPageSize = (mainPageSizeSelector && mainPageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
         const pageSizeForPreview = previewState.pageSize;
-        
+
         // Only send template_json if previewing the same size as the current editor
         // Otherwise, backend will load the saved template for the selected page size
         // Issue #600: Never send empty/fallback JSON from a failed generateCode() — that would blank the preview.
         if (pageSizeForPreview === currentMainPageSize && templateJsonOk && json && json.trim()) {
             fd.append('template_json', json);
         }
-        
+
         fd.append('page_size', pageSizeForPreview);
         fd.append('csrf_token', CSRF_TOKEN);
-        
+
         const previewUrl = PREVIEW_URL + '?t=' + Date.now();
-        
+
         // Create abort controller for request cancellation (if supported)
         let controller = null;
         let signal = null;
@@ -5504,7 +5504,7 @@ async function initializePDFEditor() {
                 console.warn('AbortController not available:', e);
             }
         }
-        
+
         // Build fetch options
         const fetchOptions = {
             method: 'POST',
@@ -5514,19 +5514,19 @@ async function initializePDFEditor() {
                 'Cache-Control': 'no-cache'
             }
         };
-        
+
         // Only add signal if it's a valid AbortSignal instance and not aborted
         if (signal instanceof AbortSignal && !signal.aborted) {
             fetchOptions.signal = signal;
         }
-        
+
         try {
             const response = await fetch(previewUrl, fetchOptions);
-            
+
             if (!response || !response.ok) {
                 throw new Error(`HTTP error! status: ${response ? response.status : 'unknown'}`);
             }
-            
+
             // Check if request was cancelled
             if (controller && controller.signal && controller.signal.aborted) {
                 return;
@@ -5549,7 +5549,7 @@ async function initializePDFEditor() {
                 doc.write(previewHtml);
                 doc.close();
             }
-            
+
             // Wait for iframe to load
             previewFrame.onload = () => {
                 hideLoading();
@@ -5571,7 +5571,7 @@ async function initializePDFEditor() {
                     }
                 }, 100);
             };
-            
+
             // Also handle load event if already loaded
             if (previewFrame.contentDocument && previewFrame.contentDocument.readyState === 'complete') {
                 try {
@@ -5580,7 +5580,7 @@ async function initializePDFEditor() {
                     console.warn('Error calling onload handler:', e);
                 }
             }
-            
+
         } catch (err) {
             if (err.name === 'AbortError') {
                 console.log('Preview request cancelled');
@@ -5592,7 +5592,7 @@ async function initializePDFEditor() {
             previewState.currentRequest = null;
         }
     }
-    
+
     // Event Listeners - with safety checks
     if (previewModalOverlay) {
         previewModalOverlay.addEventListener('click', closePreviewModal);
@@ -5600,11 +5600,11 @@ async function initializePDFEditor() {
     if (previewModalClose) {
         previewModalClose.addEventListener('click', closePreviewModal);
     }
-    
+
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         if (!previewState.isOpen) return;
-        
+
         if (e.key === 'Escape') {
             if (previewState.isFullscreen) {
                 toggleFullscreen();
@@ -5613,7 +5613,7 @@ async function initializePDFEditor() {
             }
             return;
         }
-        
+
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
             if (e.key === '+' || e.key === '=') {
                 e.preventDefault();
@@ -5626,13 +5626,13 @@ async function initializePDFEditor() {
                 resetZoom();
             }
         }
-        
+
         if (e.key === 'F11') {
             e.preventDefault();
             toggleFullscreen();
         }
     });
-    
+
     // Zoom controls
     if (previewBtnZoomIn) previewBtnZoomIn.addEventListener('click', zoomIn);
     if (previewBtnZoomOut) previewBtnZoomOut.addEventListener('click', zoomOut);
@@ -5640,13 +5640,13 @@ async function initializePDFEditor() {
     if (previewBtnFitWidth) previewBtnFitWidth.addEventListener('click', fitToWidth);
     if (previewBtnFitHeight) previewBtnFitHeight.addEventListener('click', fitToHeight);
     if (previewBtnActualSize) previewBtnActualSize.addEventListener('click', actualSize);
-    
+
     // Zoom slider
     if (previewZoomSlider) {
         const debouncedZoom = debounce((value) => {
             setZoom(parseInt(value));
         }, 50);
-        
+
         previewZoomSlider.addEventListener('input', (e) => {
             if (previewZoomDisplay) {
                 previewZoomDisplay.textContent = e.target.value + '%';
@@ -5654,7 +5654,7 @@ async function initializePDFEditor() {
             debouncedZoom(e.target.value);
         });
     }
-    
+
     // Page size selector
     if (previewPageSizeSelect) {
         previewPageSizeSelect.addEventListener('change', (e) => {
@@ -5672,11 +5672,11 @@ async function initializePDFEditor() {
             });
         });
     }
-    
+
     // Toolbar buttons
     if (previewBtnRefresh) previewBtnRefresh.addEventListener('click', () => loadPreview());
     if (previewBtnFullscreen) previewBtnFullscreen.addEventListener('click', toggleFullscreen);
-    
+
     // Error handling
     if (previewBtnRetry) {
         previewBtnRetry.addEventListener('click', () => {
@@ -5684,19 +5684,19 @@ async function initializePDFEditor() {
             loadPreview();
         });
     }
-    
+
     if (previewBtnCloseError) {
         previewBtnCloseError.addEventListener('click', () => {
             hideError();
         });
     }
-    
+
     // Fullscreen change detection
     document.addEventListener('fullscreenchange', () => {
         previewState.isFullscreen = !!document.fullscreenElement;
         updateFullscreenButton();
     });
-    
+
     // Main preview button
     const btnPreview = document.getElementById('btn-preview');
     if (btnPreview) {
@@ -5707,7 +5707,7 @@ async function initializePDFEditor() {
     } else {
         console.warn('Preview button not found');
     }
-    
+
     } catch (error) {
         console.error('Error initializing preview modal:', error);
         const btnPreview = document.getElementById('btn-preview');
@@ -5717,20 +5717,20 @@ async function initializePDFEditor() {
             });
         }
     }
-    
+
     // Generate code from canvas
     function generateCode() {
         try {
             // Get current page size and dimensions
             const currentSize = (pageSizeSelector && pageSizeSelector.value) || CURRENT_PAGE_SIZE || 'A4';
             const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
-            
+
             // Convert pixels to points (1 point = 1/72 inch, at 72 DPI: 1px = 1pt)
             // Konva canvas uses 72 DPI, so pixels = points
             function pxToPt(px) {
                 return Math.round(px || 0);
             }
-            
+
             // Build ReportLab template JSON structure
             const templateJson = {
                 page: {
@@ -5751,40 +5751,40 @@ async function initializePDFEditor() {
                     }
                 }
             };
-            
+
             // Issue #600: Infer/fix table group names before walking the layer (preview + save)
             if (layer && typeof ensureTableGroupNames === 'function') {
                 const bgRef = typeof background !== 'undefined' ? background : null;
                 ensureTableGroupNames(layer, bgRef);
             }
-            
+
             // Legacy HTML/CSS generation for backward compatibility (preview)
             let bodyContent = '';
-            
+
             if (!layer || !layer.children) {
                 console.error('Layer or children not found');
                 return { html: '<div class="invoice-wrapper"></div>', css: '', json: JSON.stringify(templateJson, null, 2), ok: true };
             }
-            
+
             layer.children.forEach((child, index) => {
                 if (!child || child === background || child.className === 'Transformer') return;
                 const ca = child.attrs || {};
                 if (ca.name === 'smart-guide') return;
                 if (child.getAttr && child.getAttr('pdfHidden')) return;
-                
-                
+
+
                 // Filter out invisible elements
                 if (ca.opacity === 0 || ca.visible === false) {
                     console.log('Skipping invisible element in code generation:', child.className, ca.name || 'unnamed');
                     return;
                 }
-                
+
                 // Filter out grid lines and page border - they should not be included in the exported template
                 if (child.className === 'Line' && ca.name === 'grid-line') return;
                 if (child.className === 'Rect' && ca.name === 'page-border') return;
                 // Filter out warning indicator dots - they should not be included in the exported template
                 if (child.className === 'Circle' && ca.name === 'warning-indicator') return;
-                
+
                 // Filter out background rectangles - any rectangle with name="background" or matching full page dimensions
                 if (child.className === 'Rect') {
                     const rectName = ca.name || '';
@@ -5794,13 +5794,13 @@ async function initializePDFEditor() {
                     const rectHeight = ca.height || 0;
                     const rectFill = ca.fill || '';
                     const rectStroke = ca.stroke || '';
-                    
+
                     // Filter out if name is "background" or "page-border"
                     if (rectName === 'background' || rectName === 'page-border') {
                         console.log('Skipping rectangle with name:', rectName);
                         return;
                     }
-                    
+
                     // CRITICAL FIX: Filter out rectangles that are children of decorative-image groups
                     // These are placeholder rectangles that should not appear in the preview
                     const parent = child.getParent && child.getParent();
@@ -5811,43 +5811,43 @@ async function initializePDFEditor() {
                             return;
                         }
                     }
-                    
+
                     // Filter out zero-sized rectangles
                     if (rectWidth === 0 && rectHeight === 0) {
                         console.log('Skipping zero-sized rectangle');
                         return;
                     }
-                    
+
                     // Filter out full-page rectangles at 0,0 with white/transparent fill and black stroke (unwanted borders)
                     // Check if it matches page dimensions (within 5px tolerance)
                     const pageWidth = dimensions.width;
                     const pageHeight = dimensions.height;
-                    const isFullPage = Math.abs(rectX) < 5 && Math.abs(rectY) < 5 && 
-                                      Math.abs(rectWidth - pageWidth) < 5 && 
+                    const isFullPage = Math.abs(rectX) < 5 && Math.abs(rectY) < 5 &&
+                                      Math.abs(rectWidth - pageWidth) < 5 &&
                                       Math.abs(rectHeight - pageHeight) < 5;
-                    
-                    if (isFullPage && (rectFill === 'white' || rectFill === '#ffffff' || rectFill === 'transparent' || rectFill === '') && 
+
+                    if (isFullPage && (rectFill === 'white' || rectFill === '#ffffff' || rectFill === 'transparent' || rectFill === '') &&
                         (rectStroke === 'black' || rectStroke === '#000000')) {
                         console.log('Filtering out unwanted full-page rectangle border:', {x: rectX, y: rectY, width: rectWidth, height: rectHeight, fill: rectFill, stroke: rectStroke, name: rectName});
                         return;
                     }
-                    
+
                     // Filter out rectangles that are completely outside page bounds (likely artifacts)
-                    if (rectX + rectWidth < -10 || rectY + rectHeight < -10 || 
+                    if (rectX + rectWidth < -10 || rectY + rectHeight < -10 ||
                         rectX > pageWidth + 10 || rectY > pageHeight + 10) {
                         console.log('Skipping rectangle outside page bounds:', {x: rectX, y: rectY, width: rectWidth, height: rectHeight});
                         return;
                     }
                 }
-                
+
                 const attrs = child.attrs || {};
                 const x = Math.round(attrs.x || 0);
                 const y = Math.round(attrs.y || 0);
                 const opacity = attrs.opacity !== undefined ? attrs.opacity : 1;
-                
+
                 // Debug logging for elements being included
                 console.log(`Including element in template JSON: type=${child.className}, name=${attrs.name || 'unnamed'}, x=${x}, y=${y}, width=${attrs.width || 'N/A'}, height=${attrs.height || 'N/A'}`);
-                
+
                 if (child.className === 'Text') {
                     const fontSize = attrs.fontSize || 14;
                     const fontFamily = attrs.fontFamily || 'Arial';
@@ -5858,7 +5858,7 @@ async function initializePDFEditor() {
                     const text = attrs.text || '';
                     const textAlign = attrs.align || 'left';
                     const vAlign = attrs.verticalAlign || 'top';
-                    
+
                     // Map font family to ReportLab font names
                     let reportLabFont = 'Helvetica';
                     if (fontFamily.toLowerCase().includes('arial')) {
@@ -5873,7 +5873,7 @@ async function initializePDFEditor() {
                     } else if (fontStyleCss === 'italic') {
                         reportLabFont += '-Oblique';
                     }
-                    
+
                     const textEl = {
                         type: 'text',
                         x: pxToPt(x),
@@ -5893,14 +5893,14 @@ async function initializePDFEditor() {
                     if (attrs.pdfLocked) textEl.locked = true;
                     if (attrs.pdfHidden) textEl.hidden = true;
                     templateJson.elements.push(textEl);
-                    
+
                     // Legacy HTML for preview
                     const escapedText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
                     bodyContent += `  <div class="element text-element" style="position:absolute;left:${x}px;top:${y}px;font-size:${fontSize}px;font-family:'${fontFamily}';font-weight:${fontWeight};font-style:${fontStyleCss};color:${color};opacity:${opacity};width:${attrs.width || 400}px;text-align:${textAlign}">${escapedText}</div>\n`;
                 } else if (child.className === 'Image') {
                     const w = Math.round(attrs.width || 100);
                     const h = Math.round(attrs.height || 50);
-                    
+
                 // Add to ReportLab template JSON - image source needs Jinja2 template syntax
                 {% raw %}
                 const imageSource = '{{ get_logo_base64(settings.get_logo_path()) if settings.has_logo() and settings.get_logo_path() else "" }}';
@@ -5914,7 +5914,7 @@ async function initializePDFEditor() {
                     source: imageSource,
                     opacity: opacity
                 });
-                    
+
                     // Legacy HTML for preview
                     {% raw %}
                     bodyContent += `  <img src="{{ get_logo_base64(settings.get_logo_path()) if settings.has_logo() and settings.get_logo_path() else '' }}" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;opacity:${opacity}" alt="Logo">\n`;
@@ -5925,7 +5925,7 @@ async function initializePDFEditor() {
                     const fill = attrs.fill || 'transparent';
                     const stroke = attrs.stroke || 'black';
                     const strokeWidth = attrs.strokeWidth || 1;
-                    
+
                     // Add to ReportLab template JSON
                     templateJson.elements.push({
                         type: 'rectangle',
@@ -5940,7 +5940,7 @@ async function initializePDFEditor() {
                             opacity: opacity
                         }
                     });
-                    
+
                     // Legacy HTML for preview
                     bodyContent += `  <div class="rectangle-element" style="position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;background:${fill};border:${strokeWidth}px solid ${stroke};opacity:${opacity}"></div>\n`;
                 } else if (child.className === 'Circle') {
@@ -5950,7 +5950,7 @@ async function initializePDFEditor() {
                     const strokeWidth = attrs.strokeWidth || 1;
                     const adjustedX = x - radius;
                     const adjustedY = y - radius;
-                    
+
                     // Add to ReportLab template JSON (circles use radius)
                     templateJson.elements.push({
                         type: 'circle',
@@ -5965,7 +5965,7 @@ async function initializePDFEditor() {
                             opacity: opacity
                         }
                     });
-                    
+
                     // Legacy HTML for preview
                     bodyContent += `  <div class="circle-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${radius*2}px;height:${radius*2}px;background:${fill};border:${strokeWidth}px solid ${stroke};border-radius:50%;opacity:${opacity}"></div>\n`;
             } else if (child.className === 'Line') {
@@ -5976,18 +5976,18 @@ async function initializePDFEditor() {
                 const lineX = attrs.x || 0;
                 const lineY = attrs.y || 0;
                 const lineWidth = attrs.width || 0;
-                
+
                 // Filter out unwanted border lines at position (0,0) or very close with full page width
                 const pageWidth = dimensions.width;
                 const isAtOrigin = Math.abs(lineX) < 5 && Math.abs(lineY) < 5;
                 const isFullWidth = lineWidth > pageWidth * 0.9 || (points.length >= 4 && Math.abs(points[2] - points[0]) > pageWidth * 0.9);
-                
+
                 // Filter out lines at origin with full width (border lines)
                 if (isAtOrigin && isFullWidth) {
                     console.log('Filtering out unwanted border line at origin:', {x: lineX, y: lineY, width: lineWidth, stroke: stroke, name: lineName});
                     return;
                 }
-                
+
                 // Filter out unwanted separator lines (gray lines at top) that match full page width
                 if (points.length >= 4) {
                     const x1 = Math.round(points[0]);
@@ -5995,19 +5995,19 @@ async function initializePDFEditor() {
                     const x2 = Math.round(points[2]);
                     const y2 = Math.round(points[3]);
                     const calculatedWidth = Math.abs(x2 - x1);
-                    
+
                     // Filter out full-width gray lines near the top (likely unwanted separators)
                     const isFullWidthLine = calculatedWidth > pageWidth * 0.9;
                     const isNearTop = Math.min(y1, y2) < 50; // Within 50px of top
-                    const isGray = stroke === '#e0e0e0' || stroke === '#dee2e6' || stroke === 'gray' || stroke === 'grey' || 
+                    const isGray = stroke === '#e0e0e0' || stroke === '#dee2e6' || stroke === 'gray' || stroke === 'grey' ||
                                   stroke === '#cccccc' || stroke === '#999999' || stroke === '#667eea';
-                    
+
                     if (isFullWidthLine && isNearTop && isGray && lineName !== 'items-table-separator' && lineName !== 'expenses-table-separator') {
                         console.log('Filtering out unwanted gray separator line:', {width: calculatedWidth, y: Math.min(y1, y2), stroke: stroke, name: lineName});
                         return;
                     }
                 }
-                
+
                 if (points.length >= 4) {
                     const x1 = Math.round(points[0]);
                     const y1 = Math.round(points[1]);
@@ -6016,18 +6016,18 @@ async function initializePDFEditor() {
                     const width = Math.abs(x2 - x1);
                     const adjustedX = x + Math.min(x1, x2);
                     const adjustedY = y + Math.min(y1, y2);
-                    
+
                     // Final check: filter out lines at origin (0,0) with full width - these are border lines
                     const pageWidth = dimensions.width;
                     const isAtOrigin = Math.abs(adjustedX) < 5 && Math.abs(adjustedY) < 5;
                     const isFullWidth = width > pageWidth * 0.9;
                     const isBorderLine = isAtOrigin && isFullWidth;
-                    
+
                     if (isBorderLine) {
                         console.log('Final filter: Removing border line at origin in code generation:', {adjustedX, adjustedY, width, stroke});
                         return;
                     }
-                    
+
                     // Add to ReportLab template JSON
                     templateJson.elements.push({
                         type: 'line',
@@ -6040,7 +6040,7 @@ async function initializePDFEditor() {
                             opacity: opacity
                         }
                     });
-                    
+
                     // Legacy HTML for preview
                     bodyContent += `  <hr class="line-element" style="position:absolute;left:${adjustedX}px;top:${adjustedY}px;width:${width}px;border:none;border-top:${strokeWidth}px solid ${stroke};margin:0;opacity:${opacity}">\n`;
                 }
@@ -6051,11 +6051,11 @@ async function initializePDFEditor() {
                     const pdfTableAttr = (child.getAttr && child.getAttr('pdfTable')) || (attrs && attrs.pdfTable) || '';
                     let isItemsTable = pdfTableAttr === 'items-table' || nameAttr === 'items-table';
                     let isExpensesTable = pdfTableAttr === 'expenses-table' || nameAttr === 'expenses-table';
-                    
+
                     // CRITICAL FIX: Check if this is a decorative-image group (handle name variations)
                     const groupName = nameAttr;
                     const isDecorativeImage = groupName && groupName.includes('decorative-image');
-                    
+
                     // Fallback: Check if group has table-like structure but missing name (Issue #504 - i18n-aware)
                     if (!isItemsTable && !isExpensesTable && !isDecorativeImage && child.children && child.children.length >= 3) {
                         const inferred = inferTableNameFromGroup(child, null);
@@ -6067,7 +6067,7 @@ async function initializePDFEditor() {
                             console.log('⚠ Expenses table detected by structure (missing name) - using inference');
                         }
                     }
-                    
+
                     // Process decorative-image groups first (before tables)
                     if (isDecorativeImage) {
                         // Decorative image element
@@ -6085,13 +6085,13 @@ async function initializePDFEditor() {
                         if (!imageUrl && child.attrs) {
                             imageUrl = child.attrs.imageUrl || '';
                         }
-                        
+
                         console.log('Generating code for decorative image, URL:', imageUrl, 'attrs:', attrs);
-                        
+
                         // Find the actual image in the group if it exists
                         const children = child.getChildren ? child.getChildren() : (child.children || []);
                         const imageElement = children.find(c => c.className === 'Image');
-                        
+
                         // Issue #537: Use group's visual bounding box so resized (scaled) dimensions persist
                         let actualX = Math.round(attrs.x || 0);
                         let actualY = Math.round(attrs.y || 0);
@@ -6109,9 +6109,9 @@ async function initializePDFEditor() {
                             actualWidth = Math.round((imageElement.width() || imageElement.attrs.width || 100) * sx);
                             actualHeight = Math.round((imageElement.height() || imageElement.attrs.height || 100) * sy);
                         }
-                        
+
                         console.log('Decorative image dimensions:', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
-                        
+
                         // Issue #432: Only add to template JSON when source is non-empty (avoid empty decorative elements in PDF)
                         if (imageUrl && imageUrl.trim() !== '') {
                             templateJson.elements.push({
@@ -6125,7 +6125,7 @@ async function initializePDFEditor() {
                                 decorative: true
                             });
                         }
-                        
+
                         // Legacy HTML for preview - only generate image tag, not rectangle
                         if (imageUrl && imageUrl.trim() !== '') {
                             bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${actualX}px;top:${actualY}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
@@ -6135,7 +6135,7 @@ async function initializePDFEditor() {
                         // Skip processing children of decorative-image groups - they are just placeholders
                         return; // Use return instead of continue in forEach
                     }
-                    
+
                     if (isItemsTable) {
                     // Extract actual header text from the table group's first Text child
                     const children = child.getChildren ? child.getChildren() : (child.children || []);
@@ -6156,7 +6156,7 @@ async function initializePDFEditor() {
                         tableX = Math.round(itemsTableBox.x);
                         tableY = Math.round(itemsTableBox.y);
                     }
-                    
+
                     // Parse header text (format: "Description | Qty | Price | Total" or German equivalent)
                     // Default to English if header text is empty or doesn't contain |
                     let headerParts = ['Description', 'Qty', 'Unit Price', 'Total'];
@@ -6184,7 +6184,7 @@ async function initializePDFEditor() {
                     const lineStrokeHex = rgbToHex(lineAttrs.stroke || '#333333');
                     const _rawLineW = Number(lineAttrs.strokeWidth);
                     const lineStrokeW = (Number.isFinite(_rawLineW) && _rawLineW > 0) ? _rawLineW : 1;
-                    
+
                     // Add to ReportLab template JSON - items table
                     {% raw %}
                     const itemsData = '{{ invoice.all_line_items }}';
@@ -6218,7 +6218,7 @@ async function initializePDFEditor() {
                             borderWidth: lineStrokeW
                         }
                     });
-                    
+
                     // Legacy HTML for preview
                     bodyContent += `  <!-- Items Table Start -->\n`;
                     bodyContent += `  <div style="position:absolute;left:${tableX}px;top:${tableY}px;opacity:${opacity};width:${tableWidthPx}px;">\n`;
@@ -6264,7 +6264,7 @@ async function initializePDFEditor() {
                     const itemsAttrs = itemsEl ? itemsEl.attrs : {};
                     const lineAttrs = lineEl ? lineEl.attrs : {};
                     const headerText = headerEl ? (headerAttrs.text || '') : '';
-                    
+
                     // Parse header text (format: "Expense | Date | Category | Amount" or localized)
                     // Default to English if header text is empty or doesn't contain |
                     let headerParts = ['Expense', 'Date', 'Category', 'Amount'];
@@ -6304,7 +6304,7 @@ async function initializePDFEditor() {
                     const expLineStrokeHex = rgbToHex(lineAttrs.stroke || defExpBorder);
                     const _rawExpLW = Number(lineAttrs.strokeWidth);
                     const expLineStrokeW = (Number.isFinite(_rawExpLW) && _rawExpLW > 0) ? _rawExpLW : 1;
-                    
+
                     // Add to ReportLab template JSON - expenses table
                     {% raw %}
                     const expensesData = '{{ invoice.expenses }}';
@@ -6338,7 +6338,7 @@ async function initializePDFEditor() {
                             borderWidth: expLineStrokeW
                         }
                     });
-                    
+
                     // Legacy HTML for preview
                     bodyContent += `  <!-- Expenses Table Start -->\n`;
                     bodyContent += `  <div style="position:absolute;left:${expTableX}px;top:${expTableY}px;opacity:${opacity};width:${tableWidthPxExp}px;">\n`;
@@ -6389,13 +6389,13 @@ async function initializePDFEditor() {
                     if (!imageUrl && child.attrs) {
                         imageUrl = child.attrs.imageUrl || '';
                     }
-                    
+
                     console.log('Generating code for decorative image (fallback), URL:', imageUrl, 'attrs:', attrs);
-                    
+
                     // Find the actual image in the group if it exists
                     const children = child.getChildren ? child.getChildren() : (child.children || []);
                     const imageElement = children.find(c => c.className === 'Image');
-                    
+
                     // Issue #537: Use group's visual bounding box so resized (scaled) dimensions persist
                     let actualX = Math.round(attrs.x || 0);
                     let actualY = Math.round(attrs.y || 0);
@@ -6413,9 +6413,9 @@ async function initializePDFEditor() {
                         actualWidth = Math.round((imageElement.width() || imageElement.attrs.width || 100) * sx);
                         actualHeight = Math.round((imageElement.height() || imageElement.attrs.height || 100) * sy);
                     }
-                    
+
                     console.log('Decorative image dimensions (fallback):', actualWidth, 'x', actualHeight, 'URL:', imageUrl);
-                    
+
                     // Issue #432: Only add to template JSON when source is non-empty
                     if (imageUrl && imageUrl.trim() !== '') {
                         templateJson.elements.push({
@@ -6429,7 +6429,7 @@ async function initializePDFEditor() {
                             decorative: true
                         });
                     }
-                    
+
                     // Legacy HTML for preview
                     if (imageUrl && imageUrl.trim() !== '') {
                         bodyContent += `  <img src="${imageUrl}" style="position:absolute;left:${actualX}px;top:${actualY}px;width:${actualWidth}px;height:${actualHeight}px;opacity:${opacity}" alt="Decorative image" class="image-element">\n`;
@@ -6453,7 +6453,7 @@ async function initializePDFEditor() {
                     }
                 }
             });
-            
+
             // Issue #600: Tables nested under another Group (or skipped if className was wrong) must still become template_json + preview HTML
             (function appendMissingTableGroupsDeep() {
                 if (!layer || typeof layer.find !== 'function') return;
@@ -6601,14 +6601,14 @@ async function initializePDFEditor() {
                     }
                 });
             })();
-            
+
             // Legacy HTML/CSS generation for preview (backward compatibility)
             const widthPx = dimensions.width;
             const heightPx = dimensions.height;
-            
+
             const html = `<div class="invoice-wrapper">
 ${bodyContent}</div>`;
-            
+
             const css = `@page {
     size: ${currentSize};
     margin: 0;
@@ -6673,9 +6673,9 @@ table td {
 table tr:last-child td {
     border-bottom: 2px solid #333;
 }`;
-            
+
             // Return both JSON (new format) and HTML/CSS (legacy for preview)
-            return { 
+            return {
                 html,  // Legacy HTML for preview
                 css,   // Legacy CSS for preview
                 json: JSON.stringify(templateJson, null, 2),  // ReportLab template JSON
@@ -6699,7 +6699,7 @@ table tr:last-child td {
             };
         }
     }
-    
+
     // View code
     document.getElementById('btn-code').addEventListener('click', function() {
         const gc = generateCode();
@@ -6708,27 +6708,27 @@ table tr:last-child td {
         if (gc.ok === false) {
             console.error('generateCode failed (view code):', gc.errorMessage);
         }
-        
+
         // Log for debugging
         console.log('=== GENERATED HTML ===');
         console.log(html);
         console.log('=== END HTML ===');
-        
+
         // Check if items table is present
         const hasItemsTable = html.includes('<!-- Items Table Start -->');
         const hasForLoop = html.includes('{' + '% for item in invoice.all_line_items') || html.includes('{' + '% for item in invoice.items');
         console.log('Has Items Table marker:', hasItemsTable);
         console.log('Has Jinja2 loop:', hasForLoop);
-        
+
         document.getElementById('code-html').value = html;
         document.getElementById('code-css').value = css;
         document.getElementById('code-modal').classList.remove('hidden');
     });
-    
+
     document.getElementById('close-modal').addEventListener('click', function() {
         document.getElementById('code-modal').classList.add('hidden');
     });
-    
+
     // Page size selector handler
     // Reuse the pageSizeSelector declared at the top level
     if (pageSizeSelector) {
@@ -6736,7 +6736,7 @@ table tr:last-child td {
         if (CURRENT_PAGE_SIZE) {
             pageSizeSelector.value = CURRENT_PAGE_SIZE;
         }
-        
+
         pageSizeSelector.addEventListener('change', async function() {
             const newSize = this.value;
             const confirmed = await showConfirm(
@@ -6756,18 +6756,18 @@ table tr:last-child td {
             }
         });
     }
-    
+
     // Cleanup function to remove unwanted elements before saving
     function cleanupUnwantedElements() {
         if (!layer) return;
-        
+
         const pageWidth = dimensions.width;
         const pageHeight = dimensions.height;
         let removedCount = 0;
-        
+
         // Get all children (create a copy since we'll be modifying the array)
         const children = layer.children.slice();
-        
+
         children.forEach((child) => {
             if (!child || child === background || child.className === 'Transformer') return;
             // Never remove Groups or named table/decorative nodes (cleanup only touches Rects and Lines)
@@ -6775,7 +6775,7 @@ table tr:last-child td {
             const name = (child.getAttr && child.getAttr('name')) || (child.attrs && child.attrs.name) || '';
             const isTableOrDecorative = name === 'items-table' || name === 'expenses-table' || (typeof name === 'string' && name.includes('decorative-image'));
             if (isGroup || isTableOrDecorative) return;
-            
+
             // Remove invisible elements (opacity 0 or not visible)
             if (child.attrs && (child.attrs.opacity === 0 || child.attrs.visible === false)) {
                 console.log('Removing invisible element:', child.className, child.attrs.name || 'unnamed');
@@ -6783,7 +6783,7 @@ table tr:last-child td {
                 removedCount++;
                 return;
             }
-            
+
             // Remove zero-sized elements (never remove Groups - they have no width/height in attrs, size comes from children; would delete items-table and expenses-table)
             if (child.attrs) {
                 const isGroup = child.className === 'Group' || (child.constructor && child.constructor.name === 'Group');
@@ -6798,7 +6798,7 @@ table tr:last-child td {
                     }
                 }
             }
-            
+
             // Remove unwanted rectangles
             if (child.className === 'Rect') {
                 const rectName = child.attrs.name || '';
@@ -6808,7 +6808,7 @@ table tr:last-child td {
                 const rectHeight = child.attrs.height || 0;
                 const rectFill = child.attrs.fill || '';
                 const rectStroke = child.attrs.stroke || '';
-                
+
                 // Remove if name is "background" or "page-border" (duplicates)
                 if (rectName === 'background' || rectName === 'page-border') {
                     console.log('Removing duplicate rectangle:', rectName);
@@ -6816,13 +6816,13 @@ table tr:last-child td {
                     removedCount++;
                     return;
                 }
-                
+
                 // Remove full-page rectangles at 0,0 with white/transparent fill and black stroke
-                const isFullPage = Math.abs(rectX) < 5 && Math.abs(rectY) < 5 && 
-                                  Math.abs(rectWidth - pageWidth) < 5 && 
+                const isFullPage = Math.abs(rectX) < 5 && Math.abs(rectY) < 5 &&
+                                  Math.abs(rectWidth - pageWidth) < 5 &&
                                   Math.abs(rectHeight - pageHeight) < 5;
-                
-                if (isFullPage && (rectFill === 'white' || rectFill === '#ffffff' || rectFill === 'transparent' || rectFill === '') && 
+
+                if (isFullPage && (rectFill === 'white' || rectFill === '#ffffff' || rectFill === 'transparent' || rectFill === '') &&
                     (rectStroke === 'black' || rectStroke === '#000000')) {
                     console.log('Removing unwanted full-page rectangle border before save');
                     child.destroy();
@@ -6830,7 +6830,7 @@ table tr:last-child td {
                     return;
                 }
             }
-            
+
             // Remove unwanted lines (border lines and separator lines)
             if (child.className === 'Line') {
                 const lineName = child.attrs.name || '';
@@ -6838,22 +6838,22 @@ table tr:last-child td {
                 const lineY = child.attrs.y || 0;
                 const lineWidth = child.attrs.width || 0;
                 const points = child.attrs.points || [];
-                
+
                 // Skip grid lines
                 if (lineName === 'grid-line') return;
-                
+
                 // Remove border lines at origin (0,0) with full page width
                 const isAtOrigin = Math.abs(lineX) < 5 && Math.abs(lineY) < 5;
-                const isFullWidthBorder = lineWidth > pageWidth * 0.9 || 
+                const isFullWidthBorder = lineWidth > pageWidth * 0.9 ||
                                         (points.length >= 4 && Math.abs(points[2] - points[0]) > pageWidth * 0.9);
-                
+
                 if (isAtOrigin && isFullWidthBorder) {
                     console.log('Removing unwanted border line at origin before save');
                     child.destroy();
                     removedCount++;
                     return;
                 }
-                
+
                 // Remove unwanted gray separator lines
                 if (points.length >= 4) {
                     const x1 = points[0];
@@ -6862,13 +6862,13 @@ table tr:last-child td {
                     const y2 = points[3];
                     const calculatedWidth = Math.abs(x2 - x1);
                     const stroke = child.attrs.stroke || '';
-                    
+
                     // Remove full-width gray/blue lines near top or anywhere
                     const isFullWidth = calculatedWidth > pageWidth * 0.9;
                     const isNearTop = Math.min(y1, y2) < 50;
-                    const isGrayOrBlue = stroke === '#e0e0e0' || stroke === '#dee2e6' || stroke === 'gray' || stroke === 'grey' || 
+                    const isGrayOrBlue = stroke === '#e0e0e0' || stroke === '#dee2e6' || stroke === 'gray' || stroke === 'grey' ||
                                         stroke === '#cccccc' || stroke === '#999999' || stroke === '#667eea';
-                    
+
                     if (isFullWidth && (isNearTop || isAtOrigin) && isGrayOrBlue && lineName !== 'items-table-separator' && lineName !== 'expenses-table-separator') {
                         console.log('Removing unwanted separator line before save');
                         child.destroy();
@@ -6878,13 +6878,13 @@ table tr:last-child td {
                 }
             }
         });
-        
+
         if (removedCount > 0) {
             console.log(`Cleaned up ${removedCount} unwanted elements before saving`);
             layer.draw();
         }
     }
-    
+
     // Save
     document.getElementById('btn-save').addEventListener('click', function() {
         // Issue #504: Ensure table groups have correct name BEFORE any cleanup (so names are set while layer is intact)
@@ -6994,7 +6994,7 @@ table tr:last-child td {
             ttAlert('Error: Could not generate template JSON. Please try again.');
             return;
         }
-        
+
         // Validate JSON before saving
         try {
             JSON.parse(json);
@@ -7003,10 +7003,10 @@ table tr:last-child td {
             ttAlert('Error: Generated template JSON is invalid. Please try again.');
             return;
         }
-        
+
         // Serialize the stage
         const stageJson = stage.toJSON();
-        
+
         // CRITICAL FIX: Explicitly inject name and imageUrl into serialized JSON for decorative images and table groups
         // (Konva may not serialize custom attrs on Groups). Use index for decorative-image; use position-based
         // matching for table groups so names are never applied to the wrong node.
@@ -7054,7 +7054,7 @@ table tr:last-child td {
                 }
             });
         }
-        
+
         // Manually inject imageUrl into serialized JSON for decorative images (backup pass)
         // Prefer position-based matching so reordering does not swap URLs (Issue #432)
         let decorativeImageIndex = 0;
@@ -7076,11 +7076,11 @@ table tr:last-child td {
                 node.children.forEach((child, idx) => ensureImageUrlInJson(child, `${parentKey}.children[${idx}]`));
             }
         }
-        
+
         if (stageJson.children) {
             stageJson.children.forEach((child, idx) => ensureImageUrlInJson(child, `children[${idx}]`));
         }
-        
+
         // Debug: Log decorative image groups in the JSON
         function logDecorativeImagesInJson(node, depth = 0) {
             const nodeName = node.attrs && node.attrs.name ? node.attrs.name : '';
@@ -7094,7 +7094,7 @@ table tr:last-child td {
         }
         console.log('=== Checking decorative images in serialized JSON ===');
         logDecorativeImagesInJson(stageJson);
-        
+
         document.getElementById('save-html').value = html;
         document.getElementById('save-css').value = css;
         document.getElementById('save-design-json').value = JSON.stringify(stageJson);
@@ -7110,7 +7110,7 @@ table tr:last-child td {
         try { window.dispatchEvent(new CustomEvent('tt:unsaved-clean')); } catch (_) {}
         document.getElementById('form-save').submit();
     });
-    
+
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         // Check if user is editing text in an input field or textarea
@@ -7120,7 +7120,7 @@ table tr:last-child td {
             activeElement.tagName === 'TEXTAREA' ||
             activeElement.isContentEditable
         );
-        
+
         // Delete selected element with Delete or Backspace (only if not editing text)
         const mod = e.ctrlKey || e.metaKey;
         if (mod && !isEditingText) {
@@ -7154,13 +7154,13 @@ table tr:last-child td {
             refreshLayersPanel();
             pushInvoiceEditorHistory();
         }
-        
+
         // Copy with Ctrl+C (multi)
         if (e.ctrlKey && e.key === 'c' && selectedNodes.length) {
             e.preventDefault();
             window.copiedElements = selectedNodes.map(function (n) { return n.toJSON(); });
         }
-        
+
         // Paste with Ctrl+V
         if (e.ctrlKey && e.key === 'v' && window.copiedElements && window.copiedElements.length) {
             e.preventDefault();
@@ -7177,7 +7177,7 @@ table tr:last-child td {
             applySelection(created);
             pushInvoiceEditorHistory();
         }
-        
+
         // Duplicate with Ctrl+D
         if (e.ctrlKey && e.key === 'd' && selectedNodes.length) {
             e.preventDefault();
@@ -7195,7 +7195,7 @@ table tr:last-child td {
             applySelection(created);
             pushInvoiceEditorHistory();
         }
-        
+
         // Arrow keys to move elements (multi, snap-aware)
         if (selectedNodes.length && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !isEditingText) {
             e.preventDefault();
@@ -7217,12 +7217,12 @@ table tr:last-child td {
             scheduleInvoiceEditorHistoryPush();
         }
     });
-    
+
     // Click on background: deselect (marquee handler also clears on tiny drag)
     background.on('click', function () {
         applySelection([]);
     });
-    
+
     // Alignment tools (page when 1 element; selection bounding box when 2+)
     window.alignElements = function (direction) {
         if (!selectedNodes.length) return;
@@ -7258,7 +7258,7 @@ table tr:last-child td {
             if (propY) propY.value = Math.round(selectedNodes[0].y());
         }
     };
-    
+
     window.distributeElements = function (axis) {
         if (!window.__PDF_EDITOR_HELPERS__) return;
         if (axis === 'h' && window.__PDF_EDITOR_HELPERS__.distributeHorizontal) {
@@ -7269,7 +7269,7 @@ table tr:last-child td {
         layer.draw();
         scheduleInvoiceEditorHistoryPush();
     };
-    
+
     // Save design state
     window.saveDesignState = function() {
         const gc = generateCode();
@@ -7281,14 +7281,14 @@ table tr:last-child td {
             errorMessage: gc.errorMessage
         };
     };
-    
+
     // Load design state
     window.loadDesignState = function(designJson) {
         try {
             const json = JSON.parse(designJson);
             stage = Konva.Node.create(json, 'canvas-container');
             layer = stage.children[0];
-            
+
                 // Re-setup selections for all elements
                 layer.children.forEach(child => {
                     if (child !== background && child.className !== 'Transformer') {
@@ -7301,13 +7301,13 @@ table tr:last-child td {
                         }
                     }
                 });
-            
+
             layer.draw();
         } catch(e) {
             console.error('Failed to load design state:', e);
         }
     };
-    
+
     // Add alignment buttons to canvas toolbar
     const canvasToolbar = document.querySelector('.canvas-toolbar');
     if (canvasToolbar) {
@@ -7339,55 +7339,55 @@ table tr:last-child td {
         `;
         canvasToolbar.insertAdjacentHTML('beforeend', alignmentButtons);
     }
-    
+
     window.__invoiceReloadCanvasFromSnapshot = function(jsonString) {
                 const savedJson = JSON.parse(jsonString);
-                
+
                 // Get current page size dimensions
                 const currentSize = CURRENT_PAGE_SIZE || 'A4';
                 const dimensions = PAGE_SIZE_DIMENSIONS[currentSize] || PAGE_SIZE_DIMENSIONS['A4'];
-                
+
                 // Update saved JSON dimensions to match current page size
                 if (savedJson.attrs) {
                     savedJson.attrs.width = dimensions.width;
                     savedJson.attrs.height = dimensions.height;
                 }
-                
+
                 // Clear current layer
                 layer.destroyChildren();
-                
+
                 // Recreate stage from saved JSON
                 const restoredStage = Konva.Node.create(savedJson, 'canvas-container');
-                
+
                 // Ensure stage has correct dimensions
                 restoredStage.width(dimensions.width);
                 restoredStage.height(dimensions.height);
-                
+
                 // Replace current stage
                 stage.destroy();
                 stage = restoredStage;
                 layer = stage.children[0];
-                
+
                 // Issue #432 / #600: Restore table + decorative Group attrs from saved JSON by (x,y); index order can diverge after Konva restore
                 const layerJson = savedJson.children && savedJson.children[0];
                 if (layerJson && layerJson.children && layer.children) {
                     applyTableMetaFromSavedJson(layer, layerJson);
                     applyDecorativeMetaFromSavedJson(layer, layerJson);
                 }
-                
+
                 // Debug: Log the saved JSON to check if imageUrl is there
                 const savedJsonString = JSON.stringify(savedJson);
                 console.log('[INVOICE] [LOAD] Saved JSON structure (first 2000 chars):', savedJsonString.substring(0, 2000));
-                
+
                 // Check if imageUrl is in the saved JSON
                 const decorativeImageCountInSaved = (savedJsonString.match(/"name":"decorative-image"/g) || []).length;
                 const imageUrlCountInSaved = (savedJsonString.match(/"imageUrl":"[^"]+"/g) || []).length;
                 console.log('[INVOICE] [LOAD] Saved JSON check - Decorative images:', decorativeImageCountInSaved, 'imageUrl attributes:', imageUrlCountInSaved);
-                
+
                 if (decorativeImageCountInSaved > 0 && imageUrlCountInSaved === 0) {
                     console.error('[INVOICE] [LOAD] ⚠️ WARNING: Found decorative images in saved JSON but NO imageUrl attributes!');
                 }
-                
+
                 // Defensive fix (Issue #504): Restore table group names from structure when missing from saved design_json (i18n-aware)
                 layer.children.forEach((child) => {
                     if (!child || child === background || child.className !== 'Group') return;
@@ -7407,7 +7407,7 @@ table tr:last-child td {
                         console.log('[INVOICE] [LOAD] Restored table group name from structure:', inferredName);
                     }
                 });
-                
+
                 // Find or create background by name and resize it
                 background = layer.findOne('[name="background"]');
                 if (background) {
@@ -7428,7 +7428,7 @@ table tr:last-child td {
                     layer.add(background);
                     background.moveToBottom();
                 }
-                
+
                 // Update page border to match new dimensions
                 const pageBorder = layer.findOne('[name="page-border"]');
                 if (pageBorder) {
@@ -7451,7 +7451,7 @@ table tr:last-child td {
                     layer.add(newPageBorder);
                     newPageBorder.moveToBottom();
                 }
-                
+
                 // Clean up unwanted elements that might have been saved
                 // Remove unwanted full-page rectangle borders
                 layer.children.forEach((child) => {
@@ -7463,27 +7463,27 @@ table tr:last-child td {
                         const rectHeight = child.attrs.height || 0;
                         const rectFill = child.attrs.fill || '';
                         const rectStroke = child.attrs.stroke || '';
-                        
+
                         // Remove if name is "background" (duplicate)
                         if (rectName === 'background') {
                             console.log('Removing duplicate background rectangle');
                             child.destroy();
                             return;
                         }
-                        
+
                         // Remove full-page rectangles at 0,0 with white fill and black stroke (unwanted borders)
-                        const isFullPage = Math.abs(rectX) < 5 && Math.abs(rectY) < 5 && 
-                                          Math.abs(rectWidth - dimensions.width) < 5 && 
+                        const isFullPage = Math.abs(rectX) < 5 && Math.abs(rectY) < 5 &&
+                                          Math.abs(rectWidth - dimensions.width) < 5 &&
                                           Math.abs(rectHeight - dimensions.height) < 5;
-                        
-                        if (isFullPage && (rectFill === 'white' || rectFill === '#ffffff' || rectFill === 'transparent') && 
+
+                        if (isFullPage && (rectFill === 'white' || rectFill === '#ffffff' || rectFill === 'transparent') &&
                             (rectStroke === 'black' || rectStroke === '#000000')) {
                             console.log('Removing unwanted full-page rectangle border on load');
                             child.destroy();
                             return;
                         }
                     }
-                    
+
                     // Remove unwanted lines (border lines and separator lines)
                     if (child.className === 'Line') {
                         const lineX = child.attrs.x || 0;
@@ -7491,17 +7491,17 @@ table tr:last-child td {
                         const points = child.attrs.points || [];
                         const stroke = child.attrs.stroke || '';
                         const lineName = child.attrs.name || '';
-                        
+
                         // Skip grid lines
                         if (lineName === 'grid-line') {
                             return;
                         }
-                        
+
                         // Calculate actual line position and width from points
                         let actualX = lineX;
                         let actualY = lineY;
                         let lineWidth = 0;
-                        
+
                         if (points.length >= 4) {
                             const x1 = points[0];
                             const y1 = points[1];
@@ -7516,26 +7516,26 @@ table tr:last-child td {
                             actualX = lineX;
                             actualY = lineY;
                         }
-                        
+
                         // Remove border lines at origin (0,0) with full page width
                         const isAtOrigin = Math.abs(actualX) < 5 && Math.abs(actualY) < 5;
                         const isFullWidth = lineWidth > dimensions.width * 0.9;
-                        const isGrayOrBlue = stroke === '#e0e0e0' || stroke === '#dee2e6' || stroke === 'gray' || stroke === 'grey' || 
+                        const isGrayOrBlue = stroke === '#e0e0e0' || stroke === '#dee2e6' || stroke === 'gray' || stroke === 'grey' ||
                                             stroke === '#cccccc' || stroke === '#999999' || stroke === '#667eea';
-                        
+
                         // Remove any line at origin with full width (border lines)
                         if (isAtOrigin && isFullWidth) {
                             console.log('Removing unwanted border line at origin on load:', {actualX, actualY, lineWidth, stroke, name: lineName});
                             child.destroy();
                             return;
                         }
-                        
+
                         // Remove unwanted gray/blue separator lines near top
                         if (points.length >= 4) {
                             const y1 = points[1];
                             const y2 = points[3];
                             const isNearTop = Math.min(y1, y2) < 50 || actualY < 50;
-                            
+
                             if (isFullWidth && isNearTop && isGrayOrBlue && lineName !== 'items-table-separator' && lineName !== 'expenses-table-separator') {
                                 console.log('Removing unwanted separator line on load:', {actualX, actualY, lineWidth, stroke, name: lineName});
                                 child.destroy();
@@ -7544,23 +7544,23 @@ table tr:last-child td {
                         }
                     }
                 });
-                
+
                 layer.draw();
-                
+
                 // Update width and height variables for fit function
                 width = dimensions.width;
                 height = dimensions.height;
-                
+
                 // Redraw grid for new size
                 drawGrid();
-                
+
                 // Fix logo images: Konva Image nodes need to reload the image from URL
                 // When Konva Image nodes are serialized/deserialized, the image data is lost
                 // We need to reload the image from the URL and restore all attributes
                 if (LOGO_URL) {
                     // Find logo images by name attribute first
                     let logoImages = layer.find('[name="logo"]');
-                    
+
                     // Also check all Image nodes in case name attribute is lost during deserialization
                     // An Image node with name="logo" or any Image node that should be a logo
                     const allImages = layer.find('Image');
@@ -7574,16 +7574,16 @@ table tr:last-child td {
                             }
                         }
                     });
-                    
+
                     console.log('Found', logoImages.length, 'logo image(s) to restore');
-                    
+
                     logoImages.forEach(function(logoNode) {
                         // Check if it's an Image node - use multiple methods for robustness
-                        const isImage = logoNode.className === 'Image' || 
+                        const isImage = logoNode.className === 'Image' ||
                                       (logoNode.constructor && logoNode.constructor.name === 'Image') ||
                                       (logoNode instanceof Konva.Image) ||
                                       (logoNode.getClassName && logoNode.getClassName() === 'Image');
-                        
+
                         if (isImage) {
                             // Save all attributes before reloading
                             const savedAttrs = {
@@ -7598,28 +7598,28 @@ table tr:last-child td {
                                 draggable: logoNode.draggable(),
                                 visible: logoNode.visible()
                             };
-                            
+
                             // Store reference to update elements array
                             const oldNode = logoNode;
                             const parent = logoNode.getParent();
                             const index = logoNode.getZIndex();
-                            
+
                             console.log('Restoring logo image at', savedAttrs.x, savedAttrs.y);
-                            
+
                             // Reload the image from URL
                             Konva.Image.fromURL(LOGO_URL, function(newImage) {
                                 // Calculate actual size considering scale
                                 // If scaleX/scaleY are not 1, the actual size is width*scaleX and height*scaleY
                                 let finalWidth = savedAttrs.width;
                                 let finalHeight = savedAttrs.height;
-                                
+
                                 // If scale was applied, we need to account for it
                                 // Reset scale to 1 and apply the scaled dimensions as the new width/height
                                 if (savedAttrs.scaleX !== 1 || savedAttrs.scaleY !== 1) {
                                     finalWidth = savedAttrs.width * savedAttrs.scaleX;
                                     finalHeight = savedAttrs.height * savedAttrs.scaleY;
                                 }
-                                
+
                                 // Restore all attributes, but reset scale to 1 and use calculated dimensions
                                 newImage.setAttrs({
                                     x: savedAttrs.x,
@@ -7634,12 +7634,12 @@ table tr:last-child td {
                                     visible: savedAttrs.visible
                                 });
                                 newImage.name('logo');
-                                
+
                                 // Replace the old node with the new one
                                 oldNode.destroy();
                                 parent.add(newImage);
                                 newImage.zIndex(index);
-                                
+
                                 // Update elements array
                                 const elementIndex = elements.findIndex(e => e.node === oldNode);
                                 if (elementIndex !== -1) {
@@ -7648,10 +7648,10 @@ table tr:last-child td {
                                     // Add to elements array if not found
                                     elements.push({ type: 'logo', node: newImage });
                                 }
-                                
+
                                 // Setup selection for the new image
                                 setupSelection(newImage);
-                                
+
                                 layer.draw();
                                 console.log('Logo image restored successfully');
                             }, function(error) {
@@ -7668,7 +7668,7 @@ table tr:last-child td {
                         }
                     });
                 }
-                
+
                 // Restore decorative images - must happen AFTER stage is created and fully deserialized
                 // Find decorative image groups and restore their images
                 console.log('🔍 Starting decorative image restoration...');
@@ -7678,7 +7678,7 @@ table tr:last-child td {
                 if (savedJson && savedJson.children) {
                     console.log('Saved JSON has', savedJson.children.length, 'top-level children');
                 }
-                
+
                 // CRITICAL: Ensure decorative image restoration runs even if there's a delay
                 // Use a longer timeout to ensure stage is fully ready
                 setTimeout(() => {
@@ -7695,21 +7695,21 @@ table tr:last-child td {
                         }
                     });
                     console.log('[INVOICE] Found', decorativeImageGroups.length, 'decorative image group(s) via layer.find (including modified names)');
-                    
+
                     // Also try finding by className and checking name - check ALL children, not just Groups
                     console.log('Checking all', layer.children.length, 'layer children...');
                     const potentialGroups = [];
                     layer.children.forEach((child, idx) => {
                         // Check if it's a Group by className or getType
-                        const isGroup = child.className === 'Group' || 
+                        const isGroup = child.className === 'Group' ||
                                        (child.getType && child.getType() === 'Group') ||
                                        (child.constructor && child.constructor.name === 'Group');
-                        
+
                         if (isGroup) {
                             const nameViaGetAttr = child.getAttr ? child.getAttr('name') : null;
                             const nameViaName = child.name ? child.name() : null;
                             const nameViaAttrs = child.attrs ? child.attrs.name : null;
-                            
+
                             // CRITICAL FIX: Check if name includes 'decorative-image' (handles "decorative-image element-overlap")
                             if ((nameViaGetAttr && nameViaGetAttr.includes('decorative-image')) ||
                                 (nameViaName && nameViaName.includes('decorative-image')) ||
@@ -7740,9 +7740,9 @@ table tr:last-child td {
                             }
                         }
                     });
-                    
+
                     console.log('Total potential decorative-image groups found:', potentialGroups.length);
-                    
+
                     // Also search the saved JSON directly to find decorative-image groups
                     const jsonGroups = [];
                     if (savedJson && savedJson.children) {
@@ -7765,10 +7765,10 @@ table tr:last-child td {
                         });
                         console.log('Found', jsonGroups.length, 'decorative-image group(s) in saved JSON');
                     }
-                    
+
                     // Combine found groups with potential groups
                     let groupsToProcess = decorativeImageGroups;
-                    
+
                     // Add any potential groups that weren't found by layer.find
                     potentialGroups.forEach(group => {
                         if (!groupsToProcess.includes(group)) {
@@ -7776,14 +7776,14 @@ table tr:last-child td {
                             groupsToProcess = groupsToProcess.concat([group]);
                         }
                     });
-                    
+
                     // If we found groups in JSON but not in the layer, try to find them by matching position/attributes
                     if (jsonGroups.length > 0 && groupsToProcess.length === 0) {
                         console.log('⚠️ Found groups in JSON but not in layer - trying to match by attributes...');
                         jsonGroups.forEach(jsonGroup => {
                             // Try to find matching group in layer by checking all children
                             layer.children.forEach(child => {
-                                const isGroup = child.className === 'Group' || 
+                                const isGroup = child.className === 'Group' ||
                                                (child.getType && child.getType() === 'Group');
                                 if (isGroup) {
                                     // Check if attributes match (x, y, width, height)
@@ -7809,21 +7809,21 @@ table tr:last-child td {
                             });
                         });
                     }
-                    
+
                     if (groupsToProcess.length === 0) {
                         console.warn('⚠️ No decorative image groups found! Checking all groups for Image/Rect children...');
                         layer.children.forEach((child, idx) => {
                             // Check if it's a Group
-                            const isGroup = child.className === 'Group' || 
+                            const isGroup = child.className === 'Group' ||
                                            (child.getType && child.getType() === 'Group') ||
                                            (child.constructor && child.constructor.name === 'Group');
-                            
+
                             if (isGroup) {
                                 const nameViaGetAttr = child.getAttr ? child.getAttr('name') : null;
                                 const nameViaName = child.name ? child.name() : null;
                                 const nameViaAttrs = child.attrs ? child.attrs.name : null;
                                 console.log(`Group ${idx}: name via getAttr="${nameViaGetAttr}", via name()="${nameViaName}", via attrs="${nameViaAttrs}"`);
-                                
+
                                 // Check if this might be a decorative image group by checking children
                                 const hasImage = child.findOne ? child.findOne('Image') : null;
                                 const hasPlaceholderRect = child.findOne ? child.findOne('Rect') : null;
@@ -7845,7 +7845,7 @@ table tr:last-child td {
                                 }
                             }
                         });
-                        
+
                         // Try searching again after potential fixes
                         const decorativeImageGroupsAfterFix = layer.find('[name="decorative-image"]');
                         if (decorativeImageGroupsAfterFix.length > 0) {
@@ -7858,13 +7858,13 @@ table tr:last-child td {
                             });
                         }
                     }
-                    
+
                     console.log('Final groupsToProcess count:', groupsToProcess.length);
-                    
+
                     groupsToProcess.forEach(decorativeImageGroup => {
                         console.log('Found decorative image group:', decorativeImageGroup);
                         console.log('Group attrs:', decorativeImageGroup.attrs);
-                        
+
                         // Check if there's an Image node already (from deserialization)
                         const existingImage = decorativeImageGroup.findOne('Image');
                         console.log('Existing image node:', existingImage);
@@ -7884,7 +7884,7 @@ table tr:last-child td {
                                 existingImage.destroy();
                             }
                         }
-                        
+
                         // Try multiple methods to get imageUrl
                         let imageUrl = '';
                         try {
@@ -7900,7 +7900,7 @@ table tr:last-child td {
                         if (!imageUrl && decorativeImageGroup.attrs) {
                             imageUrl = decorativeImageGroup.attrs.imageUrl || '';
                         }
-                        
+
                         // Also check the saved JSON directly if we still don't have it
                         if (!imageUrl && savedJson && savedJson.children) {
                             try {
@@ -7908,7 +7908,7 @@ table tr:last-child td {
                                 // Match by position to get the correct imageUrl for this specific group
                                 const groupX = decorativeImageGroup.x() || 0;
                                 const groupY = decorativeImageGroup.y() || 0;
-                                
+
                                 function findImageUrlInJsonByPosition(node, targetName, targetX, targetY) {
                                     const nodeName = node.attrs && node.attrs.name ? node.attrs.name : '';
                                     // Check if name includes targetName (handles "decorative-image element-overlap")
@@ -7930,10 +7930,10 @@ table tr:last-child td {
                                     }
                                     return '';
                                 }
-                                
+
                                 // First try to find by position
                                 let jsonImageUrl = findImageUrlInJsonByPosition(savedJson, 'decorative-image', groupX, groupY);
-                                
+
                                 // If not found by position, try to find any decorative-image (fallback)
                                 if (!jsonImageUrl) {
                                     console.log('[INVOICE] No match by position, trying to find any decorative-image in JSON...');
@@ -7953,7 +7953,7 @@ table tr:last-child td {
                                     }
                                     jsonImageUrl = findImageUrlInJson(savedJson, 'decorative-image');
                                 }
-                                
+
                                 if (jsonImageUrl) {
                                     imageUrl = jsonImageUrl;
                                     // Also set it in the group for future use
@@ -7979,18 +7979,18 @@ table tr:last-child td {
                                 console.warn('[INVOICE] Could not search JSON for imageUrl:', e);
                             }
                         }
-                        
+
                         console.log('[INVOICE] Restoring decorative image, final URL:', imageUrl);
-                        
+
                         // CRITICAL FIX: Ensure decorative image group is always visible, even without imageUrl
                         decorativeImageGroup.visible(true);
-                        
+
                         if (imageUrl && imageUrl.trim() !== '') {
                             // Remove any existing image node (it won't have valid image data after deserialization)
                             if (existingImage) {
                                 existingImage.destroy();
                             }
-                            
+
                             // Remove placeholder elements
                             const rect = decorativeImageGroup.findOne('Rect');
                             const allTexts = decorativeImageGroup.find('Text');
@@ -8000,23 +8000,23 @@ table tr:last-child td {
                                     textNode.destroy();
                                 }
                             });
-                            
+
                             if (rect) rect.destroy();
-                            
+
                             // Create a temporary image to verify it loads
                             const tempImg = new Image();
                             tempImg.crossOrigin = 'anonymous';
-                            
+
                             tempImg.onload = function() {
                                 console.log('[INVOICE] Decorative image verified, loading into Konva. Dimensions:', tempImg.width, 'x', tempImg.height);
-                                
+
                                 // Load the actual image
                                 Konva.Image.fromURL(imageUrl, function(konvaImage) {
                                     const maxSize = 200;
                                     let width = konvaImage.width() || tempImg.width || 100;
                                     let height = konvaImage.height() || tempImg.height || 100;
                                     const aspectRatio = width / height;
-                                    
+
                                     if (width > maxSize || height > maxSize) {
                                         if (width > height) {
                                             width = maxSize;
@@ -8026,7 +8026,7 @@ table tr:last-child td {
                                             width = maxSize * aspectRatio;
                                         }
                                     }
-                                    
+
                                     // Preserve transparency - don't set fill or opacity that would override image alpha
                                     konvaImage.setAttrs({
                                         x: 0,
@@ -8038,18 +8038,18 @@ table tr:last-child td {
                                         visible: true,  // Explicitly make it visible
                                         listening: true
                                     });
-                                    
+
                                     decorativeImageGroup.width(width);
                                     decorativeImageGroup.height(height);
                                     decorativeImageGroup.visible(true);  // Ensure group is visible
                                     decorativeImageGroup.add(konvaImage);
-                                    
+
                                     // Force a redraw and ensure the image is on top
                                     layer.draw();
-                                    
+
                                     // Also try drawing the stage to ensure everything is rendered
                                     stage.draw();
-                                    
+
                                     // Verify the image is actually in the group and visible
                                     const imageInGroup = decorativeImageGroup.findOne('Image');
                                     if (imageInGroup && imageInGroup === konvaImage) {
@@ -8067,11 +8067,11 @@ table tr:last-child td {
                                             stage.draw();
                                         }
                                     }
-                                    
+
                                     console.log('Image visible:', konvaImage.visible());
                                     console.log('Group visible:', decorativeImageGroup.visible());
                                     console.log('Image in group:', decorativeImageGroup.children.includes(konvaImage));
-                                    
+
                                     // Force another draw after a short delay to ensure rendering
                                     setTimeout(() => {
                                         layer.draw();
@@ -8094,7 +8094,7 @@ table tr:last-child td {
                                     layer.draw();
                                 });
                             };
-                            
+
                             tempImg.onerror = function() {
                                 console.error('Failed to verify decorative image:', imageUrl);
                                 // Restore placeholder on error
@@ -8111,10 +8111,10 @@ table tr:last-child td {
                                 decorativeImageGroup.add(placeholderRect);
                                 layer.draw();
                             };
-                            
+
                             // Set src after all handlers are attached
                             tempImg.src = imageUrl;
-                            
+
                             // Also try loading directly if tempImg fails silently
                             setTimeout(() => {
                                 if (!tempImg.complete || tempImg.naturalWidth === 0) {
@@ -8126,7 +8126,7 @@ table tr:last-child td {
                                             let width = directImage.width() || 100;
                                             let height = directImage.height() || 100;
                                             const aspectRatio = width / height;
-                                            
+
                                             if (width > maxSize || height > maxSize) {
                                                 if (width > height) {
                                                     width = maxSize;
@@ -8136,7 +8136,7 @@ table tr:last-child td {
                                                     width = maxSize * aspectRatio;
                                                 }
                                             }
-                                            
+
                                             directImage.setAttrs({
                                                 x: 0,
                                                 y: 0,
@@ -8146,7 +8146,7 @@ table tr:last-child td {
                                                 visible: true,
                                                 listening: true
                                             });
-                                            
+
                                             decorativeImageGroup.width(width);
                                             decorativeImageGroup.height(height);
                                             decorativeImageGroup.visible(true);
@@ -8164,23 +8164,23 @@ table tr:last-child td {
                             console.log('No imageUrl found for decorative image, ensuring placeholder is visible');
                             // Even if no imageUrl, ensure the group is visible and has placeholder elements
                             decorativeImageGroup.visible(true);
-                            
+
                             // Check if placeholder elements exist, if not create them
                             const hasRect = decorativeImageGroup.findOne('Rect');
                             const hasPlaceholderText = decorativeImageGroup.find('Text').some(textNode => {
                                 const text = textNode.text();
                                 return text.includes('Decorative') || text.includes('🖼️');
                             });
-                            
+
                             if (!hasRect || !hasPlaceholderText) {
                                 console.log('Creating placeholder elements for decorative image without imageUrl');
-                                
+
                                 // Remove any existing image that might be there
                                 const existingImage = decorativeImageGroup.findOne('Image');
                                 if (existingImage) {
                                     existingImage.destroy();
                                 }
-                                
+
                                 // Create placeholder rect if missing
                                 if (!hasRect) {
                                     const placeholderRect = new Konva.Rect({
@@ -8195,7 +8195,7 @@ table tr:last-child td {
                                     });
                                     decorativeImageGroup.add(placeholderRect);
                                 }
-                                
+
                                 // Create placeholder text/icon if missing
                                 if (!hasPlaceholderText) {
                                     const placeholderText = new Konva.Text({
@@ -8209,7 +8209,7 @@ table tr:last-child td {
                                         width: 80
                                     });
                                     decorativeImageGroup.add(placeholderText);
-                                    
+
                                     const placeholderIcon = new Konva.Text({
                                         x: 35,
                                         y: 15,
@@ -8220,21 +8220,21 @@ table tr:last-child td {
                                     });
                                     decorativeImageGroup.add(placeholderIcon);
                                 }
-                                
+
                                 decorativeImageGroup.width(100);
                                 decorativeImageGroup.height(100);
                             }
-                            
+
                             layer.draw();
                             stage.draw();
                         }
                     });
                 }, 300);  // Increased delay to ensure stage is fully loaded and all elements are ready
-                
+
                 // Re-setup selections for all elements (skip background, grid lines, and page border)
                 layer.children.forEach(child => {
-                    if (child !== background && 
-                        child.className !== 'Transformer' && 
+                    if (child !== background &&
+                        child.className !== 'Transformer' &&
                         !(child.className === 'Line' && child.attrs.name === 'grid-line') &&
                         !(child.className === 'Rect' && child.attrs.name === 'page-border')) {
                         // Skip logo images as they're handled above
@@ -8257,9 +8257,9 @@ table tr:last-child td {
                         elements.push({ type: child.attrs.name || child.className, node: child });
                     }
                 });
-                
+
                 layer.draw();
-                
+
                 // After setupSelection, try to restore decorative images again if they weren't found earlier
                 // This is a fallback in case the first attempt ran too early
                 setTimeout(() => {
@@ -8268,7 +8268,7 @@ table tr:last-child td {
                         console.log('🔄 Fallback: Found', decorativeImageGroups.length, 'decorative image group(s) after setupSelection');
                         decorativeImageGroups.forEach(decorativeImageGroup => {
                             const existingImage = decorativeImageGroup.findOne('Image');
-                            
+
                             // Try multiple methods to get imageUrl
                             let imageUrl = '';
                             try {
@@ -8279,7 +8279,7 @@ table tr:last-child td {
                             if (!imageUrl) {
                                 imageUrl = decorativeImageGroup.attrs.imageUrl || '';
                             }
-                            
+
                             // Also check the saved JSON directly if we still don't have it
                             if (!imageUrl && savedJson && savedJson.children) {
                                 try {
@@ -8306,18 +8306,18 @@ table tr:last-child td {
                                     console.warn('Fallback: Could not search JSON for imageUrl:', e);
                                 }
                             }
-                            
+
                             // Only restore if we have an imageUrl but no visible image
                             if (imageUrl && imageUrl.trim() !== '') {
                                 const hasValidImage = existingImage && existingImage.image();
                                 if (!hasValidImage) {
                                     console.log('🔄 Fallback: Restoring image for group with URL:', imageUrl);
-                                    
+
                                     // Remove existing image node if it doesn't have valid data
                                     if (existingImage && !existingImage.image()) {
                                         existingImage.destroy();
                                     }
-                                    
+
                                     // Remove placeholder elements
                                     const rect = decorativeImageGroup.findOne('Rect');
                                     const allTexts = decorativeImageGroup.find('Text');
@@ -8328,13 +8328,13 @@ table tr:last-child td {
                                         }
                                     });
                                     if (rect) rect.destroy();
-                                    
+
                                     Konva.Image.fromURL(imageUrl, function(konvaImage) {
                                         const maxSize = 200;
                                         let width = konvaImage.width() || 100;
                                         let height = konvaImage.height() || 100;
                                         const aspectRatio = width / height;
-                                        
+
                                         if (width > maxSize || height > maxSize) {
                                             if (width > height) {
                                                 width = maxSize;
@@ -8344,7 +8344,7 @@ table tr:last-child td {
                                                 width = maxSize * aspectRatio;
                                             }
                                         }
-                                        
+
                                         konvaImage.setAttrs({
                                             x: 0,
                                             y: 0,
@@ -8354,7 +8354,7 @@ table tr:last-child td {
                                             visible: true,
                                             listening: true
                                         });
-                                        
+
                                         decorativeImageGroup.width(width);
                                         decorativeImageGroup.height(height);
                                         decorativeImageGroup.visible(true);
@@ -8389,12 +8389,12 @@ table tr:last-child td {
                         });
                     }
                 }, 500);
-                
+
                 // Refit canvas after loading saved design
                 setTimeout(() => {
                     fitCanvasToContainer();
                 }, 150);
-                
+
                 console.log('✅ Saved design loaded successfully for size:', currentSize);
     };
 
@@ -8493,25 +8493,25 @@ table tr:last-child td {
             pushInvoiceEditorHistory();
         }, 950);
     }, 100);
-    
+
     function loadDefaultLayout() {
         console.log('Loading comprehensive default layout...');
-        
+
         // ========== HEADER SECTION ==========
         // Logo (top left)
         if (LOGO_URL) {
             addElement('logo', 40, 30);
         }
-        
+
         // Company Name and Address (top left)
         addElement('company-name', 40, 95);
         addElement('company-address', 40, 125);
         addElement('company-phone', 40, 155);
         addElement('company-email', 40, 175);
-        
+
         // INVOICE Heading (center-right)
         addElement('heading', 320, 35);
-        
+
         // Invoice Details Box (top right)
         addElement('rectangle', 380, 85, null);  // Background box for invoice details
         const rect = layer.children[layer.children.length - 1];
@@ -8520,12 +8520,12 @@ table tr:last-child td {
         rect.fill('#f8f9fa');
         rect.stroke('#dee2e6');
         rect.strokeWidth(1);
-        
+
         addElement('invoice-number', 395, 95);
         addElement('invoice-date', 395, 120);
         addElement('due-date', 395, 145);
         addElement('invoice-status', 395, 170);
-        
+
         // ========== CLIENT & PROJECT SECTION ==========
         // Bill To Section (left)
         const billToLabel = new Konva.Text({
@@ -8542,11 +8542,11 @@ table tr:last-child td {
         layer.add(billToLabel);
         setupSelection(billToLabel);
         elements.push({ type: 'label', node: billToLabel });
-        
+
         addElement('client-name', 40, 250);
         addElement('client-address', 40, 275);
         addElement('client-email', 40, 305);
-        
+
         // Project Info (right)
         const projectLabel = new Konva.Text({
             x: 320,
@@ -8562,13 +8562,13 @@ table tr:last-child td {
         layer.add(projectLabel);
         setupSelection(projectLabel);
         elements.push({ type: 'label', node: projectLabel });
-        
+
         addElement('project-name', 320, 250);
         addElement('currency', 320, 275);
-        
+
         // ========== ITEMS TABLE ==========
         addElement('items-table', 40, 350);
-        
+
         // ========== TOTALS SECTION ==========
         // Totals Box (right side) - moved down to give table more space
         addElement('rectangle', 380, 500, null);
@@ -8578,10 +8578,10 @@ table tr:last-child td {
         totalsBox.fill('#f8f9fa');
         totalsBox.stroke('#dee2e6');
         totalsBox.strokeWidth(1);
-        
+
         addElement('subtotal', 395, 512);
         addElement('tax', 395, 540);
-        
+
         // Total with highlight
         addElement('rectangle', 385, 565, null);
         const totalHighlight = layer.children[layer.children.length - 1];
@@ -8590,7 +8590,7 @@ table tr:last-child td {
         totalHighlight.fill('#667eea');
         totalHighlight.stroke('#667eea');
         totalHighlight.strokeWidth(1);
-        
+
         addElement('totals', 395, 570);
         // Find the totals text element by name
         const totalText = layer.findOne('[name="totals"]');
@@ -8598,7 +8598,7 @@ table tr:last-child td {
             totalText.fill('white');
             totalText.fontStyle('bold');
         }
-        
+
         // ========== PAYMENT SECTION ==========
         const paymentLabel = new Konva.Text({
             x: 40,
@@ -8614,18 +8614,18 @@ table tr:last-child td {
         layer.add(paymentLabel);
         setupSelection(paymentLabel);
         elements.push({ type: 'label', node: paymentLabel });
-        
+
         addElement('payment-status', 40, 635);
         addElement('amount-paid', 40, 660);
         addElement('outstanding-amount', 40, 685);
-        
+
         // Bank Info (right side)
         addElement('bank-info', 320, 635);
-        
+
         // ========== NOTES & TERMS ==========
         addElement('notes', 40, 738);
         addElement('terms', 40, 768);
-        
+
         // ========== FOOTER ==========
         // Footer text (centered)
         const footerText = new Konva.Text({
@@ -8643,7 +8643,7 @@ table tr:last-child td {
         layer.add(footerText);
         setupSelection(footerText);
         elements.push({ type: 'footer', node: footerText });
-        
+
         layer.draw();
         console.log('✅ Default layout loaded with ' + layer.children.length + ' elements');
     }
@@ -8676,12 +8676,12 @@ async function confirmResetPdfLayout() {
 document.getElementById('import-json-file')?.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     const formData = new FormData();
     formData.append('json_file', file);
     formData.append('page_size', '{{ page_size }}');
     formData.append('csrf_token', '{{ csrf_token() }}');
-    
+
     fetch('{{ url_for("admin.pdf_layout_import_json") }}', {
         method: 'POST',
         body: formData

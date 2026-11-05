@@ -24,7 +24,7 @@
         document.getElementById('prev-btn').addEventListener('click', handlePrevious);
         document.getElementById('test-connection-btn').addEventListener('click', handleTestConnection);
         document.getElementById('generate-config-btn').addEventListener('click', handleGenerateConfig);
-        
+
         // Set up copy buttons (will be created dynamically)
         document.addEventListener('click', function(e) {
             if (e.target.closest('.copy-btn')) {
@@ -203,7 +203,7 @@
         // Update navigation buttons
         document.getElementById('prev-btn').classList.toggle('hidden', currentStep === 1);
         document.getElementById('next-btn').textContent = currentStep === totalSteps ? 'Finish' : 'Next →';
-        document.getElementById('next-btn').innerHTML = currentStep === totalSteps 
+        document.getElementById('next-btn').innerHTML = currentStep === totalSteps
             ? '<i class="fas fa-check mr-2"></i>Finish'
             : 'Next<i class="fas fa-arrow-right ml-2"></i>';
 
@@ -220,7 +220,7 @@
 
     async function handleTestConnection() {
         const issuer = document.getElementById('issuer').value.trim();
-        
+
         if (!issuer) {
             ttAlert('Please enter an Issuer URL first.');
             return;
@@ -365,7 +365,7 @@
         if (!element) return;
 
         const text = element.textContent;
-        
+
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(() => {
                 const originalText = button.innerHTML;

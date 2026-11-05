@@ -95,4 +95,3 @@ exclude: |
     __pycache__/|
     mobile/.*/ephemeral/
   )
-

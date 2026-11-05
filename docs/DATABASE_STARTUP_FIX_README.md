@@ -8,7 +8,7 @@ The TimeTracker application was experiencing startup failures due to incorrect d
 
 2. **Script Execution Order**: The startup sequence was running `init-database.py` first (which tried to create tables using Flask models), then `init-database-sql.py` (which created basic tables), but the `tasks` table was missing from the SQL script.
 
-3. **Error Message**: 
+3. **Error Message**:
    ```
    Error creating tasks table: (psycopg2.errors.UndefinedTable) relation "projects" does not exist
    ```
@@ -24,7 +24,7 @@ The `tasks` table creation was embedded in the shell script (`start-new.sh`) but
 
 ### 1. Fixed Database Initialization Order
 
-**Before**: 
+**Before**:
 - `init-database.py` runs first → fails to create tasks table
 - `init-database-sql.py` runs second → creates basic tables but missing tasks
 

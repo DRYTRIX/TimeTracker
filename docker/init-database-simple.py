@@ -76,7 +76,7 @@ def ensure_correct_schema(engine):
             if "task_id" not in time_entries_columns:
                 print("Adding task_id column to time_entries table...")
                 add_column_sql = """
-                ALTER TABLE time_entries 
+                ALTER TABLE time_entries
                 ADD COLUMN task_id INTEGER;
                 """
 

@@ -34,21 +34,21 @@ switch (platform) {
       buildCommand += ' --win';
     }
     break;
-  
+
   case 'darwin':
     // macOS can build: Windows, macOS, Linux
     console.log('📦 Building for Windows, macOS, and Linux...');
     console.log('ℹ️  All platforms supported on macOS!\n');
     buildCommand += ' --win --mac --linux';
     break;
-  
+
   case 'linux':
     // Linux can build: Windows, Linux
     console.log('📦 Building for Windows and Linux...');
     console.log('ℹ️  macOS builds require macOS. Skipping macOS build.\n');
     buildCommand += ' --win --linux';
     break;
-  
+
   default:
     console.error(`❌ Unknown platform: ${platform}`);
     console.log('📦 Building for current platform only...\n');

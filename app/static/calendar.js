@@ -19,14 +19,14 @@ class Calendar {
         this.timeOff = [];
         this._dragState = null;
         this._resizeState = null;
-        
+
         // Filters
         this.showEvents = true;
         this.showTasks = true;
         this.showTimeEntries = true;
         this.showHolidays = true;
         this.showTimeOff = true;
-        
+
         this.init();
     }
 
@@ -59,7 +59,7 @@ class Calendar {
         }
         return html;
     }
-    
+
     init() {
         this.setupEventListeners();
         this.setupDragAndDrop();
@@ -296,7 +296,7 @@ class Calendar {
         const end = event.end || '';
         return `draggable="true" data-id="${event.id}" data-type="event" data-start="${start}" data-end="${end}"`;
     }
-    
+
     setupEventListeners() {
         // View navigation
         document.getElementById('todayBtn')?.addEventListener('click', () => {
@@ -304,26 +304,26 @@ class Calendar {
             this.loadEvents();
             this.updateViewLinks();
         });
-        
+
         document.getElementById('prevBtn')?.addEventListener('click', () => {
             this.navigatePrevious();
         });
-        
+
         document.getElementById('nextBtn')?.addEventListener('click', () => {
             this.navigateNext();
         });
-        
+
         // Filters
         document.getElementById('showEvents')?.addEventListener('change', (e) => {
             this.showEvents = e.target.checked;
             this.render();
         });
-        
+
         document.getElementById('showTasks')?.addEventListener('change', (e) => {
             this.showTasks = e.target.checked;
             this.render();
         });
-        
+
         document.getElementById('showTimeEntries')?.addEventListener('change', (e) => {
             this.showTimeEntries = e.target.checked;
             this.render();
@@ -338,12 +338,12 @@ class Calendar {
             this.showTimeOff = e.target.checked;
             this.render();
         });
-        
+
         // Save calendar colors
         document.getElementById('saveCalendarColorsBtn')?.addEventListener('click', () => {
             this.saveCalendarColors();
         });
-        
+
         // Modal close
         document.querySelectorAll('[data-dismiss="modal"]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -355,7 +355,7 @@ class Calendar {
             });
         });
     }
-    
+
     navigatePrevious() {
         switch (this.viewType) {
             case 'day':
@@ -371,7 +371,7 @@ class Calendar {
         this.loadEvents();
         this.updateViewLinks();
     }
-    
+
     navigateNext() {
         switch (this.viewType) {
             case 'day':
@@ -387,20 +387,20 @@ class Calendar {
         this.loadEvents();
         this.updateViewLinks();
     }
-    
+
     async loadEvents() {
         const { start, end } = this.getDateRange();
-        
+
         try {
             const url = new URL(this.apiUrl, window.location.origin);
             url.searchParams.append('start', start.toISOString());
             url.searchParams.append('end', end.toISOString());
             url.searchParams.append('include_tasks', 'true');
             url.searchParams.append('include_time_entries', 'true');
-            
+
             const response = await fetch(url);
             const data = await response.json();
-            
+
             // Build unified lists from calendar API (events, tasks, time_entries are separate).
             // If API returns merged list (only data.events with item_type), split by item_type.
             const rawEvents = data.events || [];
@@ -453,7 +453,7 @@ class Calendar {
                 color: t.color || typeColors.time_off || '#ec4899',
                 extendedProps: { ...(t.extendedProps || {}), ...t, item_type: 'time_off' }
             }));
-            
+
             this.render();
             // Update color inputs and legend from API typeColors if present
             if (data.typeColors) {
@@ -469,7 +469,7 @@ class Calendar {
             this.container.innerHTML = '<div class="text-center text-red-500 py-12">Error loading calendar data</div>';
         }
     }
-    
+
     async saveCalendarColors() {
         const prefsUrl = window.calendarData?.preferencesUrl;
         const csrfToken = window.calendarData?.csrfToken;
@@ -502,10 +502,10 @@ class Calendar {
             ttAlert('Failed to save calendar colors');
         }
     }
-    
+
     getDateRange() {
         let start, end;
-        
+
         switch (this.viewType) {
             case 'day':
                 start = new Date(this.currentDate);
@@ -513,7 +513,7 @@ class Calendar {
                 end = new Date(this.currentDate);
                 end.setHours(23, 59, 59, 999);
                 break;
-                
+
             case 'week':
                 const day = this.currentDate.getDay();
                 const diff = this.currentDate.getDate() - day + (day === 0 ? -6 : 1); // Monday as start
@@ -524,16 +524,16 @@ class Calendar {
                 end.setDate(start.getDate() + 6);
                 end.setHours(23, 59, 59, 999);
                 break;
-                
+
             case 'month':
                 start = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
                 end = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 0, 23, 59, 59, 999);
                 break;
         }
-        
+
         return { start, end };
     }
-    
+
     updateViewLinks() {
         const viewUrl = window.calendarData?.viewUrl;
         if (!viewUrl) return;
@@ -546,10 +546,10 @@ class Calendar {
             if (el) el.href = `${viewUrl}?view=${view}&date=${dateStr}`;
         });
     }
-    
+
     render() {
         this.updateTitle();
-        
+
         switch (this.viewType) {
             case 'day':
                 this.renderDayView();
@@ -562,17 +562,17 @@ class Calendar {
                 break;
         }
     }
-    
+
     updateTitle() {
         const titleEl = document.getElementById('calendarTitle');
         if (!titleEl) return;
-        
+
         const options = { month: 'long', year: 'numeric' };
-        
+
         switch (this.viewType) {
             case 'day':
-                titleEl.textContent = this.currentDate.toLocaleDateString(undefined, { 
-                    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+                titleEl.textContent = this.currentDate.toLocaleDateString(undefined, {
+                    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
                 });
                 break;
             case 'week':
@@ -584,7 +584,7 @@ class Calendar {
                 break;
         }
     }
-    
+
     renderDayView() {
         const html = `
             <div class="calendar-day-view">
@@ -598,7 +598,7 @@ class Calendar {
         `;
         this.container.innerHTML = html;
     }
-    
+
     renderTimeSlots() {
         const slots = [];
         for (let hour = 0; hour < 24; hour++) {
@@ -670,15 +670,15 @@ class Calendar {
         const leftPct = col * (widthPct + gapPct);
         return { left: leftPct + '%', width: widthPct + '%' };
     }
-    
+
     renderDayEvents() {
         const dayStart = new Date(this.currentDate);
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(this.currentDate);
         dayEnd.setHours(23, 59, 59, 999);
-        
+
         const timedItems = [];
-        
+
         if (this.showEvents) {
             this.events.forEach(event => {
                 const eventStart = new Date(event.start);
@@ -712,7 +712,7 @@ class Calendar {
                 });
             });
         }
-        
+
         if (this.showTimeEntries) {
             this.timeEntries.forEach(entry => {
                 const entryStart = new Date(entry.start);
@@ -750,15 +750,15 @@ class Calendar {
                 });
             });
         }
-        
+
         this.assignOverlapColumnsByTime(timedItems);
-        
+
         let html = '<div class="day-events-container">';
         const overlayBadges = this.renderDayOverlayBadges(this.currentDate);
         if (overlayBadges) {
             html += `<div class="day-overlay-banners">${overlayBadges}</div>`;
         }
-        
+
         timedItems.forEach(item => {
             const { left, width } = this.columnStyle(item.column, item.totalColumns);
             const style = `left: ${left}; width: ${width}; top: ${item.topPosition}px; height: ${item.heightMinutes}px;`;
@@ -789,7 +789,7 @@ class Calendar {
                 `;
             }
         });
-        
+
         if (this.showTasks) {
             this.tasks.forEach(task => {
                 const taskTitle = this.escapeHtml(task.title);
@@ -805,11 +805,11 @@ class Calendar {
                 `;
             });
         }
-        
+
         html += '</div>';
         return html;
     }
-    
+
     renderWeekView() {
         const { start } = this.getDateRange();
         const days = [];
@@ -965,7 +965,7 @@ class Calendar {
         });
         return html;
     }
-    
+
     renderMonthView() {
         const year = this.currentDate.getFullYear();
         const month = this.currentDate.getMonth();
@@ -973,14 +973,14 @@ class Calendar {
         const lastDay = new Date(year, month + 1, 0);
         const startDate = new Date(firstDay);
         startDate.setDate(startDate.getDate() - (startDate.getDay() === 0 ? 6 : startDate.getDay() - 1));
-        
+
         let html = '<div class="calendar-month-view"><table class="month-table"><thead><tr>';
         const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         weekdays.forEach(day => {
             html += `<th>${day}</th>`;
         });
         html += '</tr></thead><tbody>';
-        
+
         const currentDate = new Date(startDate);
         for (let week = 0; week < 6; week++) {
             html += '<tr>';
@@ -995,10 +995,10 @@ class Calendar {
             }
             html += '</tr>';
         }
-        
+
         html += '</tbody></table></div>';
         this.container.innerHTML = html;
-        
+
         // Add click handlers for cells
         this.container.querySelectorAll('.month-cell').forEach(cell => {
             cell.addEventListener('click', (e) => {
@@ -1009,14 +1009,14 @@ class Calendar {
             });
         });
     }
-    
+
     renderMonthCellEvents(day) {
         const dayStart = new Date(day);
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(day);
         dayEnd.setHours(23, 59, 59, 999);
         const dayKey = this.formatLocalDate(day);
-        
+
         let html = '<div class="month-events">';
         let count = 0;
         const maxDisplay = 3;
@@ -1037,7 +1037,7 @@ class Calendar {
                 }
             });
         }
-        
+
         // Events (and any time_entry items that ended up in this.events - use item_type for badge and modal)
         if (this.showEvents) {
             this.events.forEach(event => {
@@ -1055,7 +1055,7 @@ class Calendar {
                 }
             });
         }
-        
+
         // Tasks
         if (this.showTasks) {
             this.tasks.forEach(task => {
@@ -1070,7 +1070,7 @@ class Calendar {
                 }
             });
         }
-        
+
         // Time entries
         if (this.showTimeEntries) {
             this.timeEntries.forEach(entry => {
@@ -1085,22 +1085,22 @@ class Calendar {
                 }
             });
         }
-        
+
         if (count > maxDisplay) {
             html += `<div class="event-badge-more">+${count - maxDisplay} more</div>`;
         }
-        
+
         html += '</div>';
         return html;
     }
-    
+
     isToday(date) {
         const today = new Date();
         return date.getDate() === today.getDate() &&
                date.getMonth() === today.getMonth() &&
                date.getFullYear() === today.getFullYear();
     }
-    
+
     showEventDetails(id, type, clickEvent) {
         const modal = document.getElementById('eventModal');
         const modalTitle = document.querySelector('#eventModal .modal-title');
@@ -1247,7 +1247,6 @@ document.addEventListener('DOMContentLoaded', () => {
             resizeEventUrl: window.calendarData.resizeEventUrl,
             csrfToken: window.calendarData.csrfToken
         });
-        
+
     }
 });
-

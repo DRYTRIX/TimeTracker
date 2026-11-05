@@ -19,7 +19,7 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="space-y-6">
             <div>
                 <h3 class="text-lg font-semibold mb-4">{{ _('Server Connection') }}</h3>
@@ -28,9 +28,9 @@
                         <label for="server_url" class="block text-sm font-medium mb-2">
                             {{ _('CalDAV Server URL') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional if calendar URL is provided') }})</span>
                         </label>
-                        <input type="url" 
-                               name="server_url" 
-                               id="server_url" 
+                        <input type="url"
+                               name="server_url"
+                               id="server_url"
                                value="{{ integration.config.get('server_url', '') if integration.config else '' }}"
                                class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                                placeholder="https://mail.example.com/dav">
@@ -39,14 +39,14 @@
                             {{ _('Example: https://mail.example.com/dav for Zimbra') }}
                         </p>
                     </div>
-                    
+
                     <div>
                         <label for="calendar_url" class="block text-sm font-medium mb-2">
                             {{ _('Calendar URL') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional if server URL is provided') }})</span>
                         </label>
-                        <input type="url" 
-                               name="calendar_url" 
-                               id="calendar_url" 
+                        <input type="url"
+                               name="calendar_url"
+                               id="calendar_url"
                                value="{{ integration.config.get('calendar_url', '') if integration.config else '' }}"
                                class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                                placeholder="https://mail.example.com/dav/user@example.com/Calendar/">
@@ -54,21 +54,21 @@
                             {{ _('Direct URL to your calendar collection. If provided, server URL is only used for discovery.') }}
                         </p>
                     </div>
-                    
+
                     <div>
                         <label for="calendar_name" class="block text-sm font-medium mb-2">
                             {{ _('Calendar Name') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
                         </label>
-                        <input type="text" 
-                               name="calendar_name" 
-                               id="calendar_name" 
+                        <input type="text"
+                               name="calendar_name"
+                               id="calendar_name"
                                value="{{ integration.config.get('calendar_name', '') if integration.config else '' }}"
                                class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                                placeholder="{{ _('My Calendar') }}">
                     </div>
                 </div>
             </div>
-            
+
             <div>
                 <h3 class="text-lg font-semibold mb-4">{{ _('Authentication') }}</h3>
                 <div class="space-y-4">
@@ -76,9 +76,9 @@
                         <label for="username" class="block text-sm font-medium mb-2">
                             {{ _('Username') }} <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" 
-                               name="username" 
-                               id="username" 
+                        <input type="text"
+                               name="username"
+                               id="username"
                                value="{{ integration.credentials.extra_data.get('username', '') if integration.credentials and integration.credentials.extra_data else '' }}"
                                class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                                placeholder="user@example.com"
@@ -87,14 +87,14 @@
                             {{ _('Your CalDAV username (usually your email address).') }}
                         </p>
                     </div>
-                    
+
                     <div>
                         <label for="password" class="block text-sm font-medium mb-2">
                             {{ _('Password') }} {% if not integration.credentials %}<span class="text-red-500">*</span>{% endif %}
                         </label>
-                        <input type="password" 
-                               name="password" 
-                               id="password" 
+                        <input type="password"
+                               name="password"
+                               id="password"
                                class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                                placeholder="{{ _('Leave empty to keep current password') }}"
                                {% if not integration.credentials %}required{% endif %}>
@@ -105,11 +105,11 @@
                             {% endif %}
                         </p>
                     </div>
-                    
+
                     <div>
                         <label class="flex items-center">
-                            <input type="checkbox" 
-                                   name="verify_ssl" 
+                            <input type="checkbox"
+                                   name="verify_ssl"
                                    id="verify_ssl"
                                    {% if integration.config and integration.config.get('verify_ssl', True) %}checked{% endif %}
                                    class="mr-2">
@@ -121,7 +121,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div>
                 <h3 class="text-lg font-semibold mb-4">{{ _('Import Settings') }}</h3>
                 <div class="space-y-4">
@@ -130,12 +130,12 @@
                             {{ _('Default Project') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('optional') }})</span>
                         </label>
                         {% if projects %}
-                        <select name="default_project_id" 
-                                id="default_project_id" 
+                        <select name="default_project_id"
+                                id="default_project_id"
                                 class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark">
                             <option value="">{{ _('No project (import without project)') }}</option>
                             {% for project in projects %}
-                            <option value="{{ project.id }}" 
+                            <option value="{{ project.id }}"
                                     {% if integration.config and integration.config.get('default_project_id') == project.id %}selected{% endif %}>
                                 {{ project.name }}
                             </option>
@@ -157,14 +157,14 @@
                         </div>
                         {% endif %}
                     </div>
-                    
+
                     <div>
                         <label for="lookback_days" class="block text-sm font-medium mb-2">
                             {{ _('Lookback Days') }}
                         </label>
-                        <input type="number" 
-                               name="lookback_days" 
-                               id="lookback_days" 
+                        <input type="number"
+                               name="lookback_days"
+                               id="lookback_days"
                                value="{{ integration.config.get('lookback_days', 90) if integration.config else 90 }}"
                                min="1"
                                max="365"
@@ -173,7 +173,7 @@
                             {{ _('How many days back to import events from (default: 90).') }}
                         </p>
                     </div>
-                    
+
                     <div>
                         <label for="sync_direction" class="block text-sm font-medium mb-2">{{ _('Sync Direction') }}</label>
                         <select name="sync_direction" id="sync_direction"
@@ -194,8 +194,8 @@
 
                     <div>
                         <label class="flex items-center">
-                            <input type="checkbox" 
-                                   name="auto_sync" 
+                            <input type="checkbox"
+                                   name="auto_sync"
                                    id="auto_sync"
                                    {% if integration.config and integration.config.get('auto_sync', True) %}checked{% endif %}
                                    class="mr-2">
@@ -208,9 +208,9 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="mt-6 flex flex-col sm:flex-row gap-3">
-            <button type="submit" 
+            <button type="submit"
                     class="bg-primary text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-save mr-2"></i>{{ _('Save Configuration') }}
             </button>
@@ -234,4 +234,3 @@
 {% endif %}
 
 {% endblock %}
-

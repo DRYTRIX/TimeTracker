@@ -23,7 +23,7 @@ REM Create nginx config if it doesn't exist
 if not exist nginx\conf.d\https.conf (
     echo [INFO] Creating nginx HTTPS configuration...
     if not exist nginx\conf.d mkdir nginx\conf.d
-    
+
     (
     echo server {
     echo     listen 80;
@@ -52,14 +52,14 @@ if not exist nginx\conf.d\https.conf (
     echo         proxy_set_header X-Real-IP $remote_addr;
     echo         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     echo         proxy_set_header X-Forwarded-Proto $scheme;
-    echo         
+    echo
     echo         proxy_http_version 1.1;
     echo         proxy_set_header Upgrade $http_upgrade;
     echo         proxy_set_header Connection "upgrade";
     echo     }
     echo }
     ) > nginx\conf.d\https.conf
-    
+
     echo [OK] nginx configuration created
     echo.
 )
@@ -68,9 +68,9 @@ REM Update .env with HTTPS settings
 if exist .env (
     echo [INFO] Updating .env with HTTPS settings...
     copy .env .env.backup >nul 2>&1
-    
+
     powershell -Command "$content = Get-Content .env; if ($content -match '^WTF_CSRF_SSL_STRICT=') { $content = $content -replace '^WTF_CSRF_SSL_STRICT=.*', 'WTF_CSRF_SSL_STRICT=true' } else { $content += 'WTF_CSRF_SSL_STRICT=true' }; if ($content -match '^SESSION_COOKIE_SECURE=') { $content = $content -replace '^SESSION_COOKIE_SECURE=.*', 'SESSION_COOKIE_SECURE=true' } else { $content += 'SESSION_COOKIE_SECURE=true' }; if ($content -match '^CSRF_COOKIE_SECURE=') { $content = $content -replace '^CSRF_COOKIE_SECURE=.*', 'CSRF_COOKIE_SECURE=true' } else { $content += 'CSRF_COOKIE_SECURE=true' }; $content | Set-Content .env"
-    
+
     echo [OK] .env updated
     echo.
 )
@@ -130,4 +130,3 @@ echo Stop services:
 echo   docker-compose down
 echo.
 pause
-

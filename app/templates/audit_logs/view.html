@@ -46,7 +46,7 @@
             <div>
                 <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Entity</dt>
                 <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                    <a href="{{ url_for('audit_logs.entity_history', entity_type=audit_log.entity_type, entity_id=audit_log.entity_id) }}" 
+                    <a href="{{ url_for('audit_logs.entity_history', entity_type=audit_log.entity_type, entity_id=audit_log.entity_id) }}"
                        class="text-primary hover:underline">
                         {{ audit_log.entity_type }}#{{ audit_log.entity_id }}
                     </a>
@@ -95,7 +95,7 @@
                         <div><i class="fas fa-tasks mr-1"></i><strong>{{ _('Task') }}:</strong> {{ metadata.task_name }}{% if metadata.task_id %} (ID: {{ metadata.task_id }}){% endif %}</div>
                         {% endif %}
                         {% if metadata.created_at %}
-                        <div><i class="fas fa-calendar-plus mr-1"></i><strong>{{ _('TimeEntry Created') }}:</strong> 
+                        <div><i class="fas fa-calendar-plus mr-1"></i><strong>{{ _('TimeEntry Created') }}:</strong>
                             {% if metadata.created_at is string %}
                                 {{ metadata.created_at[:19]|replace('T', ' ') }}
                             {% else %}
@@ -112,7 +112,7 @@
             {% endif %}
         </dl>
     </div>
-    
+
     <!-- Change Details -->
     {% if audit_log.field_name %}
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
@@ -137,7 +137,7 @@
         </div>
     </div>
     {% endif %}
-    
+
     <!-- Full Entity State -->
     {% if audit_log.get_full_old_state() or audit_log.get_full_new_state() %}
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm lg:col-span-2">
@@ -172,7 +172,7 @@
         </div>
     </div>
     {% endif %}
-    
+
     <!-- Request Information -->
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm lg:col-span-2">
         <h2 class="text-xl font-semibold mb-4">{{ _('Request Information') }}</h2>
@@ -200,14 +200,13 @@
 </div>
 
 <div class="mt-6 flex flex-col sm:flex-row gap-4">
-    <a href="{{ url_for('audit_logs.list_audit_logs') }}" 
+    <a href="{{ url_for('audit_logs.list_audit_logs') }}"
        class="px-4 py-2 min-h-[44px] bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors inline-flex items-center justify-center">
         <i class="fas fa-arrow-left mr-2"></i>Back to List
     </a>
-    <a href="{{ url_for('audit_logs.entity_history', entity_type=audit_log.entity_type, entity_id=audit_log.entity_id) }}" 
+    <a href="{{ url_for('audit_logs.entity_history', entity_type=audit_log.entity_type, entity_id=audit_log.entity_id) }}"
        class="px-4 py-2 min-h-[44px] bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center justify-center">
         <i class="fas fa-history mr-2"></i>View Entity History
     </a>
 </div>
 {% endblock %}
-

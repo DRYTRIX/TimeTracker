@@ -14,7 +14,7 @@ There were **THREE** different keyboard event handlers all trying to handle keyb
    - Was catching `Ctrl+K` to focus search
    - This was preventing `Ctrl+K` from opening command palette
 
-2. **commands.js** 
+2. **commands.js**
    - Was catching `?` key to open command palette
    - This was conflicting with `Shift+?` for keyboard shortcuts panel
 
@@ -89,10 +89,10 @@ Added comment explaining that `Ctrl+K` is now handled by keyboard-shortcuts-adva
 
 ```javascript
 // Before:
-if (ev.key === '?' && !ev.ctrlKey && !ev.metaKey && !ev.altKey){ 
-    ev.preventDefault(); 
-    openModal(); 
-    return; 
+if (ev.key === '?' && !ev.ctrlKey && !ev.metaKey && !ev.altKey){
+    ev.preventDefault();
+    openModal();
+    return;
 }
 
 // After:
@@ -241,4 +241,3 @@ This helps verify that:
 
 1. **Hard refresh** - The old commands.js may be cached
 2. **Check commands.js** - Verify the `?` key handler is removed/commented out
-

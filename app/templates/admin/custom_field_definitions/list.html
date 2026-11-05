@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', function(e) {
             const clientCount = parseInt(form.dataset.clientCount) || 0;
             const fieldLabel = form.dataset.fieldLabel || '';
-            
+
             let message;
             if (clientCount > 0) {
                 message = '{{ _("Warning: %(count)d client(s) have a value for this custom field. Deleting this field definition will remove the field value from all %(count)d client(s). Are you sure you want to delete the custom field definition \"%(label)s\"?") }}'
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 message = '{{ _("Are you sure you want to delete this custom field definition?") }}';
             }
-            
+
             if (!confirm(message)) {
                 e.preventDefault();
                 return false;

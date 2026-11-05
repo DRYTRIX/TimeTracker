@@ -39,9 +39,9 @@ def test_postgresql_connection(db_url):
 
         # Check if we can list tables
         cursor.execute("""
-            SELECT table_name 
-            FROM information_schema.tables 
-            WHERE table_schema = 'public' 
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
             ORDER BY table_name
         """)
         tables = [row[0] for row in cursor.fetchall()]

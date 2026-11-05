@@ -9,7 +9,7 @@
         <span class="mx-2">/</span>
         <span class="text-text-light dark:text-text-dark">{{ _('Support Development') }}</span>
     </nav>
-    
+
     <!-- Hero Section (A/B: control | key_first | cta_alt | never_see) -->
     <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-5 sm:p-8 rounded-lg shadow-lg text-white mb-6">
         <div class="text-center">
@@ -48,8 +48,8 @@
                     <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                 </a>
                 {% else %}
-                <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page_hero&utm_campaign=support" 
-                   target="_blank" 
+                <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page_hero&utm_campaign=support"
+                   target="_blank"
                    rel="noopener noreferrer"
                    onclick="trackDonationClick('donate_page_hero')"
                    class="px-6 py-3 bg-white text-amber-600 rounded-lg font-semibold hover:bg-amber-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
@@ -94,7 +94,7 @@
             <p class="text-lg">
                 {{ _('Real numbers — every contribution, no matter the size, makes a difference:') }}
             </p>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 <div class="flex items-start gap-3">
                     <i class="fas fa-mug-saucer text-amber-500 mt-1"></i>
@@ -105,7 +105,7 @@
                         </p>
                     </div>
                 </div>
-                
+
                 <div class="flex items-start gap-3">
                     <i class="fas fa-server text-primary mt-1"></i>
                     <div>
@@ -115,7 +115,7 @@
                         </p>
                     </div>
                 </div>
-                
+
                 <div class="flex items-start gap-3">
                     <i class="fas fa-star text-emerald-500 mt-1"></i>
                     <div>
@@ -125,7 +125,7 @@
                         </p>
                     </div>
                 </div>
-                
+
                 <div class="flex items-start gap-3">
                     <i class="fas fa-code text-primary mt-1"></i>
                     <div>
@@ -162,8 +162,8 @@
                 <span>{{ _('Paste the code in Admin → Settings → Support visibility and verify.') }}</span>
             </li>
         </ol>
-        <a href="{{ support_purchase_url }}" 
-           target="_blank" 
+        <a href="{{ support_purchase_url }}"
+           target="_blank"
            rel="noopener noreferrer"
            onclick="trackDonationClick('donate_page_key')"
            class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg">
@@ -188,7 +188,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             {% if time_entries_count > 0 %}
             <div class="text-center p-4 bg-background-light dark:bg-background-dark rounded-lg">
                 <div class="text-3xl font-bold text-primary">{{ time_entries_count }}</div>
@@ -197,7 +197,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             {% if total_hours > 0 %}
             <div class="text-center p-4 bg-background-light dark:bg-background-dark rounded-lg">
                 <div class="text-3xl font-bold text-primary">{{ "%.1f"|format(total_hours) }}</div>
@@ -222,10 +222,10 @@
         <p class="mb-6 text-text-light dark:text-text-dark">
             {{ _('Every contribution, no matter the size, makes a difference. Your support helps ensure TimeTracker remains free and continues to evolve.') }}
         </p>
-        
+
         <div class="text-center">
-            <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page&utm_campaign=support" 
-               target="_blank" 
+            <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page&utm_campaign=support"
+               target="_blank"
                rel="noopener noreferrer"
                onclick="trackDonationClick('donate_page_button')"
                class="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-8 py-4 rounded-lg font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200">
@@ -234,7 +234,7 @@
                 <i class="fas fa-external-link-alt text-sm"></i>
             </a>
         </div>
-        
+
         <p class="text-center mt-4 text-sm text-text-muted-light dark:text-text-muted-dark">
             {{ _('You\'ll be redirected to Buy Me a Coffee where you can choose your contribution amount') }}
         </p>
@@ -273,8 +273,8 @@
             {{ _('Other Ways to Help') }}
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <a href="https://github.com/drytrix/TimeTracker" 
-               target="_blank" 
+            <a href="https://github.com/drytrix/TimeTracker"
+               target="_blank"
                rel="noopener noreferrer"
                class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
                 <i class="fab fa-github text-2xl text-text-light dark:text-text-dark"></i>
@@ -286,8 +286,8 @@
                 </div>
             </a>
 
-            <a href="https://github.com/drytrix/TimeTracker" 
-               target="_blank" 
+            <a href="https://github.com/drytrix/TimeTracker"
+               target="_blank"
                rel="noopener noreferrer"
                class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
                 <i class="fab fa-github text-2xl text-text-light dark:text-text-dark"></i>
@@ -298,8 +298,8 @@
                     </div>
                 </div>
             </a>
-            
-            <a href="{{ url_for('main.help') }}" 
+
+            <a href="{{ url_for('main.help') }}"
                class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
                 <i class="fas fa-book text-2xl text-text-light dark:text-text-dark"></i>
                 <div>
@@ -310,8 +310,8 @@
                 </div>
             </a>
 
-            <a href="{{ support_purchase_url }}" 
-               target="_blank" 
+            <a href="{{ support_purchase_url }}"
+               target="_blank"
                rel="noopener noreferrer"
                onclick="trackDonationClick('donate_page_key')"
                class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
@@ -331,7 +331,7 @@
 function trackDonationClick(source) {
     // Get CSRF token from meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-    
+
     // Track donation link click
     fetch('{{ url_for("main.track_donation_click") }}', {
         method: 'POST',
@@ -349,4 +349,3 @@ function trackDonationClick(source) {
 }
 </script>
 {% endblock %}
-

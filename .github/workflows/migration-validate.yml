@@ -254,16 +254,16 @@ jobs:
         run: |
           set -e
           echo "🔄 Testing migration rollback safety..."
-          
+
           # Get current migration (trim whitespace and optional "(head)" suffix)
           CURRENT_MIGRATION=$(flask db current | sed 's/ (head)$//' | tr -d '[:space:]')
           echo "Current migration: $CURRENT_MIGRATION"
-          
+
           if [ -z "$CURRENT_MIGRATION" ] || [ "$CURRENT_MIGRATION" = "None" ]; then
             echo "ℹ️ No migrations to test rollback on"
             exit 0
           fi
-          
+
           # Resolve parent revision via Alembic (avoids ambiguous "downgrade -1" with merge revisions)
           ROLLBACK_RESULT=$(python <<'PYEOF'
           import os
@@ -295,7 +295,7 @@ jobs:
                   print("PARENT:" + down)
           PYEOF
           )
-          
+
           if [ "$ROLLBACK_RESULT" = "SKIP" ]; then
             echo "ℹ️ At base or merge revision — skipping downgrade, verifying upgrade head..."
             if ! flask db upgrade head; then
@@ -305,13 +305,13 @@ jobs:
             echo "✅ Migration rollback test passed (downgrade skipped, upgrade head OK)"
             exit 0
           fi
-          
+
           PARENT_REV="${ROLLBACK_RESULT#PARENT:}"
           if [ -z "$PARENT_REV" ]; then
             echo "❌ Rollback test failed: could not resolve parent revision"
             exit 1
           fi
-          
+
           echo "Testing migration rollback (downgrade to $PARENT_REV, then upgrade head)..."
           if ! flask db downgrade "$PARENT_REV"; then
             echo "❌ Rollback test failed: downgrade to $PARENT_REV failed"
@@ -331,7 +331,7 @@ jobs:
           FLASK_ENV: testing
         run: |
           echo "📊 Testing migration with sample data..."
-          
+
           # Create sample data script
           python <<'EOF'
           from app import create_app, db
@@ -339,7 +339,7 @@ jobs:
           from app.models.project import Project
           from app.models.client import Client
           import datetime
-          
+
           app = create_app()
           with app.app_context():
               # Create test user
@@ -349,7 +349,7 @@ jobs:
               )
               db.session.add(user)
               db.session.commit()  # Commit to get user ID
-              
+
               # Create test client
               client = Client(
                   name='Test Client',
@@ -357,7 +357,7 @@ jobs:
               )
               db.session.add(client)
               db.session.commit()  # Commit to get client ID
-              
+
               # Create test project
               project = Project(
                   name='Test Project',
@@ -365,25 +365,25 @@ jobs:
                   description='Test project for migration validation'
               )
               db.session.add(project)
-              
+
               db.session.commit()
               print('✅ Sample data created successfully')
           EOF
-          
+
           # Verify data integrity after migration
           python <<'EOF'
           from app import create_app, db
           from app.models.user import User
           from app.models.project import Project
           from app.models.client import Client
-          
+
           app = create_app()
           with app.app_context():
               user_count = User.query.count()
               project_count = Project.query.count()
               client_count = Client.query.count()
               print(f'Users: {user_count}, Projects: {project_count}, Clients: {client_count}')
-              
+
               if user_count > 0 and project_count > 0 and client_count > 0:
                   print('✅ Data integrity verified after migration')
               else:
@@ -399,21 +399,21 @@ jobs:
           FLASK_ENV: testing
         run: |
           echo "📋 Generating migration report..."
-          
+
           # Get migration history
           echo "## Migration History" > migration_report.md
           echo "" >> migration_report.md
           flask db history --verbose >> migration_report.md
-          
+
           # Get current schema info
           echo "" >> migration_report.md
           echo "## Current Schema" >> migration_report.md
           echo "" >> migration_report.md
-          
+
           python <<'EOF' >> migration_report.md
           from app import create_app, db
           from sqlalchemy import inspect
-          
+
           app = create_app()
           with app.app_context():
               inspector = inspect(db.engine)
@@ -425,7 +425,7 @@ jobs:
                   for column in columns:
                       print(f'  - {column["name"]}: {column["type"]}')
           EOF
-          
+
           cat migration_report.md
 
       - name: Upload migration report
@@ -434,4 +434,3 @@ jobs:
         with:
           name: migration-report
           path: migration_report.md
-

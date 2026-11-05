@@ -11,48 +11,48 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'company_name') THEN
         ALTER TABLE settings ADD COLUMN company_name VARCHAR(200) DEFAULT 'Your Company Name' NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'company_address') THEN
         ALTER TABLE settings ADD COLUMN company_address TEXT DEFAULT 'Your Company Address' NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'company_email') THEN
         ALTER TABLE settings ADD COLUMN company_email VARCHAR(200) DEFAULT 'info@yourcompany.com' NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'company_phone') THEN
         ALTER TABLE settings ADD COLUMN company_phone VARCHAR(50) DEFAULT '+1 (555) 123-4567' NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'company_website') THEN
         ALTER TABLE settings ADD COLUMN company_website VARCHAR(200) DEFAULT 'www.yourcompany.com' NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'company_tax_id') THEN
         ALTER TABLE settings ADD COLUMN company_tax_id VARCHAR(100) DEFAULT '' NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'company_bank_info') THEN
         ALTER TABLE settings ADD COLUMN company_bank_info TEXT DEFAULT '' NOT NULL;
     END IF;
-    
+
     -- Invoice default columns
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'invoice_prefix') THEN
         ALTER TABLE settings ADD COLUMN invoice_prefix VARCHAR(50) DEFAULT 'INV' NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'invoice_number_pattern') THEN
         ALTER TABLE settings ADD COLUMN invoice_number_pattern VARCHAR(120) DEFAULT '{PREFIX}-{YYYY}{MM}{DD}-{SEQ}' NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'invoice_start_number') THEN
         ALTER TABLE settings ADD COLUMN invoice_start_number INTEGER DEFAULT 1000 NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'invoice_terms') THEN
         ALTER TABLE settings ADD COLUMN invoice_terms TEXT DEFAULT 'Payment is due within 30 days of invoice date.' NOT NULL;
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'settings' AND column_name = 'invoice_notes') THEN
         ALTER TABLE settings ADD COLUMN invoice_notes TEXT DEFAULT 'Thank you for your business!' NOT NULL;
     END IF;
@@ -72,7 +72,7 @@ BEGIN
 END $$;
 
 -- Step 3: Update existing settings with default values
-UPDATE settings SET 
+UPDATE settings SET
     company_name = COALESCE(company_name, 'Your Company Name'),
     company_address = COALESCE(company_address, 'Your Company Address'),
     company_email = COALESCE(company_email, 'info@yourcompany.com'),

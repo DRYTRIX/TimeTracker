@@ -62,4 +62,3 @@ Test that avatars work correctly:
 **Author:** AI Assistant  
 **Date:** October 2025  
 **Related Issue:** Profile pictures persistence between versions
-

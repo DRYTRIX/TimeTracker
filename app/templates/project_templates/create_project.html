@@ -15,20 +15,20 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('project_templates.create_project_from_template', template_id=template.id) }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
                 <label for="client_id" class="form-label">{{ _('Client') }} *</label>
                 {{ client_select('client_id', clients, required=True, only_one_client=only_one_client|default(false), single_client=single_client) }}
             </div>
-            
+
             <div>
                 <label for="name" class="form-label">{{ _('Project Name') }}</label>
                 <input type="text" id="name" name="name" class="form-input" placeholder="{{ template.name }}">
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Leave empty to use template name') }}</p>
             </div>
         </div>
-        
+
         <div class="border-t border-border-light dark:border-border-dark pt-4 mb-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Override Settings (Optional)') }}</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -42,7 +42,7 @@
                 </div>
             </div>
         </div>
-        
+
         {% if template.tasks %}
         <div class="border-t border-border-light dark:border-border-dark pt-4 mb-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Template Tasks') }}</h3>
@@ -61,7 +61,7 @@
             </div>
         </div>
         {% endif %}
-        
+
         <div class="flex flex-col-reverse sm:flex-row justify-end gap-4">
             <a href="{{ url_for('project_templates.view_template', template_id=template.id) }}" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-center">{{ _('Cancel') }}</a>
             <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">{{ _('Create Project') }}</button>
@@ -69,4 +69,3 @@
     </form>
 </div>
 {% endblock %}
-

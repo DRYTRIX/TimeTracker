@@ -4,8 +4,8 @@
             {{ invoices|length }} invoice{{ 's' if invoices|length != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <a href="{{ url_for('invoices.export_invoices_excel') }}" 
-               class="btn btn-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 export-btn" 
+            <a href="{{ url_for('invoices.export_invoices_excel') }}"
+               class="btn btn-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 export-btn"
                title="{{ _('Export to Excel') }}"
                onclick="showExportLoading(this); return true;">
                 <i class="fas fa-download mr-1"></i> <span class="export-text">Export</span>

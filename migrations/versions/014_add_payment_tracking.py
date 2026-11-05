@@ -57,7 +57,7 @@ def upgrade() -> None:
 
                 # Update existing records based on their current status
                 bind.execute(sa.text("""
-                    UPDATE invoices SET payment_status = CASE 
+                    UPDATE invoices SET payment_status = CASE
                         WHEN status = 'paid' THEN 'fully_paid'
                         ELSE 'unpaid'
                     END
@@ -87,16 +87,16 @@ def upgrade() -> None:
 
                 # Update existing records based on their current status
                 bind.execute(sa.text("""
-                    UPDATE invoices SET payment_status = CASE 
+                    UPDATE invoices SET payment_status = CASE
                         WHEN status = 'paid' THEN 'fully_paid'
                         ELSE 'unpaid'
-                    END 
+                    END
                     WHERE payment_status IS NULL
                 """))
 
                 # For invoices marked as 'paid', also set amount_paid to total_amount
                 bind.execute(sa.text("""
-                    UPDATE invoices SET amount_paid = total_amount, payment_date = CURRENT_DATE 
+                    UPDATE invoices SET amount_paid = total_amount, payment_date = CURRENT_DATE
                     WHERE status = 'paid' AND amount_paid = 0
                 """))
 

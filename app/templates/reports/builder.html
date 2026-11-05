@@ -34,7 +34,7 @@
                 </div>
                 {% endfor %}
             </div>
-            
+
             <h3 class="font-semibold mb-4 mt-6">{{ _('Components') }}</h3>
             <div class="space-y-2" id="components">
                 <div class="p-3 border border-border-light dark:border-border-dark rounded-lg cursor-move hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-primary/50 transition-all duration-150 active:scale-[0.98]" draggable="true" data-component="table" role="button" tabindex="0" aria-label="{{ _('Add table to report') }}">
@@ -55,7 +55,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Main Canvas -->
     <div class="lg:col-span-3">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
@@ -75,14 +75,14 @@
                     </button>
                 </div>
             </div>
-            
+
             <div id="reportCanvas" class="min-h-96 border-2 border-dashed border-border-light dark:border-border-dark rounded-lg p-4 transition-colors duration-150" role="region" aria-label="{{ _('Report canvas') }}" aria-describedby="canvasHelp">
                 <p id="canvasHelp" class="text-center text-text-muted-light dark:text-text-muted-dark py-8" data-empty-placeholder>
                     {{ _('Drag data sources and components here to build your report') }}
                 </p>
             </div>
         </div>
-        
+
         <!-- Filters Panel -->
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mt-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Filters') }}</h3>
@@ -102,11 +102,11 @@
                     </select>
                 </div>
             </div>
-            
+
             <!-- Advanced Filters (for Time Entries) -->
             <div id="timeEntriesFilters" class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
                 <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">{{ _('Advanced Filters') }}</h4>
-                
+
                 <!-- Unpaid Hours Filter -->
                 <div class="mb-4">
                     <label class="flex items-center cursor-pointer">
@@ -120,7 +120,7 @@
                         {{ _('Unpaid = billable, not yet on any invoice.') }}
                     </p>
                 </div>
-                
+
                 <!-- Custom Field Filter -->
                 {% if custom_field_keys %}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -139,7 +139,7 @@
                         <label class="form-label">
                             {{ _('Field Value') }}
                         </label>
-                        <input type="text" id="filterCustomFieldValue" class="form-input" 
+                        <input type="text" id="filterCustomFieldValue" class="form-input"
                                placeholder="{{ _('e.g., MM, PB') }}">
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {{ _('Enter the value to filter by (e.g., salesman initial)') }}
@@ -237,7 +237,7 @@
                     <option value="public" {% if saved_view and saved_view.scope == 'public' %}selected{% endif %}>{{ _('Public') }}</option>
                 </select>
             </div>
-            
+
             <!-- Iterative Report Generation -->
             <div class="mb-4 pt-4 border-t border-border-light dark:border-border-dark">
                 <label class="flex items-center cursor-pointer mb-3">
@@ -263,7 +263,7 @@
                     </p>
                 </div>
             </div>
-            
+
             <div class="flex justify-end gap-4">
                 <button type="button" onclick="closeSaveModal()" class="px-4 py-2 border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</button>
                 <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">{{ _('Save') }}</button>
@@ -292,22 +292,22 @@ const canvas = document.getElementById('reportCanvas');
         columns: savedConfig.columns || [],
         grouping: savedConfig.grouping || {}
     };
-    
+
     // Clear canvas first
     canvas.innerHTML = '<p class="text-center text-text-muted-light dark:text-text-muted-dark py-8">{{ _("Drag data sources and components here to build your report") }}</p>';
-    
+
     // Load data source
     if (reportConfig.data_source) {
         addDataSourceToCanvas(reportConfig.data_source);
     }
-    
+
     // Load components
     if (reportConfig.components && Array.isArray(reportConfig.components)) {
         reportConfig.components.forEach(component => {
             addComponentToCanvas(component);
         });
     }
-    
+
     // Load filters
     if (reportConfig.filters) {
         if (reportConfig.filters.start_date) {
@@ -341,7 +341,7 @@ const canvas = document.getElementById('reportCanvas');
             }
         }
     }
-    
+
     // Update filter visibility
     updateFiltersVisibility();
 })();
@@ -392,9 +392,9 @@ canvas.addEventListener('dragleave', () => {
 canvas.addEventListener('drop', (e) => {
     e.preventDefault();
     canvas.classList.remove('border-primary');
-    
+
     const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-    
+
     if (data.type === 'source') {
         reportConfig.data_source = data.id;
         addDataSourceToCanvas(data.id);
@@ -409,7 +409,7 @@ function addDataSourceToCanvas(sourceId) {
     if (existingSource) {
         existingSource.remove();
     }
-    
+
     const sourceNames = {
         'time_entries': '{{ _("Time Entries") }}',
         'projects': '{{ _("Projects") }}',
@@ -417,7 +417,7 @@ function addDataSourceToCanvas(sourceId) {
         'invoices': '{{ _("Invoices") }}',
         'expenses': '{{ _("Expenses") }}'
     };
-    
+
     const element = document.createElement('div');
     element.className = 'p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-4';
     element.setAttribute('data-report-source', sourceId);
@@ -432,7 +432,7 @@ function addDataSourceToCanvas(sourceId) {
             </button>
         </div>
     `;
-    
+
     canvas.querySelector('p')?.remove();
     canvas.appendChild(element);
     reportConfig.data_source = sourceId;
@@ -483,10 +483,10 @@ function addComponentToCanvas(componentId) {
             </button>
         </div>
     `;
-    
+
     canvas.querySelector('p')?.remove();
     canvas.appendChild(element);
-    
+
     // Add to components array if not already present
     if (!reportConfig.components.includes(componentId)) {
         reportConfig.components.push(componentId);
@@ -515,18 +515,18 @@ function previewReport() {
         alert('{{ _("Please select a data source first") }}');
         return;
     }
-    
+
     // Collect current filters
     const projectSelect = document.getElementById('filterProject');
     const projectValue = projectSelect ? projectSelect.value : '';
-    
+
     reportConfig.filters = {
         start_date: document.getElementById('filterStartDate').value || null,
         end_date: document.getElementById('filterEndDate').value || null,
         project_id: projectValue || null,
         unpaid_only: document.getElementById('filterUnpaidOnly')?.checked || false
     };
-    
+
     // Add custom field filter if set
     const customFieldName = document.getElementById('filterCustomFieldName')?.value;
     const customFieldValue = document.getElementById('filterCustomFieldValue')?.value;
@@ -535,25 +535,25 @@ function previewReport() {
             [customFieldName]: customFieldValue
         };
     }
-    
+
     // Show preview modal
     const modal = document.getElementById('previewModal');
     const loading = document.getElementById('previewLoading');
     const error = document.getElementById('previewError');
     const errorMessage = document.getElementById('previewErrorMessage');
     const data = document.getElementById('previewData');
-    
+
     modal.classList.remove('hidden');
     loading.classList.remove('hidden');
     error.classList.add('hidden');
     data.classList.add('hidden');
-    
+
     // Debug: Log what we're sending
     console.log('Preview report config:', reportConfig);
-    
+
     // Get CSRF token from meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-    
+
     // Fetch preview data
     fetch('{{ url_for("custom_reports.preview_report") }}', {
         method: 'POST',
@@ -592,14 +592,14 @@ function previewReport() {
             }
             throw new Error(errorMsg);
         }
-        
+
         // Response is OK, parse JSON
         const result = await response.json();
         return result;
     })
     .then(result => {
         loading.classList.add('hidden');
-        
+
         if (result.success && result.data) {
             renderPreview(result.data);
             data.classList.remove('hidden');
@@ -623,9 +623,9 @@ function renderPreview(reportData) {
     const previewData = document.getElementById('previewData');
     const data = reportData.data || [];
     const summary = reportData.summary || {};
-    
+
     let html = '';
-    
+
     // Render summary
     if (Object.keys(summary).length > 0) {
         html += '<div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">';
@@ -636,22 +636,22 @@ function renderPreview(reportData) {
         }
         html += '</div></div>';
     }
-    
+
     // Render data table
     if (data.length > 0) {
         html += '<div class="overflow-x-auto">';
         html += '<table class="min-w-full divide-y divide-border-light dark:divide-border-dark">';
         html += '<thead class="bg-gray-50 dark:bg-gray-800">';
         html += '<tr>';
-        
+
         // Get column headers from first data item
         const columns = Object.keys(data[0]);
         columns.forEach(col => {
             html += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">${col.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</th>`;
         });
-        
+
         html += '</tr></thead><tbody class="bg-white dark:bg-gray-900 divide-y divide-border-light dark:divide-border-dark">';
-        
+
         data.forEach(row => {
             html += '<tr>';
             columns.forEach(col => {
@@ -659,7 +659,7 @@ function renderPreview(reportData) {
             });
             html += '</tr>';
         });
-        
+
         html += '</tbody></table></div>';
     } else {
         html += '<div class="text-center py-8 text-text-muted-light dark:text-text-muted-dark">';
@@ -667,7 +667,7 @@ function renderPreview(reportData) {
         html += '<p>{{ _("No data found for the selected filters") }}</p>';
         html += '</div>';
     }
-    
+
     previewData.innerHTML = html;
 }
 
@@ -713,17 +713,17 @@ document.getElementById('iterativeReportGeneration')?.addEventListener('change',
 
 document.getElementById('saveForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const submitButton = e.target.querySelector('button[type="submit"]');
     const originalButtonText = submitButton.innerHTML;
-    
+
     // Disable button and show loading state
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Saving...") }}';
-    
+
     const name = document.getElementById('reportName').value.trim();
     const scope = document.getElementById('reportScope').value;
-    
+
     // Validate name
     if (!name) {
         alert('{{ _("Please enter a report name") }}');
@@ -731,7 +731,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
         submitButton.innerHTML = originalButtonText;
         return;
     }
-    
+
     // Validate data source is selected
     if (!reportConfig.data_source) {
         alert('{{ _("Please select a data source first") }}');
@@ -739,7 +739,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
         submitButton.innerHTML = originalButtonText;
         return;
     }
-    
+
     // Collect filters
     reportConfig.filters = {
         start_date: document.getElementById('filterStartDate').value || null,
@@ -747,7 +747,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
         project_id: document.getElementById('filterProject').value || null,
         unpaid_only: document.getElementById('filterUnpaidOnly')?.checked || false
     };
-    
+
     // Add custom field filter if set
     const customFieldName = document.getElementById('filterCustomFieldName')?.value;
     const customFieldValue = document.getElementById('filterCustomFieldValue')?.value;
@@ -756,7 +756,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
             [customFieldName]: customFieldValue
         };
     }
-    
+
     // Ensure columns and grouping exist
     if (!reportConfig.columns) {
         reportConfig.columns = [];
@@ -764,23 +764,23 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
     if (!reportConfig.grouping) {
         reportConfig.grouping = {};
     }
-    
+
     // Rebuild components array from DOM to ensure it matches what's visible
     const componentElements = canvas.querySelectorAll('[data-report-component]');
     reportConfig.components = Array.from(componentElements).map(el => el.getAttribute('data-report-component'));
-    
+
     // Ensure data source matches what's in the DOM
     const sourceElement = canvas.querySelector('[data-report-source]');
     if (sourceElement) {
         reportConfig.data_source = sourceElement.getAttribute('data-report-source');
     }
-    
+
     console.log('Saving report config:', reportConfig);
-    
+
     try {
         // Get CSRF token from meta tag
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        
+
         const response = await fetch('{{ url_for("custom_reports.save_report_view") }}', {
             method: 'POST',
             headers: {
@@ -797,7 +797,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
                 iterative_custom_field_name: document.getElementById('iterativeCustomFieldName')?.value || null
             })
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             try {
@@ -807,15 +807,15 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}. ${errorText}`);
             }
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             // Show toast notification
-            const message = result.action === 'created' 
-                ? '{{ _("Report created successfully!") }}' 
+            const message = result.action === 'created'
+                ? '{{ _("Report created successfully!") }}'
                 : '{{ _("Report updated successfully!") }}';
-            
+
             if (window.toastManager) {
                 window.toastManager.success(message, '{{ _("Success") }}', 3000);
             } else if (window.showToast) {
@@ -823,9 +823,9 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
             } else {
                 alert(message);
             }
-            
+
             closeSaveModal();
-            
+
             // If editing, stay on edit page; if creating, reload to show in list
             {% if saved_view %}
             // Editing - reload to show updated config
@@ -978,4 +978,3 @@ async function revokeShareLink(token) {
 {% endif %}
 </script>
 {% endblock %}
-

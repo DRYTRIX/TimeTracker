@@ -31,7 +31,7 @@ def upgrade():
 
     # Set default values for existing rows
     op.execute("""
-        UPDATE settings 
+        UPDATE settings
         SET mail_enabled = false,
             mail_port = 587,
             mail_use_tls = true,

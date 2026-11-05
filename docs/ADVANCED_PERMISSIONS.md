@@ -484,4 +484,3 @@ For issues or questions about the permission system:
 1. Check this documentation
 2. Review the test files: `tests/test_permissions.py` and `tests/test_permissions_routes.py`
 3. Check the implementation: `app/models/permission.py` and `app/utils/permissions.py`
-

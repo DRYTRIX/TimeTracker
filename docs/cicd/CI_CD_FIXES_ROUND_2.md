@@ -15,7 +15,7 @@ on:
   # Removed: push to develop
 ```
 
-**Result:** 
+**Result:**
 - Pull requests → Run comprehensive CI tests
 - Push to `develop` → Run CD pipeline with quick tests + build Docker image
 - No more duplicate test runs!
@@ -24,7 +24,7 @@ on:
 
 ### 2. Test Fixture Errors - User `is_active` Parameter ✅
 
-**Problem:** 
+**Problem:**
 ```
 TypeError: __init__() got an unexpected keyword argument 'is_active'
 ```
@@ -250,4 +250,3 @@ git push origin develop
 | Black formatting | ⚠️ Pending | Need to run `black app/` |
 
 **Next Step:** Run `black app/` to format code, then commit and push! 🚀
-

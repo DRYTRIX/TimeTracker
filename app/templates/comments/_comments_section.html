@@ -12,7 +12,7 @@
             <i class="fas fa-plus me-1"></i>{{ _('Add Comment') }}
         </button>
     </div>
-    
+
     <!-- New comment form (initially hidden) -->
     <div class="new-comment-form d-none mb-4" id="new-comment-form">
         <div class="card">
@@ -48,7 +48,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Comments list -->
     <div class="comments-list">
         {% if comments %}
@@ -98,7 +98,7 @@ function hideNewCommentForm() {
 function editComment(commentId) {
     const content = document.getElementById('comment-content-' + commentId);
     const editForm = document.getElementById('edit-form-' + commentId);
-    
+
     content.classList.add('d-none');
     editForm.classList.remove('d-none');
     editForm.querySelector('textarea').focus();
@@ -107,7 +107,7 @@ function editComment(commentId) {
 function cancelEdit(commentId) {
     const content = document.getElementById('comment-content-' + commentId);
     const editForm = document.getElementById('edit-form-' + commentId);
-    
+
     editForm.classList.add('d-none');
     content.classList.remove('d-none');
 }
@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.height = (this.scrollHeight) + 'px';
         });
     });
-    
+
     // Add loading state to forms
     const forms = document.querySelectorAll('.comments-section form');
     forms.forEach(function(form) {

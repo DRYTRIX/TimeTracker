@@ -281,4 +281,3 @@ Potential additions:
 - [PDF Layout Customization Guide](./PDF_LAYOUT_CUSTOMIZATION.md)
 - [Invoice System Overview](./ENHANCED_INVOICE_SYSTEM_README.md)
 - [Admin Settings Guide](./SETTINGS.md)
-

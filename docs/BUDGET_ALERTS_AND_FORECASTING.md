@@ -591,4 +591,3 @@ Potential future improvements:
 - [Time Tracking](./TIME_TRACKING.md)
 - [Reports](./REPORTS.md)
 - [API Documentation](./API.md)
-

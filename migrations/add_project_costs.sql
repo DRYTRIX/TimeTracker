@@ -33,4 +33,3 @@ COMMENT ON TABLE project_costs IS 'Tracks project expenses beyond hourly work (t
 COMMENT ON COLUMN project_costs.category IS 'Category of cost: travel, materials, services, equipment, software, other';
 COMMENT ON COLUMN project_costs.billable IS 'Whether this cost should be billed to the client';
 COMMENT ON COLUMN project_costs.invoiced IS 'Whether this cost has been included in an invoice';
-

@@ -36,4 +36,3 @@ Telemetry is sent to Grafana Cloud OTLP when configured:
 
 Admins can enable/disable detailed analytics in the app at any time.  
 Disabling detailed analytics does **not** stop base anonymous telemetry.
-

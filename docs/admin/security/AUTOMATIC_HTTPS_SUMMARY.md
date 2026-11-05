@@ -70,7 +70,7 @@ docker-compose -f docker-compose.yml -f docker-compose.https-mkcert.yml up -d
 1. mkcert init container starts
    ├─ Has mkcert pre-installed
    ├─ Checks if nginx/ssl/cert.pem exists
-   ├─ If missing: 
+   ├─ If missing:
    │  ├─ Installs local CA
    │  ├─ Generates trusted certificate
    │  ├─ Copies rootCA.pem for host installation
@@ -511,4 +511,3 @@ docker-compose down
 **Implementation Complete! 🎊**
 
 **Enjoy your automatic HTTPS TimeTracker! 🔒🚀**
-

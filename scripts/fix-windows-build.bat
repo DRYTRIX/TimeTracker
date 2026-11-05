@@ -47,21 +47,21 @@ if exist "node_modules" (
     echo   (This may take a moment on Windows/OneDrive)
     echo   NOTE: If this fails, use PowerShell script: scripts\fix-onedrive-lock.ps1
     echo.
-    
+
     REM Try to remove with retries
     set MAX_RETRIES=5
     set RETRY=0
     :retry_remove
     set /a RETRY+=1
     echo   Attempt !RETRY!/%MAX_RETRIES%: Trying to remove node_modules...
-    
+
     REM First try normal removal
     rmdir /s /q node_modules 2>nul
     if not exist "node_modules" (
         echo   [OK] node_modules removed successfully
         goto :removed
     )
-    
+
     REM If that failed, try removing files individually (slower but more reliable)
     if !RETRY! leq 2 (
         echo   Trying aggressive removal method...
@@ -72,7 +72,7 @@ if exist "node_modules" (
             goto :removed
         )
     )
-    
+
     if !RETRY! lss %MAX_RETRIES% (
         echo   [WARNING] Attempt !RETRY! failed, waiting 3 seconds...
         timeout /t 3 /nobreak >nul
@@ -104,7 +104,7 @@ if exist "node_modules" (
         echo.
         exit /b 1
     )
-    
+
     :removed
     echo.
 )

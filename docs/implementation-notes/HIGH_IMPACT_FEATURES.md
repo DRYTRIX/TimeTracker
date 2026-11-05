@@ -29,8 +29,8 @@ Provides instant search results as you type, with autocomplete suggestions, rece
 #### Basic Implementation:
 ```html
 <!-- Add to any page -->
-<input type="text" 
-       data-enhanced-search='{"endpoint": "/api/search", "minChars": 2}' 
+<input type="text"
+       data-enhanced-search='{"endpoint": "/api/search", "minChars": 2}'
        placeholder="Search...">
 ```
 
@@ -216,7 +216,7 @@ const table = new EnhancedTable(document.querySelector('#my-table'), {
 document.querySelector('#my-table').addEventListener('cellEdited', (e) => {
     console.log('Cell edited:', e.detail);
     // e.detail.oldValue, e.detail.newValue, e.detail.row, etc.
-    
+
     // Save to server
     fetch('/api/update', {
         method: 'POST',
@@ -268,9 +268,9 @@ document.querySelector('#my-table').addEventListener('cellEdited', (e) => {
 ```html
 {% block extra_content %}
 <div class="mb-4">
-    <input type="text" 
-           class="form-control" 
-           data-enhanced-search='{"endpoint": "/api/search"}' 
+    <input type="text"
+           class="form-control"
+           data-enhanced-search='{"endpoint": "/api/search"}'
            placeholder="Search projects, tasks, clients...">
 </div>
 {% endblock %}
@@ -278,7 +278,7 @@ document.querySelector('#my-table').addEventListener('cellEdited', (e) => {
 
 ### 2. Make Reports Table Sortable/Filterable
 ```html
-<table class="table" 
+<table class="table"
        data-enhanced-table='{"sortable": true, "filterable": true, "exportable": true}'>
     <!-- existing table content -->
 </table>
@@ -529,4 +529,3 @@ Potential additions:
 ---
 
 **All features are production-ready and actively deployed! Start using them today to supercharge your TimeTracker experience! 🚀**
-

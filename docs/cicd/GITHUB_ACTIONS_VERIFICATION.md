@@ -517,4 +517,3 @@ Your TimeTracker project has a **complete CI/CD pipeline** that runs **exclusive
 
 No external services, no additional setup, no hidden dependencies.  
 Everything you need is already configured and ready to use! 🎉
-

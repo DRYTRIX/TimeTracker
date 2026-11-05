@@ -145,10 +145,10 @@ function filterActivities(entityType) {
     console.log('Filtering activities by:', entityType);
     activityFilter = entityType === 'all' ? '' : entityType;
     activityPage = 1;
-    
+
     // Update visual indicators
     updateFilterIndicators(entityType);
-    
+
     loadActivities(false).catch(error => {
         console.error('Filter failed:', error);
     });
@@ -159,7 +159,7 @@ function updateFilterIndicators(activeFilter) {
     document.querySelectorAll('.filter-check').forEach(check => {
         check.classList.add('hidden');
     });
-    
+
     // Show checkmark for active filter
     const filterButton = document.getElementById(`filter-${activeFilter}`);
     if (filterButton) {
@@ -168,7 +168,7 @@ function updateFilterIndicators(activeFilter) {
             checkmark.classList.remove('hidden');
         }
     }
-    
+
     // Show/hide filter indicator dot
     const indicator = document.getElementById('filter-indicator');
     if (indicator) {
@@ -228,26 +228,26 @@ async function loadActivities(append = false) {
         console.error('Activity feed container not found');
         return Promise.resolve();
     }
-    
+
     const loadMoreBtn = document.getElementById('load-more-activities');
     const loadMoreContainer = document.getElementById('load-more-container');
-    
+
     if (loadMoreBtn) {
         loadMoreBtn.disabled = true;
         loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {{ _('Loading...') }}';
     }
-    
+
     if (!append) {
         container.innerHTML = getActivitySkeletonHTML(5);
     }
-    
+
     try {
         let url = `/api/activities?limit=${activityLimit}&page=${activityPage}`;
         // Only add entity_type filter if it's not empty
         if (activityFilter && activityFilter !== 'all') {
             url += `&entity_type=${activityFilter}`;
         }
-        
+
         console.log('Fetching activities from:', url);
         const response = await fetch(url, {
             credentials: 'same-origin',
@@ -262,10 +262,10 @@ async function loadActivities(append = false) {
             console.error('Error details:', errorText);
             throw new Error(`Failed to fetch activities: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log('Received activities:', data);
-        
+
         // Debug: Log entity types of received activities
         if (data.activities && data.activities.length > 0) {
             const entityTypes = data.activities.map(a => a.entity_type);
@@ -273,10 +273,10 @@ async function loadActivities(append = false) {
         } else {
             console.log('No activities received from API');
         }
-        
+
         if (data.activities && data.activities.length > 0) {
             const activityHTML = data.activities.map(activity => createActivityHTML(activity)).join('');
-            
+
             if (append) {
                 const spacer = container.querySelector('.space-y-3');
                 if (spacer) {
@@ -287,7 +287,7 @@ async function loadActivities(append = false) {
             } else {
                 container.innerHTML = '<div class="space-y-3">' + activityHTML + '</div>';
             }
-            
+
             // Show/hide load more button and container
             if (loadMoreContainer) {
                 if (data.has_next) {
@@ -317,7 +317,7 @@ async function loadActivities(append = false) {
                 loadMoreContainer.style.display = 'none';
             }
         }
-        
+
         return Promise.resolve();
     } catch (error) {
         console.error('Error loading activities:', error);
@@ -345,7 +345,7 @@ function createActivityHTML(activity) {
     const fullTime = window.formatUserDateTime
         ? window.formatUserDateTime(new Date(activity.created_at))
         : new Date(activity.created_at).toLocaleString();
-    
+
     let extraDataHTML = '';
     if (activity.extra_data && activity.extra_data.old_status && activity.extra_data.new_status) {
         extraDataHTML = `
@@ -358,7 +358,7 @@ function createActivityHTML(activity) {
             </div>
         `;
     }
-    
+
     return `
         <div class="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
             <div class="flex-shrink-0 mt-1">
@@ -403,7 +403,7 @@ function getActivityIcon(action) {
 
 function formatTimeAgo(date) {
     const seconds = Math.floor((new Date() - date) / 1000);
-    
+
     if (seconds < 60) return 'just now';
     if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
     if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
@@ -433,7 +433,7 @@ setInterval(() => {
 // WebSocket integration for real-time updates
 if (typeof io !== 'undefined') {
     const socket = io();
-    
+
     socket.on('activity_created', function(data) {
         // Only add activity if it matches current filter (or no filter)
         if (!activityFilter || activityFilter === 'all' || data.activity.entity_type === activityFilter) {
@@ -445,14 +445,13 @@ if (typeof io !== 'undefined') {
             }
         }
     });
-    
+
     socket.on('connect', function() {
         console.log('Activity feed WebSocket connected');
     });
-    
+
     socket.on('disconnect', function() {
         console.log('Activity feed WebSocket disconnected');
     });
 }
 </script>
-

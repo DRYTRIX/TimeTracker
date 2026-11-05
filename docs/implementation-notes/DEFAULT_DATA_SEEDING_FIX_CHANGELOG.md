@@ -176,4 +176,3 @@ This fix ensures that default client and project data respects user preferences 
 **Version**: 3.2.3+
 
 **Date**: October 23, 2025
-

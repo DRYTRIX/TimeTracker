@@ -257,18 +257,18 @@
                     <i class="fas fa-wallet mr-2 text-green-500"></i>
                     {{ _('Budget Overview') }}
                 </h2>
-                <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" 
+                <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}"
                    class="text-primary hover:text-primary-dark text-sm flex items-center gap-1 transition">
                     {{ _('Details') }} <i class="fas fa-arrow-right text-xs"></i>
                 </a>
             </div>
-            
+
             {% set consumed_amount = project.budget_consumed_amount|float if project.budget_consumed_amount else 0.0 %}
             {% set budget_amt = project.budget_amount|float %}
             {% set remaining = budget_amt - consumed_amount %}
             {% set percentage = (consumed_amount / budget_amt * 100) if budget_amt > 0 else 0 %}
             {% set threshold = project.budget_threshold_percent or 80 %}
-            
+
             <!-- Budget Progress Bar -->
             <div class="mb-4">
                 <div class="flex justify-between text-sm mb-2">
@@ -281,7 +281,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Budget Stats Grid -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
@@ -324,10 +324,10 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Quick Action Button -->
             <div class="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
-                <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" 
+                <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}"
                    class="block w-full text-center bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg transition shadow-md hover:shadow-lg">
                     <i class="fas fa-chart-line mr-2"></i>{{ _('View Full Budget Analysis') }}
                 </a>

@@ -40,12 +40,12 @@
      */
     function initSparklines() {
         const sparklineContainers = document.querySelectorAll('[data-sparkline]');
-        
+
         sparklineContainers.forEach(container => {
             const data = JSON.parse(container.getAttribute('data-sparkline'));
             const color = container.getAttribute('data-color') || '#4F46E5';
             const id = container.id || 'sparkline-' + Math.random().toString(36).substr(2, 9);
-            
+
             if (!container.id) {
                 container.id = id;
             }
@@ -86,7 +86,7 @@
         data.forEach((value, index) => {
             const x = padding + index * xScale;
             const y = height - padding - (value - minValue) * yScale;
-            
+
             if (index === 0) {
                 pathData += `M ${x} ${y}`;
             } else {
@@ -115,7 +115,7 @@
         data.forEach((value, index) => {
             const x = padding + index * xScale;
             const y = height - padding - (value - minValue) * yScale;
-            
+
             const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             circle.setAttribute('cx', x);
             circle.setAttribute('cy', y);
@@ -759,4 +759,3 @@
     };
 
 })();
-

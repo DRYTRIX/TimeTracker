@@ -436,4 +436,3 @@ For issues with email configuration:
 - [Admin Panel Guide](ADMIN_GUIDE.md)
 - [Configuration Guide](CONFIGURATION.md)
 - [Deployment Guide](../DEPLOYMENT_GUIDE.md)
-

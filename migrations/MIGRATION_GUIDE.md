@@ -68,7 +68,7 @@ This script handles:
    ```bash
    # PostgreSQL
    pg_dump --format=custom --dbname="$DATABASE_URL" --file=backup_$(date +%Y%m%d_%H%M%S).dump
-   
+
    # SQLite
    cp instance/timetracker.db backup_timetracker_$(date +%Y%m%d_%H%M%S).db
    ```
@@ -259,7 +259,7 @@ python -c "from app import create_app; app = create_app(); print('Connection OK'
 def upgrade():
     # Custom data transformation
     op.execute("UPDATE users SET role = 'user' WHERE role IS NULL")
-    
+
     # Complex table modifications
     op.execute("""
         INSERT INTO new_table (id, name, status)

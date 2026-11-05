@@ -102,21 +102,21 @@ Start Application
 ```bash
 # Check if alembic_version table exists
 SELECT EXISTS (
-    SELECT FROM information_schema.tables 
+    SELECT FROM information_schema.tables
     WHERE table_name = 'alembic_version'
 );
 
 # Get list of existing tables
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
 ORDER BY table_name;
 ```
 
 ### **SQLite Detection:**
 ```bash
 # Check if alembic_version table exists
-SELECT name FROM sqlite_master 
+SELECT name FROM sqlite_master
 WHERE type='table' AND name='alembic_version';
 
 # Get list of existing tables

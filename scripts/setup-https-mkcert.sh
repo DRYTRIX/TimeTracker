@@ -82,7 +82,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -149,4 +149,3 @@ echo "  1. Find CA: mkcert -CAROOT"
 echo "  2. Copy rootCA.pem to device"
 echo "  3. Import as trusted certificate"
 echo ""
-

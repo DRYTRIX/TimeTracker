@@ -17,7 +17,7 @@ docker-compose restart app  # or flask run
 ### 2. Add Excel Export Button (1 minute)
 Open `app/templates/reports/index.html` and add:
 ```html
-<a href="{{ url_for('reports.export_excel', start_date=start_date, end_date=end_date) }}" 
+<a href="{{ url_for('reports.export_excel', start_date=start_date, end_date=end_date) }}"
    class="btn btn-success">
     <i class="fas fa-file-excel"></i> Export to Excel
 </a>
@@ -124,7 +124,7 @@ def settings():
         db.session.commit()
         flash('Settings saved!', 'success')
         return redirect(url_for('user.settings'))
-    
+
     return render_template('user/settings.html')
 ```
 
@@ -133,24 +133,24 @@ def settings():
 <form method="POST">
     <h3>Notifications</h3>
     <label>
-        <input type="checkbox" name="email_notifications" 
+        <input type="checkbox" name="email_notifications"
                {% if current_user.email_notifications %}checked{% endif %}>
         Enable email notifications
     </label>
-    
+
     <label>
-        <input type="checkbox" name="overdue" 
+        <input type="checkbox" name="overdue"
                {% if current_user.notification_overdue_invoices %}checked{% endif %}>
         Overdue invoice notifications
     </label>
-    
+
     <h3>Theme</h3>
     <select name="theme">
         <option value="light">Light</option>
         <option value="dark">Dark</option>
         <option value="system">System</option>
     </select>
-    
+
     <button type="submit">Save Settings</button>
 </form>
 ```
@@ -194,7 +194,7 @@ python -c "from app import create_app; from app.models import Activity; app = cr
 
 ### Excel Export Button
 ```html
-<a href="{{ url_for('reports.export_excel', **request.args) }}" 
+<a href="{{ url_for('reports.export_excel', **request.args) }}"
    class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">
     <i class="fas fa-file-excel mr-2"></i>
     Export to Excel

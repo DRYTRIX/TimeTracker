@@ -1169,7 +1169,7 @@ class InvoicePDFGenerator:
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Client Information -->
                 <div class="two-col">
                     <div class="card">
@@ -1184,7 +1184,7 @@ class InvoicePDFGenerator:
                         {self._get_project_description_html()}
                     </div>
                 </div>
-                
+
                 <!-- Invoice Items -->
                 <div>
                     <table>
@@ -1204,10 +1204,10 @@ class InvoicePDFGenerator:
                         </tfoot>
                     </table>
                 </div>
-                
+
                 <!-- Additional Information -->
                 {self._get_additional_info_html()}
-                
+
                 <!-- Footer -->
                 <div class="footer">
                     {self._get_payment_info_html()}
@@ -1424,7 +1424,7 @@ class InvoicePDFGenerator:
                 color: #666;
             }}
         }}
-        
+
         body {{
             font-family: 'Helvetica Neue', Arial, sans-serif;
             font-size: 12pt;
@@ -1433,11 +1433,11 @@ class InvoicePDFGenerator:
             margin: 0;
             padding: 0;
         }}
-        
+
         .invoice-container {{
             max-width: 100%;
         }}
-        
+
         .header {{
             display: flex;
             justify-content: space-between;
@@ -1446,11 +1446,11 @@ class InvoicePDFGenerator:
             border-bottom: 2px solid #007bff;
             padding-bottom: 1em;
         }}
-        
+
         .company-info {{
             flex: 1;
         }}
-        
+
         .company-logo {{
             max-width: 150px;
             max-height: 80px;
@@ -1459,70 +1459,70 @@ class InvoicePDFGenerator:
             margin-right: 0;
             margin-bottom: 1em;
         }}
-        
+
         .company-name {{
             font-size: 24pt;
             font-weight: bold;
             color: #007bff;
             margin: 0 0 0.5em 0;
         }}
-        
+
         .company-address {{
             margin-bottom: 0.5em;
             line-height: 1.3;
         }}
-        
+
         .company-contact {{
             margin-bottom: 0.5em;
         }}
-        
+
         .company-contact span {{
             display: block;
             margin-bottom: 0.2em;
             font-size: 10pt;
         }}
-        
+
         .company-tax {{
             font-size: 10pt;
             color: #666;
         }}
-        
+
         .invoice-info {{
             text-align: right;
             min-width: 200px;
         }}
-        
+
         .logo-container {{
             text-align: right;
             margin-bottom: 1em;
         }}
-        
+
         .invoice-title {{
             font-size: 28pt;
             font-weight: bold;
             color: #007bff;
             margin: 0 0 1em 0;
         }}
-        
+
         .invoice-details .detail-row {{
             margin-bottom: 0.5em;
         }}
-        
+
         .detail-row .label {{
             font-weight: bold;
             margin-right: 0.5em;
         }}
-        
+
         .status-draft {{ color: #6c757d; }}
         .status-sent {{ color: #17a2b8; }}
         .status-paid {{ color: #28a745; }}
         .status-overdue {{ color: #dc3545; }}
         .status-cancelled {{ color: #343a40; }}
-        
+
         .client-section, .project-section {{
             margin-bottom: 2em;
         }}
-        
+
         .client-section h3, .project-section h3 {{
             font-size: 14pt;
             font-weight: bold;
@@ -1531,107 +1531,107 @@ class InvoicePDFGenerator:
             border-bottom: 1px solid #dee2e6;
             padding-bottom: 0.3em;
         }}
-        
+
         .client-name {{
             font-weight: bold;
             font-size: 14pt;
             margin-bottom: 0.5em;
         }}
-        
+
         .client-email, .client-address, .project-description {{
             margin-bottom: 0.3em;
             color: #666;
         }}
-        
+
         .items-section {{
             margin-bottom: 2em;
         }}
-        
+
         .invoice-table {{
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 1em;
         }}
-        
+
         .invoice-table th,
         .invoice-table td {{
             border: 1px solid #dee2e6;
             padding: 0.75em;
             text-align: left;
         }}
-        
+
         .invoice-table th {{
             background-color: #f8f9fa;
             font-weight: bold;
             color: #495057;
         }}
-        
+
         .description {{ width: 40%; }}
         .quantity {{ width: 15%; text-align: center; }}
         .unit-price {{ width: 20%; text-align: right; }}
         .total {{ width: 25%; text-align: right; }}
-        
+
         .text-center {{ text-align: center; }}
         .text-right {{ text-align: right; }}
-        
+
         .time-entry-info {{
             color: #6c757d;
             font-style: italic;
         }}
-        
+
         .subtotal {{ background-color: #f8f9fa; }}
         .tax {{ background-color: #fff3cd; }}
         .total {{ background-color: #d1ecf1; font-weight: bold; }}
-        
+
         .additional-info {{
             margin-bottom: 2em;
         }}
-        
+
         .notes-section, .terms-section {{
             margin-bottom: 1em;
         }}
-        
+
         .notes-section h4, .terms-section h4 {{
             font-size: 12pt;
             font-weight: bold;
             color: #495057;
             margin: 0 0 0.5em 0;
         }}
-        
+
         .footer {{
             margin-top: 2em;
             padding-top: 1em;
             border-top: 1px solid #dee2e6;
         }}
-        
+
         .payment-info {{
             margin-bottom: 1em;
         }}
-        
+
         .payment-info h4 {{
             font-size: 12pt;
             font-weight: bold;
             color: #495057;
             margin: 0 0 0.5em 0;
         }}
-        
+
         .bank-info {{
             color: #666;
             line-height: 1.3;
         }}
-        
+
         .terms h4 {{
             font-size: 12pt;
             font-weight: bold;
             color: #495057;
             margin: 0 0 0.5em 0;
         }}
-        
+
         .terms p {{
             color: #666;
             line-height: 1.3;
         }}
-        
+
         /* Utility classes */
         .nl2br {{
             white-space: pre-line;
@@ -1655,7 +1655,7 @@ def get_overflow_prevention_css():
         overflow: hidden;
         box-sizing: border-box;
     }
-    
+
     /* Ensure all wrapper containers respect page boundaries and clip overflow */
     .invoice-wrapper,
     .quote-wrapper,
@@ -1670,7 +1670,7 @@ def get_overflow_prevention_css():
         /* Additional clipping for absolutely positioned children */
         contain: layout style paint;
     }
-    
+
     /* Clip absolutely positioned elements that might overflow page boundaries */
     [style*="position:absolute"],
     [style*="position: fixed"],
@@ -1680,7 +1680,7 @@ def get_overflow_prevention_css():
         /* Elements must not exceed wrapper boundaries */
         contain: layout style paint;
     }
-    
+
     /* Ensure wrapper strictly clips all children - prevent any overflow */
     .invoice-wrapper,
     .quote-wrapper,
@@ -1691,7 +1691,7 @@ def get_overflow_prevention_css():
         overflow: hidden !important;
         clip-path: inset(0) !important;
     }
-    
+
     /* Constrain absolutely positioned elements to wrapper boundaries */
     /* Elements positioned outside wrapper boundaries will be clipped */
     .invoice-wrapper [style*="position:absolute"],
@@ -1707,7 +1707,7 @@ def get_overflow_prevention_css():
         max-width: 100%;
         max-height: 100%;
     }
-    
+
     /* Specifically constrain elements that might overflow */
     .invoice-wrapper .element,
     .invoice-wrapper .text-element,
@@ -1724,7 +1724,7 @@ def get_overflow_prevention_css():
         /* Prevent overflow beyond wrapper */
         overflow: hidden;
     }
-    
+
     /* Prevent tables from overflowing */
     table {
         max-width: 100%;
@@ -1732,14 +1732,14 @@ def get_overflow_prevention_css():
         word-wrap: break-word;
         overflow-wrap: break-word;
     }
-    
+
     /* Prevent images from overflowing */
     img {
         max-width: 100%;
         height: auto;
         object-fit: contain;
     }
-    
+
     /* Prevent text from overflowing containers */
     * {
         word-wrap: break-word;
@@ -2346,7 +2346,7 @@ class QuotePDFGenerator:
                 color: #666;
             }}
         }}
-        
+
         body {{
             font-family: 'Helvetica Neue', Arial, sans-serif;
             font-size: 12pt;

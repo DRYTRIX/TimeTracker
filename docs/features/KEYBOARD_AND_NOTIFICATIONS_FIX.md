@@ -29,7 +29,7 @@ startBackgroundTasks() {
 
 **Root Cause**: Browser security policy prevents requesting notification permissions on page load. Permissions can only be requested in response to a user action (like clicking a button).
 
-**Fix**: 
+**Fix**:
 - Changed `init()` to call `checkPermissionStatus()` instead of `requestPermission()`
 - `checkPermissionStatus()` only checks the current permission state without requesting
 - `requestPermission()` can now be called from user interactions (like clicking the "Enable" button)
@@ -44,32 +44,32 @@ isTyping(e) {
     const target = e.target;
     const tagName = target.tagName.toLowerCase();
     const isInput = tagName === 'input' || tagName === 'textarea' || target.isContentEditable;
-    
+
     // Don't block anything if not in an input
     if (!isInput) {
         return false;
     }
-    
+
     // Allow Escape in search inputs
     if (target.type === 'search' && e.key === 'Escape') {
         return false;
     }
-    
+
     // Allow Ctrl+/ and Cmd+/ even in inputs for search
     if (e.key === '/' && (e.ctrlKey || e.metaKey)) {
         return false;
     }
-    
+
     // Allow Ctrl+K and Cmd+K even in inputs for command palette
     if (e.key === 'k' && (e.ctrlKey || e.metaKey)) {
         return false;
     }
-    
+
     // Allow Shift+? for shortcuts panel
     if (e.key === '?' && e.shiftKey) {
         return false;
     }
-    
+
     // Block all other keys when typing
     return true;
 }
@@ -173,4 +173,3 @@ Consider adding:
 - [ ] Browser notification sound preferences
 - [ ] Desktop notification styling
 - [ ] Notification history persistence
-

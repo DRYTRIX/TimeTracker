@@ -366,4 +366,3 @@ For issues or questions:
 **Last Updated**: October 24, 2025
 **Feature Version**: 1.0
 **Migration**: 027_add_weekly_time_goals
-

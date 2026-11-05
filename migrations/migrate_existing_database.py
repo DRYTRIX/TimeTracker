@@ -144,9 +144,9 @@ def analyze_existing_schema(db_type, db_url):
 
             # Get list of existing tables
             cursor.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' 
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
                 ORDER BY table_name
             """)
             existing_tables = [row[0] for row in cursor.fetchall()]
@@ -156,8 +156,8 @@ def analyze_existing_schema(db_type, db_url):
             for table in existing_tables:
                 cursor.execute(f"""
                     SELECT column_name, data_type, is_nullable, column_default
-                    FROM information_schema.columns 
-                    WHERE table_name = '{table}' 
+                    FROM information_schema.columns
+                    WHERE table_name = '{table}'
                     ORDER BY ordinal_position
                 """)
                 columns = cursor.fetchall()
@@ -312,13 +312,13 @@ from app.models import User, Project, TimeEntry, Task, Settings, Invoice, Client
 def migrate_existing_data():
     \"\"\"Migrate existing data to new schema\"\"\"
     app = create_app()
-    
+
     with app.app_context():
         print("Starting data migration...")
-        
+
         # Add your data migration logic here
         # Example: Migrate old client names to new client table
-        
+
         print("Data migration completed")
 
 if __name__ == "__main__":

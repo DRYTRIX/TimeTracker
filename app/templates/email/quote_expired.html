@@ -69,7 +69,7 @@
         <div class="content">
             <p>Hello {{ user.display_name or user.username }},</p>
             <p>Quote <strong>{{ quote.quote_number }}</strong> has expired.</p>
-            
+
             <div class="quote-details">
                 <p><strong>Quote Number:</strong> {{ quote.quote_number }}</p>
                 <p><strong>Title:</strong> {{ quote.title }}</p>
@@ -77,9 +77,9 @@
                 <p><strong>Total Amount:</strong> {{ quote.currency_code }} {{ "%.2f"|format(quote.total_amount) }}</p>
                 <p><strong>Valid Until:</strong> {{ quote.valid_until|format_date if quote.valid_until else 'N/A' }}</p>
             </div>
-            
+
             <p>You may want to follow up with the client or create a new quote.</p>
-            
+
             {% if quote_url %}
             <a href="{{ quote_url }}" class="button">{{ _('View Quote') }}</a>
             {% endif %}
@@ -90,4 +90,3 @@
     </div>
 </body>
 </html>
-

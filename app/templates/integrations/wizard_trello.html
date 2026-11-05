@@ -12,7 +12,7 @@
                     {{ _('Get your API key and secret from') }} <a href="https://trello.com/app-key" target="_blank" class="underline">trello.com/app-key</a>
                 </p>
             </div>
-            
+
             <div>
                 <label for="trello_api_key" class="block text-sm font-medium mb-2">
                     {{ _('Trello API Key') }} <span class="text-red-500">*</span>
@@ -22,7 +22,7 @@
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-card-light dark:bg-card-dark"
                        placeholder="{{ _('Enter API Key') }}" required>
             </div>
-            
+
             <div>
                 <label for="trello_api_secret" class="block text-sm font-medium mb-2">
                     {{ _('Trello API Secret') }} <span class="text-red-500">*</span>
@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-        
+
         wizard.addValidationCallback(2, function() {
             if (!wizard.connectionTestResult) {
                 alert('{{ _("Please test the connection before proceeding.") }}');
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return true;
         });
-        
+
         const testBtn = document.getElementById('test-connection-btn');
         if (testBtn) {
             testBtn.addEventListener('click', async function() {
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 wizard.displayConnectionResults(result);
             });
         }
-        
+
         wizard.init();
     }
 });

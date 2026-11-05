@@ -138,20 +138,20 @@ def upgrade():
             # Handle different database dialects
             if dialect_name == "postgresql":
                 conn.execute(sa.text("""
-                    UPDATE quotes 
-                    SET quote_number = 'QUO-' || id::text 
+                    UPDATE quotes
+                    SET quote_number = 'QUO-' || id::text
                     WHERE quote_number IS NULL
                 """))
             elif dialect_name == "sqlite":
                 conn.execute(sa.text("""
-                    UPDATE quotes 
+                    UPDATE quotes
                     SET quote_number = 'QUO-' || CAST(id AS TEXT)
                     WHERE quote_number IS NULL
                 """))
             else:
                 # Generic SQL for other databases
                 conn.execute(sa.text("""
-                    UPDATE quotes 
+                    UPDATE quotes
                     SET quote_number = CONCAT('QUO-', CAST(id AS CHAR))
                     WHERE quote_number IS NULL
                 """))

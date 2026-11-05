@@ -388,4 +388,3 @@ docker-compose down
 ```
 
 **That's it! Enjoy automatic HTTPS! 🔒**
-

@@ -227,4 +227,3 @@ Potential future improvements to the expense feature:
 - [Invoice Creation Guide](INVOICE_CREATION.md)
 - [PDF Customization](PDF_LAYOUT_CUSTOMIZATION.md)
 - [API Documentation](API_DOCUMENTATION.md)
-

@@ -18,26 +18,26 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('issues.new_issue') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        
+
         <div class="space-y-4">
             <div>
                 <label for="title" class="block text-sm font-medium mb-1">{{ _('Title') }} <span class="text-red-500">*</span></label>
                 <input type="text" id="title" name="title" value="{{ request.form.get('title', '') }}" required
                        class="form-input w-full">
             </div>
-            
+
             <div>
                 <label for="description" class="block text-sm font-medium mb-1">{{ _('Description') }}</label>
                 <textarea id="description" name="description" rows="6"
                           class="form-input w-full">{{ request.form.get('description', '') }}</textarea>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="client_id" class="block text-sm font-medium mb-1">{{ _('Client') }} <span class="text-red-500">*</span></label>
                     {{ client_select('client_id', clients, selected_id=request.form.get('client_id')|int, required=True, only_one_client=only_one_client|default(false), single_client=single_client) }}
                 </div>
-                
+
                 <div>
                     <label for="priority" class="block text-sm font-medium mb-1">{{ _('Priority') }}</label>
                     <select id="priority" name="priority" class="form-input w-full">
@@ -48,7 +48,7 @@
                     </select>
                 </div>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="project_id" class="block text-sm font-medium mb-1">{{ _('Project') }}</label>
@@ -59,7 +59,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="assigned_to" class="block text-sm font-medium mb-1">{{ _('Assigned To') }}</label>
                     <select id="assigned_to" name="assigned_to" class="form-input w-full">
@@ -71,7 +71,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="mt-6 flex flex-col sm:flex-row gap-3">
             <button type="submit" class="bg-primary text-white px-4 py-2 min-h-[44px] rounded hover:bg-primary/90 transition-colors">
                 <i class="fas fa-save mr-2"></i>{{ _('Create Issue') }}

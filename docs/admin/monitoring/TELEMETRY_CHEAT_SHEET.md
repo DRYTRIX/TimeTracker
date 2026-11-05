@@ -225,4 +225,3 @@ curl http://localhost:5000/metrics
 - `IMPLEMENTATION_COMPLETE.md` - Full implementation details
 - `docs/all_tracked_events.md` - Complete event list
 - `docs/TELEMETRY_QUICK_START.md` - User guide
-

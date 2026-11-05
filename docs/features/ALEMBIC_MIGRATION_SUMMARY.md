@@ -122,4 +122,3 @@ The migration is production-ready and can be safely deployed to your TimeTracker
 ---
 
 **Questions?** See `ALEMBIC_MIGRATION_README.md` for detailed instructions.
-

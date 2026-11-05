@@ -33,8 +33,8 @@
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Invoice Details') }}</h3>
             <p class="text-sm mb-1"><span class="font-medium">{{ _('Issue Date') }}:</span> {{ invoice.issue_date|format_date }}</p>
             <p class="text-sm mb-1"><span class="font-medium">{{ _('Due Date') }}:</span> {{ invoice.due_date|format_date }}</p>
-            <p class="text-sm mb-1"><span class="font-medium">{{ _('Status') }}:</span> 
-                <span class="px-2 py-1 text-xs rounded-full 
+            <p class="text-sm mb-1"><span class="font-medium">{{ _('Status') }}:</span>
+                <span class="px-2 py-1 text-xs rounded-full
                     {% if invoice.payment_status == 'fully_paid' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                     {% elif invoice.is_overdue %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
                     {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}">
@@ -46,7 +46,7 @@
             {% endif %}
         </div>
     </div>
-    
+
     {% if invoice.items %}
     <div class="mb-6">
         <h3 class="text-lg font-semibold mb-4">{{ _('Invoice Items') }}</h3>
@@ -74,7 +74,7 @@
         </div>
     </div>
     {% endif %}
-    
+
     <div class="flex justify-end">
         <div class="w-full sm:w-1/2 md:w-1/3">
             <div class="space-y-2">
@@ -101,30 +101,30 @@
             </div>
         </div>
     </div>
-    
+
     {% if invoice.payment_status != 'fully_paid' %}
     <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
         <div class="flex flex-col sm:flex-row gap-4 justify-end">
-            <a href="{{ url_for('client_portal.pay_invoice', invoice_id=invoice.id) }}" 
+            <a href="{{ url_for('client_portal.pay_invoice', invoice_id=invoice.id) }}"
                class="inline-flex items-center justify-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
                 <i class="fas fa-credit-card mr-2"></i>
                 {{ _('Pay Invoice') }}
             </a>
-            <a href="{{ url_for('client_portal.invoices') }}" 
+            <a href="{{ url_for('client_portal.invoices') }}"
                class="inline-flex items-center justify-center px-6 py-3 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg transition-colors">
                 {{ _('Back to Invoices') }}
             </a>
         </div>
     </div>
     {% endif %}
-    
+
     {% if invoice.notes %}
     <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Notes') }}</h3>
         <p class="whitespace-pre-line">{{ invoice.notes }}</p>
     </div>
     {% endif %}
-    
+
     {% if invoice.terms %}
     <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Terms') }}</h3>
@@ -133,4 +133,3 @@
     {% endif %}
 </div>
 {% endblock %}
-

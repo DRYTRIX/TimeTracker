@@ -27,7 +27,7 @@ Before running the migration:
    # Or using alembic directly
    alembic current
    ```
-   
+
    Expected output: `017 (head)` or similar
 
 3. ✅ **Review the migration**
@@ -166,7 +166,7 @@ alembic downgrade 017
 
 **Problem:** The previous migration (017) doesn't exist or wasn't run.
 
-**Solution:** 
+**Solution:**
 1. Check current revision: `flask db current`
 2. Upgrade to 017 first: `flask db upgrade 017`
 3. Then upgrade to 018: `flask db upgrade`
@@ -175,7 +175,7 @@ alembic downgrade 017
 
 **Problem:** Referenced tables (projects, users, invoices) don't exist.
 
-**Solution:** 
+**Solution:**
 1. Ensure you're at migration 017 before running this
 2. The migration checks for invoices table existence before creating that FK
 3. Run previous migrations first: `flask db upgrade`
@@ -208,10 +208,10 @@ After successful migration:
    ```bash
    # Docker
    docker-compose restart app
-   
+
    # Systemd
    sudo systemctl restart timetracker
-   
+
    # Manual
    # Stop and start your Flask application
    ```
@@ -220,7 +220,7 @@ After successful migration:
    ```bash
    # If using Redis
    redis-cli FLUSHALL
-   
+
    # Browser cache
    # Hard refresh: Ctrl+Shift+R (or Cmd+Shift+R on Mac)
    ```
@@ -316,4 +316,3 @@ After successful migration:
 - Train users on the new functionality
 - Monitor application performance
 - Set up any necessary backups for the new data
-

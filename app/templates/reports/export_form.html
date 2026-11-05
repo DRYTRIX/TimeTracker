@@ -40,7 +40,7 @@
                     <option value="excel" {% if export_format == 'excel' %}selected{% endif %}>Excel (.xlsx)</option>
                 </select>
             </div>
-            
+
             <!-- Date Range Section -->
             <div>
                 <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white flex items-center">
@@ -52,10 +52,10 @@
                         <label for="start_date" class="form-label">
                             Start Date <span class="text-red-500">*</span>
                         </label>
-                        <input type="date" 
-                               name="start_date" 
-                               id="start_date" 
-                               value="{{ default_start_date }}" 
+                        <input type="date"
+                               name="start_date"
+                               id="start_date"
+                               value="{{ default_start_date }}"
                                required
                                class="form-input user-date-input">
                     </div>
@@ -63,10 +63,10 @@
                         <label for="end_date" class="form-label">
                             End Date <span class="text-red-500">*</span>
                         </label>
-                        <input type="date" 
-                               name="end_date" 
-                               id="end_date" 
-                               value="{{ default_end_date }}" 
+                        <input type="date"
+                               name="end_date"
+                               id="end_date"
+                               value="{{ default_end_date }}"
                                required
                                class="form-input user-date-input">
                     </div>
@@ -82,15 +82,15 @@
                     Filters
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    
+
                     {% if current_user.is_admin %}
                     <!-- User Filter (Admin Only) -->
                     <div>
                         <label for="user_id" class="form-label">
                             <i class="fas fa-user mr-1"></i> User
                         </label>
-                        <select name="user_id" 
-                                id="user_id" 
+                        <select name="user_id"
+                                id="user_id"
                                 class="form-input">
                             <option value="">All Users</option>
                             {% for user in users %}
@@ -113,8 +113,8 @@
                         <label for="project_id" class="form-label">
                             <i class="fas fa-project-diagram mr-1"></i> Project
                         </label>
-                        <select name="project_id" 
-                                id="project_id" 
+                        <select name="project_id"
+                                id="project_id"
                                 class="form-input">
                             <option value="">All Projects</option>
                             {% for project in projects %}
@@ -128,8 +128,8 @@
                         <label for="task_id" class="form-label">
                             <i class="fas fa-tasks mr-1"></i> Task
                         </label>
-                        <select name="task_id" 
-                                id="task_id" 
+                        <select name="task_id"
+                                id="task_id"
                                 class="form-input"
                                 disabled>
                             <option value="">All Tasks (Select a project first)</option>
@@ -141,8 +141,8 @@
                         <label for="billable" class="form-label">
                             <i class="fas fa-dollar-sign mr-1"></i> Billable Status
                         </label>
-                        <select name="billable" 
-                                id="billable" 
+                        <select name="billable"
+                                id="billable"
                                 class="form-input">
                             <option value="all">All Entries</option>
                             <option value="yes">Billable Only</option>
@@ -155,8 +155,8 @@
                         <label for="source" class="form-label">
                             <i class="fas fa-compass mr-1"></i> Entry Source
                         </label>
-                        <select name="source" 
-                                id="source" 
+                        <select name="source"
+                                id="source"
                                 class="form-input">
                             <option value="all">All Sources</option>
                             <option value="manual">Manual Entries</option>
@@ -169,9 +169,9 @@
                         <label for="tags" class="form-label">
                             <i class="fas fa-tags mr-1"></i> Tags (comma-separated)
                         </label>
-                        <input type="text" 
-                               name="tags" 
-                               id="tags" 
+                        <input type="text"
+                               name="tags"
+                               id="tags"
                                placeholder="{{ _('e.g., development, meeting, urgent') }}"
                                class="form-input">
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -185,12 +185,12 @@
 
             <!-- Action Buttons -->
             <div class="flex flex-col sm:flex-row justify-end gap-3">
-                <button type="button" 
+                <button type="button"
                         id="resetBtn"
                         class="bg-gray-600 text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-gray-700 transition">
                     <i class="fas fa-undo mr-2"></i>{{ _('Reset Filters') }}
                 </button>
-                <button type="submit" 
+                <button type="submit"
                         id="exportSubmitBtn"
                         class="bg-primary text-white px-6 py-2 min-h-[44px] rounded-lg hover:bg-primary/90 transition">
                     <i class="fas fa-download mr-2"></i><span id="exportSubmitLabel">{{ _('Export to CSV') if export_format == 'csv' else _('Export to Excel') }}</span>
@@ -232,18 +232,18 @@ document.addEventListener('DOMContentLoaded', function() {
     if (projectSelect) {
         projectSelect.addEventListener('change', function() {
             const projectId = this.value;
-            
+
             if (projectId) {
                 // Enable task select and load tasks
                 taskSelect.disabled = true;
                 taskSelect.innerHTML = '<option value="">Loading tasks...</option>';
-                
+
                 // Fetch tasks for the selected project
                 fetch(`/api/projects/${projectId}/tasks`)
                     .then(response => response.json())
                     .then(data => {
                         taskSelect.innerHTML = '<option value="">All Tasks</option>';
-                        
+
                         if (data.tasks && data.tasks.length > 0) {
                             data.tasks.forEach(task => {
                                 const option = document.createElement('option');
@@ -302,13 +302,13 @@ document.addEventListener('DOMContentLoaded', function() {
         resetBtn.addEventListener('click', function() {
             // Reset all select fields to default
             exportForm.reset();
-            
+
             // Reset task select
             if (taskSelect) {
                 taskSelect.innerHTML = '<option value="">All Tasks (Select a project first)</option>';
                 taskSelect.disabled = true;
             }
-            
+
             // Set default dates
             document.getElementById('start_date').value = '{{ default_start_date }}';
             document.getElementById('end_date').value = '{{ default_end_date }}';
@@ -356,4 +356,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 {% endblock %}
-

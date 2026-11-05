@@ -93,8 +93,8 @@ def upgrade():
     # But we can add a PostgreSQL-specific check if needed
     try:
         op.execute("""
-            ALTER TABLE time_entries 
-            ADD CONSTRAINT chk_time_entries_project_or_client 
+            ALTER TABLE time_entries
+            ADD CONSTRAINT chk_time_entries_project_or_client
             CHECK (project_id IS NOT NULL OR client_id IS NOT NULL)
         """)
     except Exception:

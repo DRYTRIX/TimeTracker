@@ -59,7 +59,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             exit 1
         fi
     fi
-    
+
     echo ""
     echo "Installing dependencies fresh..."
     if ! npm install --prefer-offline --no-audit; then

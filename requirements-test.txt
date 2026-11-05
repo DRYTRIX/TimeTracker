@@ -50,4 +50,3 @@ pytest-html==4.2.0  # HTML test reports
 
 # Additional utilities
 freezegun==1.5.5  # Time mocking
-

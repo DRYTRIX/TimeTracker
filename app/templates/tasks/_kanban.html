@@ -37,12 +37,12 @@
       </div>
       <div class="kanban-column-body" data-status="{{ col.key }}">
         {% for task in tasks if task.status == col.key %}
-        <div class="kanban-card {% if current_user.active_timer and current_user.active_timer.task_id == task.id %}kanban-card-active{% endif %}" 
-             draggable="true" 
-             data-task-id="{{ task.id }}" 
+        <div class="kanban-card {% if current_user.active_timer and current_user.active_timer.task_id == task.id %}kanban-card-active{% endif %}"
+             draggable="true"
+             data-task-id="{{ task.id }}"
              data-status="{{ task.status }}"
              data-priority="{{ task.priority }}">
-          
+
           <!-- Card Header with ID and Actions -->
           <div class="kanban-card-header">
             <div class="kanban-card-id">#{{ task.id }}</div>
@@ -83,7 +83,7 @@
               <span class="kanban-badge" style="background:#e5e7eb;color:#374151;">{{ task.project.code_display }}</span>
             </div>
             {% endif %}
-            
+
             {% if task.description %}
             <p class="kanban-card-description">
               {{ task.description[:90] }}{% if task.description|length > 90 %}...{% endif %}
@@ -665,12 +665,12 @@
   .kanban-board {
     grid-template-columns: 1fr;
   }
-  
+
   .kanban-card-meta {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .kanban-meta-item {
     width: 100%;
   }
@@ -825,7 +825,7 @@
     return String(value || 'fas fa-circle').replace(/[^a-zA-Z0-9\s\-_]/g, '');
   }
 
-  const statusLabels = { 
+  const statusLabels = {
     {% for col in kanban_columns %}
     '{{ col.key }}': '{{ col.label }}'{% if not loop.last %},{% endif %}
     {% endfor %}
@@ -1145,7 +1145,7 @@ window.openTaskModal = async function(taskId) {
       </div>
     `;
     document.getElementById('taskModalProject').innerHTML = projectHtml;
-    
+
     // Description
     const descSection = document.getElementById('taskModalDescriptionSection');
     if (task.description && task.description.trim()) {
@@ -1154,7 +1154,7 @@ window.openTaskModal = async function(taskId) {
     } else {
       descSection.style.display = 'none';
     }
-    
+
     // Assigned users
     const assignedSection = document.getElementById('taskModalAssignedSection');
     const assigneeNames = (task.assignees || [])
@@ -1177,7 +1177,7 @@ window.openTaskModal = async function(taskId) {
     } else {
       assignedSection.style.display = 'none';
     }
-    
+
     // Due date
     const dueDateSection = document.getElementById('taskModalDueDateSection');
     if (task.due_date) {
@@ -1195,63 +1195,63 @@ window.openTaskModal = async function(taskId) {
     } else {
       dueDateSection.style.display = 'none';
     }
-    
+
     // Progress
     const progressSection = document.getElementById('taskModalProgressSection');
     const estimatedSection2 = document.getElementById('taskModalEstimatedSection2');
     if (task.estimated_hours && task.estimated_hours > 0) {
       progressSection.style.display = 'block';
       estimatedSection2.style.display = 'block';
-      
+
       const progress = task.progress_percentage || 0;
       document.getElementById('taskModalProgressBar').style.width = `${progress}%`;
       document.getElementById('taskModalProgressText').textContent = `${progress}%`;
-      
+
       const tracked = task.total_hours || 0;
-      document.getElementById('taskModalHoursInfo').textContent = 
+      document.getElementById('taskModalHoursInfo').textContent =
         `${tracked.toFixed(1)}h tracked / ${task.estimated_hours.toFixed(1)}h estimated`;
       document.getElementById('taskModalEstimated').textContent = `${task.estimated_hours.toFixed(1)}h`;
     } else {
       progressSection.style.display = 'none';
       estimatedSection2.style.display = 'none';
     }
-    
+
     // Tags
     const tagsSection = document.getElementById('taskModalTagsSection');
     if (task.tags && task.tags.length > 0) {
       tagsSection.style.display = 'block';
-      const tagsHtml = task.tags.map(tag => 
+      const tagsHtml = task.tags.map(tag =>
         `<span class="badge bg-light text-dark border">${escapeHtml(tag)}</span>`
       ).join('');
       document.getElementById('taskModalTags').innerHTML = tagsHtml;
     } else {
       tagsSection.style.display = 'none';
     }
-    
+
     // Stats
-    document.getElementById('taskModalTotalHours').textContent = 
+    document.getElementById('taskModalTotalHours').textContent =
       `${(task.total_hours || 0).toFixed(1)}h`;
-    
+
     // Created date
     const createdDate = new Date(task.created_at);
-    document.getElementById('taskModalCreated').textContent = 
+    document.getElementById('taskModalCreated').textContent =
       createdDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    
+
     // Completed date
     const completedSection = document.getElementById('taskModalCompletedSection');
     if (task.completed_at) {
       completedSection.style.display = 'block';
       const completedDate = new Date(task.completed_at);
-      document.getElementById('taskModalCompleted').textContent = 
+      document.getElementById('taskModalCompleted').textContent =
         completedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     } else {
       completedSection.style.display = 'none';
     }
-    
+
     // Update action buttons
     document.getElementById('taskModalViewFullBtn').href = `/tasks/${taskId}`;
     document.getElementById('taskModalEditBtn').href = `/tasks/${taskId}/edit`;
-    
+
     if (loadingEl) loadingEl.style.display = 'none';
     if (contentEl) contentEl.style.display = 'block';
 
@@ -1414,5 +1414,3 @@ document.addEventListener('keydown', function(e) {
     </div>
   </div>
 </div>
-
-

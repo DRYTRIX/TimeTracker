@@ -60,7 +60,7 @@ def migrate_task_management(engine):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
             );
-            
+
             CREATE INDEX ix_tasks_project_id ON tasks (project_id);
             CREATE INDEX ix_tasks_status ON tasks (status);
             CREATE INDEX ix_tasks_priority ON tasks (priority);
@@ -84,7 +84,7 @@ def migrate_task_management(engine):
 
                 # Add task_id column
                 add_column_sql = """
-                ALTER TABLE time_entries 
+                ALTER TABLE time_entries
                 ADD COLUMN task_id INTEGER;
                 """
 
@@ -105,10 +105,10 @@ def migrate_task_management(engine):
             try:
                 # Check if foreign key constraint exists
                 constraints_sql = """
-                SELECT constraint_name 
-                FROM information_schema.table_constraints 
-                WHERE table_name = 'time_entries' 
-                AND constraint_type = 'FOREIGN KEY' 
+                SELECT constraint_name
+                FROM information_schema.table_constraints
+                WHERE table_name = 'time_entries'
+                AND constraint_type = 'FOREIGN KEY'
                 AND constraint_name LIKE '%task_id%';
                 """
 
@@ -119,8 +119,8 @@ def migrate_task_management(engine):
                     if not constraints:
                         print("Adding foreign key constraint for task_id...")
                         add_fk_sql = """
-                        ALTER TABLE time_entries 
-                        ADD CONSTRAINT fk_time_entries_task_id 
+                        ALTER TABLE time_entries
+                        ADD CONSTRAINT fk_time_entries_task_id
                         FOREIGN KEY (task_id) REFERENCES tasks(id);
                         """
 

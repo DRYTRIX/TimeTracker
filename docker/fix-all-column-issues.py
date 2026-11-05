@@ -28,9 +28,9 @@ def main():
             # Step 1: Check current table structure
             print("\n1. Checking current table structure...")
             result = conn.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'settings' 
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'settings'
                 ORDER BY column_name;
             """))
 
@@ -86,7 +86,7 @@ def main():
             # Step 4: Update existing settings with default values
             print("\n4. Updating existing settings with default values...")
             update_sql = """
-            UPDATE settings SET 
+            UPDATE settings SET
                 company_name = COALESCE(company_name, 'Your Company Name'),
                 company_address = COALESCE(company_address, 'Your Company Address'),
                 company_email = COALESCE(company_email, 'info@yourcompany.com'),
@@ -109,9 +109,9 @@ def main():
             # Step 5: Verify final structure
             print("\n5. Verifying final table structure...")
             result = conn.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'settings' 
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'settings'
                 ORDER BY column_name;
             """))
 

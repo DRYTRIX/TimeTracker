@@ -219,7 +219,7 @@ def upgrade():
             # PostgreSQL syntax
             op.execute("""
                 INSERT INTO expense_categories (name, code, color, icon, requires_receipt, requires_approval, is_active)
-                VALUES 
+                VALUES
                     ('Travel', 'TRAVEL', '#4CAF50', '✈️', true, true, true),
                     ('Meals', 'MEALS', '#FF9800', '🍽️', true, false, true),
                     ('Accommodation', 'ACCOM', '#2196F3', '🏨', true, true, true),
@@ -233,7 +233,7 @@ def upgrade():
             # SQLite syntax
             op.execute("""
                 INSERT OR IGNORE INTO expense_categories (name, code, color, icon, requires_receipt, requires_approval, is_active)
-                VALUES 
+                VALUES
                     ('Travel', 'TRAVEL', '#4CAF50', '✈️', 1, 1, 1),
                     ('Meals', 'MEALS', '#FF9800', '🍽️', 1, 0, 1),
                     ('Accommodation', 'ACCOM', '#2196F3', '🏨', 1, 1, 1),
@@ -255,7 +255,7 @@ def upgrade():
                 # PostgreSQL syntax
                 op.execute("""
                     INSERT INTO per_diem_rates (country_code, location, rate_per_day, breakfast_deduction, lunch_deduction, dinner_deduction, valid_from, currency_code, is_active)
-                    VALUES 
+                    VALUES
                         ('US', 'General', 55.00, 13.00, 16.00, 26.00, '2025-01-01', 'USD', true),
                         ('GB', 'General', 45.00, 10.00, 13.00, 22.00, '2025-01-01', 'GBP', true),
                         ('DE', 'General', 24.00, 5.00, 8.00, 11.00, '2025-01-01', 'EUR', true),
@@ -265,7 +265,7 @@ def upgrade():
                 # SQLite syntax
                 op.execute("""
                     INSERT INTO per_diem_rates (country_code, location, rate_per_day, breakfast_deduction, lunch_deduction, dinner_deduction, valid_from, currency_code, is_active)
-                    VALUES 
+                    VALUES
                         ('US', 'General', 55.00, 13.00, 16.00, 26.00, '2025-01-01', 'USD', 1),
                         ('GB', 'General', 45.00, 10.00, 13.00, 22.00, '2025-01-01', 'GBP', 1),
                         ('DE', 'General', 24.00, 5.00, 8.00, 11.00, '2025-01-01', 'EUR', 1),

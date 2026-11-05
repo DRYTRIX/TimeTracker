@@ -28,7 +28,7 @@ class TimeEntryCard extends ConsumerWidget {
     // Find project and task by ID
     final projectsState = ref.watch(projectsProvider);
     final tasksState = ref.watch(tasksProvider);
-    
+
     Project? project;
     Task? task;
     if (entry.projectId != null) {

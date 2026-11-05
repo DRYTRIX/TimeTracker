@@ -171,4 +171,3 @@ Inspired by command palettes in:
 - Ctrl+K shortcut
 - Basic keyboard navigation
 - Command filtering
-

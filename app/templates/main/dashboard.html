@@ -1740,22 +1740,22 @@
                     throw new Error(`HTTP ${response.status}`);
                 }
                 const template = await response.json();
-                
+
                 // Get form elements (re-select to avoid scope issues)
                 const projectSelect = document.getElementById('startTimerProject');
                 const taskSelect = document.getElementById('startTimerTask');
                 const notesField = document.getElementById('startTimerNotes');
-                
+
                 if (!projectSelect || !taskSelect || !notesField) {
                     throw new Error('Form elements not found');
                 }
-                
+
                 // Apply template values to form
                 if (template.project_id) {
                     projectSelect.value = template.project_id;
                     // Trigger change event to load tasks
                     projectSelect.dispatchEvent(new Event('change'));
-                    
+
                     // Wait for tasks to load, then select task
                     setTimeout(() => {
                         if (template.task_id) {
@@ -1773,7 +1773,7 @@
                         } catch (e) {}
                     }
                 }
-                
+
                 // Mark template as used
                 const csrfToken = modal ? modal.querySelector('input[name="csrf_token"]')?.value : '';
                 fetch(`/api/templates/${templateId}/use`, {
@@ -1783,7 +1783,7 @@
                         'X-CSRFToken': csrfToken || ''
                     }
                 }).catch(() => {});  // Silently fail if marking fails
-                
+
             } catch (error) {
                 console.error('Error applying template:', error);
                 ttAlert('Failed to apply template. Please try again.');
@@ -1832,7 +1832,7 @@
 
         // Multiple image upload handler - improved version
         window.dashboardNotesEditor.removeHook && window.dashboardNotesEditor.removeHook('addImageBlobHook');
-        
+
         // Create custom multiple file input with unique ID
         const dashboardFileInputId = 'dashboard-image-input-' + Date.now();
         let dashboardFileInput = document.getElementById(dashboardFileInputId);
@@ -1847,17 +1847,17 @@
             dashboardFileInput.style.left = '-9999px';
             document.body.appendChild(dashboardFileInput);
         }
-        
+
         // Verify multiple attribute is set
         if (!dashboardFileInput.hasAttribute('multiple')) {
             dashboardFileInput.setAttribute('multiple', 'multiple');
         }
         console.log('File input multiple attribute:', dashboardFileInput.multiple, dashboardFileInput.hasAttribute('multiple'));
-        
+
         // Function to find image button with multiple strategies
         function findImageButton(toolbar, retries = 0) {
             if (!toolbar) return null;
-            
+
             // Try multiple selectors in order of reliability
             const selectors = [
                 '[data-tooltip="Insert image"]',
@@ -1869,7 +1869,7 @@
                 '.toastui-editor-toolbar-group button:nth-child(6)',
                 '.toastui-editor-toolbar-group button:nth-child(4)'
             ];
-            
+
             for (const selector of selectors) {
                 try {
                     const button = toolbar.querySelector(selector);
@@ -1877,7 +1877,7 @@
                         // Verify it's likely the image button by checking if it has image-related attributes or classes
                         const buttonText = (button.textContent || '').toLowerCase();
                         const buttonTitle = (button.title || button.getAttribute('title') || '').toLowerCase();
-                        if (buttonText.includes('image') || buttonTitle.includes('image') || 
+                        if (buttonText.includes('image') || buttonTitle.includes('image') ||
                             selector.includes('image') || button.classList.toString().includes('image')) {
                             return button;
                         }
@@ -1886,15 +1886,15 @@
                     // Continue to next selector
                 }
             }
-            
+
             return null;
         }
-        
+
         // Function to intercept image button with retry logic
         function setupImageButtonInterception(editor, input, maxRetries = 5) {
             let attempts = 0;
             let intercepted = false;
-            
+
             function tryIntercept() {
                 attempts++;
                 try {
@@ -1903,7 +1903,7 @@
                     if (!editorContainer) {
                         throw new Error('Editor container element not found');
                     }
-                    
+
                     // Find toolbar - try multiple ways to access it
                     let toolbar = null;
                     // Try finding toolbar relative to editor container
@@ -1921,7 +1921,7 @@
                     if (!toolbar) {
                         toolbar = document.querySelector('.toastui-editor-toolbar');
                     }
-                    
+
                     if (toolbar && !intercepted) {
                         const imageButton = findImageButton(toolbar, attempts);
                         if (imageButton) {
@@ -1930,15 +1930,15 @@
                                 e.preventDefault();
                                 e.stopPropagation();
                                 e.stopImmediatePropagation();
-                                
+
                                 // Small delay to ensure default behavior is prevented
                                 setTimeout(() => {
                                     input.click();
                                 }, 10);
-                                
+
                                 return false;
                             }, true); // Use capture phase
-                            
+
                             intercepted = true;
                             console.log('Successfully intercepted image button for multiple file selection');
                             return true;
@@ -1947,7 +1947,7 @@
                 } catch (err) {
                     console.warn('Error intercepting image button (attempt ' + attempts + '):', err);
                 }
-                
+
                 // Retry if we haven't exceeded max retries
                 if (attempts < maxRetries && !intercepted) {
                     setTimeout(tryIntercept, 200 * attempts); // Exponential backoff
@@ -1958,11 +1958,11 @@
                 }
                 return false;
             }
-            
+
             // Start with initial delay to ensure toolbar is ready
             setTimeout(tryIntercept, 100);
         }
-        
+
         // Override the addImageBlobHook to use multiple file selection
         // This is the fallback if button interception fails
         if (window.dashboardNotesEditor && typeof window.dashboardNotesEditor.addHook === 'function') {
@@ -1975,27 +1975,27 @@
                 // Don't call callback - let dashboardFileInput.change handle it
             });
         }
-        
+
         // Setup button interception
         if (window.dashboardNotesEditor) {
             setupImageButtonInterception(window.dashboardNotesEditor, dashboardFileInput);
         }
-        
+
         // Handle multiple file selection with progress feedback
         dashboardFileInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             console.log('File input changed. Files selected:', files.length, 'Multiple attribute:', dashboardFileInput.multiple);
-            
+
             if (files.length === 0) {
                 console.log('No files selected');
                 return;
             }
-            
+
             // Log file details for debugging
             files.forEach((file, index) => {
                 console.log(`File ${index + 1}: ${file.name}, type: ${file.type}, size: ${file.size}`);
             });
-            
+
             // Validate file types
             const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
             const validFiles = files.filter(file => {
@@ -2005,23 +2005,23 @@
                 }
                 return isValid;
             });
-            
+
             if (validFiles.length === 0) {
                 ttAlert('{{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.") }}');
                 dashboardFileInput.value = '';
                 return;
             }
-            
+
             if (validFiles.length < files.length) {
                 console.warn('Some files were skipped due to invalid type');
             }
-            
+
             // Show loading feedback
             const fileCount = validFiles.length;
-            const loadingMsg = fileCount > 1 ? 
-                `{{ _("Uploading") }} ${fileCount} {{ _("images") }}...` : 
+            const loadingMsg = fileCount > 1 ?
+                `{{ _("Uploading") }} ${fileCount} {{ _("images") }}...` :
                 '{{ _("Uploading image") }}...';
-            
+
             // Try to show a temporary loading indicator (if toast/notification system exists)
             let loadingIndicator = null;
             try {
@@ -2033,18 +2033,18 @@
             } catch (e) {
                 // No toast system available, continue without it
             }
-            
+
             try {
                 const formData = new FormData();
                 validFiles.forEach(file => {
                     formData.append('images', file);
                 });
-                
+
                 const res = await fetch('{{ url_for('api.upload_editor_images_bulk') }}', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await res.json();
                 if (data && data.urls && data.urls.length > 0) {
                     // Insert all images into editor
@@ -2052,28 +2052,28 @@
                         const fileName = validFiles[index].name || 'image';
                         return `![${fileName}](${url})`;
                     }).join('\n\n');
-                    
+
                     // Get current markdown content
                     const currentMarkdown = window.dashboardNotesEditor.getMarkdown() || '';
-                    
+
                     // Append images to current content (with proper spacing)
-                    const newMarkdown = currentMarkdown 
+                    const newMarkdown = currentMarkdown
                         ? currentMarkdown + '\n\n' + imagesMarkdown
                         : imagesMarkdown;
-                    
+
                     // Set the markdown which will properly render images in WYSIWYG mode
                     window.dashboardNotesEditor.setMarkdown(newMarkdown);
-                    
+
                     // Show success message
-                    const successMsg = data.urls.length > 1 ? 
-                        `{{ _("Successfully uploaded") }} ${data.urls.length} {{ _("images") }}` : 
+                    const successMsg = data.urls.length > 1 ?
+                        `{{ _("Successfully uploaded") }} ${data.urls.length} {{ _("images") }}` :
                         '{{ _("Image uploaded successfully") }}';
-                    
+
                     if (loadingIndicator && typeof loadingIndicator.update === 'function') {
                         loadingIndicator.update(successMsg, 'success');
                         setTimeout(() => loadingIndicator.remove && loadingIndicator.remove(), 2000);
                     }
-                    
+
                     // Show warnings if any
                     if (data.warnings && data.warnings.length > 0) {
                         console.warn('Some images failed to upload:', data.warnings);
@@ -2100,7 +2100,7 @@
                 }
                 ttAlert('{{ _("Failed to upload images. Please check your connection and try again.") }}');
             }
-            
+
             // Reset file input
             dashboardFileInput.value = '';
         });

@@ -30,8 +30,8 @@ def table_exists(cursor, table_name):
     cursor.execute(
         """
         SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
+            SELECT FROM information_schema.tables
+            WHERE table_schema = 'public'
             AND table_name = %s
         );
     """,
@@ -89,19 +89,19 @@ def migrate():
         # Add comments
         print("Adding table comments...")
         cursor.execute("""
-            COMMENT ON TABLE project_costs IS 
+            COMMENT ON TABLE project_costs IS
             'Tracks project expenses beyond hourly work (travel, materials, services, etc.)';
         """)
         cursor.execute("""
-            COMMENT ON COLUMN project_costs.category IS 
+            COMMENT ON COLUMN project_costs.category IS
             'Category of cost: travel, materials, services, equipment, software, other';
         """)
         cursor.execute("""
-            COMMENT ON COLUMN project_costs.billable IS 
+            COMMENT ON COLUMN project_costs.billable IS
             'Whether this cost should be billed to the client';
         """)
         cursor.execute("""
-            COMMENT ON COLUMN project_costs.invoiced IS 
+            COMMENT ON COLUMN project_costs.invoiced IS
             'Whether this cost has been included in an invoice';
         """)
         print("✓ Added comments")

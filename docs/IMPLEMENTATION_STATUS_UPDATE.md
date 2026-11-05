@@ -97,7 +97,7 @@ sync_direction = cfg.get("sync_direction", "calendar_to_time_tracker")
 
 if sync_direction in ("calendar_to_time_tracker", "bidirectional"):
     calendar_result = self._sync_calendar_to_time_tracker(...)
-    
+
     if sync_direction == "bidirectional":
         tracker_result = self._sync_time_tracker_to_calendar(cfg, calendar_url, sync_type)
 ```

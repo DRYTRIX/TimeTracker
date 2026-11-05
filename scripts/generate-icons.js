@@ -2,12 +2,12 @@
 
 /**
  * Icon Generation Script for TimeTracker
- * 
+ *
  * This script generates all required icon formats from the SVG logo.
  * Requires: sharp, to-ico (npm install sharp to-ico)
- * 
+ *
  * Usage: node scripts/generate-icons.js
- * 
+ *
  * For macOS .icns: run scripts/generate-macos-icon.sh on macOS (uses iconutil)
  */
 

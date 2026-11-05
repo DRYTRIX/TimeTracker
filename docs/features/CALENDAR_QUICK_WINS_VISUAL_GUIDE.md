@@ -194,12 +194,12 @@ Wednesday, Dec 11, 2024                10.0h / 8h (125%)
 ```
 1. Open calendar (shows this week)
    Total Hours: 0h
-   
+
 2. Press [D] for Day view
    Capacity: 0h / 8h (0%) 🟢
-   
+
 3. Create entries for the day
-   
+
 4. End result:
    Capacity: 7.5h / 8h (94%) 🟡
    Perfect! Room for one more task
@@ -212,13 +212,13 @@ Wednesday, Dec 11, 2024                10.0h / 8h (125%)
 ```
 1. Navigate to billing period
    Press [P] [P] [P] to go back 3 weeks
-   
+
 2. Click [💰 Billable Only]
    Total Hours: 32.5h → Only billable shown
-   
+
 3. Press [M] for Month view
    See all billable work at a glance
-   
+
 4. Export for invoice
    Click [Export] → CSV Format
 ```
@@ -230,13 +230,13 @@ Wednesday, Dec 11, 2024                10.0h / 8h (125%)
 ```
 1. Find last week's meeting entry
    Press [P] to go back one week
-   
+
 2. Click the meeting entry
    Modal opens with details
-   
+
 3. Click [Duplicate]
    Enter: "2024-12-11 10:00"
-   
+
 4. ✅ Meeting added to this week
    All notes and properties copied!
 ```
@@ -396,4 +396,3 @@ All Quick Wins are now live and ready to use. Enjoy your improved calendar exper
 ---
 
 **Happy Time Tracking! ⏱️**
-

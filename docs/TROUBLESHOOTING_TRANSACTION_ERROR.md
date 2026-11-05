@@ -5,7 +5,7 @@
 When updating to version 4.1.1, users may encounter the following error:
 
 ```
-sqlalchemy.exc.InternalError: (psycopg2.errors.InFailedSqlTransaction) 
+sqlalchemy.exc.InternalError: (psycopg2.errors.InFailedSqlTransaction)
 current transaction is aborted, commands ignored until end of transaction block
 ```
 
@@ -191,4 +191,3 @@ For additional help, please provide:
 - Output of `flask db current`
 - Database version (`docker-compose exec db psql --version`)
 - Application version (check `setup.py` or `docker-compose.yml`)
-

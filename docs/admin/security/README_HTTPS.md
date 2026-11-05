@@ -218,4 +218,3 @@ docker-compose -f docker-compose.yml -f docker-compose.https.yml up -d
 ✅ Production-grade security settings  
 
 **Enjoy secure TimeTracker! 🔒**
-

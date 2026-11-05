@@ -365,7 +365,7 @@ CREATE TABLE expenses (
     user_id INTEGER NOT NULL,
     project_id INTEGER,
     client_id INTEGER,
-    
+
     -- Expense details
     title VARCHAR(200) NOT NULL,
     description TEXT,
@@ -374,17 +374,17 @@ CREATE TABLE expenses (
     currency_code VARCHAR(3) NOT NULL DEFAULT 'EUR',
     tax_amount NUMERIC(10, 2),
     tax_rate NUMERIC(5, 2),
-    
+
     -- Payment information
     payment_method VARCHAR(50),
     payment_date DATE,
-    
+
     -- Status and approval
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     approved_by INTEGER,
     approved_at DATETIME,
     rejection_reason TEXT,
-    
+
     -- Billing and invoicing
     billable BOOLEAN NOT NULL DEFAULT 0,
     reimbursable BOOLEAN NOT NULL DEFAULT 1,
@@ -392,7 +392,7 @@ CREATE TABLE expenses (
     invoice_id INTEGER,
     reimbursed BOOLEAN NOT NULL DEFAULT 0,
     reimbursed_at DATETIME,
-    
+
     -- Date and metadata
     expense_date DATE NOT NULL,
     receipt_path VARCHAR(500),
@@ -400,10 +400,10 @@ CREATE TABLE expenses (
     vendor VARCHAR(200),
     notes TEXT,
     tags VARCHAR(500),
-    
+
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
+
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
     FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
@@ -490,4 +490,3 @@ For questions or issues with the Expense Tracking feature:
 - [Project Cost Tracking](./PROJECT_COSTS.md)
 - [User Roles and Permissions](./PERMISSIONS.md)
 - [API Documentation](./API.md)
-

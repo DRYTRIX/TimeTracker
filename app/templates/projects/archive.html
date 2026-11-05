@@ -34,16 +34,16 @@
 
         <form method="POST" action="{{ url_for('projects.archive_project', project_id=project.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
             <div class="space-y-4">
                 <div>
                     <label for="reason" class="form-label">
                         {{ _('Reason for Archiving') }} <span class="text-text-muted-light dark:text-text-muted-dark">({{ _('Optional') }})</span>
                     </label>
-                    <textarea 
-                        id="reason" 
-                        name="reason" 
-                        rows="4" 
+                    <textarea
+                        id="reason"
+                        name="reason"
+                        rows="4"
                         class="form-input"
                         placeholder="{{ _('e.g., Project completed, Client contract ended, Project cancelled, etc.') }}"
                     ></textarea>
@@ -95,4 +95,3 @@ function setReason(reason) {
 }
 </script>
 {% endblock %}
-

@@ -64,12 +64,12 @@
     <div class="header">
         <h1>⚠️ {{ _('Invoice Overdue') }}</h1>
     </div>
-    
+
     <div class="content">
         <p>Hello {{ user.display_name }},</p>
-        
+
         <p>This is a notification that <strong>Invoice {{ invoice.invoice_number }}</strong> is now <strong>{{ days_overdue }} days overdue</strong>.</p>
-        
+
         <div class="invoice-details">
             <table>
                 <tr>
@@ -98,9 +98,9 @@
                 </tr>
             </table>
         </div>
-        
+
         <p><strong>Recommended Action:</strong> Please follow up with the client or update the invoice status if payment has been received.</p>
-        
+
         {% if invoice_url %}
         <center>
             <a href="{{ invoice_url }}" class="button">
@@ -109,11 +109,10 @@
         </center>
         {% endif %}
     </div>
-    
+
     <div class="footer">
         <p>TimeTracker - Time Tracking & Project Management</p>
         <p>This is an automated notification. To manage your notification preferences, visit your user settings.</p>
     </div>
 </body>
 </html>
-

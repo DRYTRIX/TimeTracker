@@ -76,11 +76,11 @@
         <div class="content">
             <p>Hello {{ user.display_name or user.username }},</p>
             <p>Quote <strong>{{ quote.quote_number }}</strong> will expire in <strong>{{ days_remaining }} day{% if days_remaining != 1 %}s{% endif %}</strong>.</p>
-            
+
             <div class="warning">
                 <strong>Action Required:</strong> You may want to follow up with the client before the quote expires.
             </div>
-            
+
             <div class="quote-details">
                 <p><strong>Quote Number:</strong> {{ quote.quote_number }}</p>
                 <p><strong>Title:</strong> {{ quote.title }}</p>
@@ -89,7 +89,7 @@
                 <p><strong>Valid Until:</strong> {{ quote.valid_until|format_date if quote.valid_until else 'N/A' }}</p>
                 <p><strong>Days Remaining:</strong> {{ days_remaining }}</p>
             </div>
-            
+
             {% if quote_url %}
             <a href="{{ quote_url }}" class="button">{{ _('View Quote') }}</a>
             {% endif %}
@@ -100,4 +100,3 @@
     </div>
 </body>
 </html>
-

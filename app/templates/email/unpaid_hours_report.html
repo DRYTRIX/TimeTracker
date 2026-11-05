@@ -114,12 +114,12 @@
         <p>Salesman: {{ salesman_initial }}</p>
         <p>{{ start_date }} to {{ end_date }}</p>
     </div>
-    
+
     <div class="content">
         <p>Hello,</p>
-        
+
         <p>This report contains all unpaid (unbilled) hours for clients assigned to you ({{ salesman_initial }}).</p>
-        
+
         <div class="summary-box">
             <p>Total Unpaid Hours</p>
             <h2>{{ "%.2f"|format(report_data.total_hours) }}</h2>
@@ -142,7 +142,7 @@
 
         {% if report_data.entries %}
         <h3 style="margin-top: 30px;">Time Entry Details</h3>
-        
+
         <table class="entries-table">
             <thead>
                 <tr>
@@ -170,9 +170,9 @@
             </tbody>
         </table>
         {% endif %}
-        
+
         <p style="margin-top: 20px;">Please review these entries and create invoices as needed.</p>
-        
+
         {% if reports_url %}
         <center>
             <a href="{{ reports_url }}" class="button">
@@ -181,11 +181,10 @@
         </center>
         {% endif %}
     </div>
-    
+
     <div class="footer">
         <p>TimeTracker - Time Tracking & Project Management</p>
         <p>This is an automated report. For questions, please contact your administrator.</p>
     </div>
 </body>
 </html>
-

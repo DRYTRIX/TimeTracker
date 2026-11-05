@@ -14,7 +14,7 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('scheduled_reports.create_scheduled') }}" novalidate>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div class="md:col-span-2">
                 <label for="saved_view_id" class="form-label">{{ _('Report View') }} *</label>
@@ -26,7 +26,7 @@
                 </select>
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Select a saved report view to schedule') }}</p>
             </div>
-            
+
             <div class="md:col-span-2">
                 <label for="recipients" class="form-label">
                     <i class="fas fa-envelope mr-2"></i>{{ _('Email Recipients') }} *
@@ -39,7 +39,7 @@
                     <i class="fas fa-info-circle mr-1"></i>{{ _('When using Mapping or Template, these are used as fallback if no address is found for a value.') }}
                 </p>
             </div>
-            
+
             <div>
                 <label for="cadence" class="form-label">{{ _('Frequency') }} *</label>
                 <select id="cadence" name="cadence" required class="form-input" onchange="toggleCronField()">
@@ -50,7 +50,7 @@
                     <option value="custom-cron">{{ _('Custom (Cron)') }}</option>
                 </select>
             </div>
-            
+
             <div id="lastMonthField" class="hidden">
                 <label class="flex items-center cursor-pointer pt-8">
                     <input type="checkbox" id="use_last_month_dates" name="use_last_month_dates" value="1" class="form-checkbox">
@@ -58,14 +58,14 @@
                 </label>
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 ml-6">{{ _('For monthly runs: report will use the first and last day of the previous month.') }}</p>
             </div>
-            
+
             <div id="cronField" class="hidden">
                 <label for="cron" class="form-label">{{ _('Cron Expression') }}</label>
                 <input type="text" id="cron" name="cron" class="form-input" placeholder="0 8 * * *">
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Cron format: minute hour day month weekday') }}</p>
             </div>
         </div>
-        
+
         <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ _('Report Iteration (Optional)') }}</h3>
             <div class="space-y-3">
@@ -95,7 +95,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="flex flex-col sm:flex-row justify-end gap-3">
             <a href="{{ url_for('scheduled_reports.list_scheduled') }}" class="px-4 py-2 min-h-[44px] inline-flex items-center justify-center border border-border-light dark:border-border-dark rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">{{ _('Cancel') }}</a>
             <button type="submit" class="bg-primary text-white px-4 py-2 min-h-[44px] rounded-lg hover:bg-primary/90 transition-colors">{{ _('Create Schedule') }}</button>
@@ -172,4 +172,3 @@ function toggleLastMonthField() {
 document.addEventListener('DOMContentLoaded', function() { toggleCronField(); });
 </script>
 {% endblock %}
-

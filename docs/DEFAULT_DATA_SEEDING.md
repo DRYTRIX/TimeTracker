@@ -192,4 +192,3 @@ On a fresh installation:
 - [Database Migration Guide](../migrations/MIGRATION_GUIDE.md)
 - [Deployment Guide](DEPLOYMENT_GUIDE.md)
 - [Quick Start Guide](QUICK_START_GUIDE.md)
-

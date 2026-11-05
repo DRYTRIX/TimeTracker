@@ -86,7 +86,7 @@ Tests are organized using pytest markers:
 #### 🔍 Pull Requests (Comprehensive Testing)
 - **Runs on**: Every PR to main or develop
 - **Duration**: ~30-40 minutes
-- **Tests**: 
+- **Tests**:
   - Smoke tests (fast, critical)
   - Unit tests (parallel)
   - Integration tests (with PostgreSQL)
@@ -124,4 +124,3 @@ View build status and metrics:
 ---
 
 **Note**: Add this section to your main README.md file
-

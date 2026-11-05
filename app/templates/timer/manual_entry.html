@@ -22,7 +22,7 @@
         <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 mt-1"></i>
         <div>
             <p class="text-sm text-blue-800 dark:text-blue-200">
-                <strong>{{ _('Duplicating entry:') }}</strong> 
+                <strong>{{ _('Duplicating entry:') }}</strong>
                 {% if original_entry.project %}
                     {{ original_entry.project.name }}{% if original_entry.task %} - {{ original_entry.task.name }}{% endif %}
                 {% elif original_entry.client %}
@@ -475,7 +475,7 @@ document.addEventListener('DOMContentLoaded', async function(){
             }
         });
     }
-    
+
     function buildTasksUrl(projectId) {
         const pid = String(projectId || '').trim();
         if (!pid) return '';
@@ -565,7 +565,7 @@ document.addEventListener('DOMContentLoaded', async function(){
             }
         }
     }
-    
+
     if (projectSelect && projectSelect.value) {
         loadTasks(projectSelect.value);
     }
@@ -616,14 +616,14 @@ document.addEventListener('DOMContentLoaded', async function(){
         endTime.addEventListener('input', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(false); });
         endTime.addEventListener('focus', () => { if (endTime.disabled) { setDurationOnlyMode(false); ensureStartEndDefaultsIfEmpty(); } });
     }
-    
+
     // Form validation: ensure either project or client is selected and validate time range / duration-only
     // Use capture phase to run before other handlers
     if (form) {
         // Store original button state to restore if needed
         const submitBtn = form.querySelector('button[type="submit"]');
         let originalButtonHTML = submitBtn ? submitBtn.innerHTML : null;
-        
+
         form.addEventListener('submit', function(e) {
             // Validate project or client selection
             const projectVal = projectSelect ? projectSelect.value : '';
@@ -631,13 +631,13 @@ document.addEventListener('DOMContentLoaded', async function(){
             if (!projectVal && !clientVal) {
                 e.preventDefault();
                 e.stopImmediatePropagation(); // Stop other handlers from running
-                
+
                 // Ensure button state is preserved
                 if (submitBtn && originalButtonHTML) {
                     submitBtn.innerHTML = originalButtonHTML;
                     submitBtn.disabled = false;
                 }
-                
+
                         // Show error message using toast notification
                         const errorMsg = {{ _("Please select either a project or a client")|tojson }};
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
@@ -713,7 +713,7 @@ document.addEventListener('DOMContentLoaded', async function(){
                     return false;
                 }
             }
-            
+
             // Validate that either full start/end is present, or a worked_time duration is provided.
             const startDate = document.getElementById('start_date');
             const startTime = document.getElementById('start_time');
@@ -738,23 +738,23 @@ document.addEventListener('DOMContentLoaded', async function(){
                 }
                 return false;
             }
-            
+
             // If we have start+end, validate the range. If duration-only, backend will compute range.
             if (hasAllTimes) {
                 const start = new Date(`${startDate.value}T${startTime.value}:00`);
                 const end = new Date(`${endDate.value}T${endTime.value}:00`);
-                
+
                 if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
                     if (end <= start) {
                         e.preventDefault();
                         e.stopImmediatePropagation(); // Stop other handlers from running
-                        
+
                         // Ensure button state is preserved
                         if (submitBtn && originalButtonHTML) {
                             submitBtn.innerHTML = originalButtonHTML;
                             submitBtn.disabled = false;
                         }
-                        
+
                         // Show error message using toast notification
                         const errorMsg = {{ _("End time must be after start time")|tojson }};
                         if (window.toastManager && typeof window.toastManager.error === 'function') {
@@ -921,7 +921,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Multiple image upload handler - improved version
         mdEditor.removeHook && mdEditor.removeHook('addImageBlobHook');
-        
+
         // Create custom multiple file input with unique ID
         const fileInputId = 'manual-entry-image-input-' + Date.now();
         let fileInput = document.getElementById(fileInputId);
@@ -936,17 +936,17 @@ document.addEventListener('DOMContentLoaded', function() {
             fileInput.style.left = '-9999px';
             document.body.appendChild(fileInput);
         }
-        
+
         // Verify multiple attribute is set
         if (!fileInput.hasAttribute('multiple')) {
             fileInput.setAttribute('multiple', 'multiple');
         }
         console.log('File input multiple attribute:', fileInput.multiple, fileInput.hasAttribute('multiple'));
-        
+
         // Function to find image button with multiple strategies
         function findImageButton(toolbar, retries = 0) {
             if (!toolbar) return null;
-            
+
             // Try multiple selectors in order of reliability
             const selectors = [
                 '[data-tooltip="Insert image"]',
@@ -958,7 +958,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 '.toastui-editor-toolbar-group button:nth-child(6)',
                 '.toastui-editor-toolbar-group button:nth-child(4)'
             ];
-            
+
             for (const selector of selectors) {
                 try {
                     const button = toolbar.querySelector(selector);
@@ -966,7 +966,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Verify it's likely the image button by checking if it has image-related attributes or classes
                         const buttonText = (button.textContent || '').toLowerCase();
                         const buttonTitle = (button.title || button.getAttribute('title') || '').toLowerCase();
-                        if (buttonText.includes('image') || buttonTitle.includes('image') || 
+                        if (buttonText.includes('image') || buttonTitle.includes('image') ||
                             selector.includes('image') || button.classList.toString().includes('image')) {
                             return button;
                         }
@@ -975,15 +975,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Continue to next selector
                 }
             }
-            
+
             return null;
         }
-        
+
         // Function to intercept image button with retry logic
         function setupImageButtonInterception(editor, input, maxRetries = 5) {
             let attempts = 0;
             let intercepted = false;
-            
+
             function tryIntercept() {
                 attempts++;
                 try {
@@ -992,7 +992,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!editorContainer) {
                         throw new Error('Editor container element not found');
                     }
-                    
+
                     // Find toolbar - try multiple ways to access it
                     let toolbar = null;
                     // Try finding toolbar relative to editor container
@@ -1010,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!toolbar) {
                         toolbar = document.querySelector('.toastui-editor-toolbar');
                     }
-                    
+
                     if (toolbar && !intercepted) {
                         const imageButton = findImageButton(toolbar, attempts);
                         if (imageButton) {
@@ -1019,15 +1019,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 e.stopImmediatePropagation();
-                                
+
                                 // Small delay to ensure default behavior is prevented
                                 setTimeout(() => {
                                     input.click();
                                 }, 10);
-                                
+
                                 return false;
                             }, true); // Use capture phase
-                            
+
                             intercepted = true;
                             console.log('Successfully intercepted image button for multiple file selection');
                             return true;
@@ -1036,7 +1036,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } catch (err) {
                     console.warn('Error intercepting image button (attempt ' + attempts + '):', err);
                 }
-                
+
                 // Retry if we haven't exceeded max retries
                 if (attempts < maxRetries && !intercepted) {
                     setTimeout(tryIntercept, 200 * attempts); // Exponential backoff
@@ -1047,11 +1047,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return false;
             }
-            
+
             // Start with initial delay to ensure toolbar is ready
             setTimeout(tryIntercept, 100);
         }
-        
+
         // Override the addImageBlobHook to use multiple file selection
         // This is the fallback if button interception fails
         if (mdEditor && typeof mdEditor.addHook === 'function') {
@@ -1064,27 +1064,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Don't call callback - let fileInput.change handle it
             });
         }
-        
+
         // Setup button interception
         if (mdEditor) {
             setupImageButtonInterception(mdEditor, fileInput);
         }
-        
+
         // Handle multiple file selection with progress feedback
         fileInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             console.log('File input changed. Files selected:', files.length, 'Multiple attribute:', fileInput.multiple);
-            
+
             if (files.length === 0) {
                 console.log('No files selected');
                 return;
             }
-            
+
             // Log file details for debugging
             files.forEach((file, index) => {
                 console.log(`File ${index + 1}: ${file.name}, type: ${file.type}, size: ${file.size}`);
             });
-            
+
             // Validate file types
             const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
             const validFiles = files.filter(file => {
@@ -1094,23 +1094,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return isValid;
             });
-            
+
             if (validFiles.length === 0) {
                 ttAlert({{ _("No valid image files selected. Please select PNG, JPG, GIF, or WebP images.")|tojson }});
                 fileInput.value = '';
                 return;
             }
-            
+
             if (validFiles.length < files.length) {
                 console.warn('Some files were skipped due to invalid type');
             }
-            
+
             // Show loading feedback
             const fileCount = validFiles.length;
-            const loadingMsg = fileCount > 1 ? 
+            const loadingMsg = fileCount > 1 ?
                         ({{ _("Uploading")|tojson }} + ' ' + fileCount + ' ' + {{ _("images")|tojson }} + '...') :
                 {{ _("Uploading image")|tojson }} + '...';
-            
+
             // Try to show a temporary loading indicator (if toast/notification system exists)
             let loadingIndicator = null;
             try {
@@ -1122,18 +1122,18 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (e) {
                 // No toast system available, continue without it
             }
-            
+
             try {
                 const formData = new FormData();
                 validFiles.forEach(file => {
                     formData.append('images', file);
                 });
-                
+
                 const res = await fetch('{{ url_for('api.upload_editor_images_bulk') }}', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const data = await res.json();
                 if (data && data.urls && data.urls.length > 0) {
                     // Insert all images into editor
@@ -1141,28 +1141,28 @@ document.addEventListener('DOMContentLoaded', function() {
                         const fileName = validFiles[index].name || 'image';
                         return `![${fileName}](${url})`;
                     }).join('\n\n');
-                    
+
                     // Get current markdown content
                     const currentMarkdown = mdEditor.getMarkdown() || '';
-                    
+
                     // Append images to current content (with proper spacing)
-                    const newMarkdown = currentMarkdown 
+                    const newMarkdown = currentMarkdown
                         ? currentMarkdown + '\n\n' + imagesMarkdown
                         : imagesMarkdown;
-                    
+
                     // Set the markdown which will properly render images in WYSIWYG mode
                     mdEditor.setMarkdown(newMarkdown);
-                    
+
                     // Show success message
-                    const successMsg = data.urls.length > 1 ? 
+                    const successMsg = data.urls.length > 1 ?
                         ({{ _("Successfully uploaded")|tojson }} + ' ' + data.urls.length + ' ' + {{ _("images")|tojson }}) :
                         {{ _("Image uploaded successfully")|tojson }};
-                    
+
                     if (loadingIndicator && typeof loadingIndicator.update === 'function') {
                         loadingIndicator.update(successMsg, 'success');
                         setTimeout(() => loadingIndicator.remove && loadingIndicator.remove(), 2000);
                     }
-                    
+
                     // Show warnings if any
                     if (data.warnings && data.warnings.length > 0) {
                         console.warn('Some images failed to upload:', data.warnings);
@@ -1189,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 ttAlert({{ _("Failed to upload images. Please check your connection and try again.")|tojson }});
             }
-            
+
             // Reset file input
             fileInput.value = '';
         });

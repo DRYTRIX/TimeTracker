@@ -92,12 +92,12 @@
                 </label>
             </div>
         </div>
-        
+
         <!-- Suppliers Section -->
         <div class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
             <h3 class="text-lg font-semibold mb-4">{{ _('Suppliers') }}</h3>
             <p class="text-sm text-gray-500 mb-4">{{ _('Manage multiple suppliers for this item with different pricing.') }}</p>
-            
+
             <div id="suppliers-container" class="space-y-4">
                 {% if item %}
                     {% for supplier_item in item.supplier_items.filter_by(is_active=True).all() %}
@@ -124,7 +124,7 @@
                     {% endfor %}
                 {% endif %}
             </div>
-            
+
             <button type="button" id="add-supplier" class="mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
                 <i class="fas fa-plus mr-2"></i>{{ _('Add Supplier') }}
             </button>
@@ -146,18 +146,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const suppliersContainer = document.getElementById('suppliers-container');
     const addSupplierBtn = document.getElementById('add-supplier');
     const suppliers = {{ suppliers | tojson if suppliers else '[]' }};
-    
+
     // Add supplier row
     addSupplierBtn.addEventListener('click', function() {
         const row = document.createElement('div');
         row.className = 'supplier-row grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
-        
+
         let suppliersHtml = '<option value="">{{ _("Select Supplier") }}</option>';
         suppliers.forEach(supplier => {
             suppliersHtml += '<option value="' + supplier.id + '">' + supplier.code + ' - ' + supplier.name + '</option>';
         });
-        
-        row.innerHTML = 
+
+        row.innerHTML =
             '<input type="hidden" name="supplier_item_id[]" value="">' +
             '<select name="supplier_id[]" class="md:col-span-3 form-input text-sm" required>' + suppliersHtml + '</select>' +
             '<input type="text" name="supplier_sku[]" placeholder="{{ _("Supplier SKU") }}" class="md:col-span-2 form-input text-sm">' +
@@ -171,15 +171,15 @@ document.addEventListener('DOMContentLoaded', function() {
             '<button type="button" class="remove-supplier md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition text-sm" title="{{ _("Remove") }}">' +
                 '<i class="fas fa-trash"></i>' +
             '</button>';
-        
+
         suppliersContainer.appendChild(row);
-        
+
         // Setup remove button
         row.querySelector('.remove-supplier').addEventListener('click', function() {
             row.remove();
         });
     });
-    
+
     // Setup remove buttons for existing rows
     document.querySelectorAll('.remove-supplier').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -190,4 +190,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endblock %}
 {% endblock %}
-

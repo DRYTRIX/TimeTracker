@@ -22,7 +22,7 @@ command_exists() {
 # Function to test basic connectivity
 test_basic_connectivity() {
     log "=== Testing Basic Connectivity ==="
-    
+
     # Test if we can resolve the database hostname
     if ping -c 1 db >/dev/null 2>&1; then
         log "✓ Can ping database host 'db'"
@@ -30,7 +30,7 @@ test_basic_connectivity() {
         log "✗ Cannot ping database host 'db'"
         return 1
     fi
-    
+
     # Test if database port is accessible
     if command_exists nc; then
         if nc -zv db 5432 2>/dev/null; then
@@ -42,18 +42,18 @@ test_basic_connectivity() {
     else
         log "⚠ netcat not available, skipping port test"
     fi
-    
+
     return 0
 }
 
 # Function to test environment variables
 test_environment() {
     log "=== Testing Environment Variables ==="
-    
+
     # Check if DATABASE_URL is set
     if [[ -n "${DATABASE_URL}" ]]; then
         log "✓ DATABASE_URL is set: ${DATABASE_URL}"
-        
+
         # Check if it's a valid PostgreSQL URL
         if [[ "${DATABASE_URL}" == postgresql* ]]; then
             log "✓ DATABASE_URL format is valid PostgreSQL"
@@ -65,21 +65,21 @@ test_environment() {
         log "✗ DATABASE_URL is not set"
         return 1
     fi
-    
+
     # Check other important variables
     if [[ -n "${FLASK_APP}" ]]; then
         log "✓ FLASK_APP is set: ${FLASK_APP}"
     else
         log "⚠ FLASK_APP is not set"
     fi
-    
+
     return 0
 }
 
 # Function to test Python dependencies
 test_python_dependencies() {
     log "=== Testing Python Dependencies ==="
-    
+
     # Check if psycopg2 is available
     if python -c "import psycopg2; print('✓ psycopg2 is available')" 2>/dev/null; then
         log "✓ psycopg2 is available"
@@ -87,7 +87,7 @@ test_python_dependencies() {
         log "✗ psycopg2 is not available"
         return 1
     fi
-    
+
     # Check if Flask is available
     if python -c "import flask; print('✓ Flask is available')" 2>/dev/null; then
         log "✓ Flask is available"
@@ -95,7 +95,7 @@ test_python_dependencies() {
         log "✗ Flask is not available"
         return 1
     fi
-    
+
     # Check if Flask-Migrate is available
     if python -c "import flask_migrate; print('✓ Flask-Migrate is available')" 2>/dev/null; then
         log "✓ Flask-Migrate is available"
@@ -103,14 +103,14 @@ test_python_dependencies() {
         log "✗ Flask-Migrate is not available"
         return 1
     fi
-    
+
     return 0
 }
 
 # Function to test database connection
 test_database_connection() {
     log "=== Testing Database Connection ==="
-    
+
     # Run the connection test script
     if [[ -f "/app/docker/test_db_connection.py" ]]; then
         log "Running database connection test..."
@@ -123,7 +123,7 @@ test_database_connection() {
         fi
     else
         log "⚠ Database connection test script not found"
-        
+
         # Fallback: test connection manually
         log "Testing connection manually..."
         if python -c "
@@ -156,11 +156,11 @@ except Exception as e:
 # Function to test Flask-Migrate commands
 test_flask_migrate() {
     log "=== Testing Flask-Migrate Commands ==="
-    
+
     # Check if flask db command is available
     if flask db --help >/dev/null 2>&1; then
         log "✓ Flask-Migrate commands are available"
-        
+
         # Test current command
         if flask db current >/dev/null 2>&1; then
             current_revision=$(flask db current 2>/dev/null | tr -d '\n' || echo "unknown")
@@ -172,27 +172,27 @@ test_flask_migrate() {
         log "✗ Flask-Migrate commands are not available"
         return 1
     fi
-    
+
     return 0
 }
 
 # Function to show system information
 show_system_info() {
     log "=== System Information ==="
-    
+
     log "Python version: $(python --version)"
     log "Flask version: $(flask --version 2>/dev/null || echo 'Flask CLI not available')"
     log "Working directory: $(pwd)"
     log "Current user: $(whoami)"
     log "Environment: $(env | grep -E '(FLASK|DATABASE|PYTHON)' | sort)"
-    
+
     # Check if we're in a container
     if [[ -f /.dockerenv ]]; then
         log "✓ Running in Docker container"
     else
         log "⚠ Not running in Docker container"
     fi
-    
+
     # Check if we can access the app directory
     if [[ -d "/app" ]]; then
         log "✓ /app directory is accessible"
@@ -205,11 +205,11 @@ show_system_info() {
 # Main execution
 main() {
     log "Starting TimeTracker startup debug..."
-    
+
     # Show system information
     show_system_info
     echo
-    
+
     # Test basic connectivity
     if ! test_basic_connectivity; then
         log "❌ Basic connectivity test failed"
@@ -222,7 +222,7 @@ main() {
         return 1
     fi
     echo
-    
+
     # Test environment variables
     if ! test_environment; then
         log "❌ Environment test failed"
@@ -235,7 +235,7 @@ main() {
         return 1
     fi
     echo
-    
+
     # Test Python dependencies
     if ! test_python_dependencies; then
         log "❌ Python dependencies test failed"
@@ -248,7 +248,7 @@ main() {
         return 1
     fi
     echo
-    
+
     # Test database connection
     if ! test_database_connection; then
         log "❌ Database connection test failed"
@@ -262,7 +262,7 @@ main() {
         return 1
     fi
     echo
-    
+
     # Test Flask-Migrate
     if ! test_flask_migrate; then
         log "❌ Flask-Migrate test failed"
@@ -275,10 +275,10 @@ main() {
         return 1
     fi
     echo
-    
+
     log "🎉 All tests passed! System appears to be ready."
     log "You can now try starting the application normally."
-    
+
     return 0
 }
 

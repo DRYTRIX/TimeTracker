@@ -78,8 +78,8 @@ def migrate_to_client_model():
         try:
             # Check if client_id column already exists
             result = db.session.execute(db.text("""
-                SELECT column_name 
-                FROM information_schema.columns 
+                SELECT column_name
+                FROM information_schema.columns
                 WHERE table_name = 'projects' AND column_name = 'client_id'
             """))
             if result.fetchone():
@@ -114,8 +114,8 @@ def migrate_to_client_model():
         print("Step 6: Adding foreign key constraint...")
         try:
             db.session.execute(db.text("""
-                ALTER TABLE projects 
-                ADD CONSTRAINT fk_projects_client_id 
+                ALTER TABLE projects
+                ADD CONSTRAINT fk_projects_client_id
                 FOREIGN KEY (client_id) REFERENCES clients(id)
             """))
             print("✓ Foreign key constraint added successfully")

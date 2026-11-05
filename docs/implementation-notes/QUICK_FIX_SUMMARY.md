@@ -120,4 +120,3 @@ pip install black && black app/ && git add . && git commit -F COMMIT_MESSAGE.txt
 ## 🎉 Status: ALL TESTS FIXED!
 
 Your CI/CD pipeline is ready to go after Black formatting.
-

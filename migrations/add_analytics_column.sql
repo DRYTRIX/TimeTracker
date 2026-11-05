@@ -5,9 +5,9 @@
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 
-        FROM information_schema.columns 
-        WHERE table_name = 'settings' 
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'settings'
         AND column_name = 'allow_analytics'
     ) THEN
         -- Add the new column
@@ -20,6 +20,6 @@ END $$;
 
 -- Verify the column was added
 SELECT column_name, data_type, is_nullable, column_default
-FROM information_schema.columns 
-WHERE table_name = 'settings' 
+FROM information_schema.columns
+WHERE table_name = 'settings'
 AND column_name = 'allow_analytics';

@@ -387,4 +387,3 @@ When contributing to the templates feature:
 - **Implementation**: Initial implementation in Quick Wins phase (January 2025)
 - **Testing & Documentation**: Completed October 2025
 - **Maintained by**: TimeTracker Project Contributors
-

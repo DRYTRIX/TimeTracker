@@ -593,21 +593,21 @@
     .calendar-day-view {
         grid-template-columns: 60px 1fr;
     }
-    
+
     .time-slot {
         font-size: 0.75rem;
         padding: 0.25rem;
     }
-    
+
     .month-cell {
         height: 80px;
         font-size: 0.75rem;
     }
-    
+
     .calendar-week-view {
         min-width: 600px;
     }
-    
+
     .event-badge {
         font-size: 0.65rem;
         padding: 0.125rem 0.25rem;
@@ -730,4 +730,3 @@
 .week-event-block {
     position: relative;
 }
-

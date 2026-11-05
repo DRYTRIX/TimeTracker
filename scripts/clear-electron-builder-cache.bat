@@ -12,7 +12,7 @@ echo.
 
 if exist "%CACHE_DIR%" (
     echo Removing cache directories...
-    
+
     REM Remove winCodeSign cache (causes symlink issues)
     if exist "%CACHE_DIR%\winCodeSign" (
         echo   Removing winCodeSign cache...
@@ -24,7 +24,7 @@ if exist "%CACHE_DIR%" (
             echo   [OK] winCodeSign cache removed
         )
     )
-    
+
     echo.
     echo [OK] Cache cleared
 ) else (

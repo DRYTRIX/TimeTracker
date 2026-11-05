@@ -108,4 +108,3 @@ Some shortcuts may conflict with browser shortcuts:
 - **`F1-F12`** function keys may have browser-specific behavior
 
 Most common shortcuts are designed to avoid conflicts.
-

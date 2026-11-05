@@ -485,4 +485,3 @@
     window.EnhancedSearch = EnhancedSearch;
 
 })();
-

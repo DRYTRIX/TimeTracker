@@ -38,7 +38,7 @@
                     </div>
                 </div>
             </div>
-        
+
         <div class="flex items-center gap-2 mb-4">
             {% set auth_method = config.get('AUTH_METHOD', 'local') or 'local' %}
             {% set oidc_enabled = auth_method.lower() in ['oidc', 'both', 'all'] %}
@@ -52,8 +52,8 @@
             </span>
             {% endif %}
         </div>
-        
-        <a href="{{ url_for('admin.oidc_setup_wizard') }}" 
+
+        <a href="{{ url_for('admin.oidc_setup_wizard') }}"
            class="block w-full bg-primary hover:bg-primary/90 text-white px-4 py-2.5 min-h-[44px] rounded-lg transition-colors text-center font-medium inline-flex items-center justify-center">
             <i class="fas fa-magic mr-2"></i>{{ _('Setup Wizard') }}
         </a>
@@ -119,7 +119,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="flex items-center gap-2 mb-4">
                 {% if existing_integration %}
                     {% if existing_integration.is_active %}
@@ -147,15 +147,15 @@
                     </span>
                 {% endif %}
             </div>
-            
+
             <div class="space-y-2">
                 {% if has_setup_wizard(provider.provider) %}
-                <a href="{{ url_for('integrations.setup_wizard', provider=provider.provider) }}" 
+                <a href="{{ url_for('integrations.setup_wizard', provider=provider.provider) }}"
                    class="block w-full bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-lg transition-colors text-center font-medium">
                     <i class="fas fa-magic mr-2"></i>{{ _('Setup Wizard') }}
                 </a>
                 {% endif %}
-                <a href="{{ url_for('integrations.manage_integration', provider=provider.provider) }}" 
+                <a href="{{ url_for('integrations.manage_integration', provider=provider.provider) }}"
                    class="block w-full {% if existing_integration and existing_integration.is_active %}bg-gray-600 hover:bg-gray-700{% else %}{% if has_setup_wizard(provider.provider) %}bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600{% else %}bg-primary hover:bg-primary/90{% endif %}{% endif %} text-white px-4 py-2.5 rounded-lg transition-colors text-center font-medium">
                     {% if existing_integration %}
                         {% if existing_integration.is_active %}

@@ -386,4 +386,3 @@ If you encounter issues with uploads persistence:
    - Docker Compose version
    - Relevant log output
    - Steps to reproduce the issue
-

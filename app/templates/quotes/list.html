@@ -106,9 +106,9 @@ function toggleFilterVisibility() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
     const isCollapsed = filterBody.classList.contains('filter-collapsed');
-    
+
     if (isCollapsed) {
         filterBody.classList.remove('filter-collapsed');
         toggleIcon.classList.remove('fa-chevron-down');
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const toggleIcon = document.getElementById('filterToggleIcon');
     const toggleButton = document.getElementById('toggleFilters');
     if (!filterBody || !toggleIcon || !toggleButton) return;
-    
+
     const filtersVisible = localStorage.getItem('quoteListFiltersVisible');
     if (filtersVisible === 'false') {
         filterBody.classList.add('filter-collapsed');
@@ -148,16 +148,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // Quotes Filter Handler - AJAX filtering
 (function() {
     'use strict';
-    
+
     let filterTimeout = null;
     let searchTimeout = null;
-    
+
     function getFilterParams() {
         const form = document.getElementById('quotesFilterForm');
         if (!form) return {};
-        
+
         const params = {};
-        
+
         // Get search input value directly
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 params.search = searchValue;
             }
         }
-        
+
         // Get status
         const statusSelect = form.querySelector('[name="status"]');
         if (statusSelect) {
@@ -179,34 +179,34 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             params.status = 'all';
         }
-        
+
         return params;
     }
-    
+
     function buildFilterUrl() {
         const params = getFilterParams();
         const queryString = new URLSearchParams(params).toString();
         return `/quotes?${queryString}`;
     }
-    
+
     function applyFilters() {
         const url = buildFilterUrl();
         const container = document.getElementById('quotesListContainer');
-        
+
         if (!container) {
             console.error('quotesListContainer not found');
             return;
         }
-        
+
         // Show loading state
         container.style.opacity = '0.5';
         container.style.pointerEvents = 'none';
-        
+
         // Update URL
         if (window.history && window.history.pushState) {
             window.history.pushState({}, '', url);
         }
-        
+
         // Fetch filtered results
         fetch(url, {
             method: 'GET',
@@ -225,9 +225,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(html => {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = html.trim();
-            
+
             const newContainer = tempDiv.querySelector('#quotesListContainer');
-            
+
             if (newContainer) {
                 container.innerHTML = newContainer.innerHTML;
             } else {
@@ -254,21 +254,21 @@ document.addEventListener('DOMContentLoaded', function() {
             container.style.pointerEvents = '';
         });
     }
-    
+
     function debouncedApplyFilters(delay = 100) {
         if (filterTimeout) {
             clearTimeout(filterTimeout);
         }
         filterTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     function debouncedSearch(delay = 500) {
         if (searchTimeout) {
             clearTimeout(searchTimeout);
         }
         searchTimeout = setTimeout(applyFilters, delay);
     }
-    
+
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('quotesFilterForm');
@@ -276,21 +276,21 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Quotes filter form not found');
             return;
         }
-        
+
         // Auto-submit on dropdown changes
         form.querySelectorAll('select').forEach(select => {
             select.addEventListener('change', () => {
                 debouncedApplyFilters(100);
             });
         });
-        
+
         // Auto-submit on search input (debounced)
         const searchInput = form.querySelector('input[name="search"]');
         if (searchInput) {
             searchInput.addEventListener('input', () => {
                 debouncedSearch(500);
             });
-            
+
             // Submit on Enter
             searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
+
         // Prevent form submission (use AJAX instead)
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -361,16 +361,16 @@ document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeA
 function showBulkAction(action){
     const count = document.querySelectorAll('.quote-checkbox:checked').length;
     if (count === 0) return false;
-    
+
     const actions = {
         'duplicate': { label: '{{ _('Duplicate') }}', msg: `{{ _('Are you sure you want to duplicate') }} ${count} {{ _('quote(s)?') }}` },
         'mark_sent': { label: '{{ _('Mark as Sent') }}', msg: `{{ _('Are you sure you want to mark') }} ${count} {{ _('quote(s) as sent?') }}` },
         'delete': { label: '{{ _('Delete') }}', msg: `{{ _('Are you sure you want to delete') }} ${count} {{ _('quote(s)?') }}`, variant: 'danger' }
     };
-    
+
     const actionData = actions[action];
     if (!actionData) return false;
-    
+
     if (window.showConfirm){
         window.showConfirm(actionData.msg, { title: actionData.label, confirmText: actionData.label, variant: actionData.variant || 'default' }).then(function(ok){
             if (ok) submitBulkAction(action);

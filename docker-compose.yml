@@ -45,13 +45,13 @@ services:
       - ADMIN_USERNAMES=${ADMIN_USERNAMES:-admin}
       # IMPORTANT: Change SECRET_KEY in production! Used for sessions and CSRF tokens.
       # Generate a secure key: python -c "import secrets; print(secrets.token_hex(32))"
-      # 
+      #
       # CSRF CONFIGURATION:
       # - WTF_CSRF_SSL_STRICT: Set to 'false' for HTTP access (localhost or IP address)
       #   Set to 'true' only when using HTTPS in production
       # - If accessing via IP address (e.g., 192.168.1.100), also set:
       #   SESSION_COOKIE_SECURE=false and CSRF_COOKIE_SECURE=false
-      # 
+      #
       # TROUBLESHOOTING: If forms fail with "CSRF token missing or invalid":
       # 1. Verify SECRET_KEY is set and doesn't change between restarts
       # 2. Check CSRF is enabled: WTF_CSRF_ENABLED=true

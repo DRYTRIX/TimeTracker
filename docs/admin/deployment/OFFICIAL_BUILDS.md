@@ -224,4 +224,3 @@ You can also trigger builds manually:
 ---
 
 **Remember:** Whether you use official or self-hosted builds, TimeTracker respects your privacy. Telemetry is always opt-in, transparent, and never collects PII.
-

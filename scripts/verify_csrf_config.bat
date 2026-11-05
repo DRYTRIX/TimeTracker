@@ -165,4 +165,3 @@ echo   docs/CSRF_CONFIGURATION.md
 echo ==================================================
 
 endlocal
-

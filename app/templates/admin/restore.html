@@ -47,7 +47,7 @@
             <i class="fas fa-sync-alt {% if progress.status == 'running' %}fa-spin{% endif %} mr-2"></i>
             Restore Progress
         </h2>
-        
+
         <div class="mb-4">
             <div class="flex justify-between items-center mb-2">
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</span>
@@ -58,15 +58,15 @@
                     {{ progress.status|title }}
                 </span>
             </div>
-            
+
             <!-- Progress Bar -->
             <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mb-2">
-                <div class="bg-blue-600 h-4 rounded-full transition-all duration-300 flex items-center justify-center text-xs text-white font-semibold" 
+                <div class="bg-blue-600 h-4 rounded-full transition-all duration-300 flex items-center justify-center text-xs text-white font-semibold"
                      style="width: {{ progress.percent }}%">
                     {{ progress.percent }}%
                 </div>
             </div>
-            
+
             <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
                 <i class="fas fa-info-circle mr-1"></i>{{ progress.message }}
             </p>
@@ -99,7 +99,7 @@
             </div>
         </div>
         {% endif %}
-        
+
         {% if progress.status == 'running' %}
         <script nonce="{{ csp_nonce() }}">
         // Auto-refresh every 2 seconds while running
@@ -124,7 +124,7 @@
                 <div class="p-6">
                     <form action="{{ url_for('admin.restore') }}" method="POST" enctype="multipart/form-data" id="restoreForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
+
                         <div class="mb-6">
                             <label for="backup_file" class="form-label">
                                 Select Backup Archive (.zip)
@@ -150,10 +150,10 @@
                         <!-- Confirmation Checkbox -->
                         <div class="mb-6">
                             <label class="flex items-start">
-                                <input type="checkbox" id="confirmRestore" required 
+                                <input type="checkbox" id="confirmRestore" required
                                        class="mt-1 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500">
                                 <span class="ml-3 text-sm text-gray-700 dark:text-gray-300">
-                                    I understand that this will <strong class="text-red-600 dark:text-red-400">permanently replace all current data</strong> 
+                                    I understand that this will <strong class="text-red-600 dark:text-red-400">permanently replace all current data</strong>
                                     and I have a recent backup of the current database.
                                 </span>
                             </label>
@@ -164,7 +164,7 @@
                                     class="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-colors">
                                 <i class="fas fa-undo-alt mr-2"></i>Restore Database
                             </button>
-                            <a href="{{ url_for('admin.backups_management') }}" 
+                            <a href="{{ url_for('admin.backups_management') }}"
                                class="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-semibold transition-colors">
                                 Cancel
                             </a>
@@ -251,7 +251,7 @@
 function updateFileName(input) {
     const fileName = input.files[0]?.name || '';
     document.getElementById('fileName').textContent = fileName ? `Selected: ${fileName}` : '';
-    
+
     // Enable restore button if file is selected and checkbox is checked
     updateRestoreButton();
 }
@@ -304,4 +304,3 @@ dropZone.addEventListener('drop', (e) => {
 }, false);
 </script>
 {% endblock %}
-

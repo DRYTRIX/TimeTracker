@@ -46,4 +46,3 @@ services:
       #   value: demo
       # - key: DEMO_PASSWORD
       #   sync: false
-

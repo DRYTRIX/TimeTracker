@@ -163,13 +163,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingIndicator = document.getElementById('loadingIndicator');
     const clientDataContainer = document.getElementById('clientDataContainer');
     const summarySection = document.getElementById('summarySection');
-    
+
     // Handle form submission with Ajax
     filterForm.addEventListener('submit', function(e) {
         e.preventDefault();
         loadReportData();
     });
-    
+
     // Auto-filter on date change
     document.getElementById('start_date').addEventListener('change', function() {
         loadReportData();
@@ -180,16 +180,16 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('client_id').addEventListener('change', function() {
         loadReportData();
     });
-    
+
     function loadReportData() {
         const formData = new FormData(filterForm);
         const params = new URLSearchParams(formData);
         params.append('format', 'json');
-        
+
         // Show loading indicator
         loadingIndicator.classList.remove('hidden');
         clientDataContainer.style.opacity = '0.5';
-        
+
         fetch('{{ url_for("reports.unpaid_hours_report") }}?' + params.toString(), {
             method: 'GET',
             headers: {
@@ -210,17 +210,17 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error loading report data. Please try again.');
         });
     }
-    
+
     function updateSummary(summary) {
         document.getElementById('summaryTotalHours').textContent = summary.total_unpaid_hours.toFixed(2);
         document.getElementById('summaryEstimatedAmount').textContent = summary.total_estimated_amount.toFixed(2);
         document.getElementById('summaryClientsCount').textContent = summary.clients_count;
     }
-    
+
     function updateClientTable(clientData) {
         const tbody = document.getElementById('clientTableBody');
         if (!tbody) return;
-        
+
         if (clientData.length === 0) {
             tbody.innerHTML = `
                 <tr>
@@ -232,17 +232,17 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             return;
         }
-        
+
         let html = '';
         clientData.forEach(data => {
-            const projectsHtml = data.projects.map(proj => 
+            const projectsHtml = data.projects.map(proj =>
                 `<div class="text-sm">
                     <span class="font-medium">${escapeHtml(proj.project_name)}</span>
                     <span class="text-gray-600 dark:text-gray-400">: ${proj.hours.toFixed(2)}h</span>
                     ${proj.rate > 0 ? `<span class="text-gray-500 dark:text-gray-500">@ ${proj.rate.toFixed(2)}/h</span>` : ''}
                 </div>`
             ).join('');
-            
+
             html += `
                 <tr class="client-row border-b border-border-light dark:border-border-dark hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" data-client-id="${data.client_id}">
                     <td class="p-3">
@@ -297,23 +297,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr>
             `;
         });
-        
+
         tbody.innerHTML = html;
-        
+
         // Re-attach click handlers
         attachExpandHandlers();
     }
-    
+
     function attachExpandHandlers() {
         document.querySelectorAll('.client-row').forEach(row => {
             row.addEventListener('click', function() {
                 const clientId = this.getAttribute('data-client-id');
                 const detailsRow = document.querySelector(`.client-details-row[data-client-id="${clientId}"]`);
                 const icon = this.querySelector('.expand-icon');
-                
+
                 if (detailsRow) {
                     const isHidden = detailsRow.classList.contains('hidden');
-                    
+
                     // Close all other rows
                     document.querySelectorAll('.client-details-row').forEach(r => {
                         r.classList.add('hidden');
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         i.classList.remove('fa-chevron-down');
                         i.classList.add('fa-chevron-right');
                     });
-                    
+
                     // Toggle current row
                     if (isHidden) {
                         detailsRow.classList.remove('hidden');
@@ -337,16 +337,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
-    
+
     // Initial attachment of handlers
     attachExpandHandlers();
-    
+
     // Export button handler
     document.getElementById('exportBtn').addEventListener('click', function(e) {
         e.preventDefault();
@@ -358,4 +358,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

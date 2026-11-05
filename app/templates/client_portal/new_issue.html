@@ -20,7 +20,7 @@
 <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <form method="POST" action="{{ url_for('client_portal.new_issue') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        
+
         <div class="space-y-4">
             <div>
                 <label for="title" class="block text-sm font-medium mb-1">{{ _('Title') }} <span class="text-red-500">*</span></label>
@@ -28,14 +28,14 @@
                        class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                        placeholder="{{ _('Brief description of the issue') }}">
             </div>
-            
+
             <div>
                 <label for="description" class="block text-sm font-medium mb-1">{{ _('Description') }}</label>
                 <textarea id="description" name="description" rows="6"
                           class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                           placeholder="{{ _('Detailed description of the issue, steps to reproduce, etc.') }}">{{ description or '' }}</textarea>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="project_id" class="block text-sm font-medium mb-1">{{ _('Project') }}</label>
@@ -47,7 +47,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="priority" class="block text-sm font-medium mb-1">{{ _('Priority') }}</label>
                     <select id="priority" name="priority"
@@ -59,7 +59,7 @@
                     </select>
                 </div>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="submitter_name" class="block text-sm font-medium mb-1">{{ _('Your Name') }}</label>
@@ -67,7 +67,7 @@
                            class="w-full px-3 py-2 border border-border-light dark:border-border-dark rounded-lg bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                            placeholder="{{ _('Your name (optional)') }}">
                 </div>
-                
+
                 <div>
                     <label for="submitter_email" class="block text-sm font-medium mb-1">{{ _('Your Email') }}</label>
                     <input type="email" id="submitter_email" name="submitter_email" value="{{ submitter_email or '' }}"
@@ -76,7 +76,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="mt-6 flex flex-col-reverse sm:flex-row gap-3">
             <a href="{{ url_for('client_portal.issues') }}" class="bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark px-4 py-2.5 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors text-center">
                 {{ _('Cancel') }}

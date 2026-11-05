@@ -44,19 +44,19 @@ if (Test-Path $NodeModulesDir) {
     Write-Host "Removing node_modules..." -ForegroundColor Cyan
     Write-Host "  (This may take a moment, especially with OneDrive locking)" -ForegroundColor Yellow
     Write-Host ""
-    
+
     # Method 1: Try Remove-Item with -Recurse -Force
     $maxRetries = 5
     $retry = 0
     $removed = $false
-    
+
     while ($retry -lt $maxRetries -and -not $removed) {
         $retry++
         Write-Host "  Attempt $retry/$maxRetries..." -ForegroundColor Yellow
-        
+
         try {
             # Try to remove locked files first
-            Get-ChildItem -Path $NodeModulesDir -Recurse -Force -ErrorAction SilentlyContinue | 
+            Get-ChildItem -Path $NodeModulesDir -Recurse -Force -ErrorAction SilentlyContinue |
                 ForEach-Object {
                     try {
                         Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
@@ -64,7 +64,7 @@ if (Test-Path $NodeModulesDir) {
                         # Ignore individual file errors
                     }
                 }
-            
+
             # Remove directory
             Remove-Item -Path $NodeModulesDir -Recurse -Force -ErrorAction Stop
             $removed = $true

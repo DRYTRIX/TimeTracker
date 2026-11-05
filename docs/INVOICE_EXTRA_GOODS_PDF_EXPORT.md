@@ -311,4 +311,3 @@ For issues, questions, or feature requests related to extra goods in invoice PDF
 **Last Updated**: October 24, 2024  
 **Author**: TimeTracker Development Team  
 **Version**: 1.0.0
-

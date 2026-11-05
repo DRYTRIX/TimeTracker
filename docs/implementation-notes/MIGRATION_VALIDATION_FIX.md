@@ -145,4 +145,3 @@ To verify the fix works in CI/CD:
 **Status:** ✅ Fixed  
 **Tested:** ✅ Unit test passing  
 **Ready for:** CI/CD validation on next PR with migration changes
-

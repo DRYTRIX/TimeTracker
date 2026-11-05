@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Toast Notification System Demo - TimeTracker</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <style>
         :root {
             --primary-color: #3b82f6;
@@ -224,7 +224,7 @@
         <div class="demo-section">
             <h2>Basic Notifications</h2>
             <p class="mb-4">Click the buttons below to see different notification types:</p>
-            
+
             <div class="text-center">
                 <button class="btn btn-success btn-demo" onclick="showSuccessToast()">
                     <i class="fas fa-check-circle"></i>Success
@@ -252,7 +252,7 @@ toastManager.info('New updates available!');
         <div class="demo-section">
             <h2>Advanced Options</h2>
             <p class="mb-4">Customize duration, titles, and more:</p>
-            
+
             <div class="text-center">
                 <button class="btn btn-primary btn-demo" onclick="showQuickToast()">
                     <i class="fas fa-bolt"></i>Quick (2s)
@@ -286,7 +286,7 @@ toastManager.show({<br>
         <div class="demo-section">
             <h2>Multiple Notifications</h2>
             <p class="mb-4">Test notification stacking and management:</p>
-            
+
             <div class="text-center">
                 <button class="btn btn-primary btn-demo" onclick="showMultipleToasts()">
                     <i class="fas fa-layer-group"></i>Show Multiple
@@ -300,7 +300,7 @@ toastManager.show({<br>
         <!-- Features -->
         <div class="demo-section">
             <h2>Key Features</h2>
-            
+
             <div class="feature-grid">
                 <div class="feature-card">
                     <i class="fas fa-palette"></i>
@@ -338,7 +338,7 @@ toastManager.show({<br>
         <!-- Usage Guide -->
         <div class="demo-section">
             <h2>Quick Start</h2>
-            
+
             <h4 class="mt-4">1. Include the files</h4>
             <div class="code-block">
 &lt;link rel="stylesheet" href="toast-notifications.css"&gt;<br>
@@ -428,7 +428,7 @@ flash('User created successfully', 'success')<br><br>
                 { type: 'info', msg: 'Processing...' },
                 { type: 'success', msg: 'Complete!' }
             ];
-            
+
             messages.forEach((item, index) => {
                 setTimeout(() => {
                     toastManager[item.type](item.msg);
@@ -439,7 +439,7 @@ flash('User created successfully', 'success')<br><br>
         // Theme toggle
         const themeToggle = document.getElementById('themeToggle');
         const html = document.documentElement;
-        
+
         function updateThemeIcon() {
             const icon = themeToggle.querySelector('i');
             const isDark = html.getAttribute('data-theme') === 'dark';
@@ -466,4 +466,3 @@ flash('User created successfully', 'success')<br><br>
     </script>
 </body>
 </html>
-

@@ -68,4 +68,3 @@
 5. `app/integrations/trello.py` - Fix to use API key setup
 6. `app/routes/calendar.py` - Remove duplicate integrations page
 7. `app/templates/integrations/` - Create setup templates
-

@@ -18,13 +18,13 @@
 <div class="max-w-4xl mx-auto">
     <form method="POST" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" novalidate data-validate-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <!-- Trip Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-info-circle mr-2"></i>Trip Information
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
                     <label for="trip_purpose" class="form-label">
@@ -35,7 +35,7 @@
                            placeholder="{{ _('e.g., Business trip to Berlin') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="start_date" class="form-label">
                         Start Date <span class="text-red-500">*</span>
@@ -44,7 +44,7 @@
                            value="{{ per_diem.start_date.strftime('%Y-%m-%d') if per_diem else '' }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
                 </div>
-                
+
                 <div>
                     <label for="end_date" class="form-label">
                         End Date <span class="text-red-500">*</span>
@@ -53,7 +53,7 @@
                            value="{{ per_diem.end_date.strftime('%Y-%m-%d') if per_diem else '' }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700 user-date-input">
                 </div>
-                
+
                 <div>
                     <label for="country" class="form-label">
                         Country <span class="text-red-500">*</span>
@@ -64,7 +64,7 @@
                            maxlength="2"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="city" class="form-label">
                         City
@@ -76,13 +76,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Days Calculation -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-calendar mr-2"></i>Days Calculation
             </h3>
-            
+
             <div class="mb-4">
                 <div class="flex items-center">
                     <input type="checkbox" name="auto_calculate_days" id="auto_calculate_days" checked
@@ -92,7 +92,7 @@
                     </label>
                 </div>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="full_days" class="form-label">
@@ -102,7 +102,7 @@
                            value="{{ per_diem.full_days if per_diem else '0' }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="half_days" class="form-label">
                         Half Days
@@ -113,13 +113,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Meal Deductions -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-utensils mr-2"></i>Provided Meals (Deductions)
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label for="breakfast_provided" class="form-label">
@@ -129,7 +129,7 @@
                            value="{{ per_diem.breakfast_provided if per_diem else '0' }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="lunch_provided" class="form-label">
                         Lunches Provided
@@ -138,7 +138,7 @@
                            value="{{ per_diem.lunch_provided if per_diem else '0' }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">
                 </div>
-                
+
                 <div>
                     <label for="dinner_provided" class="form-label">
                         Dinners Provided
@@ -149,13 +149,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Project & Client -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-project-diagram mr-2"></i>Association
             </h3>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="project_id" class="form-label">
@@ -171,7 +171,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div>
                     <label for="client_id" class="form-label">
                         Client
@@ -180,7 +180,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Notes -->
         <div class="mb-6">
             <label for="notes" class="form-label">
@@ -190,7 +190,7 @@
                       placeholder="{{ _('Additional notes...') }}"
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-primary focus:border-primary dark:bg-gray-700">{{ per_diem.notes if per_diem else '' }}</textarea>
         </div>
-        
+
         <!-- Create Expense Option -->
         {% if not per_diem %}
         <div class="mb-6">
@@ -204,14 +204,14 @@
             </div>
         </div>
         {% endif %}
-        
+
         <!-- Actions -->
         <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            <a href="{{ url_for('per_diem.view_per_diem', per_diem_id=per_diem.id) if per_diem else url_for('per_diem.list_per_diem') }}" 
+            <a href="{{ url_for('per_diem.view_per_diem', per_diem_id=per_diem.id) if per_diem else url_for('per_diem.list_per_diem') }}"
                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <i class="fas fa-times mr-2"></i>Cancel
             </a>
-            
+
             <button type="submit" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
                 <i class="fas fa-save mr-2"></i>{{ 'Update Claim' if per_diem else 'Create Claim' }}
             </button>
@@ -220,4 +220,3 @@
 </div>
 
 {% endblock %}
-

@@ -125,7 +125,7 @@ Create PR → Run Tests → Merge to main → Build → Release
 | Release Build | 55-60 min | 40-50 min | -15 min (tests removed) |
 | **Total (PR + Release)** | **70-80 min** | **70-90 min** | Similar |
 
-**Key Difference**: 
+**Key Difference**:
 - Same total time, but issues caught at PR stage
 - Main branch always deployable
 - Faster feedback for contributors
@@ -323,7 +323,7 @@ git push origin v3.2.4
   - Network timeouts
 
 **Problem**: Tests pass locally but fail on CI
-- **Solution**: 
+- **Solution**:
   - CI uses PostgreSQL, you might be using SQLite
   - Run with PostgreSQL locally: `docker-compose up -d db`
   - Check environment differences
@@ -444,4 +444,3 @@ This is called **"shift-left testing"** - catching issues as early as possible i
 **Required Actions**: Configure branch protection + verify secrets  
 
 **Questions?** Read the docs or create an issue! 🚀
-

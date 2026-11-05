@@ -73,8 +73,8 @@ def duplicate_timer(timer_id):
 
 #### Dashboard Button
 ```html
-<a href="{{ url_for('timer.duplicate_timer', timer_id=entry.id) }}" 
-   class="text-blue-600 hover:text-blue-800" 
+<a href="{{ url_for('timer.duplicate_timer', timer_id=entry.id) }}"
+   class="text-blue-600 hover:text-blue-800"
    title="{{ _('Duplicate entry') }}">
     <i class="fas fa-copy"></i>
 </a>
@@ -82,7 +82,7 @@ def duplicate_timer(timer_id):
 
 #### Edit Page Button
 ```html
-<a href="{{ url_for('timer.duplicate_timer', timer_id=timer.id) }}" 
+<a href="{{ url_for('timer.duplicate_timer', timer_id=timer.id) }}"
    class="btn btn-outline-primary">
     <i class="fas fa-copy me-1"></i>{{ _('Duplicate') }}
 </a>
@@ -251,4 +251,3 @@ For questions or issues with the Time Entry Duplication feature:
 ## License
 
 This feature is part of the TimeTracker application and follows the same license terms.
-

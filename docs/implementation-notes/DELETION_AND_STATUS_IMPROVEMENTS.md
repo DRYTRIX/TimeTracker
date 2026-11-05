@@ -255,4 +255,3 @@ This implementation follows the user's preferences:
 - Database schema changes should use Alembic migrations (Memory ID: 8330340, 8329489)
 - All new features require unit tests (Memory ID: 9751130)
 - Documentation must be added for new features (Memory ID: 9751130)
-

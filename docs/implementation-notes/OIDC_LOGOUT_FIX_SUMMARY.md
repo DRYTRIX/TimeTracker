@@ -122,4 +122,3 @@ The only difference is that providers without RP-Initiated Logout support no lon
 - Issue: Authelia doesn't support RP-Initiated Logout
 - OIDC Spec: [RP-Initiated Logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html)
 - Related: end_session_endpoint is optional in OIDC providers
-

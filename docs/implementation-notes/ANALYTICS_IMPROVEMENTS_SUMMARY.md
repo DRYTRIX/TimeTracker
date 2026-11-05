@@ -154,4 +154,3 @@ The dashboard now generates intelligent insights based on your data:
 **Enjoy your enhanced analytics dashboard!** 🎉
 
 If you have any questions or need additional metrics, feel free to ask.
-

@@ -16,12 +16,12 @@
                 <span class="badge badge-secondary"><i class="fas fa-lock mr-1"></i>Private</span>
                 {% endif %}
             </div>
-            
+
             <div class="flex gap-2">
                 <a href="{{ url_for('calendar.edit_event', event_id=event.id) }}" class="btn btn-sm btn-primary">
                     <i class="fas fa-edit mr-2"></i>{{ _('Edit') }}
                 </a>
-                <button type="button" class="btn btn-sm btn-danger" 
+                <button type="button" class="btn btn-sm btn-danger"
                         onclick="document.getElementById('confirmDeleteEvent-{{ event.id }}').classList.remove('hidden')">
                     <i class="fas fa-trash mr-2"></i>{{ _('Delete') }}
                 </button>
@@ -31,7 +31,7 @@
                 </form>
             </div>
         </div>
-        
+
         <!-- Event Details -->
         <div class="space-y-4">
             <!-- Date and Time -->
@@ -57,7 +57,7 @@
                     <p class="text-sm text-muted">{{ _('Duration') }}: {{ '%.2f'|format(event.duration_hours()) }} hours</p>
                 </div>
             </div>
-            
+
             <!-- Description -->
             {% if event.description %}
             <div class="flex items-start">
@@ -68,7 +68,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Location -->
             {% if event.location %}
             <div class="flex items-start">
@@ -79,7 +79,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Project -->
             {% if event.project %}
             <div class="flex items-start">
@@ -87,7 +87,7 @@
                 <div>
                     <p class="font-semibold">{{ _('Project') }}</p>
                     <p class="text-muted">
-                        <a href="{{ url_for('projects.view_project', project_id=event.project.id) }}" 
+                        <a href="{{ url_for('projects.view_project', project_id=event.project.id) }}"
                            class="text-primary hover:underline">
                             {{ event.project.name }}
                         </a>
@@ -95,7 +95,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Task -->
             {% if event.task %}
             <div class="flex items-start">
@@ -103,7 +103,7 @@
                 <div>
                     <p class="font-semibold">{{ _('Task') }}</p>
                     <p class="text-muted">
-                        <a href="{{ url_for('tasks.view_task', task_id=event.task.id) }}" 
+                        <a href="{{ url_for('tasks.view_task', task_id=event.task.id) }}"
                            class="text-primary hover:underline">
                             {{ event.task.name }}
                         </a>
@@ -111,7 +111,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Client -->
             {% if event.client %}
             <div class="flex items-start">
@@ -119,7 +119,7 @@
                 <div>
                     <p class="font-semibold">{{ _('Client') }}</p>
                     <p class="text-muted">
-                        <a href="{{ url_for('clients.view_client', client_id=event.client.id) }}" 
+                        <a href="{{ url_for('clients.view_client', client_id=event.client.id) }}"
                            class="text-primary hover:underline">
                             {{ event.client.name }}
                         </a>
@@ -127,7 +127,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Reminder -->
             {% if event.reminder_minutes %}
             <div class="flex items-start">
@@ -146,7 +146,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Recurring -->
             {% if event.is_recurring %}
             <div class="flex items-start">
@@ -162,7 +162,7 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Created/Updated -->
             <div class="flex items-start">
                 <i class="fas fa-info-circle text-primary mt-1 mr-3 w-5"></i>
@@ -175,7 +175,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Back Button -->
         <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
             <a href="{{ url_for('calendar.view_calendar') }}" class="btn btn-secondary">
@@ -195,4 +195,3 @@
     'danger'
 ) }}
 {% endblock %}
-

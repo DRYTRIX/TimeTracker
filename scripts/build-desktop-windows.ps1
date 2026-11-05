@@ -40,12 +40,12 @@ Write-Host "Preparing desktop assets..." -ForegroundColor Cyan
 if (-not $env:ASSETS_PREPARED) {
     $DesktopAssets = Join-Path $DesktopDir "assets"
     $MainLogo = Join-Path $ProjectRoot "app\static\images\timetracker-logo.svg"
-    
+
     # Ensure assets directory exists
     if (-not (Test-Path $DesktopAssets)) {
         New-Item -ItemType Directory -Path $DesktopAssets -Force | Out-Null
     }
-    
+
     # Copy logo if missing
     $LogoPath = Join-Path $DesktopAssets "logo.svg"
     if (-not (Test-Path $LogoPath)) {
@@ -60,13 +60,13 @@ if (-not $env:ASSETS_PREPARED) {
     } else {
         Write-Host "  [OK] Logo already exists" -ForegroundColor Green
     }
-    
+
     # Check for icon files
     $MissingIcons = $false
     $IconPng = Join-Path $DesktopAssets "icon.png"
     $IconIco = Join-Path $DesktopAssets "icon.ico"
     $IconIcns = Join-Path $DesktopAssets "icon.icns"
-    
+
     if (-not (Test-Path $IconPng)) {
         Write-Host "  [WARN] icon.png not found (will be generated if possible)" -ForegroundColor Yellow
         $MissingIcons = $true
@@ -79,7 +79,7 @@ if (-not $env:ASSETS_PREPARED) {
         Write-Host "  [WARN] icon.icns not found (required for macOS builds)" -ForegroundColor Yellow
         $MissingIcons = $true
     }
-    
+
     # Try to generate PNG icon if node is available
     if (-not (Test-Path $IconPng) -and (Get-Command node -ErrorAction SilentlyContinue)) {
         $GenerateIconsScript = Join-Path $ProjectRoot "scripts\generate-icons.js"
@@ -99,7 +99,7 @@ if (-not $env:ASSETS_PREPARED) {
             Pop-Location
         }
     }
-    
+
     if ($MissingIcons) {
         Write-Host ""
         Write-Host "NOTE: Some icon files are missing. The build will continue, but:" -ForegroundColor Yellow
@@ -113,7 +113,7 @@ if (-not $env:ASSETS_PREPARED) {
         Write-Host "  3. Convert PNG to .ico/.icns using online tools or ImageMagick" -ForegroundColor Cyan
         Write-Host ""
     }
-    
+
     Write-Host "Asset preparation complete!" -ForegroundColor Green
     $env:ASSETS_PREPARED = "1"
 }
@@ -122,7 +122,7 @@ Write-Host ""
 # Check if node_modules exists and is valid
 $NodeModulesValid = $false
 if (Test-Path "node_modules") {
-    if ((Test-Path "node_modules\electron\package.json") -and 
+    if ((Test-Path "node_modules\electron\package.json") -and
         (Test-Path "node_modules\electron-builder\package.json")) {
         try {
             node -e "require('electron')" 2>$null | Out-Null
@@ -136,7 +136,7 @@ if (Test-Path "node_modules") {
 
 if (-not $NodeModulesValid) {
     Write-Host "Installing dependencies..." -ForegroundColor Cyan
-    
+
     if (-not (Test-Path "node_modules")) {
         Write-Host "  Installing dependencies (first time)..." -ForegroundColor Yellow
         npm install --prefer-offline --no-audit --loglevel=warn

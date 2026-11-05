@@ -47,10 +47,10 @@
             </button>
         </div>
     </div>
-    
+
     <div class="comment-content" id="comment-content-{{ comment.id }}">
         <div class="comment-text">{{ comment.content | nl2br | safe }}</div>
-        
+
         <!-- Attachments -->
         {% if comment.attachments and comment.attachments|length > 0 %}
         <div class="comment-attachments mt-3 pt-3 border-top">
@@ -69,8 +69,8 @@
                         {% endif %}
                     </div>
                     <div class="flex-grow-1 min-w-0">
-                        <a href="{{ url_for('comments.download_attachment', attachment_id=attachment.id) }}" 
-                           class="text-decoration-none text-primary d-block text-truncate" 
+                        <a href="{{ url_for('comments.download_attachment', attachment_id=attachment.id) }}"
+                           class="text-decoration-none text-primary d-block text-truncate"
                            title="{{ attachment.original_filename }}">
                             {{ attachment.original_filename }}
                         </a>
@@ -78,8 +78,8 @@
                     </div>
                     {% if comment.can_edit(current_user) %}
                     <div class="flex-shrink-0">
-                        <form method="POST" action="{{ url_for('comments.delete_attachment', attachment_id=attachment.id) }}" 
-                              class="d-inline" 
+                        <form method="POST" action="{{ url_for('comments.delete_attachment', attachment_id=attachment.id) }}"
+                              class="d-inline"
                               onsubmit="return confirm('{{ _('Are you sure you want to delete this attachment?') }}');">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="{{ _('Delete') }}">
@@ -93,23 +93,23 @@
             </div>
         </div>
         {% endif %}
-        
+
         <!-- Add Attachment Button (only if user can edit) -->
         {% if comment.can_edit(current_user) %}
         <div class="comment-attachment-actions mt-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" 
-                    onclick="toggleAttachmentForm({{ comment.id }})" 
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    onclick="toggleAttachmentForm({{ comment.id }})"
                     id="attach-btn-{{ comment.id }}">
                 <i class="fas fa-paperclip me-1"></i>{{ _('Add Attachment') }}
             </button>
-            
+
             <!-- Attachment Upload Form (initially hidden) -->
             <div class="attachment-upload-form d-none mt-2" id="attachment-form-{{ comment.id }}">
-                <form method="POST" action="{{ url_for('comments.upload_comment_attachment', comment_id=comment.id) }}" 
+                <form method="POST" action="{{ url_for('comments.upload_comment_attachment', comment_id=comment.id) }}"
                       enctype="multipart/form-data" class="d-flex gap-2 align-items-end">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="flex-grow-1">
-                        <input type="file" name="file" class="form-input text-sm py-2" required 
+                        <input type="file" name="file" class="form-input text-sm py-2" required
                                accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt,.xls,.xlsx,.zip,.rar">
                         <small class="text-muted">{{ _('Max 10 MB. Images, PDFs, documents, spreadsheets, archives') }}</small>
                     </div>
@@ -124,7 +124,7 @@
         </div>
         {% endif %}
     </div>
-    
+
     <!-- Edit form (initially hidden) -->
     <div class="comment-edit-form d-none" id="edit-form-{{ comment.id }}">
         <form method="POST" action="{{ url_for('comments.edit_comment', comment_id=comment.id) }}">
@@ -142,7 +142,7 @@
             </div>
         </form>
     </div>
-    
+
     <!-- Reply form (initially hidden) -->
     <div class="comment-reply-form d-none mt-3" id="reply-form-{{ comment.id }}">
         <form method="POST" action="{{ url_for('comments.create_comment') }}">
@@ -166,7 +166,7 @@
             </div>
         </form>
     </div>
-    
+
     <!-- Replies -->
     {% if comment.replies and depth < max_depth %}
     <div class="comment-replies mt-3">

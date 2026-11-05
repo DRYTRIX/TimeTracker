@@ -86,7 +86,7 @@ columns = KanbanColumn.get_all_columns()  # Works fine
 
 **Solution:** Use `expire_all()` without `close()` to get fresh data while keeping session objects intact.
 
-**Result:** 
+**Result:**
 - ✅ Fresh data loaded from database
 - ✅ No browser caching
 - ✅ Flask-Login still works
@@ -94,4 +94,3 @@ columns = KanbanColumn.get_all_columns()  # Works fine
 - ✅ Changes reflected immediately
 
 The application now works correctly! 🎉
-

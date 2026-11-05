@@ -96,7 +96,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Comparison View -->
         <div>
             <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-3">{{ _('Comparison View') }}</h3>
@@ -131,7 +131,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Comparison Results (hidden by default) -->
     <div id="comparisonResults" class="hidden mt-6 p-4 bg-background-light dark:bg-background-dark rounded-lg">
         <h3 class="text-md font-semibold mb-4">{{ _('Comparison Results') }}</h3>
@@ -287,7 +287,7 @@
 function setDateRange(preset) {
     const today = new Date();
     let startDate, endDate;
-    
+
     switch(preset) {
         case 'today':
             startDate = endDate = today;
@@ -308,10 +308,10 @@ function setDateRange(preset) {
             endDate = new Date(today);
             break;
     }
-    
+
     document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
     document.getElementById('endDate').value = endDate.toISOString().split('T')[0];
-    
+
     // Apply to current report
     applyCustomDateRange();
 }
@@ -319,7 +319,7 @@ function setDateRange(preset) {
 function applyCustomDateRange() {
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
-    
+
     if (startDate && endDate) {
         // Redirect to project report with date range
         window.location.href = `{{ url_for('reports.project_report') }}?start_date=${startDate}&end_date=${endDate}`;
@@ -333,7 +333,7 @@ function showComparisonView(period) {
         .then(data => {
             const resultsDiv = document.getElementById('comparisonResults');
             const statsDiv = document.getElementById('comparisonStats');
-            
+
             statsDiv.innerHTML = `
                 <div class="text-center">
                     <div class="text-2xl font-bold text-primary">${data.current.hours.toFixed(1)}</div>
@@ -350,7 +350,7 @@ function showComparisonView(period) {
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark">Previous Period Hours</div>
                 </div>
             `;
-            
+
             resultsDiv.classList.remove('hidden');
         })
         .catch(error => {
@@ -394,7 +394,7 @@ function hideScheduledReportsModal() {
 function loadScheduledReports() {
     const listContainer = document.getElementById('scheduledReportsList');
     listContainer.innerHTML = '<p class="text-text-muted-light dark:text-text-muted-dark text-center py-4">Loading...</p>';
-    
+
     fetch('/api/reports/scheduled')
         .then(response => response.json())
         .then(data => {
@@ -406,10 +406,10 @@ function loadScheduledReports() {
                     const lastRun = schedule.last_run_at
                         ? (window.formatUserDateTime ? window.formatUserDateTime(new Date(schedule.last_run_at)) : new Date(schedule.last_run_at).toLocaleString())
                         : 'Never';
-                    const statusBadge = schedule.active 
+                    const statusBadge = schedule.active
                         ? '<span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs">Active</span>'
                         : '<span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded text-xs">Inactive</span>';
-                    
+
                     return `
                         <div class="p-4 border border-border-light dark:border-border-dark rounded-lg">
                             <div class="flex justify-between items-start mb-2">
@@ -458,7 +458,7 @@ function showAddScheduledReportForm() {
                 ttAlert('{{ _("You need to create a saved report view first. Please create one from the reports page.") }}');
                 return;
             }
-            
+
             // Create form modal
             const formModal = document.createElement('div');
             formModal.id = 'addScheduledReportForm';
@@ -482,7 +482,7 @@ function showAddScheduledReportForm() {
                             </div>
                             <div class="mb-4">
                                 <label class="block text-sm font-medium mb-2">{{ _('Recipients') }}</label>
-                                <input type="email" id="recipients" name="recipients" class="form-input w-full" 
+                                <input type="email" id="recipients" name="recipients" class="form-input w-full"
                                        placeholder="email1@example.com, email2@example.com" required>
                                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Comma-separated email addresses') }}</p>
                             </div>
@@ -527,12 +527,12 @@ function createScheduledReport(event) {
         recipients: document.getElementById('recipients').value.trim(),
         cadence: document.getElementById('cadence').value,
     };
-    
+
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>{{ _("Creating...") }}';
-    
+
     fetch('/api/reports/scheduled', {
         method: 'POST',
         headers: {
@@ -588,7 +588,7 @@ async function deleteSchedule(scheduleId) {
     if (!(await ttConfirm('{{ _("Are you sure you want to delete this scheduled report?") }}', { variant: 'danger', confirmText: '{{ _("Delete") }}' }))) {
         return;
     }
-    
+
     fetch(`/api/reports/scheduled/${scheduleId}`, {
         method: 'DELETE',
         headers: {
@@ -623,7 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const today = new Date();
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
-    
+
     document.getElementById('startDate').value = weekStart.toISOString().split('T')[0];
     document.getElementById('endDate').value = today.toISOString().split('T')[0];
 });

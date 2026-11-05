@@ -133,7 +133,7 @@ This helps you verify you're duplicating the correct entry and shows:
 **A**: Yes, but you'll need to set both start and end times for the duplicate since it will be a completed entry.
 
 ### Q: How is this different from Time Entry Templates?
-**A**: 
+**A**:
 - **Duplication**: Copy a specific past entry (one-time action)
 - **Templates**: Create reusable templates for future use (permanent resource)
 
@@ -175,4 +175,3 @@ Use templates for regular recurring work, duplication for quick one-off copies.
 
 **Last Updated**: October 23, 2024
 **Feature Version**: 1.0
-

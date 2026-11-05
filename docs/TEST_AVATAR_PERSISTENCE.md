@@ -210,4 +210,3 @@ Run with: `bash test_avatar_persistence.sh`
 
 **Date:** October 2025  
 **Purpose:** Verify profile picture persistence across updates
-

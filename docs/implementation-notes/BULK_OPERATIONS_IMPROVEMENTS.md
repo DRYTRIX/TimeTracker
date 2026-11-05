@@ -125,7 +125,7 @@ function toggleAllItems() {
 function updateBulkActionButton() {
     const count = document.querySelectorAll('.item-checkbox:checked').length;
     const btnGroup = document.getElementById('bulkActionsGroup');
-    
+
     if (count > 0) {
         btnGroup.style.display = 'inline-block';
         document.getElementById('selectedCount').textContent = count;
@@ -343,4 +343,3 @@ This implementation builds on:
 The bulk operations feature provides a powerful, consistent way to manage multiple items across tasks, projects, and clients. The implementation follows established patterns, maintains security, and provides clear user feedback. The inactive status for projects adds flexibility to project lifecycle management without requiring database changes.
 
 All changes are production-ready, fully tested, and backward compatible.
-

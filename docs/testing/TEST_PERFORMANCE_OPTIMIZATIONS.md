@@ -179,7 +179,7 @@ This usually indicates test isolation issues:
 
 1. **Database conflicts**: Each test should use its own database
    - ✅ Already handled via unique SQLite files per test
-   
+
 2. **Shared state**: Tests shouldn't share global state
    - Check for module-level variables
    - Use fixtures instead of global state
@@ -221,4 +221,3 @@ Potential further improvements:
 - [pytest-xdist documentation](https://pytest-xdist.readthedocs.io/)
 - [pytest performance tips](https://docs.pytest.org/en/stable/how-to/usage.html#profiling-test-execution-duration)
 - [pytest caching](https://docs.pytest.org/en/stable/cache.html)
-

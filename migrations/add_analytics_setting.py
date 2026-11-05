@@ -53,8 +53,8 @@ def migrate_postgres():
 
         # Check if column already exists
         cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
+            SELECT column_name
+            FROM information_schema.columns
             WHERE table_name = 'settings' AND column_name = 'allow_analytics'
         """)
 

@@ -23,28 +23,28 @@
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-info-circle mr-2"></i>Claim Details
             </h3>
-            
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Period</p>
                     <p class="font-semibold">{{ per_diem.start_date|format_date }} to {{ per_diem.end_date|format_date }}</p>
                 </div>
-                
+
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Location</p>
                     <p class="font-semibold">{{ per_diem.city + ', ' if per_diem.city else '' }}{{ per_diem.country }}</p>
                 </div>
-                
+
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Full Days</p>
                     <p class="font-semibold">{{ per_diem.full_days }}</p>
                 </div>
-                
+
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Half Days</p>
                     <p class="font-semibold">{{ per_diem.half_days }}</p>
                 </div>
-                
+
                 <div class="col-span-2 mt-2">
                     <div class="p-4 bg-primary/10 rounded-lg">
                         <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Amount</p>
@@ -54,7 +54,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Sidebar -->
     <div class="space-y-6">
         <!-- Status -->
@@ -62,7 +62,7 @@
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-info-circle mr-2"></i>Status
             </h3>
-            
+
             <div class="mb-4">
                 {% if per_diem.status == 'pending' %}
                 <span class="px-3 py-2 text-sm rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 font-semibold">
@@ -83,21 +83,21 @@
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- Admin Actions -->
         {% if current_user.is_admin and per_diem.status == 'pending' %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <i class="fas fa-gavel mr-2"></i>Admin Actions
             </h3>
-            
+
             <form method="POST" action="{{ url_for('per_diem.approve_per_diem', per_diem_id=per_diem.id) }}" class="mb-3">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
                     <i class="fas fa-check mr-2"></i>Approve
                 </button>
             </form>
-            
+
             <form method="POST" action="{{ url_for('per_diem.reject_per_diem', per_diem_id=per_diem.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <textarea name="rejection_reason" placeholder="{{ _('Rejection reason (required)') }}" rows="2" required
@@ -112,4 +112,3 @@
 </div>
 
 {% endblock %}
-

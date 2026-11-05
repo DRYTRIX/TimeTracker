@@ -69,7 +69,7 @@
         <div class="content">
             <p>Hello {{ user.display_name or user.username }},</p>
             <p><strong>Great news!</strong> Your quote has been approved and is ready to be sent.</p>
-            
+
             <div class="quote-details">
                 <p><strong>Quote Number:</strong> {{ quote.quote_number }}</p>
                 <p><strong>Title:</strong> {{ quote.title }}</p>
@@ -78,9 +78,9 @@
                 <p><strong>Approved By:</strong> {{ quote.approver.full_name or quote.approver.username if quote.approver else 'N/A' }}</p>
                 <p><strong>Approved At:</strong> {{ quote.approved_at|user_datetime if quote.approved_at else 'N/A' }}</p>
             </div>
-            
+
             <p>You can now send this quote to the client.</p>
-            
+
             {% if quote_url %}
             <a href="{{ quote_url }}" class="button">{{ _('View Quote') }}</a>
             {% endif %}
@@ -91,4 +91,3 @@
     </div>
 </body>
 </html>
-

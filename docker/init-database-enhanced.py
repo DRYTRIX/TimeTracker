@@ -324,8 +324,8 @@ def create_triggers(engine):
                 try:
                     conn.execute(text(f"""
                         DROP TRIGGER IF EXISTS update_{table}_updated_at ON {table};
-                        CREATE TRIGGER update_{table}_updated_at 
-                        BEFORE UPDATE ON {table} 
+                        CREATE TRIGGER update_{table}_updated_at
+                        BEFORE UPDATE ON {table}
                         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
                     """))
                 except Exception as e:
@@ -362,7 +362,7 @@ def insert_initial_data(engine):
 
             # Insert default admin user (idempotent via unique username)
             conn.execute(text(f"""
-                INSERT INTO users (username, role, is_active) 
+                INSERT INTO users (username, role, is_active)
                 SELECT '{admin_username}', 'admin', true
                 WHERE NOT EXISTS (
                     SELECT 1 FROM users WHERE username = '{admin_username}'
@@ -411,14 +411,14 @@ def insert_initial_data(engine):
             # Insert default settings only if none exist (singleton semantics)
             conn.execute(text("""
                 INSERT INTO settings (
-                    timezone, currency, rounding_minutes, single_active_timer, 
-                    allow_self_register, idle_timeout_minutes, backup_retention_days, 
+                    timezone, currency, rounding_minutes, single_active_timer,
+                    allow_self_register, idle_timeout_minutes, backup_retention_days,
                     backup_time, export_delimiter, allow_analytics,
-                    company_name, company_address, company_email, company_phone, 
-                    company_website, company_logo_filename, company_tax_id, 
-                    company_bank_info, invoice_prefix, invoice_start_number, 
+                    company_name, company_address, company_email, company_phone,
+                    company_website, company_logo_filename, company_tax_id,
+                    company_bank_info, invoice_prefix, invoice_start_number,
                     invoice_terms, invoice_notes
-                ) 
+                )
                 SELECT 'Europe/Rome', 'EUR', 1, true, true, 30, 30, '02:00', ',', true,
                        'Your Company Name', 'Your Company Address', 'info@yourcompany.com',
                        '+1 (555) 123-4567', 'www.yourcompany.com', '', '', '', 'INV', 1000,

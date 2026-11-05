@@ -25,9 +25,9 @@ wait_for_database() {
     local db_url="$1"
     local max_retries=60  # Increased retries
     local retry_delay=3   # Increased delay
-    
+
     log "Waiting for database to be available..."
-    
+
     for attempt in $(seq 1 $max_retries); do
         if [[ "$db_url" == postgresql://* ]]; then
             # PostgreSQL connection test
@@ -37,7 +37,7 @@ wait_for_database() {
                     return 0
                 fi
             fi
-            
+
             # Always try Python connection as primary method
             if python -c "
 import psycopg2
@@ -64,13 +64,13 @@ except Exception as e:
                 return 0
             fi
         fi
-        
+
         log "Database not ready (attempt $attempt/$max_retries)"
         if [[ $attempt -lt $max_retries ]]; then
             sleep $retry_delay
         fi
     done
-    
+
     log "✗ Database is not available after maximum retries"
     return 1
 }
@@ -79,28 +79,28 @@ except Exception as e:
 detect_database_state() {
     local db_url="$1"
     log "Analyzing database state..."
-    
+
     if [[ "$db_url" == postgresql://* ]]; then
         # PostgreSQL state detection
         if command_exists psql; then
             # Check if alembic_version table exists
             local has_alembic=$(psql "$db_url" -t -c "
                 SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
+                    SELECT FROM information_schema.tables
                     WHERE table_name = 'alembic_version'
                 );
             " 2>/dev/null | tr -d ' ')
-            
+
             # Get list of existing tables
             local existing_tables=$(psql "$db_url" -t -c "
-                SELECT table_name 
-                FROM information_schema.tables 
-                WHERE table_schema = 'public' 
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
                 ORDER BY table_name;
             " 2>/dev/null | grep -v '^$' | tr '\n' ' ')
-            
+
             log "PostgreSQL state: has_alembic=$has_alembic, tables=[$existing_tables]"
-            
+
             if [[ "$has_alembic" == "t" ]]; then
                 echo "migrated"
             elif [[ -n "$existing_tables" ]]; then
@@ -115,27 +115,27 @@ import psycopg2
 try:
     conn = psycopg2.connect('$db_url')
     cursor = conn.cursor()
-    
+
     # Check if alembic_version table exists
     cursor.execute(\"\"\"
         SELECT EXISTS (
-            SELECT FROM information_schema.tables 
+            SELECT FROM information_schema.tables
             WHERE table_name = 'alembic_version'
         )
     \"\"\")
     has_alembic = cursor.fetchone()[0]
-    
+
     # Get list of existing tables
     cursor.execute(\"\"\"
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
         ORDER BY table_name
     \"\"\")
     existing_tables = [row[0] for row in cursor.fetchall()]
-    
+
     conn.close()
-    
+
     if has_alembic:
         print('migrated')
     elif existing_tables:
@@ -150,28 +150,28 @@ except Exception as e:
     elif [[ "$db_url" == sqlite://* ]]; then
         # SQLite state detection
         local db_file="${db_url#sqlite://}"
-        
+
         if [[ ! -f "$db_file" ]]; then
             echo "fresh"
             return
         fi
-        
+
         local state=$(python -c "
 import sqlite3
 try:
     conn = sqlite3.connect('$db_file')
     cursor = conn.cursor()
-    
+
     # Check if alembic_version table exists
     cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\" AND name=\"alembic_version\"')
     has_alembic = cursor.fetchone() is not None
-    
+
     # Get list of existing tables
     cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\"')
     existing_tables = [row[0] for row in cursor.fetchall()]
-    
+
     conn.close()
-    
+
     if has_alembic:
         print('migrated')
     elif existing_tables:
@@ -191,7 +191,7 @@ except Exception as e:
 choose_migration_strategy() {
     local db_state="$1"
     log "Choosing migration strategy for state: $db_state"
-    
+
     case "$db_state" in
         "fresh")
             log "Fresh database detected - using standard initialization"
@@ -216,9 +216,9 @@ choose_migration_strategy() {
 execute_migration_strategy() {
     local strategy="$1"
     local db_url="$2"
-    
+
     log "Executing migration strategy: $strategy"
-    
+
     case "$strategy" in
         "fresh_init")
             execute_fresh_init "$db_url"
@@ -240,28 +240,28 @@ execute_migration_strategy() {
 execute_fresh_init() {
     local db_url="$1"
     log "Executing fresh database initialization..."
-    
+
     # Initialize Flask-Migrate
     if ! flask db init >/dev/null 2>&1; then
         log "✗ Flask-Migrate initialization failed"
         return 1
     fi
     log "✓ Flask-Migrate initialized"
-    
+
     # Create initial migration
     if ! flask db migrate -m "Initial database schema" >/dev/null 2>&1; then
         log "✗ Initial migration creation failed"
         return 1
     fi
     log "✓ Initial migration created"
-    
+
     # Apply migration
     if ! flask db upgrade >/dev/null 2>&1; then
         log "✗ Initial migration application failed"
         return 1
     fi
     log "✓ Initial migration applied"
-    
+
     return 0
 }
 
@@ -269,7 +269,7 @@ execute_fresh_init() {
 execute_check_migrations() {
     local db_url="$1"
     log "Checking for pending migrations..."
-    
+
     # Check current migration status
     local current_output
     current_output=$(flask db current 2>/dev/null || echo "unknown")
@@ -302,7 +302,7 @@ execute_check_migrations() {
         echo "$heads_output" | sed 's/^/[HEAD] /'
         return 0
     fi
-    
+
     # Check for pending migrations
     # If there are multiple heads and we're not at a head, upgrade all heads.
     # Otherwise do the normal single-head upgrade.
@@ -336,7 +336,7 @@ execute_check_migrations() {
     fi
     rm -f "$upgrade_output"
     log "✓ Migrations checked and applied"
-    
+
     return 0
 }
 
@@ -344,7 +344,7 @@ execute_check_migrations() {
 execute_comprehensive_migration() {
     local db_url="$1"
     log "Executing comprehensive migration..."
-    
+
     # Try to run the enhanced startup script
     if [[ -f "/app/docker/startup_with_migration.py" ]]; then
         log "Running enhanced startup script..."
@@ -355,10 +355,10 @@ execute_comprehensive_migration() {
             log "⚠ Enhanced startup script failed, falling back to manual migration"
         fi
     fi
-    
+
     # Fallback to manual migration
     log "Executing manual migration fallback..."
-    
+
     # Initialize Flask-Migrate if not already done
     if [[ ! -f "/app/migrations/env.py" ]]; then
         if ! flask db init >/dev/null 2>&1; then
@@ -367,21 +367,21 @@ execute_comprehensive_migration() {
         fi
         log "✓ Flask-Migrate initialized"
     fi
-    
+
     # Create baseline migration
     if ! flask db migrate -m "Baseline from existing database" >/dev/null 2>&1; then
         log "✗ Baseline migration creation failed"
         return 1
     fi
     log "✓ Baseline migration created"
-    
+
     # Stamp database as current
     if ! flask db stamp head >/dev/null 2>&1; then
         log "✗ Database stamping failed"
         return 1
     fi
     log "✓ Database stamped as current"
-    
+
     return 0
 }
 
@@ -389,18 +389,18 @@ execute_comprehensive_migration() {
 verify_database_integrity() {
     local db_url="$1"
     log "Verifying database integrity..."
-    
+
     # Test basic database operations
     if [[ "$db_url" == postgresql://* ]]; then
         if command_exists psql; then
             # Check if key tables exist
             local key_tables=$(psql "$db_url" -t -c "
-                SELECT table_name 
-                FROM information_schema.tables 
+                SELECT table_name
+                FROM information_schema.tables
                 WHERE table_name IN ('users', 'projects', 'time_entries')
                 AND table_schema = 'public';
             " 2>/dev/null | grep -v '^$' | tr '\n' ' ')
-            
+
             if [[ $(echo "$key_tables" | wc -w) -ge 2 ]]; then
                 log "✓ Database integrity verified (PostgreSQL)"
                 return 0
@@ -415,17 +415,17 @@ import psycopg2
 try:
     conn = psycopg2.connect('$db_url')
     cursor = conn.cursor()
-    
+
     cursor.execute(\"\"\"
-        SELECT table_name 
-        FROM information_schema.tables 
+        SELECT table_name
+        FROM information_schema.tables
         WHERE table_name IN ('users', 'projects', 'time_entries')
         AND table_schema = 'public'
     \"\"\")
     key_tables = [row[0] for row in cursor.fetchall()]
-    
+
     conn.close()
-    
+
     if len(key_tables) >= 2:
         exit(0)
     else:
@@ -442,23 +442,23 @@ except:
         fi
     elif [[ "$db_url" == sqlite://* ]]; then
         local db_file="${db_url#sqlite://}"
-        
+
         if [[ ! -f "$db_file" ]]; then
             log "✗ SQLite database file not found"
             return 1
         fi
-        
+
         if python -c "
 import sqlite3
 try:
     conn = sqlite3.connect('$db_file')
     cursor = conn.cursor()
-    
+
     cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\" AND name IN (\"users\", \"projects\", \"time_entries\")')
     key_tables = [row[0] for row in cursor.fetchall()]
-    
+
     conn.close()
-    
+
     if len(key_tables) >= 2:
         exit(0)
     else:
@@ -473,59 +473,59 @@ except:
             return 1
         fi
     fi
-    
+
     return 1
 }
 
 # Main execution
 main() {
     log "=== TimeTracker Docker Entrypoint with Migration Detection ==="
-    
+
     # Set environment variables
     export FLASK_APP=${FLASK_APP:-/app/app.py}
-    
+
     # Get database URL from environment
     local db_url="${DATABASE_URL}"
     if [[ -z "$db_url" ]]; then
         log "✗ DATABASE_URL environment variable not set"
         exit 1
     fi
-    
+
     log "Database URL: $db_url"
-    
+
     # Wait for database to be available
     if ! wait_for_database "$db_url"; then
         log "✗ Failed to connect to database"
         exit 1
     fi
-    
+
     # Detect database state
     local db_state=$(detect_database_state "$db_url")
     log "Detected database state: $db_state"
-    
+
     # Choose migration strategy
     local strategy=$(choose_migration_strategy "$db_state")
     log "Selected migration strategy: $strategy"
-    
+
     # Execute migration strategy
     if ! execute_migration_strategy "$strategy" "$db_url"; then
         log "✗ Migration strategy execution failed"
         exit 1
     fi
-    
+
     # Verify database integrity
     if ! verify_database_integrity "$db_url"; then
         log "✗ Database integrity verification failed"
         exit 1
     fi
-    
+
     log "=== Startup and Migration Complete ==="
     log "Database is ready for use"
-    
+
     # Show final migration status
     local final_status=$(flask db current 2>/dev/null | tr -d '\n' || echo "unknown")
     log "Final migration status: $final_status"
-    
+
     # Start the application
     log "Starting TimeTracker application..."
     exec "$@"

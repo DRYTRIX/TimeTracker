@@ -10,7 +10,7 @@ if [ -f "/app/docker/start.sh" ]; then
     echo "✓ Startup script exists at /app/docker/start.sh"
     echo "File permissions: $(ls -la /app/docker/start.sh)"
     echo "File owner: $(stat -c '%U:%G' /app/docker/start.sh)"
-    
+
     echo "Testing if script is executable..."
     if [ -x "/app/docker/start.sh" ]; then
         echo "✓ Startup script is executable"

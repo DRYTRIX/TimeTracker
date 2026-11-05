@@ -6,7 +6,7 @@
 <div class="container mx-auto px-4 py-8 max-w-2xl">
     <!-- Header -->
     <div class="mb-6">
-        <a href="{{ url_for('time_entry_templates.list_templates') }}" 
+        <a href="{{ url_for('time_entry_templates.list_templates') }}"
            class="text-blue-600 hover:text-blue-800 dark:text-blue-400 mb-4 inline-block">
             <i class="fas fa-arrow-left mr-2"></i> Back to Templates
         </a>
@@ -18,17 +18,17 @@
     <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-md p-6">
         <form method="POST" action="{{ url_for('time_entry_templates.edit_template', template_id=template.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
             <!-- Template Name -->
             <div class="mb-6">
                 <label for="name" class="form-label">
                     Template Name <span class="text-red-500">*</span>
                 </label>
-                <input type="text" 
-                       id="name" 
-                       name="name" 
+                <input type="text"
+                       id="name"
+                       name="name"
                        value="{{ template.name }}"
-                       required 
+                       required
                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                        placeholder="{{ _('e.g., Daily Standup, Client Meeting') }}">
             </div>
@@ -38,13 +38,13 @@
                 <label for="project_id" class="form-label">
                     Project
                 </label>
-                <select id="project_id" 
-                        name="project_id" 
+                <select id="project_id"
+                        name="project_id"
                         onchange="loadProjectTasks(this.value)"
                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
                     <option value="">Select a project (optional)</option>
                     {% for project in projects %}
-                    <option value="{{ project.id }}" 
+                    <option value="{{ project.id }}"
                             {% if template.project_id == project.id %}selected{% endif %}>
                         {{ project.name }}
                     </option>
@@ -57,8 +57,8 @@
                 <label for="task_id" class="form-label">
                     Task
                 </label>
-                <select id="task_id" 
-                        name="task_id" 
+                <select id="task_id"
+                        name="task_id"
                         data-selected="{{ template.task_id if template.task_id else '' }}"
                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
                     <option value="">Select a task (optional)</option>
@@ -76,11 +76,11 @@
                 <label for="default_duration" class="form-label">
                     Default Duration (hours)
                 </label>
-                <input type="number" 
-                       id="default_duration" 
-                       name="default_duration" 
+                <input type="number"
+                       id="default_duration"
+                       name="default_duration"
                        value="{{ template.default_duration if template.default_duration else '' }}"
-                       step="0.25" 
+                       step="0.25"
                        min="0"
                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                        placeholder="{{ _('e.g., 1.0, 0.5') }}">
@@ -94,8 +94,8 @@
                 <label for="default_notes" class="form-label">
                     Default Notes
                 </label>
-                <textarea id="default_notes" 
-                          name="default_notes" 
+                <textarea id="default_notes"
+                          name="default_notes"
                           rows="3"
                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                           placeholder="{{ _('Pre-fill notes for this type of time entry') }}">{{ template.default_notes if template.default_notes else '' }}</textarea>
@@ -106,9 +106,9 @@
                 <label for="tags" class="form-label">
                     Tags
                 </label>
-                <input type="text" 
-                       id="tags" 
-                       name="tags" 
+                <input type="text"
+                       id="tags"
+                       name="tags"
                        value="{{ template.tags if template.tags else '' }}"
                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                        placeholder="{{ _('e.g., meeting, development, admin') }}">
@@ -119,7 +119,7 @@
 
             <!-- Actions -->
             <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <a href="{{ url_for('time_entry_templates.list_templates') }}" 
+                <a href="{{ url_for('time_entry_templates.list_templates') }}"
                    class="btn btn-secondary text-center">
                     Cancel
                 </a>
@@ -154,14 +154,14 @@ function buildTasksUrl(projectId) {
 function loadProjectTasks(projectId) {
     const taskSelect = document.getElementById('task_id');
     const selectedTaskId = taskSelect.dataset.selected;
-    
+
     // Clear existing options except the currently selected one
     taskSelect.innerHTML = '<option value="">Select a task (optional)</option>';
-    
+
     if (!projectId) {
         return;
     }
-    
+
     // Fetch tasks for the selected project
     fetch(buildTasksUrl(projectId))
         .then(response => response.json())
@@ -190,4 +190,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

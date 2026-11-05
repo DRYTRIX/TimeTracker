@@ -223,4 +223,3 @@ For CSRF tokens to work correctly in Docker:
 5. **Never change SECRET_KEY** without understanding the impact
 
 All docker-compose files have been updated with these settings and include helpful comments.
-

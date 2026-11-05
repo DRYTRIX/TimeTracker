@@ -195,7 +195,7 @@
     <p class="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">
         {{ _('If TimeTracker saves you money, a star helps others find it.') }}
     </p>
-    
+
     {% if current_user.is_authenticated and (not settings or not getattr(settings, 'donate_ui_hidden', false)) and current_user.ui_show_donate %}
     <!-- Support Section -->
     <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-lg border border-amber-200 dark:border-amber-800 mt-6">

@@ -79,9 +79,9 @@
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" data-label="{{ _('Actions') }}">
                         <div class="flex justify-end gap-2">
                             {% if schedule.saved_view and schedule.active %}
-                            <button 
-                                type="button" 
-                                class="trigger-report-btn text-blue-600 hover:text-blue-800" 
+                            <button
+                                type="button"
+                                class="trigger-report-btn text-blue-600 hover:text-blue-800"
                                 data-schedule-id="{{ schedule.id }}"
                                 title="{{ _('Trigger report now (for testing)') }}">
                                 <i class="fas fa-play"></i>
@@ -121,21 +121,21 @@
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function() {
     const triggerButtons = document.querySelectorAll('.trigger-report-btn');
-    
+
     triggerButtons.forEach(button => {
         button.addEventListener('click', function() {
             const scheduleId = this.getAttribute('data-schedule-id');
             const originalIcon = this.innerHTML;
-            
+
             // Disable button and show loading state
             this.disabled = true;
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            
+
             // Get CSRF token from meta tag or form
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
-                            document.querySelector('input[name="csrf_token"]')?.value || 
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                            document.querySelector('input[name="csrf_token"]')?.value ||
                             '{{ csrf_token() }}';
-            
+
             // Make API call
             fetch(`/api/reports/scheduled/${scheduleId}/trigger`, {
                 method: 'POST',
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     // Show success message
-                    alert('{{ _("Report triggered successfully!") }}\n' + 
+                    alert('{{ _("Report triggered successfully!") }}\n' +
                           (data.message || '{{ _("Report sent to recipients.") }}'));
                 } else {
                     // Show error message
@@ -170,4 +170,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

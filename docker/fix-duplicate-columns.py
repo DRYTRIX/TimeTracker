@@ -24,9 +24,9 @@ def main():
 
             # Check current table structure
             result = conn.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'settings' 
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'settings'
                 ORDER BY column_name;
             """))
 
@@ -62,9 +62,9 @@ def main():
 
             # Verify the fix
             result = conn.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'settings' 
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'settings'
                 ORDER BY column_name;
             """))
 

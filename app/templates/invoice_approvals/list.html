@@ -28,7 +28,7 @@
                         </a>
                     </h3>
                     <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        {{ _('Requested by') }}: {{ approval.requester.username }} • 
+                        {{ _('Requested by') }}: {{ approval.requester.username }} •
                         {{ _('Stage') }} {{ approval.current_stage + 1 }}/{{ approval.total_stages }}
                     </p>
                 </div>
@@ -44,11 +44,11 @@
                     </button>
                 </div>
             </div>
-            
+
             {% if approval.stages and approval.current_stage < approval.stages|length %}
             <div class="mt-3 pt-3 border-t border-border-light dark:border-border-dark">
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                    <strong>{{ _('Current Approver') }}:</strong> 
+                    <strong>{{ _('Current Approver') }}:</strong>
                     {% set current_stage = approval.stages[approval.current_stage] %}
                     {% if current_stage.get('approver_id') == current_user.id %}
                     <span class="text-primary font-semibold">{{ _('You') }}</span>
@@ -102,4 +102,3 @@ function closeRejectModal() {
 }
 </script>
 {% endblock %}
-

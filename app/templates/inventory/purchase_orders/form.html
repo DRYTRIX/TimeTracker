@@ -19,7 +19,7 @@
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-6xl mx-auto">
     <form method="POST" action="{{ url_for('inventory.edit_purchase_order', po_id=purchase_order.id) if is_edit else url_for('inventory.new_purchase_order') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <!-- Basic Information -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
@@ -78,7 +78,7 @@
                     <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}
                 </button>
             </div>
-            
+
             <div class="hidden md:grid md:grid-cols-12 gap-3 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase">
                 <div class="md:col-span-3">{{ _('Stock Item') }}</div>
                 <div class="md:col-span-2">{{ _('Description') }}</div>
@@ -89,11 +89,11 @@
                 <div class="md:col-span-1">{{ _('Supplier SKU') }}</div>
                 <div class="md:col-span-1 text-center">{{ _('Action') }}</div>
             </div>
-            
+
             <div id="po-items" class="space-y-2">
                 <!-- Items will be added here dynamically -->
             </div>
-            
+
             <div class="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
                 <div class="flex justify-between items-center">
                     <span class="text-sm font-medium">{{ _('Subtotal') }}:</span>
@@ -118,7 +118,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const itemsContainer = document.getElementById('po-items');
     const addItemBtn = document.getElementById('add-item');
-    
+
     const stockItems = {{ stock_items | tojson if stock_items else '[]' }};
     const warehouses = {{ warehouses | tojson if warehouses else '[]' }};
     const existingItems = [
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endfor %}
         {% endif %}
     ];
-    
+
     // Build stock items dropdown HTML
     function buildStockItemsHtml() {
         let html = '<option value="">{{ _("Select Item") }}</option>';
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         return html;
     }
-    
+
     // Build warehouses dropdown HTML
     function buildWarehousesHtml() {
         let html = '<option value="">{{ _("Select Warehouse") }}</option>';
@@ -146,13 +146,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         return html;
     }
-    
+
     // Add item row
     function addItemRow(item = null) {
         const row = document.createElement('div');
         row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 po-item-row';
-        
-        row.innerHTML = 
+
+        row.innerHTML =
             '<input type="hidden" name="item_supplier_stock_item_id[]" value="' + (item && item.supplier_stock_item_id ? item.supplier_stock_item_id : '') + '">' +
             '<select name="item_stock_item_id[]" class="md:col-span-3 form-input text-sm item-stock-select">' + buildStockItemsHtml() + '</select>' +
             '<input type="text" name="item_description[]" placeholder="{{ _("Description") }}" value="' + (item ? (item.description || '').replace(/"/g, '&quot;') : '') + '" class="md:col-span-2 form-input text-sm item-description" required>' +
@@ -164,20 +164,20 @@ document.addEventListener('DOMContentLoaded', function() {
             '<button type="button" class="remove-item md:col-span-1 bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition text-sm" title="{{ _("Remove") }}">' +
                 '<i class="fas fa-trash"></i>' +
             '</button>';
-        
+
         itemsContainer.appendChild(row);
-        
+
         // Setup stock item select handler
         const stockSelect = row.querySelector('.item-stock-select');
         const warehouseSelect = row.querySelector('.item-warehouse-select');
-        
+
         if (item && item.stock_item_id) {
             stockSelect.value = String(item.stock_item_id);
         }
         if (item && item.warehouse_id) {
             warehouseSelect.value = String(item.warehouse_id);
         }
-        
+
         stockSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             const descInput = row.querySelector('.item-description');
@@ -185,46 +185,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 descInput.value = selectedOption.dataset.name;
             }
         });
-        
+
         // Setup calculation triggers
         row.querySelectorAll('[data-calc-trigger]').forEach(input => {
             input.addEventListener('input', calculateTotals);
         });
-        
+
         // Setup remove button
         row.querySelector('.remove-item').addEventListener('click', function() {
             row.remove();
             calculateTotals();
         });
-        
+
         calculateTotals();
     }
-    
+
     // Calculate totals
     function calculateTotals() {
         let subtotal = 0;
-        
+
         document.querySelectorAll('.po-item-row').forEach(row => {
             const qty = parseFloat(row.querySelector('.item-quantity')?.value || 0);
             const cost = parseFloat(row.querySelector('.item-cost')?.value || 0);
             const total = qty * cost;
-            
+
             const totalEl = row.querySelector('.item-total');
             if (totalEl) {
                 totalEl.textContent = total.toFixed(2);
             }
-            
+
             subtotal += total;
         });
-        
+
         document.getElementById('po-subtotal').textContent = subtotal.toFixed(2);
     }
-    
+
     // Add item button
     addItemBtn.addEventListener('click', function() {
         addItemRow();
     });
-    
+
     // Prefill existing items in edit mode, otherwise one blank row
     if (existingItems.length > 0) {
         existingItems.forEach(item => addItemRow(item));

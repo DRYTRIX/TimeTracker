@@ -234,7 +234,7 @@
                 "hour_of_day_label": "Hour of Day",
                 "revenue_label": "Revenue"
             };
-        } catch (e) { 
+        } catch (e) {
             return {
                 "error_loading_charts": "Failed to load charts. Please try again.",
                 "error_refreshing_charts": "Failed to refresh charts. Please try again.",
@@ -245,7 +245,7 @@
             };
         }
     })();
-    
+
     // Also make it available as a local variable for backward compatibility
     var i18n_analytics = window.i18n_analytics;
   </script>
@@ -299,7 +299,7 @@ class AnalyticsDashboard {
 
     async loadCharts() {
         this.showLoading();
-        
+
         try {
             await Promise.all([
                 this.loadDailyHoursChart(),
@@ -324,7 +324,7 @@ class AnalyticsDashboard {
 
     async refreshAllCharts() {
         this.showLoading();
-        
+
         try {
             await Promise.all([
                 this.loadDailyHoursChart(true),
@@ -351,11 +351,11 @@ class AnalyticsDashboard {
     async loadDailyHoursChart(refresh = false) {
         const response = await fetch(`/api/analytics/hours-by-day?days=${this.timeRange}`);
         const data = await response.json();
-        
+
         if (refresh && this.charts.dailyHours) {
             this.charts.dailyHours.destroy();
         }
-        
+
         const ctx = document.getElementById('dailyHoursChart').getContext('2d');
         this.charts.dailyHours = new Chart(ctx, {
             type: 'line',
@@ -394,11 +394,11 @@ class AnalyticsDashboard {
     async loadBillableChart(refresh = false) {
         const response = await fetch(`/api/analytics/billable-vs-nonbillable?days=${this.timeRange}`);
         const data = await response.json();
-        
+
         if (refresh && this.charts.billable) {
             this.charts.billable.destroy();
         }
-        
+
         const ctx = document.getElementById('billableChart').getContext('2d');
         this.charts.billable = new Chart(ctx, {
             type: 'doughnut',
@@ -418,11 +418,11 @@ class AnalyticsDashboard {
     async loadProjectChart(refresh = false) {
         const response = await fetch(`/api/analytics/hours-by-project?days=${this.timeRange}`);
         const data = await response.json();
-        
+
         if (refresh && this.charts.project) {
             this.charts.project.destroy();
         }
-        
+
         const ctx = document.getElementById('projectChart').getContext('2d');
         this.charts.project = new Chart(ctx, {
             type: 'bar',
@@ -451,11 +451,11 @@ class AnalyticsDashboard {
     async loadWeeklyTrendsChart(refresh = false) {
         const response = await fetch(`/api/analytics/weekly-trends?weeks=${Math.min(12, Math.ceil(this.timeRange / 7))}`);
         const data = await response.json();
-        
+
         if (refresh && this.charts.weeklyTrends) {
             this.charts.weeklyTrends.destroy();
         }
-        
+
         const ctx = document.getElementById('weeklyTrendsChart').getContext('2d');
         this.charts.weeklyTrends = new Chart(ctx, {
             type: 'line',
@@ -516,11 +516,11 @@ class AnalyticsDashboard {
     async loadHourlyChart(refresh = false) {
         const response = await fetch(`/api/analytics/hours-by-hour?days=${this.timeRange}`);
         const data = await response.json();
-        
+
         if (refresh && this.charts.hourly) {
             this.charts.hourly.destroy();
         }
-        
+
         const ctx = document.getElementById('hourlyChart').getContext('2d');
         this.charts.hourly = new Chart(ctx, {
             type: 'line',
@@ -555,11 +555,11 @@ class AnalyticsDashboard {
     async loadEfficiencyChart(refresh = false) {
         const response = await fetch(`/api/analytics/project-efficiency?days=${this.timeRange}`);
         const data = await response.json();
-        
+
         if (refresh && this.charts.efficiency) {
             this.charts.efficiency.destroy();
         }
-        
+
         const ctx = document.getElementById('efficiencyChart').getContext('2d');
         this.charts.efficiency = new Chart(ctx, {
             type: 'bar',
@@ -647,11 +647,11 @@ class AnalyticsDashboard {
     async loadUserChart(refresh = false) {
         const response = await fetch(`/api/analytics/hours-by-user?days=${this.timeRange}`);
         const data = await response.json();
-        
+
         if (refresh && this.charts.user) {
             this.charts.user.destroy();
         }
-        
+
         const ctx = document.getElementById('userChart').getContext('2d');
         this.charts.user = new Chart(ctx, {
             type: 'bar',
@@ -683,24 +683,24 @@ class AnalyticsDashboard {
             // Get summary data from daily hours chart
             const response = await fetch(`/api/analytics/hours-by-day?days=${this.timeRange}`);
             const data = await response.json();
-            
+
             const totalHours = data.datasets[0].data.reduce((sum, hours) => sum + hours, 0);
             const avgDailyHours = totalHours / data.datasets[0].data.length;
-            
+
             document.getElementById('totalHours').textContent = totalHours.toFixed(1) + 'h';
             document.getElementById('avgDailyHours').textContent = avgDailyHours.toFixed(1) + 'h';
-            
+
             // Get billable data
             const billableResponse = await fetch(`/api/analytics/billable-vs-nonbillable?days=${this.timeRange}`);
             const billableData = await billableResponse.json();
             const billableHours = billableData.datasets[0].data[0];
             document.getElementById('billableHours').textContent = billableHours.toFixed(1) + 'h';
-            
+
             // Get project count
             const projectResponse = await fetch(`/api/analytics/hours-by-project?days=${this.timeRange}`);
             const projectData = await projectResponse.json();
             document.getElementById('activeProjects').textContent = projectData.labels.length;
-            
+
         } catch (error) {
             console.error('Error updating summary cards:', error);
         }

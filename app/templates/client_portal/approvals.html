@@ -19,7 +19,7 @@
 <!-- Enhanced Status Filter -->
 <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg p-4 mb-6">
     <div class="flex flex-wrap gap-2">
-        <a href="{{ url_for('client_portal.time_entry_approvals', status='pending') }}" 
+        <a href="{{ url_for('client_portal.time_entry_approvals', status='pending') }}"
            class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
            {% if status_filter == 'pending' %}
            bg-yellow-600 text-white shadow-md
@@ -32,7 +32,7 @@
             <span class="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs font-bold">{{ pending_count }}</span>
             {% endif %}
         </a>
-        <a href="{{ url_for('client_portal.time_entry_approvals', status='approved') }}" 
+        <a href="{{ url_for('client_portal.time_entry_approvals', status='approved') }}"
            class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
            {% if status_filter == 'approved' %}
            bg-green-600 text-white shadow-md
@@ -42,7 +42,7 @@
             <i class="fas fa-check-circle"></i>
             <span>{{ _('Approved') }}</span>
         </a>
-        <a href="{{ url_for('client_portal.time_entry_approvals', status='rejected') }}" 
+        <a href="{{ url_for('client_portal.time_entry_approvals', status='rejected') }}"
            class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
            {% if status_filter == 'rejected' %}
            bg-red-600 text-white shadow-md
@@ -52,7 +52,7 @@
             <i class="fas fa-times-circle"></i>
             <span>{{ _('Rejected') }}</span>
         </a>
-        <a href="{{ url_for('client_portal.time_entry_approvals', status='all') }}" 
+        <a href="{{ url_for('client_portal.time_entry_approvals', status='all') }}"
            class="px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center space-x-2
            {% if status_filter == 'all' %}
            bg-primary text-white shadow-md
@@ -81,7 +81,7 @@
                         </div>
                         <div>
                             <h3 class="text-xl font-bold text-text-light dark:text-text-dark">
-                                <a href="{{ url_for('client_portal.view_approval', approval_id=approval.id) }}" 
+                                <a href="{{ url_for('client_portal.view_approval', approval_id=approval.id) }}"
                                    class="text-primary hover:text-primary/80 hover:underline">
                                     {{ _('Time Entry') }} #{{ approval.time_entry_id }}
                                 </a>
@@ -100,7 +100,7 @@
                             {% else %}
                             bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300
                             {% endif %}">
-                            <i class="fas 
+                            <i class="fas
                                 {% if approval.status.value == 'pending' %}fa-clock
                                 {% elif approval.status.value == 'approved' %}fa-check-circle
                                 {% elif approval.status.value == 'rejected' %}fa-times-circle
@@ -108,7 +108,7 @@
                             {{ approval.status.value|title }}
                         </span>
                     </div>
-                    
+
                     {% if approval.time_entry %}
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div class="flex items-center space-x-3 p-3 bg-background-light dark:bg-background-dark rounded-lg">
@@ -145,7 +145,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     {% if approval.time_entry.description %}
                     <div class="mb-4 p-4 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
                         <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Description') }}</p>
@@ -153,7 +153,7 @@
                     </div>
                     {% endif %}
                     {% endif %}
-                    
+
                     {% if approval.request_comment %}
                     <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                         <p class="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1">
@@ -164,9 +164,9 @@
                     {% endif %}
                 </div>
             </div>
-            
+
             <div class="flex items-center justify-end space-x-3 pt-4 border-t border-border-light dark:border-border-dark">
-                <a href="{{ url_for('client_portal.view_approval', approval_id=approval.id) }}" 
+                <a href="{{ url_for('client_portal.view_approval', approval_id=approval.id) }}"
                    class="inline-flex items-center px-5 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-colors shadow-md hover:shadow-lg group">
                     <i class="fas fa-eye mr-2"></i>
                     <span>{{ _('View Details') }}</span>

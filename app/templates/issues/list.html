@@ -29,7 +29,7 @@
     <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
             <label for="issues-filter-search" class="block text-sm font-medium mb-1">{{ _('Search') }}</label>
-            <input type="text" name="search" id="issues-filter-search" value="{{ search or '' }}" 
+            <input type="text" name="search" id="issues-filter-search" value="{{ search or '' }}"
                    class="form-input" placeholder="{{ _('Search by title or description') }}">
         </div>
         <div>
@@ -111,7 +111,7 @@
                     <td class="p-3" data-label="{{ _('Client') }}">{{ issue.client.name }}</td>
                     <td class="p-3" data-label="{{ _('Project') }}">{{ issue.project.name if issue.project else '-' }}</td>
                     <td class="p-3" data-label="{{ _('Status') }}">
-                        <span class="px-2 py-1 text-xs rounded-full 
+                        <span class="px-2 py-1 text-xs rounded-full
                             {% if issue.status == 'open' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
                             {% elif issue.status == 'in_progress' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                             {% elif issue.status == 'resolved' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
@@ -121,7 +121,7 @@
                         </span>
                     </td>
                     <td class="p-3" data-label="{{ _('Priority') }}">
-                        <span class="px-2 py-1 text-xs rounded-full 
+                        <span class="px-2 py-1 text-xs rounded-full
                             {% if issue.priority == 'urgent' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
                             {% elif issue.priority == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
                             {% elif issue.priority == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
@@ -141,20 +141,20 @@
             </tbody>
         </table>
     </div>
-    
+
     <!-- Pagination -->
     {% if pagination.pages > 1 %}
     <div class="mt-4 flex justify-center">
         <div class="flex gap-2">
             {% if pagination.has_prev %}
-            <a href="{{ url_for('issues.list_issues', page=pagination.prev_num, status=status, priority=priority, client_id=client_id, project_id=project_id, assigned_to=assigned_to, search=search) }}" 
+            <a href="{{ url_for('issues.list_issues', page=pagination.prev_num, status=status, priority=priority, client_id=client_id, project_id=project_id, assigned_to=assigned_to, search=search) }}"
                class="px-3 py-1 bg-card-light dark:bg-card-dark rounded border border-border-light dark:border-border-dark">
                 {{ _('Previous') }}
             </a>
             {% endif %}
             <span class="px-3 py-1">{{ _('Page') }} {{ pagination.page }} {{ _('of') }} {{ pagination.pages }}</span>
             {% if pagination.has_next %}
-            <a href="{{ url_for('issues.list_issues', page=pagination.next_num, status=status, priority=priority, client_id=client_id, project_id=project_id, assigned_to=assigned_to, search=search) }}" 
+            <a href="{{ url_for('issues.list_issues', page=pagination.next_num, status=status, priority=priority, client_id=client_id, project_id=project_id, assigned_to=assigned_to, search=search) }}"
                class="px-3 py-1 bg-card-light dark:bg-card-dark rounded border border-border-light dark:border-border-dark">
                 {{ _('Next') }}
             </a>

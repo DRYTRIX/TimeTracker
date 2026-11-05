@@ -260,14 +260,14 @@ class ChartManager {
                     const ctx = chart.ctx;
                     const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
                     const centerY = chart.chartArea.bottom;
-                    
+
                     ctx.save();
                     ctx.font = 'bold 24px sans-serif';
                     ctx.fillStyle = options.color || '#4F46E5';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(`${percentage.toFixed(1)}%`, centerX, centerY - 20);
-                    
+
                     if (options.label) {
                         ctx.font = '12px sans-serif';
                         ctx.fillStyle = '#6b7280';
@@ -473,4 +473,3 @@ function formatCurrency(value, currency = 'USD') {
         currency: currency
     }).format(value);
 }
-
