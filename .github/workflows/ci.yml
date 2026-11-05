@@ -432,7 +432,7 @@ jobs:
         run: |
           CONTAINER_ID=$(docker run -d --name test-container \
             -p 8081:8080 \
-            -e DATABASE_URL="sqlite:////app/test.db" \
+            -e DATABASE_URL="sqlite:////data/test.db" \
             -e SECRET_KEY="test-secret-key-for-ci-only-$(openssl rand -hex 16)" \
             -e FLASK_ENV="development" \
             timetracker:ci)
@@ -543,7 +543,7 @@ jobs:
           java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.4'
+          flutter-version: '3.47.9'
           channel: stable
           cache: true
       - run: flutter config --no-analytics
