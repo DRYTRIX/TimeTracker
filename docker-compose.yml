@@ -155,6 +155,9 @@ services:
       # Alternative provider: Peppyrus (free)
       - PEPPYRUS_BASE_URL=${PEPPYRUS_BASE_URL:-https://api.peppyrus.be/v1}
       - PEPPYRUS_API_KEY=${PEPPYRUS_API_KEY:-}
+      # Alternative provider: getpeppr
+      - GETPEPPR_BASE_URL=${GETPEPPR_BASE_URL:-https://api.getpeppr.dev/v1}
+      - GETPEPPR_API_KEY=${GETPEPPR_API_KEY:-}
       # generic_custom passthrough
       - GENERIC_FORWARD_URL=${GENERIC_FORWARD_URL:-}
       - GENERIC_FORWARD_TOKEN=${GENERIC_FORWARD_TOKEN:-}

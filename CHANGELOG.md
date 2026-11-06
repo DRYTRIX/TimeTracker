@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+
+- **Peppol bridge: getpeppr preset** — `PEPPOL_BRIDGE_PROVIDER=getpeppr` sends the UBL through getpeppr (`GETPEPPR_API_KEY`), with delivery status for the post-send check and an idempotency key so sending the same invoice twice the same day does not deliver a second copy (#840). See [PEPPOL_BRIDGE.md](docs/admin/configuration/PEPPOL_BRIDGE.md).
 
 ## [5.19.0] - 2026-11-05
 ### Added

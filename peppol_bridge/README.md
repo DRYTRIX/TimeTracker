@@ -38,6 +38,16 @@ Environment:
 
 Peppyrus authenticates API requests with the `X-Api-Key` header (not `Authorization: Bearer`).
 
+### getpeppr
+
+Environment:
+
+- `PEPPOL_BRIDGE_PROVIDER=getpeppr`
+- `GETPEPPR_API_KEY=...` (`sk_sandbox_…` or `sk_live_…`; the key decides the environment)
+- `GETPEPPR_BASE_URL=https://api.getpeppr.dev/v1` (optional)
+
+getpeppr takes the sender from the API key and routes to the recipient's `scheme:id`; see [PEPPOL_BRIDGE.md](../docs/admin/configuration/PEPPOL_BRIDGE.md#getpeppr) for status mapping and idempotency.
+
 ### generic_custom (passthrough)
 
 Environment:
