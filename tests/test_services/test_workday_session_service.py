@@ -138,15 +138,23 @@ class TestWorkdaySessionPeriodTotals:
 
     def test_active_session_clips_to_period_end(self, app, workday_user):
         with app.app_context():
-            start = local_now().replace(hour=9, minute=0, second=0, microsecond=0)
+            now = local_now()
+            # Start earlier today (not a fixed clock hour) so this is stable before 09:00.
+            start = now - timedelta(hours=2)
+            if start.date() < now.date():
+                start = now.replace(hour=0, minute=1, second=0, microsecond=0)
             session = WorkdaySession(user_id=workday_user.id, start_time=start, source="manual")
             db.session.add(session)
             db.session.commit()
 
-            today = start.date()
+            today = now.date()
             total = WorkdaySession.get_total_seconds_for_period(workday_user.id, today, today)
+            elapsed = int((local_now() - start).total_seconds())
+            through_period_end = int((datetime.combine(today, datetime.max.time()) - start).total_seconds())
             assert total >= 0
-            assert total <= int((local_now() - start).total_seconds()) + 1
+            assert total <= elapsed + 1
+            # Active sessions must stop at "now", not count the rest of the day.
+            assert total < through_period_end
 
 
 class TestResolveAutoClosedSession:

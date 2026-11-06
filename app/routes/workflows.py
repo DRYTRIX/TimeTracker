@@ -15,7 +15,7 @@ from app.routes.workflow_helpers import get_action_types, get_trigger_types, par
 from app.services.workflow_engine import WorkflowEngine
 from app.services.workflow_template_service import WorkflowTemplateService
 from app.utils.decorators import admin_required
-from app.utils.error_handling import client_error_payload
+from app.utils.error_handling import client_error_payload, sanitize_log_value
 from app.utils.module_helpers import module_enabled
 
 workflows_bp = Blueprint("workflows", __name__)
@@ -469,5 +469,5 @@ def test_workflow(workflow_id):
         result = WorkflowEngine.execute_rule(workflow, test_event)
         return jsonify(_safe_workflow_test_payload(result))
     except Exception:
-        logger.exception("Workflow test failed for workflow %s", workflow_id)
+        logger.exception("Workflow test failed for workflow %s", sanitize_log_value(workflow_id))
         return jsonify({"success": False, **client_error_payload()}), 500
