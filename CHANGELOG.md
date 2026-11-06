@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - First-five-minutes checklist after Docker quick start; demo credentials beside the live demo link; refreshed dashboard screenshot; community/discovery funnel tweaks.
 - Release and version docs aligned with Prepare/Finalize + `bump_version.py` (superseding manual GitHub Releases / `version-manager.sh` as the primary path).
 
+### Fixed
+
+- **Invoices** — Deleting a draft invoice (single or bulk) now gives back the prepaid hours it used; before, fully prepaid time entries stayed non-billable and invoicing the same entries again failed on a unique constraint.
+
 ## [5.18.5] - 2026-10-30
 
 ### Security

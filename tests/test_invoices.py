@@ -1775,6 +1775,94 @@ def test_bulk_delete_invoices_makes_costs_and_expenses_billable_again(app, clien
     _assert_billable_again(project, cost_id, expense_id)
 
 
+def _prepaid_draft_with_generated_items(client, user, invoice_number):
+    from factories import TimeEntryFactory
+
+    prepaid_client = ClientFactory(
+        name="Prepaid Delete Client",
+        email="prepaid-delete@example.com",
+        prepaid_hours_monthly=Decimal("5.0"),
+        prepaid_reset_day=1,
+    )
+    db.session.commit()
+    project = ProjectFactory(
+        name="Prepaid Delete Project", client_id=prepaid_client.id, billable=True, hourly_rate=Decimal("100.00")
+    )
+    db.session.commit()
+    entries = []
+    for idx, hours in enumerate([3, 4]):
+        start = datetime(2025, 3, 3 + idx, 9, 0, 0)
+        entries.append(
+            TimeEntryFactory(
+                user_id=user.id,
+                project_id=project.id,
+                start_time=start,
+                end_time=start + timedelta(hours=hours),
+                billable=True,
+            )
+        )
+    entry_ids = [entry.id for entry in entries]
+    invoice_id = _new_prepaid_draft(user, project, prepaid_client, invoice_number)
+    resp = client.post(
+        f"/invoices/{invoice_id}/generate-from-time", data={"time_entries[]": [str(i) for i in entry_ids]}
+    )
+    assert resp.status_code == 302
+    assert ClientPrepaidConsumption.query.filter_by(invoice_id=invoice_id).count() == 2
+    return prepaid_client.id, project, entry_ids, invoice_id
+
+
+def _new_prepaid_draft(user, project, prepaid_client, invoice_number):
+    invoice = InvoiceFactory(
+        invoice_number=invoice_number,
+        project_id=project.id,
+        client_name=prepaid_client.name,
+        client_id=prepaid_client.id,
+        due_date=date.today() + timedelta(days=14),
+        created_by=user.id,
+        status="draft",
+    )
+    db.session.commit()
+    return invoice.id
+
+
+@pytest.mark.routes
+@pytest.mark.invoices
+@pytest.mark.parametrize("bulk", [False, True])
+def test_delete_draft_invoice_releases_prepaid_hours(app, client, user, bulk):
+    """A deleted draft must give back the prepaid hours it used, so the same entries can be invoiced again."""
+    from app.models import TimeEntry
+
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    client_id, project, entry_ids, invoice_id = _prepaid_draft_with_generated_items(client, user, "INV-PREPAID-DEL-1")
+
+    if bulk:
+        resp = client.post("/invoices/bulk-delete", data={"invoice_ids[]": [str(invoice_id)]})
+    else:
+        resp = client.post(f"/invoices/{invoice_id}/delete")
+    assert resp.status_code == 302
+    assert Invoice.query.get(invoice_id) is None
+
+    db.session.expire_all()
+    assert ClientPrepaidConsumption.query.filter_by(client_id=client_id).count() == 0
+    assert [TimeEntry.query.get(i).billable for i in entry_ids] == [True, True]
+
+    # Invoicing the same entries again uses the 5 prepaid hours once and bills the remaining 2.
+    prepaid_client = Client.query.get(client_id)
+    new_invoice_id = _new_prepaid_draft(user, project, prepaid_client, "INV-PREPAID-DEL-2")
+    resp = client.post(
+        f"/invoices/{new_invoice_id}/generate-from-time", data={"time_entries[]": [str(i) for i in entry_ids]}
+    )
+    assert resp.status_code == 302
+    db.session.expire_all()
+    consumptions = ClientPrepaidConsumption.query.filter_by(client_id=client_id).all()
+    assert sum(c.seconds_consumed for c in consumptions) == 5 * 3600
+    assert {c.invoice_id for c in consumptions} == {new_invoice_id}
+    assert [item.quantity for item in Invoice.query.get(new_invoice_id).items] == [Decimal("2.00")]
+
+
 @pytest.mark.routes
 @pytest.mark.invoices
 def test_delete_invoice_route_permission_denied(app, client, user, project):

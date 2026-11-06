@@ -207,18 +207,36 @@ class Invoice(db.Model):
                 self.status = "sent"
 
     def release_invoiced_costs_and_expenses(self):
-        """Make this invoice's project costs and expenses billable again.
+        """Make this invoice's project costs, expenses and prepaid hours billable again.
 
         Call before deleting the invoice. The database only clears their
         ``invoice_id``; ``invoiced`` would stay True and keep them off every
         later invoice.
+
+        Prepaid hours used by the invoice are given back the same way
+        ``PrepaidHoursAllocator`` does before it recalculates an invoice: the
+        consumption rows are removed and their time entries are billable again.
+        Otherwise fully prepaid entries stay non-billable and are left off later
+        invoices, and the rows, left without an invoice, still count against the
+        client's prepaid hours and make invoicing their entries again fail on the
+        unique ``time_entry_id``.
         """
+        from .client_prepaid_consumption import ClientPrepaidConsumption
         from .project_cost import ProjectCost
+        from .time_entry import TimeEntry
 
         for cost in ProjectCost.query.filter_by(invoice_id=self.id).all():
             cost.unmark_as_invoiced()
         for expense in self.expenses.all():
             expense.unmark_as_invoiced()
+
+        consumptions = ClientPrepaidConsumption.query.filter_by(invoice_id=self.id).all()
+        entry_ids = [consumption.time_entry_id for consumption in consumptions]
+        if entry_ids:
+            for entry in TimeEntry.query.filter(TimeEntry.id.in_(entry_ids)).all():
+                entry.billable = True
+        for consumption in consumptions:
+            db.session.delete(consumption)
 
     def calculate_totals(self):
         """Calculate invoice totals from items, extra goods, and expenses"""
