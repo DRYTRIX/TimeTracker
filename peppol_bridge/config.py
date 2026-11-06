@@ -19,6 +19,10 @@ class BridgeConfig:
     peppyrus_base_url: str
     peppyrus_api_key: Optional[str]
 
+    # getpeppr
+    getpeppr_base_url: str
+    getpeppr_api_key: Optional[str]
+
     # Generic passthrough
     generic_forward_url: Optional[str]
     generic_forward_token: Optional[str]
@@ -38,6 +42,9 @@ def load_config() -> BridgeConfig:
     peppyrus_base_url = (os.getenv("PEPPYRUS_BASE_URL") or "https://api.peppyrus.be/v1").strip().rstrip("/")
     peppyrus_api_key = (os.getenv("PEPPYRUS_API_KEY") or "").strip() or None
 
+    getpeppr_base_url = (os.getenv("GETPEPPR_BASE_URL") or "https://api.getpeppr.dev/v1").strip().rstrip("/")
+    getpeppr_api_key = (os.getenv("GETPEPPR_API_KEY") or "").strip() or None
+
     # Generic passthrough
     generic_forward_url = (os.getenv("GENERIC_FORWARD_URL") or "").strip()
     generic_forward_token = (os.getenv("GENERIC_FORWARD_TOKEN") or "").strip() or None
@@ -50,6 +57,8 @@ def load_config() -> BridgeConfig:
         einvoice_api_key=einvoice_api_key,
         peppyrus_base_url=peppyrus_base_url,
         peppyrus_api_key=peppyrus_api_key,
+        getpeppr_base_url=getpeppr_base_url,
+        getpeppr_api_key=getpeppr_api_key,
         generic_forward_url=generic_forward_url or None,
         generic_forward_token=generic_forward_token,
     )

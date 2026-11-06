@@ -20,7 +20,7 @@
   <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-lg font-semibold mb-2">1) Deploy the Peppol Bridge</h2>
     <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
-      TimeTracker sends UBL XML to a local bridge. The bridge forwards it to your Access Point provider (e.g. Peppyrus or e-invoice.be).
+      TimeTracker sends UBL XML to a local bridge. The bridge forwards it to your Access Point provider (e.g. Peppyrus, e-invoice.be or getpeppr).
     </p>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -29,6 +29,7 @@
         <select id="wizardProviderPreset" class="form-input">
           <option value="einvoice">e-invoice.be</option>
           <option value="peppyrus">Peppyrus</option>
+          <option value="getpeppr">getpeppr</option>
           <option value="generic_custom">generic_custom (forward URL)</option>
         </select>
         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
@@ -149,6 +150,12 @@ function buildComposeSnippet() {
       '      - PEPPOL_BRIDGE_PROVIDER=peppyrus',
       '      - PEPPYRUS_BASE_URL=${PEPPYRUS_BASE_URL:-https://api.peppyrus.be/v1}',
       '      - PEPPYRUS_API_KEY=${PEPPYRUS_API_KEY:?Set PEPPYRUS_API_KEY}',
+    ].join('\\n');
+  } else if (preset === 'getpeppr') {
+    providerEnv = [
+      '      - PEPPOL_BRIDGE_PROVIDER=getpeppr',
+      '      - GETPEPPR_BASE_URL=${GETPEPPR_BASE_URL:-https://api.getpeppr.dev/v1}',
+      '      - GETPEPPR_API_KEY=${GETPEPPR_API_KEY:?Set GETPEPPR_API_KEY}',
     ].join('\\n');
   } else {
     providerEnv = [

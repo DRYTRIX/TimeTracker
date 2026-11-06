@@ -60,6 +60,23 @@ Environment variables:
 
 Peppyrus authenticates API requests with the `X-Api-Key` header (not `Authorization: Bearer`).
 
+### getpeppr
+
+Environment variables:
+
+- `PEPPOL_BRIDGE_PROVIDER=getpeppr`
+- `GETPEPPR_API_KEY=...` (`sk_sandbox_…` sends on the Peppol test network, `sk_live_…` in production; the key decides the environment)
+- `GETPEPPR_BASE_URL=https://api.getpeppr.dev/v1` (optional)
+
+getpeppr authenticates with `Authorization: Bearer <key>`. Create an account and a sandbox key at [console.getpeppr.dev](https://console.getpeppr.dev).
+
+How the bridge uses it:
+
+- `POST /test` calls `GET /v1/identity` (read-only) and returns the key's environment and its Peppol identity, so you can check which company and network you are about to send from.
+- `POST /send` calls `POST /v1/invoices/import` with the UBL exactly as TimeTracker generated it and the recipient's `scheme:id` as routing. getpeppr takes the sender from the API key's company and refuses a UBL whose supplier is another company; the document type comes from the UBL. The sender and document/process identifiers in TimeTracker's contract are therefore not forwarded.
+- Every send carries an `Idempotency-Key` built from the invoice's UBL, its recipient and the UTC date. Embedded attachments (the invoice PDF) are left out of the key, because TimeTracker regenerates the PDF on every attempt and sends without it when generation fails or embedding is turned off. Sending the same invoice again the same day never delivers a second copy: getpeppr returns the original document when the request is byte-identical, and otherwise refuses it (`422 idempotency_key_reuse`), which TimeTracker shows as a failed send even though the first attempt went out. Check the document in the getpeppr console before sending it again. A corrected invoice is a new key. getpeppr also refuses the same invoice number to the same recipient within 15 minutes (`409 duplicate_document`). A resend on a later UTC day goes out, and getpeppr flags it with `duplicateOf`.
+- `GET /message/<id>/status` reads `GET /v1/invoices/<id>` and maps getpeppr's status to the bridge folder: `submitted` → `outbox`; `delivered` and the buyer's responses (`acknowledged`, `in_process`, `under_query`, `conditionally_accepted`, `accepted`, `rejected`, `paid`, `partially_paid`) → `sent`; `failed` → `failed`; `no_action` (recipient not found on the network) → `failed`; `cleared` and any other status → no folder (still pending). A failed folder carries a `fatal_rules` entry (`getpeppr:failed` or `getpeppr:no_recipient`). getpeppr's own status is returned beside it in `status`. A buyer's `rejected` is a business answer after delivery, not a failed transmission, so it reads `sent` with `status: "rejected"`.
+
 ### generic_custom (passthrough)
 
 Environment variables:
