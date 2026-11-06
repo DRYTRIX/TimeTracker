@@ -142,7 +142,6 @@ class CalendarEvent(db.Model):
 
         from app.utils.error_handling import sanitize_log_value
 
-        # codeql[py/log-injection]
         logger.info(
             "get_events_in_range called: user_id=%s, start=%s, end=%s, include_tasks=%s, include_time_entries=%s",
             sanitize_log_value(user_id),
@@ -170,7 +169,6 @@ class CalendarEvent(db.Model):
 
         # Optionally include tasks with due dates
         if include_tasks:
-            # codeql[py/log-injection]
             logger.info("Querying tasks for user %s", sanitize_log_value(user_id))
             from app.services.task_service import task_assigned_to_user_clause
 
@@ -202,7 +200,6 @@ class CalendarEvent(db.Model):
 
         # Optionally include time entries
         if include_time_entries:
-            # codeql[py/log-injection]
             logger.info("Querying time entries for user %s", sanitize_log_value(user_id))
             time_entries = (
                 TimeEntry.query.filter(

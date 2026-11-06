@@ -250,7 +250,6 @@ def resolve_hostname_multiple_strategies(
             return True, ip_address, None, strategy_name
         last_error = error
 
-    # codeql[py/log-injection]
     logger.warning(
         "All DNS resolution strategies failed for %s. Last error: %s",
         sanitize_log_value(hostname),
@@ -360,7 +359,6 @@ def try_docker_internal_name(hostname: str, issuer_url: str) -> Optional[str]:
     if parsed.path:
         internal_url += parsed.path
 
-    # codeql[py/log-injection]
     logger.info(
         "Attempting Docker internal URL: %s (original: %s)",
         sanitize_log_value(internal_url),
