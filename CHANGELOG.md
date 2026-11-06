@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Invoices** — Deleting a draft invoice (single or bulk) now gives back the prepaid hours it used; before, fully prepaid time entries stayed non-billable and invoicing the same entries again failed on a unique constraint.
 
+### Fixed
+
+- **Payments** — Changing a completed payment to refunded, failed or pending through the API now takes it out of the invoice's amount paid; before, the invoice kept the old amount and could stay fully paid.
+
 ## [5.18.5] - 2026-10-30
 
 ### Security
