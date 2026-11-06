@@ -404,6 +404,17 @@ def test_pdf_layout_navigation_link_exists(admin_authenticated_client, app):
 
 @pytest.mark.smoke
 @pytest.mark.admin
+def test_quote_pdf_layout_navigation_link_exists(admin_authenticated_client, app):
+    """The quote PDF designer is reachable from the admin navigation."""
+    response = admin_authenticated_client.get("/admin/settings")
+
+    assert response.status_code == 200
+    with app.app_context():
+        assert url_for("admin.quote_pdf_layout") in response.get_data(as_text=True)
+
+
+@pytest.mark.smoke
+@pytest.mark.admin
 def test_pdf_layout_form_csrf_protection(admin_authenticated_client):
     """Test that PDF layout form has CSRF protection."""
     # Get the PDF layout page

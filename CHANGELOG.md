@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Peppol bridge: getpeppr preset** — `PEPPOL_BRIDGE_PROVIDER=getpeppr` sends the UBL through getpeppr (`GETPEPPR_API_KEY`), with delivery status for the post-send check and an idempotency key so sending the same invoice twice the same day does not deliver a second copy (#840). See [PEPPOL_BRIDGE.md](docs/admin/configuration/PEPPOL_BRIDGE.md).
 
+### Fixed
+
+- **Admin** — The sidebar links the Quote PDF designer again, next to Invoice PDF; 5.19.0 left only one PDF Templates link, to the invoice designer (#850).
+
 ## [5.19.0] - 2026-11-05
 ### Added
 
