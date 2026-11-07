@@ -3,13 +3,43 @@ Stripe payment gateway integration utilities.
 """
 
 import logging
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, Optional
 
 import stripe
 from flask import current_app
 
 logger = logging.getLogger(__name__)
+
+# Stripe takes amounts in the currency's smallest unit. Most currencies have
+# two decimals (cents), but these have none or three:
+# https://docs.stripe.com/currencies#zero-decimal
+# ISK, UGX, HUF and TWD are listed there as special cases: Stripe takes them
+# in the two-decimal form, so they are intentionally not in these sets.
+ZERO_DECIMAL_CURRENCIES = frozenset(
+    {"BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "VND", "VUV", "XAF", "XOF", "XPF"}
+)
+THREE_DECIMAL_CURRENCIES = frozenset({"BHD", "JOD", "KWD", "OMR", "TND"})
+
+
+def _minor_unit_factor(currency: str) -> int:
+    code = (currency or "").upper()
+    if code in ZERO_DECIMAL_CURRENCIES:
+        return 1
+    if code in THREE_DECIMAL_CURRENCIES:
+        return 1000
+    return 100
+
+
+def to_stripe_amount(amount, currency: str) -> int:
+    """Convert an amount in major units (e.g. 19.99 EUR) to Stripe's integer amount."""
+    factor = _minor_unit_factor(currency)
+    return int((Decimal(str(amount)) * factor).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def from_stripe_amount(stripe_amount, currency: str) -> Decimal:
+    """Convert Stripe's integer amount back to major units."""
+    return Decimal(str(stripe_amount)) / _minor_unit_factor(currency)
 
 
 class StripeIntegration:
@@ -42,8 +72,7 @@ class StripeIntegration:
             dict with 'success', 'client_secret', and 'payment_intent' keys
         """
         try:
-            # Convert amount to cents
-            amount_cents = int(amount * 100)
+            amount_cents = to_stripe_amount(amount, currency)
 
             payment_intent_data = {
                 "amount": amount_cents,
@@ -105,7 +134,7 @@ class StripeIntegration:
             dict with 'success', 'session_id', and 'url' keys
         """
         try:
-            amount_cents = int(amount * 100)
+            amount_cents = to_stripe_amount(amount, currency)
 
             session_data = {
                 "payment_method_types": ["card"],
