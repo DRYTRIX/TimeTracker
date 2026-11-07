@@ -124,3 +124,26 @@ def test_create_payment_updates_invoice_amount_paid(client, api_token, setup_inv
         invoice = db.session.get(Invoice, inv.id)
         assert float(invoice.amount_paid) == expected_paid
         assert invoice.payment_status == expected_status
+
+
+def test_refunding_payment_updates_invoice_amount_paid(client, api_token, setup_invoice):
+    inv = setup_invoice
+    inv.total_amount = 10
+    db.session.commit()
+
+    r = client.post(
+        "/api/v1/payments",
+        headers=_auth(api_token),
+        json={"invoice_id": inv.id, "amount": 10.0, "method": "bank_transfer"},
+    )
+    assert r.status_code == 201
+    pid = r.get_json()["payment"]["id"]
+    db.session.expire_all()
+    assert db.session.get(Invoice, inv.id).payment_status == "fully_paid"
+
+    r = client.patch(f"/api/v1/payments/{pid}", headers=_auth(api_token), json={"status": "refunded"})
+    assert r.status_code == 200
+    db.session.expire_all()
+    invoice = db.session.get(Invoice, inv.id)
+    assert float(invoice.amount_paid) == 0.0
+    assert invoice.payment_status == "unpaid"

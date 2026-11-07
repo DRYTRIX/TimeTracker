@@ -110,5 +110,10 @@ def cors_origin_allowed(origin: Optional[str], app=None, environ=None) -> bool:
 
 
 def socketio_cors_allowed_origin(origin, environ=None) -> bool:
-    """Callable for ``socketio.init_app(..., cors_allowed_origins=...)``."""
-    return cors_origin_allowed(origin, environ=environ)
+    """Callable for ``socketio.init_app(..., cors_allowed_origins=...)``.
+
+    Engine.IO calls this from WSGI before any Flask app context exists, so take
+    the app from the environ, where Flask-SocketIO's middleware puts it.
+    """
+    app = (environ or {}).get("flask.app")
+    return cors_origin_allowed(origin, app=app, environ=environ)

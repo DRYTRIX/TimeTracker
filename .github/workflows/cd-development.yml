@@ -1,31 +1,11 @@
 name: CD - Development Build
 
-# Publish :develop (and sha tags) on every push to develop that touches image contents.
-# Pure docs/markdown-only pushes are skipped; use workflow_dispatch to refresh without a path match.
-# Smoke tests must pass before push unless force_build=true on manual dispatch.
+# Publish :develop (and sha tags) on demand only.
+# Merges into develop no longer trigger an image publish — use workflow_dispatch
+# when you intentionally want a fresh :develop image (e.g. before a demo or RC cut).
+# Smoke tests must pass before push unless force_build=true.
 
 on:
-  push:
-    branches: [develop]
-    paths:
-      - 'app/**'
-      - 'migrations/**'
-      - 'translations/**'
-      - 'peppol_bridge/**'
-      - 'docker/**'
-      - 'nginx/**'
-      - 'requirements*.txt'
-      - 'setup.py'
-      - 'Dockerfile'
-      - 'docker-compose*.yml'
-      - 'package*.json'
-      - 'tailwind.config.js'
-      - 'postcss.config.js'
-      - '.github/workflows/cd-development.yml'
-      - 'babel.cfg'
-      - 'scripts/**'
-      - 'donate_hide_public.pem'
-      - 'env.example'
   workflow_dispatch:
     inputs:
       force_build:
@@ -191,5 +171,5 @@ jobs:
               echo "- Docker Hub: skipped (credentials not configured)"
             fi
             echo ""
-            echo "Publish is path-filtered and smoke-gated. Manual refresh: Actions → CD - Development Build → Run workflow."
+            echo "Publish is manual only (workflow_dispatch). Merges into \`develop\` do not build this image."
           } >> "$GITHUB_STEP_SUMMARY"

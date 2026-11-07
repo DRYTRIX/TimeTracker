@@ -149,6 +149,8 @@ class PaymentService:
         if not payment:
             return {"success": False, "message": "Payment not found", "error": "not_found"}
 
+        was_completed = payment.status == "completed"
+
         # Update fields
         for field in ("currency", "method", "reference", "notes", "status"):
             if field in kwargs:
@@ -161,18 +163,21 @@ class PaymentService:
         # Recalculate net amount
         payment.calculate_net_amount()
 
-        # Update invoice payment status if needed
-        if payment.status == "completed" and payment.invoice:
+        # Recompute the invoice whenever the payment counts or used to count:
+        # a completed payment moved to refunded, failed or pending must drop
+        # out of amount_paid, as it does in delete_payment.
+        if (was_completed or payment.status == "completed") and payment.invoice:
+            db.session.flush()
             total_payments = self.payment_repo.get_total_for_invoice(payment.invoice_id)
             payment.invoice.amount_paid = total_payments
 
-            # Update payment status
-            if payment.invoice.amount_paid >= payment.invoice.total_amount:
-                payment.invoice.payment_status = "fully_paid"
-            elif payment.invoice.amount_paid > 0:
-                payment.invoice.payment_status = "partially_paid"
-            else:
+            # Update payment status (same order as delete_payment)
+            if payment.invoice.amount_paid <= 0:
                 payment.invoice.payment_status = "unpaid"
+            elif payment.invoice.amount_paid >= payment.invoice.total_amount:
+                payment.invoice.payment_status = "fully_paid"
+            else:
+                payment.invoice.payment_status = "partially_paid"
 
         if not safe_commit("update_payment", {"payment_id": payment_id, "user_id": user_id}):
             return {

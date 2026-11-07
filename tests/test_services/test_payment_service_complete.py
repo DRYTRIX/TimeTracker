@@ -96,6 +96,43 @@ class TestPaymentServiceComplete:
         assert invoice.amount_paid == Decimal("10.00")
         assert invoice.payment_status == "fully_paid"
 
+    @pytest.mark.parametrize("new_status", ["refunded", "failed", "pending"])
+    def test_update_payment_out_of_completed_updates_amount_paid(self, app, invoice, user, new_status):
+        """A completed payment moved to another status no longer counts in amount_paid"""
+        from app import db
+
+        invoice.total_amount = Decimal("10.00")
+        db.session.commit()
+        service = PaymentService()
+
+        first = service.create_payment(
+            invoice_id=invoice.id, amount=Decimal("4.00"), payment_date=date.today(), received_by=user.id
+        )["payment"]
+        second = service.create_payment(
+            invoice_id=invoice.id, amount=Decimal("6.00"), payment_date=date.today(), received_by=user.id
+        )["payment"]
+        db.session.refresh(invoice)
+        assert invoice.amount_paid == Decimal("10.00")
+        assert invoice.payment_status == "fully_paid"
+
+        result = service.update_payment(payment_id=second.id, user_id=user.id, status=new_status)
+        assert result["success"] is True
+        db.session.refresh(invoice)
+        assert invoice.amount_paid == Decimal("4.00")
+        assert invoice.payment_status == "partially_paid"
+
+        result = service.update_payment(payment_id=first.id, user_id=user.id, status=new_status)
+        assert result["success"] is True
+        db.session.refresh(invoice)
+        assert invoice.amount_paid == Decimal("0.00")
+        assert invoice.payment_status == "unpaid"
+
+        result = service.update_payment(payment_id=first.id, user_id=user.id, status="completed")
+        assert result["success"] is True
+        db.session.refresh(invoice)
+        assert invoice.amount_paid == Decimal("4.00")
+        assert invoice.payment_status == "partially_paid"
+
     def test_create_pending_payment_leaves_amount_paid(self, app, invoice, user):
         """A non-completed payment does not change amount_paid"""
         from app import db

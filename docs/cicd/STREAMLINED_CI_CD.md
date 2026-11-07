@@ -13,7 +13,7 @@ Your CI/CD pipeline has been **streamlined** from **7 workflows to 5**, removing
 | # | Workflow | Purpose | Triggers | Duration |
 |---|----------|---------|----------|----------|
 | 1 | `ci-comprehensive.yml` | Complete testing | PR, push to develop | ~15-20 min |
-| 2 | `cd-development.yml` | Dev builds & publish | Push to develop | ~25 min |
+| 2 | `cd-development.yml` | Dev builds & publish | Manual (`workflow_dispatch`) | ~25 min |
 | 3 | `cd-release.yml` | Production releases | Push to main, tags | ~55 min |
 | 4 | `migration-check.yml` | Migration validation | PR with model changes | ~15 min |
 | 5 | `static.yml` | Security scanning | PR, push, schedule | ~5 min |
@@ -50,22 +50,19 @@ Your CI/CD pipeline has been **streamlined** from **7 workflows to 5**, removing
 
 ### 2. **CD - Development Builds** (`cd-development.yml`)
 
-**Purpose:** Automated development builds and publishing  
+**Purpose:** On-demand development image publish (`:develop`)  
 **Triggers:**
 ```yaml
-- Push to develop branch
-- Manual trigger (workflow_dispatch)
+- Manual trigger (workflow_dispatch) only
 ```
 
 **What it runs:**
-- 🧪 Quick test suite
+- 🧪 Smoke tests
 - 🐳 Multi-platform Docker build (AMD64, ARM64)
-- 📦 Publish to GHCR with tags:
+- 📦 Publish to GHCR (and Docker Hub when configured) with tags:
   - `develop`
   - `dev-{date}-{time}`
   - `dev-{sha}`
-- 📝 Create development release
-- 📄 Generate deployment manifests
 
 **Output:**
 ```bash
@@ -75,8 +72,8 @@ ghcr.io/{owner}/timetracker:dev-abc1234
 ```
 
 **When to expect it:**
-- Every push to develop
-- Manual execution from Actions tab
+- Only when a maintainer runs **CD - Development Build** from the Actions tab
+- Merges into `develop` do **not** trigger this workflow
 
 ---
 
@@ -222,14 +219,15 @@ All checks must pass to merge
 ### Development Build Scenario
 
 ```
-Push to develop branch
+Merge into develop
   ↓
-✅ ci-comprehensive.yml runs (testing)
-✅ cd-development.yml runs (build & publish)
+✅ CI (`ci.yml`) runs (path-aware testing)
   ↓
-Development image available
+ℹ️ No automatic `:develop` image publish
   ↓
-Ready to deploy to dev environment
+Maintainer runs Actions → CD - Development Build (optional)
+  ↓
+Development image available at :develop
 ```
 
 ### Production Release Scenario
@@ -354,7 +352,7 @@ git push origin test-streamlined-ci
 git checkout develop
 git merge test-streamlined-ci
 git push origin develop
-# Should trigger: ci-comprehensive.yml, cd-development.yml
+# Should trigger: CI (ci.yml). Does NOT trigger cd-development.yml.
 
 # Test 3: Create release
 git tag v1.0.0
@@ -382,7 +380,8 @@ The following documentation has been updated:
 | Event | Workflows Triggered |
 |-------|---------------------|
 | **PR opened/updated** | ci-comprehensive, static, (migration-check if models changed) |
-| **Push to develop** | ci-comprehensive, cd-development |
+| **Push to develop** | CI (`ci.yml`) only — use workflow_dispatch for `:develop` |
+
 | **Push to main** | cd-release |
 | **Create tag v*.*.\*** | cd-release |
 | **Model file changed in PR** | migration-check (additional) |
@@ -393,7 +392,7 @@ The following documentation has been updated:
 
 | Trigger | Registry | Tags |
 |---------|----------|------|
-| **Push to develop** | ghcr.io | `develop`, `dev-{date}`, `dev-{sha}` |
+| **Manual CD - Development Build** | ghcr.io | `develop`, `dev-{date}`, `dev-{sha}` |
 | **Push to main** | ghcr.io | `latest`, `stable`, `v{version}`, `{major}.{minor}`, `{major}` |
 | **Version tag** | ghcr.io | Same as push to main |
 

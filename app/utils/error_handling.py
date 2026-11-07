@@ -5,25 +5,27 @@ Use these where failures must not break the main flow (e.g. cache, cleanup, tele
 
 import logging
 import os
-import re
 from typing import Any, Optional, Tuple
 
 _valid_log_levels = ("debug", "info", "warning", "error", "critical")
-_LOG_CRLF_RE = re.compile(r"[\r\n]+")
 
 # Generic client-facing message — never embed exception text in HTTP responses.
 DEFAULT_CLIENT_ERROR = "An unexpected error occurred"
 
 
 def sanitize_log_value(value: Any, *, max_len: int = 500) -> str:
-    """Neutralize CR/LF (log injection) and truncate untrusted values for logging."""
+    """Neutralize CR/LF (log injection) and truncate untrusted values for logging.
+
+    The return expression must end in ``.replace("\\n", ...)`` / ``.replace("\\r\\n", ...)``
+    so CodeQL's built-in ReplaceLineBreaksSanitizer treats the value as safe.
+    """
     if value is None:
         return ""
     text = str(value)
-    text = _LOG_CRLF_RE.sub(" ", text)
     if len(text) > max_len:
         text = text[: max_len - 3] + "..."
-    return text
+    # Order: CRLF first, then lone CR, then LF — final .replace("\n") is required for CodeQL.
+    return text.replace("\r\n", " ").replace("\r", " ").replace("\n", " ")
 
 
 def client_error_payload(

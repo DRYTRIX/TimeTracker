@@ -576,8 +576,13 @@
                                 </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' or ep == 'admin.quote_pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
-                                    <i class="fas fa-file-pdf w-4 mr-2"></i>{{ _('PDF Templates') }}
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
+                                    <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoice PDF') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.quote_pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.quote_pdf_layout') }}">
+                                    <i class="fas fa-file-contract w-4 mr-2"></i>{{ _('Quote PDF') }}
                                 </a>
                             </li>
                             <li>

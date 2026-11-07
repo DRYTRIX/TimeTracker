@@ -89,6 +89,10 @@ services:
       # - PEPPOL_BRIDGE_PROVIDER=peppyrus
       # - PEPPYRUS_BASE_URL=${PEPPYRUS_BASE_URL:-https://api.peppyrus.be/v1}
       # - PEPPYRUS_API_KEY=${PEPPYRUS_API_KEY:?Set PEPPYRUS_API_KEY}
+      # Alternative provider: getpeppr
+      # - PEPPOL_BRIDGE_PROVIDER=getpeppr
+      # - GETPEPPR_BASE_URL=${GETPEPPR_BASE_URL:-https://api.getpeppr.dev/v1}
+      # - GETPEPPR_API_KEY=${GETPEPPR_API_KEY:?Set GETPEPPR_API_KEY}
     ports: []
     restart: unless-stopped
 

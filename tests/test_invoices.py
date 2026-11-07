@@ -554,6 +554,239 @@ def test_generate_from_time_per_entry_lines(app, client, user, project):
 
 
 @pytest.mark.routes
+def test_generate_from_time_second_pass_keeps_existing_lines(app, client, user, project):
+    """A second generate-from-time pass adds to the invoice instead of dropping earlier lines."""
+    from factories import TimeEntryFactory
+
+    from app.models import ProjectCost
+
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    project.hourly_rate = Decimal("100.00")
+    cl = ClientFactory(name="Second Pass Client", email="second-pass@test.com")
+    db.session.commit()
+
+    inv = InvoiceFactory(
+        invoice_number="INV-TEST-SECOND-PASS-001",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=7),
+        created_by=user.id,
+        status="draft",
+        tax_rate=Decimal("0"),
+    )
+    db.session.commit()
+
+    manual = InvoiceItemFactory(
+        invoice_id=inv.id,
+        description="Manual setup fee",
+        quantity=Decimal("1.00"),
+        unit_price=Decimal("30.00"),
+    )
+    start = datetime(2025, 6, 2, 9, 0, 0)
+    entry1 = TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        start_time=start,
+        end_time=start + timedelta(hours=2),
+        billable=True,
+    )
+    entry2 = TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        start_time=start + timedelta(days=1),
+        end_time=start + timedelta(days=1, hours=1),
+        billable=True,
+    )
+    cost = ProjectCost(
+        project_id=project.id,
+        user_id=user.id,
+        description="Hosting",
+        category="services",
+        amount=Decimal("12.50"),
+        cost_date=date.today(),
+        billable=True,
+    )
+    db.session.add(cost)
+    db.session.commit()
+    manual_id, cost_id = manual.id, cost.id
+
+    # First pass: one entry and the cost
+    resp = client.post(
+        f"/invoices/{inv.id}/generate-from-time",
+        data={"time_entries[]": [str(entry1.id)], "project_costs[]": [str(cost_id)]},
+    )
+    assert resp.status_code == 302
+    inv = Invoice.query.get(inv.id)
+    assert inv.subtotal == Decimal("242.50")
+
+    # Second pass: the picker no longer offers entry1, the user adds entry2
+    resp = client.post(
+        f"/invoices/{inv.id}/generate-from-time",
+        data={"time_entries[]": [str(entry2.id)]},
+    )
+    assert resp.status_code == 302
+
+    db.session.expire_all()
+    inv = Invoice.query.get(inv.id)
+    items = list(inv.items)
+    billed_ids = set()
+    for item in items:
+        for part in (item.time_entry_ids or "").split(","):
+            if part.strip().isdigit():
+                billed_ids.add(int(part))
+    assert billed_ids == {entry1.id, entry2.id}
+    assert any(item.id == manual_id for item in items)
+    assert any(item.description.startswith("Hosting") for item in items)
+    assert ProjectCost.query.get(cost_id).invoice_id == inv.id
+    # 30.00 manual + 3h x 100.00 + 12.50 cost
+    assert inv.subtotal == Decimal("342.50")
+    assert inv.total_amount == Decimal("342.50")
+
+
+def _second_pass_setup(user, project, name, prepaid_hours=None):
+    from app.models import ProjectCost
+
+    cl_kwargs = {"name": f"{name} Client", "email": f"{name.lower().replace(' ', '-')}@test.com"}
+    if prepaid_hours is not None:
+        cl_kwargs.update(prepaid_hours_monthly=Decimal(prepaid_hours), prepaid_reset_day=1)
+    cl = ClientFactory(**cl_kwargs)
+    db.session.commit()
+    if project is None:
+        project = ProjectFactory(name=f"{name} Project", client_id=cl.id, billable=True)
+    project.hourly_rate = Decimal("100.00")
+    db.session.commit()
+
+    inv = InvoiceFactory(
+        invoice_number=f"INV-{name.upper().replace(' ', '-')}",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=7),
+        created_by=user.id,
+        status="draft",
+        tax_rate=Decimal("0"),
+    )
+    db.session.commit()
+
+    from factories import TimeEntryFactory
+
+    start = datetime(2025, 6, 2, 9, 0, 0)
+    entry_a = TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        start_time=start,
+        end_time=start + timedelta(hours=2),
+        billable=True,
+    )
+    entry_b = TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        start_time=start + timedelta(days=1),
+        end_time=start + timedelta(days=1, hours=1),
+        billable=True,
+    )
+    cost = ProjectCost(
+        project_id=project.id,
+        user_id=user.id,
+        description="Hosting",
+        category="services",
+        amount=Decimal("12.50"),
+        cost_date=date.today(),
+        billable=True,
+    )
+    db.session.add(cost)
+    db.session.commit()
+    return inv.id, entry_a.id, entry_b.id, cost.id
+
+
+def _billed_entry_ids(invoice):
+    billed_ids = set()
+    for item in invoice.items:
+        for part in (item.time_entry_ids or "").split(","):
+            if part.strip().isdigit():
+                billed_ids.add(int(part))
+    return billed_ids
+
+
+@pytest.mark.routes
+def test_generate_from_time_second_pass_keeps_time_and_cost_lines(app, client, user, project):
+    """Without manual lines, a second pass keeps the earlier time entry and cost on the invoice."""
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    inv_id, entry_a, entry_b, cost_id = _second_pass_setup(user, project, "Second Pass Plain")
+
+    resp = client.post(
+        f"/invoices/{inv_id}/generate-from-time",
+        data={"time_entries[]": [str(entry_a)], "project_costs[]": [str(cost_id)]},
+    )
+    assert resp.status_code == 302
+    resp = client.post(f"/invoices/{inv_id}/generate-from-time", data={"time_entries[]": [str(entry_b)]})
+    assert resp.status_code == 302
+
+    db.session.expire_all()
+    inv = Invoice.query.get(inv_id)
+    assert _billed_entry_ids(inv) == {entry_a, entry_b}
+    # 3h x 100.00 + 12.50 cost
+    assert inv.subtotal == Decimal("312.50")
+    assert sum(1 for item in inv.items if item.description.startswith("Hosting")) == 1
+
+
+@pytest.mark.routes
+def test_generate_from_time_resubmit_does_not_duplicate_cost(app, client, user, project):
+    """Submitting the same generate-from-time form twice leaves the invoice unchanged."""
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    inv_id, entry_a, _entry_b, cost_id = _second_pass_setup(user, project, "Resubmit Cost")
+    data = {"time_entries[]": [str(entry_a)], "project_costs[]": [str(cost_id)]}
+
+    snapshots = []
+    for _ in range(2):
+        resp = client.post(f"/invoices/{inv_id}/generate-from-time", data=data)
+        assert resp.status_code == 302
+        db.session.expire_all()
+        inv = Invoice.query.get(inv_id)
+        snapshots.append((inv.subtotal, inv.items.count(), _billed_entry_ids(inv)))
+
+    assert snapshots[0] == (Decimal("212.50"), 2, {entry_a})
+    assert snapshots[1] == snapshots[0]
+
+
+@pytest.mark.routes
+def test_generate_from_time_second_pass_keeps_prepaid_allocation(app, client, user):
+    """Prepaid hours used by the first pass stay with those entries on a second pass."""
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    inv_id, entry_a, entry_b, _cost_id = _second_pass_setup(user, None, "Second Pass Prepaid", prepaid_hours="2.0")
+
+    resp = client.post(f"/invoices/{inv_id}/generate-from-time", data={"time_entries[]": [str(entry_a)]})
+    assert resp.status_code == 302
+    db.session.expire_all()
+    assert Invoice.query.get(inv_id).subtotal == Decimal("0")
+
+    resp = client.post(f"/invoices/{inv_id}/generate-from-time", data={"time_entries[]": [str(entry_b)]})
+    assert resp.status_code == 302
+
+    db.session.expire_all()
+    inv = Invoice.query.get(inv_id)
+    consumed = {
+        row.time_entry_id: row.seconds_consumed for row in ClientPrepaidConsumption.query.filter_by(invoice_id=inv_id)
+    }
+    assert consumed == {entry_a: 7200}
+    assert _billed_entry_ids(inv) == {entry_b}
+    assert inv.subtotal == Decimal("100.00")
+
+
+@pytest.mark.routes
 def test_unbilled_excludes_entries_on_current_invoice(app, client, user, project):
     """Entries already linked to the current invoice should not appear in the picker."""
     from factories import TimeEntryFactory
@@ -1773,6 +2006,94 @@ def test_bulk_delete_invoices_makes_costs_and_expenses_billable_again(app, clien
     assert resp.status_code == 200
     assert Invoice.query.get(invoice_id) is None
     _assert_billable_again(project, cost_id, expense_id)
+
+
+def _prepaid_draft_with_generated_items(client, user, invoice_number):
+    from factories import TimeEntryFactory
+
+    prepaid_client = ClientFactory(
+        name="Prepaid Delete Client",
+        email="prepaid-delete@example.com",
+        prepaid_hours_monthly=Decimal("5.0"),
+        prepaid_reset_day=1,
+    )
+    db.session.commit()
+    project = ProjectFactory(
+        name="Prepaid Delete Project", client_id=prepaid_client.id, billable=True, hourly_rate=Decimal("100.00")
+    )
+    db.session.commit()
+    entries = []
+    for idx, hours in enumerate([3, 4]):
+        start = datetime(2025, 3, 3 + idx, 9, 0, 0)
+        entries.append(
+            TimeEntryFactory(
+                user_id=user.id,
+                project_id=project.id,
+                start_time=start,
+                end_time=start + timedelta(hours=hours),
+                billable=True,
+            )
+        )
+    entry_ids = [entry.id for entry in entries]
+    invoice_id = _new_prepaid_draft(user, project, prepaid_client, invoice_number)
+    resp = client.post(
+        f"/invoices/{invoice_id}/generate-from-time", data={"time_entries[]": [str(i) for i in entry_ids]}
+    )
+    assert resp.status_code == 302
+    assert ClientPrepaidConsumption.query.filter_by(invoice_id=invoice_id).count() == 2
+    return prepaid_client.id, project, entry_ids, invoice_id
+
+
+def _new_prepaid_draft(user, project, prepaid_client, invoice_number):
+    invoice = InvoiceFactory(
+        invoice_number=invoice_number,
+        project_id=project.id,
+        client_name=prepaid_client.name,
+        client_id=prepaid_client.id,
+        due_date=date.today() + timedelta(days=14),
+        created_by=user.id,
+        status="draft",
+    )
+    db.session.commit()
+    return invoice.id
+
+
+@pytest.mark.routes
+@pytest.mark.invoices
+@pytest.mark.parametrize("bulk", [False, True])
+def test_delete_draft_invoice_releases_prepaid_hours(app, client, user, bulk):
+    """A deleted draft must give back the prepaid hours it used, so the same entries can be invoiced again."""
+    from app.models import TimeEntry
+
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    client_id, project, entry_ids, invoice_id = _prepaid_draft_with_generated_items(client, user, "INV-PREPAID-DEL-1")
+
+    if bulk:
+        resp = client.post("/invoices/bulk-delete", data={"invoice_ids[]": [str(invoice_id)]})
+    else:
+        resp = client.post(f"/invoices/{invoice_id}/delete")
+    assert resp.status_code == 302
+    assert Invoice.query.get(invoice_id) is None
+
+    db.session.expire_all()
+    assert ClientPrepaidConsumption.query.filter_by(client_id=client_id).count() == 0
+    assert [TimeEntry.query.get(i).billable for i in entry_ids] == [True, True]
+
+    # Invoicing the same entries again uses the 5 prepaid hours once and bills the remaining 2.
+    prepaid_client = Client.query.get(client_id)
+    new_invoice_id = _new_prepaid_draft(user, project, prepaid_client, "INV-PREPAID-DEL-2")
+    resp = client.post(
+        f"/invoices/{new_invoice_id}/generate-from-time", data={"time_entries[]": [str(i) for i in entry_ids]}
+    )
+    assert resp.status_code == 302
+    db.session.expire_all()
+    consumptions = ClientPrepaidConsumption.query.filter_by(client_id=client_id).all()
+    assert sum(c.seconds_consumed for c in consumptions) == 5 * 3600
+    assert {c.invoice_id for c in consumptions} == {new_invoice_id}
+    assert [item.quantity for item in Invoice.query.get(new_invoice_id).items] == [Decimal("2.00")]
 
 
 @pytest.mark.routes

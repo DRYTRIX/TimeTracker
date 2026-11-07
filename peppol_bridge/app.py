@@ -11,6 +11,7 @@ from peppol_bridge.config import BridgeConfig, load_config
 from peppol_bridge.providers.base import ProviderBase, ProviderError
 from peppol_bridge.providers.einvoice import EInvoiceProvider
 from peppol_bridge.providers.generic_custom import GenericCustomProvider
+from peppol_bridge.providers.getpeppr import GetpepprProvider
 from peppol_bridge.providers.peppyrus import PeppyrusProvider
 
 _CLIENT_ERROR = "An unexpected error occurred"
@@ -90,6 +91,10 @@ def _build_provider(cfg: BridgeConfig) -> ProviderBase:
         if not cfg.peppyrus_api_key:
             raise ProviderError("PEPPYRUS_API_KEY is not set")
         return PeppyrusProvider(base_url=cfg.peppyrus_base_url, api_key=cfg.peppyrus_api_key, timeout_s=cfg.timeout_s)
+    if cfg.provider in {"getpeppr"}:
+        if not cfg.getpeppr_api_key:
+            raise ProviderError("GETPEPPR_API_KEY is not set")
+        return GetpepprProvider(base_url=cfg.getpeppr_base_url, api_key=cfg.getpeppr_api_key, timeout_s=cfg.timeout_s)
     if cfg.provider in {"generic_custom", "generic"}:
         if not cfg.generic_forward_url:
             raise ProviderError("GENERIC_FORWARD_URL is not set for generic_custom provider")
