@@ -1013,9 +1013,20 @@ def generate_from_time(invoice_id):
             flash(_("No time entries, costs, expenses, or extra goods selected"), "error")
             return redirect(url_for("invoices.generate_from_time", invoice_id=invoice.id))
 
-        # Only regenerate invoice items when time entries or project costs are selected
-        if selected_entries or selected_costs:
-            invoice.items.delete()
+        # The picker hides what is already on this invoice, so keep it: manual and cost
+        # lines stay, and time lines are rebuilt from their entries plus the new selection.
+        entry_ids = set(selected_entries)
+        if selected_entries:
+            from app.models import ClientPrepaidConsumption
+
+            for item in invoice.items.all():
+                item_entry_ids = [p.strip() for p in (item.time_entry_ids or "").split(",") if p.strip().isdigit()]
+                if item_entry_ids:
+                    entry_ids.update(item_entry_ids)
+                    db.session.delete(item)
+            # Entries fully covered by prepaid hours have no line, only a ledger row
+            for row in ClientPrepaidConsumption.query.filter_by(invoice_id=invoice.id).all():
+                entry_ids.add(str(row.time_entry_id))
 
         total_prepaid_allocated = Decimal("0")
         prepaid_allocator = None
@@ -1028,7 +1039,7 @@ def generate_from_time(invoice_id):
                 resolve_group_time_entries_from_form,
             )
 
-            time_entries = TimeEntry.query.filter(TimeEntry.id.in_(selected_entries)).all()
+            time_entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids)).all()
 
             prepaid_allocator = PrepaidHoursAllocator(client=invoice.client, invoice=invoice)
             processed_entries = prepaid_allocator.process(time_entries)
@@ -1054,6 +1065,8 @@ def generate_from_time(invoice_id):
         # Process project costs
         if selected_costs:
             costs = ProjectCost.query.filter(ProjectCost.id.in_(selected_costs)).all()
+            # A cost already on this invoice keeps its line; a resubmitted form must not add a second one
+            costs = [cost for cost in costs if cost.invoice_id != invoice.id]
 
             for cost in costs:
                 # Create invoice item for each cost
