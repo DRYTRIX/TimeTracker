@@ -52,16 +52,12 @@ Once you create a PR, the CI pipeline will automatically:
 
 ### For Maintainers
 
-#### Development Releases (develop branch)
+#### Development image (`:develop`)
 
-Every push to `develop` automatically:
-1. Runs quick test suite
-2. Builds Docker image for AMD64 and ARM64
-3. Publishes to `ghcr.io/{owner}/{repo}:develop`
-4. Creates development release
+Publishing `:develop` is **manual** (Actions → **CD - Development Build** → Run workflow). Merges into `develop` do not build a development image.
 
 ```bash
-# Pull and test development build
+# After a manual publish
 docker pull ghcr.io/{owner}/{repo}:develop
 docker run -p 8080:8080 ghcr.io/{owner}/{repo}:develop
 ```

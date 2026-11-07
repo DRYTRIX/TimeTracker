@@ -220,18 +220,15 @@ pytest tests/test_routes.py::test_health_check
 ### 2. CD - Development Builds (`cd-development.yml`)
 
 **Triggers**:
-- Pushes to `develop` branch
-- Manual workflow dispatch
+- Manual workflow dispatch only (not on merges into `develop`)
 
 **Process**:
-1. Quick test suite (smoke + unit + critical integration)
+1. Quick test suite (smoke)
 2. Build multi-platform Docker image (AMD64, ARM64)
-3. Push to `ghcr.io` with tags:
+3. Push to `ghcr.io` (and Docker Hub when configured) with tags:
    - `develop` (latest development)
    - `dev-{date}-{time}`
    - `dev-{sha}`
-4. Create development release
-5. Generate deployment manifest
 
 **Tags**:
 ```
