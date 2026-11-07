@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommunityApplications>
+  <Profile>TimeTracker is a self-hosted time tracking, project management, and Peppol e-invoicing app (GPL-3.0). Install TimeTracker-DB first, then TimeTracker on the same timetracker network. Set SECRET_KEY with openssl rand -hex 32. Support: https://github.com/DRYTRIX/TimeTracker/issues — Docs: https://github.com/DRYTRIX/TimeTracker/blob/main/docs/admin/deployment/DISTRIBUTION.md</Profile>
+  <Icon>https://raw.githubusercontent.com/DRYTRIX/TimeTracker/main/app/static/images/timetracker-logo-icon.svg</Icon>
+  <WebPage>https://github.com/DRYTRIX/TimeTracker</WebPage>
+</CommunityApplications>

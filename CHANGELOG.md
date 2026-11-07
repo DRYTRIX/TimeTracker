@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **DigitalOcean one-click** — `.do/deploy.template.yaml` (Docker Hub image + Dev Database) and Deploy to DigitalOcean button in the README / Distribution guide.
+- **Unraid CA profile** — Root `ca_profile.xml` (`CommunityApplications` + `<Profile>`) required for Community Applications submission.
+
+### Documentation
+
+- **OrcaRouter** — AI Helper docs and Admin settings include a signup link for an OrcaRouter API key (`https://www.orcarouter.ai/ref/ref_984e584cb4cd86485a8c`).
+- **Deploy & discovery** — DigitalOcean and Railway deploy guides; Unraid CA + directory listing submission packages; publishing checklist (`docs/deploy/*`, `docs/marketing/*`).
+
 ## [5.19.1] - 2026-11-07
 ### Added
 

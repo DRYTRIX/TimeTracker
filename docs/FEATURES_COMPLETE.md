@@ -478,9 +478,10 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 #### 46. **Invoice Status Management**
 - Status workflow (Draft → Sent → Paid)
 - Status change tracking
-- Overdue invoice detection
+- Overdue invoice detection (APScheduler daily 09:00 → status `overdue`, staff + client notify)
 - Bulk status updates
 - Status-based filtering
+- See [Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)
 
 #### 47. **Tax Calculation**
 - Automatic tax calculation
@@ -498,10 +499,12 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 #### 49. **Recurring Invoices**
 - Recurring invoice templates
-- Weekly, monthly, quarterly, yearly recurrence
-- Automatic invoice generation
-- Recurring invoice management
+- Daily, weekly, monthly, yearly recurrence (with interval)
+- Automatic invoice generation (APScheduler daily 08:00)
+- Optional auto-include of unbilled time entries; optional auto-send
+- Recurring invoice management (web + `/api/v1/recurring-invoices`)
 - Next generation date tracking
+- See [Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)
 
 #### 50. **Invoice Email**
 - Email invoice to clients

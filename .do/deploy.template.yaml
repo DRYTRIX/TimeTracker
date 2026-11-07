@@ -1,0 +1,53 @@
+# DigitalOcean App Platform — Deploy to DigitalOcean button
+# https://docs.digitalocean.com/products/app-platform/how-to/add-deploy-do-button/
+#
+# Uses the public Docker Hub image (same multi-arch build as GHCR).
+# Dev Database only (Deploy button limitation). For production, use a managed
+# Postgres cluster or self-host with docker-compose.nas.yml.
+#
+# Button: https://cloud.digitalocean.com/apps/new?repo=https://github.com/DRYTRIX/TimeTracker/tree/develop
+# (default branch; switch to /tree/main after the template is merged to main)
+
+spec:
+  name: timetracker
+  services:
+    - name: web
+      image:
+        registry_type: DOCKER_HUB
+        registry: drytrix
+        repository: timetracker
+        tag: latest
+      instance_count: 1
+      instance_size_slug: basic-xxs
+      http_port: 8080
+      health_check:
+        http_path: /_health
+        initial_delay_seconds: 30
+        period_seconds: 15
+        timeout_seconds: 10
+        success_threshold: 1
+        failure_threshold: 5
+      envs:
+        - key: FLASK_ENV
+          scope: RUN_TIME
+          value: production
+        - key: FLASK_APP
+          scope: RUN_TIME
+          value: app:create_app()
+        - key: AUTH_METHOD
+          scope: RUN_TIME
+          value: local
+        - key: REDIS_ENABLED
+          scope: RUN_TIME
+          value: "false"
+        - key: SECRET_KEY
+          scope: RUN_TIME
+          type: SECRET
+          # Replace at deploy time: openssl rand -hex 32
+          value: "CHANGE_ME_openssl_rand_hex_32"
+        - key: DATABASE_URL
+          scope: RUN_TIME
+          value: ${timetracker-db.DATABASE_URL}
+  databases:
+    - name: timetracker-db
+      engine: PG

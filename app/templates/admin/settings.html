@@ -779,6 +779,9 @@
                             <option value="orcarouter" {% if ai_config.provider == 'orcarouter' %}selected{% endif %}>OrcaRouter</option>
                             <option value="openai_compatible" {% if ai_config.provider == 'openai_compatible' %}selected{% endif %}>{{ _('Custom OpenAI-compatible') }}</option>
                         </select>
+                        <p id="ai_orcarouter_signup_wrap" class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark {% if ai_config.provider != 'orcarouter' %}hidden{% endif %}">
+                            <a href="https://www.orcarouter.ai/ref/ref_984e584cb4cd86485a8c" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">{{ _('Get an OrcaRouter API key') }}</a>
+                        </p>
                     </div>
                     <div>
                         <label for="ai_base_url" class="form-label">{{ _('Base URL') }}</label>
@@ -1177,6 +1180,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const aiModelInput = document.getElementById('ai_model');
     const aiModelList = document.getElementById('ai_model_suggestions');
     const aiRoutingWrap = document.getElementById('ai_routing_strategy_wrap');
+    const aiOrcaSignupWrap = document.getElementById('ai_orcarouter_signup_wrap');
     const aiPresets = {
         ollama: { base_url: 'http://127.0.0.1:11434', models: ['llama3.1', 'llama3.2', 'mistral', 'qwen2.5'], default_model: 'llama3.1' },
         openai: { base_url: 'https://api.openai.com', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'], default_model: 'gpt-4o-mini' },
@@ -1190,6 +1194,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const preset = aiPresets[aiProviderSelect.value] || aiPresets.openai_compatible;
         if (aiRoutingWrap) {
             aiRoutingWrap.classList.toggle('hidden', aiProviderSelect.value !== 'orcarouter');
+        }
+        if (aiOrcaSignupWrap) {
+            aiOrcaSignupWrap.classList.toggle('hidden', aiProviderSelect.value !== 'orcarouter');
         }
         if (aiModelList) {
             aiModelList.innerHTML = '';

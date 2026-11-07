@@ -52,6 +52,8 @@ Just add a button linking to these routes. Files download automatically with pro
 - Sends notifications to admins and creators
 - Updates invoice status
 
+Full behavior (and recurring invoices at 8 AM): [Invoice reminders and recurring](../features/INVOICE_REMINDERS_AND_RECURRING.md).
+
 **Manual trigger:**
 ```python
 from app.utils.scheduled_tasks import check_overdue_invoices

@@ -1,0 +1,15 @@
+Hi,
+
+Please consider adding TimeTracker to the selfh.st apps directory.
+
+Name: TimeTracker
+Repo: https://github.com/DRYTRIX/TimeTracker
+Website: https://timetracker.drytrix.com
+Demo: https://timetracker-demo.drytrix.com (login test / test123!)
+License: GPL-3.0
+Docker: ghcr.io/drytrix/timetracker:latest (also drytrix/timetracker on Docker Hub)
+Category: Time tracking / productivity / invoicing
+
+Short description: Self-hosted time tracking, PDF invoicing, and Peppol/EN 16931 e-invoicing for freelancers and teams — open-source Toggl/Clockify alternative with no per-seat fees.
+
+Thanks!

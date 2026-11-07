@@ -3,6 +3,8 @@
 Use these after the README demo GIF, screenshot paths, and browseable demo are live.
 Prefer **shipping a release or fix first**, then posting — empty “please star” posts underperform.
 
+**Also do first:** directory listings in [LISTING_SUBMISSIONS.md](LISTING_SUBMISSIONS.md) and cadence in [PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md). HN/Reddit must be submitted from your account (not automated).
+
 ## Show HN (Hacker News)
 
 **Title:** Show HN: TimeTracker – self-hosted Toggl/Clockify alternative with Peppol e-invoicing
@@ -58,5 +60,14 @@ Other targets if not yet listed:
 
 1. Cut a release with a crisp highlight (e.g. Peppol Bridge, Factur-X, NAS install).
 2. Update demo (Render deploy hook / `TimeTrackerDemoRender` secret).
-3. Post Show HN **or** Reddit (not both the same hour with identical text).
-4. Link the demo credentials every time.
+3. Submit directories from [LISTING_SUBMISSIONS.md](LISTING_SUBMISSIONS.md) / [UNRAID_CA_SUBMIT.md](UNRAID_CA_SUBMIT.md) if not done yet.
+4. Post Show HN **or** Reddit (not both the same hour with identical text) — paste from this file; submit from your account at [HN submit](https://news.ycombinator.com/submit) or Reddit.
+5. Link the demo credentials every time.
+
+## Paste checklist (before you hit submit)
+
+- [ ] Demo loads; credentials work (`test` / `test123!`)
+- [ ] Latest release notes mention the highlight you lead with
+- [ ] Title matches the draft (no “please star”)
+- [ ] First HN comment (if Show HN) tells the Peppol / self-host story
+- [ ] You are **not** cross-posting the same text to HN + Reddit the same hour
