@@ -1,6 +1,10 @@
 # Unraid Community Applications — submission package
 
-Templates already live in [`templates/unraid/`](../../templates/unraid/). Submit them to the official CA catalog so Unraid users can install without copying XML by hand.
+Do **not** submit the `main`/`develop` default branch. Those trees include `AndroidManifest.xml` (and other non-Container XML), which CA reports as `not_unraid_application`.
+
+Use the template-only branch **`unraid-ca`** (only `ca_profile.xml` + Container templates + LICENSE/README).
+
+Copies for manual Unraid installs also live under [`templates/unraid/`](../../templates/unraid/) on `develop`/`main`.
 
 ## Submit URL
 
@@ -11,33 +15,32 @@ Templates already live in [`templates/unraid/`](../../templates/unraid/). Submit
 | Field | Value |
 |-------|--------|
 | **Repository / Project** | `https://github.com/DRYTRIX/TimeTracker` |
+| **Branch** | `unraid-ca` (required) |
 | **Support** | `https://github.com/DRYTRIX/TimeTracker/issues` |
 | **Icon** | `https://raw.githubusercontent.com/DRYTRIX/TimeTracker/main/app/static/images/timetracker-logo-icon.svg` |
 | **Overview** | Self-hosted time tracking, invoicing, and Peppol e-invoicing for freelancers and teams. |
 | **Category** | Productivity: Tools |
 
-### Template XML URLs (raw)
+### Template XML URLs (raw, `unraid-ca` branch)
 
 ```
-https://raw.githubusercontent.com/DRYTRIX/TimeTracker/main/templates/unraid/timetracker-db.xml
-https://raw.githubusercontent.com/DRYTRIX/TimeTracker/main/templates/unraid/timetracker-app.xml
+https://raw.githubusercontent.com/DRYTRIX/TimeTracker/unraid-ca/timetracker-db.xml
+https://raw.githubusercontent.com/DRYTRIX/TimeTracker/unraid-ca/timetracker-app.xml
+https://raw.githubusercontent.com/DRYTRIX/TimeTracker/unraid-ca/ca_profile.xml
 ```
-
-Profile metadata (required at **repo root only**): [`ca_profile.xml`](../../ca_profile.xml)
-
-Do **not** put `ca_profile.xml` under `templates/unraid/` — CA will treat it as an app template (`not_unraid_application`) and may flag a duplicate `Name`.
 
 ## Checklist before submit
 
-- [x] Root [`ca_profile.xml`](../../ca_profile.xml) with non-empty `<Profile>` (`CommunityApplications` format)
-- [x] Only Container templates under `templates/unraid/` (`timetracker-app.xml`, `timetracker-db.xml`)
-- [x] `Repository` points at `ghcr.io/drytrix/timetracker:latest` / `postgres:16-alpine`
-- [x] `TemplateURL` raw GitHub URLs set on both XMLs
-- [x] `Support`, `Project`, `Overview` filled
-- [x] `WebUI` = `http://[IP]:[PORT:8080]/` on the app template
-- [ ] Changes **pushed** to GitHub (CA reads the remote, not your local disk)
-- [ ] Maintainer signs in at ca.unraid.net and submits repo `https://github.com/DRYTRIX/TimeTracker` (moderator review ~1–2 weeks)
+- [x] Branch [`unraid-ca`](https://github.com/DRYTRIX/TimeTracker/tree/unraid-ca) contains only CA files (no Android XML)
+- [x] Root `ca_profile.xml` with non-empty `<Profile>`
+- [x] Container templates: `timetracker-app.xml`, `timetracker-db.xml`
+- [x] `Repository` / `TemplateURL` / `WebUI` fields set
+- [ ] In CA submit: repo URL + **branch `unraid-ca`**, then Validate → Scan
 - [ ] After approval, note the CA listing in DISTRIBUTION.md
+
+### Expected warning (OK to leave)
+
+**Duplicate Docker apps (1)** for `postgres:16-alpine` is expected — that image is already in CA. Moderators review companion DB templates; do not remove TimeTracker-DB unless they ask.
 
 **Blocked without login:** Community Apps submission requires an Unraid account (Sign In step).
 

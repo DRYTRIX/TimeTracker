@@ -125,27 +125,17 @@ Template XML files live in [`templates/unraid/`](../../../templates/unraid/):
 
 ### Submit to Community Applications
 
-To list TimeTracker in the official Unraid CA catalog:
+Submit the template-only branch **`unraid-ca`** (not `main`/`develop`). Default branches include Android and other XML that CA flags as `not_unraid_application`.
 
-1. Ensure root [`ca_profile.xml`](../../../ca_profile.xml) has a non-empty `<Profile>` (required at repo root — not under `templates/unraid/`)
-2. Use the copy-paste package in [`docs/marketing/UNRAID_CA_SUBMIT.md`](../../marketing/UNRAID_CA_SUBMIT.md)
-3. **Push** to GitHub so CA can fetch the files (local-only changes are invisible to the scanner)
-4. Go to [ca.unraid.net/submit](https://ca.unraid.net/submit/new) (Unraid account required)
-5. Point the repository URL at this repo (Container templates under `templates/unraid/` only)
-6. Run **Validate**, then **Scan**
-7. Wait for moderator review (typically 1–2 weeks)
+1. Use the copy-paste package in [`docs/marketing/UNRAID_CA_SUBMIT.md`](../../marketing/UNRAID_CA_SUBMIT.md)
+2. Go to [ca.unraid.net/submit](https://ca.unraid.net/submit/new) (Unraid account required)
+3. Repository: `https://github.com/DRYTRIX/TimeTracker` · **Branch: `unraid-ca`**
+4. Run **Validate**, then **Scan**
+5. Wait for moderator review (typically 1–2 weeks)
 
-Checklist before submitting:
+A duplicate warning for `postgres:16-alpine` is expected (official Postgres image already in CA).
 
-- [x] Root `ca_profile.xml` with `<CommunityApplications>` / `<Profile>`
-- [x] No non-Container XML under `templates/unraid/` (profile lives at repo root only)
-- [x] `Repository` in each XML points to a valid image (`ghcr.io/drytrix/timetracker:latest`, `postgres:16-alpine`)
-- [x] `TemplateURL` in each XML points to the raw GitHub URL for that file
-- [x] `Support`, `Project`, and `Overview` fields are filled in
-- [x] `WebUI` is set to `http://[IP]:[PORT:8080]/` on the app template
-- [ ] Changes pushed to the branch CA scans
-- [ ] Maintainer signs in and submits at ca.unraid.net (see UNRAID_CA_SUBMIT.md)
-- [ ] Tested on a clean Unraid install
+Branch contents: [`unraid-ca`](https://github.com/DRYTRIX/TimeTracker/tree/unraid-ca) · manual templates also in [`templates/unraid/`](../../../templates/unraid/)
 
 ---
 
