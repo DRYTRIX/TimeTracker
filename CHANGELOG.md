@@ -10,9 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Peppol bridge: getpeppr preset** — `PEPPOL_BRIDGE_PROVIDER=getpeppr` sends the UBL through getpeppr (`GETPEPPR_API_KEY`), with delivery status for the post-send check and an idempotency key so sending the same invoice twice the same day does not deliver a second copy (#840). See [PEPPOL_BRIDGE.md](docs/admin/configuration/PEPPOL_BRIDGE.md).
 
+### Changed
+
+- **CI / develop image** — **CD - Development Build** no longer runs on every merge into `develop`. Publish `:develop` only via **Actions → CD - Development Build → Run workflow**.
+
 ### Fixed
 
 - **Admin** — The sidebar links the Quote PDF designer again, next to Invoice PDF; 5.19.0 left only one PDF Templates link, to the invoice designer (#850).
+- **Invoices** — Deleting a draft invoice (single or bulk) now gives back the prepaid hours it used; before, fully prepaid time entries stayed non-billable and invoicing the same entries again failed on a unique constraint (#829).
+- **Invoices** — A second generate-from-time pass keeps existing invoice lines instead of replacing them (#851).
+- **Payments** — Changing a completed payment to refunded, failed or pending through the API now takes it out of the invoice's amount paid; before, the invoice kept the old amount and could stay fully paid (#830).
+- **Socket.IO** — Pass the Flask app into the Socket.IO origin check so CORS validation runs with app context (#849).
+- **Security / CodeQL** — Make `sanitize_log_value` visible to the log-injection query so findings clear correctly.
+- **Release CD** — Stop the no-op `cp` of `docker-compose.nas.yml` when preparing release artifacts.
+- **CI** — Migration drift gate ignores constraint/index rename noise and compares against a models-only base checkout more reliably.
+
+### Documentation
+
+- Peppol Bridge / e-invoicing docs and compose examples cover the getpeppr provider preset.
+- Release process docs: `:develop` image is manual-only (no per-merge publish).
 
 ## [5.19.0] - 2026-11-05
 ### Added
@@ -46,14 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First-five-minutes checklist after Docker quick start; demo credentials beside the live demo link; refreshed dashboard screenshot; community/discovery funnel tweaks.
 - Release and version docs aligned with Prepare/Finalize + `bump_version.py` (superseding manual GitHub Releases / `version-manager.sh` as the primary path).
-
-### Fixed
-
-- **Invoices** — Deleting a draft invoice (single or bulk) now gives back the prepaid hours it used; before, fully prepaid time entries stayed non-billable and invoicing the same entries again failed on a unique constraint.
-
-### Fixed
-
-- **Payments** — Changing a completed payment to refunded, failed or pending through the API now takes it out of the invoice's amount paid; before, the invoice kept the old amount and could stay fully paid.
 
 ## [5.18.5] - 2026-10-30
 
