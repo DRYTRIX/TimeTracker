@@ -185,8 +185,8 @@ The invoice feature interface has been significantly improved to provide a more 
 - Personalized dashboard views
 
 ### **3. Automation**
-- Recurring invoice generation
-- Automatic payment reminders
+- Recurring invoice generation (implemented; see [Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md))
+- Overdue invoice detection / one-shot notify (implemented); multi-step payment dunning still future
 - Smart time entry suggestions
 - Automated tax calculations
 

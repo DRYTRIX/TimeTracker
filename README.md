@@ -343,6 +343,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory. See 
 - **[Task Management](docs/TASK_MANAGEMENT_README.md)** — Task tracking system
 - **[Client Management](docs/CLIENT_MANAGEMENT_README.md)** — Client relationships
 - **[Invoice System](docs/INVOICE_FEATURE_README.md)** — Invoice generation
+- **[Overdue reminders & recurring invoices](docs/features/INVOICE_REMINDERS_AND_RECURRING.md)** — Daily overdue check and recurring billing
 
 **Advanced Features:**
 - **[Calendar & Bulk Entry](docs/CALENDAR_FEATURES_README.md)** — Calendar view and bulk operations
