@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DigitalOcean one-click** — `.do/deploy.template.yaml` (Docker Hub image + Dev Database) and Deploy to DigitalOcean button in the README / Distribution guide.
 - **Unraid CA profile** — Root `ca_profile.xml` (`CommunityApplications` + `<Profile>`) required for Community Applications submission.
 
+### Fixed
+
+- **Payments** — Stripe checkout now sends JPY and other zero-decimal currencies (and three-decimal ones such as KWD) in the unit Stripe expects; before, every amount was multiplied by 100, so a JPY invoice was charged 100 times its balance, and the webhook amount was divided by 100 the same way.
+
 ### Documentation
 
 - **OrcaRouter** — AI Helper docs and Admin settings include a signup link for an OrcaRouter API key (`https://www.orcarouter.ai/ref/ref_984e584cb4cd86485a8c`).
