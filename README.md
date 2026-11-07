@@ -152,11 +152,11 @@ Timers, projects, clients, CRM pipeline, PDF + Peppol invoicing, expenses, repor
 | **NAS compose** | QNAP, Synology, Portainer | Paste [`docker-compose.nas.yml`](docker-compose.nas.yml) — [NAS guide](docs/admin/deployment/NAS_DEPLOYMENT.md) |
 | **GitHub Release** | Compose files + desktop/mobile | [Releases](https://github.com/drytrix/TimeTracker/releases) |
 | **Cloud (Render)** | Managed hosting | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drytrix/TimeTracker) |
+| **Cloud (DigitalOcean)** | Managed hosting | [![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/DRYTRIX/TimeTracker/tree/develop) |
 | **Railyard** | Managed hosting | [![Deploy to Railyard](https://app.railyard.run/deploy/badge)](https://app.railyard.run/deploy?repo=https://github.com/DRYTRIX/TimeTracker) |
 | **Cloud (RepoCloud)** | Managed hosting | <a href="https://repocloud.io/details/TimeTracker/"><img src="https://d16t0pc4846x52.cloudfront.net/deploylobe.svg" alt="Deploy on RepoCloud" height="32"></a> |
 
-
-**Full list of install paths:** [Distribution Guide](docs/admin/deployment/DISTRIBUTION.md) (Portainer templates, Unraid, Railway, Fly.io, Coolify, [Docker Hub](https://hub.docker.com/r/drytrix/timetracker))
+**Full list of install paths:** [Distribution Guide](docs/admin/deployment/DISTRIBUTION.md) (Portainer templates, Unraid, Railway, Fly.io, Coolify, DigitalOcean, [Docker Hub](https://hub.docker.com/r/drytrix/timetracker))
 
 > **Docker Hub namespace:** images are published at [`drytrix/timetracker`](https://hub.docker.com/r/drytrix/timetracker) (formerly `driesp/timetracker`).
 
@@ -440,6 +440,7 @@ TimeTracker includes an optional **server-side AI helper** for the web app and A
 
 - **Enable (any setup)**: set `AI_ENABLED=true` (environment or **Admin → System Settings → AI Helper**).
 - **Ollama**: set `AI_PROVIDER=ollama`, `AI_MODEL=...`, and `AI_BASE_URL` to `http://ollama:11434` when Ollama runs in Docker on the same Compose network, or `http://127.0.0.1:11434` when Ollama runs on the host.
+- **OrcaRouter** (hosted multi-model gateway): set `AI_PROVIDER=orcarouter`, `AI_BASE_URL=https://api.orcarouter.ai`, and `AI_API_KEY=...`. [Sign up for an API key](https://www.orcarouter.ai/ref/ref_984e584cb4cd86485a8c).
 - **Hosted OpenAI-compatible**: set `AI_PROVIDER=openai_compatible` and `AI_API_KEY=...`
 
 The AI helper is exposed as:
@@ -473,7 +474,7 @@ The root `docker-compose.yml` defines a CPU-only **`ollama`** service and a one-
 - Pulled models are cached in the `ollama_data` named volume, so subsequent boots are faster.
 - Verify in the UI: **Admin → System Settings → AI helper**, then click *Test connection*.
 - To pull additional models manually: `docker compose exec ollama ollama pull <model>` (with the `ai` profile active).
-- **Hosted provider only (no Ollama containers):** set `AI_PROVIDER=openai_compatible`, `AI_BASE_URL`, and `AI_API_KEY` in `.env`; keep `docker compose up -d` without the `ai` profile.
+- **Hosted provider only (no Ollama containers):** set `AI_PROVIDER=orcarouter` (or `openai_compatible`), `AI_BASE_URL`, and `AI_API_KEY` in `.env`; keep `docker compose up -d` without the `ai` profile. For OrcaRouter, [sign up here](https://www.orcarouter.ai/ref/ref_984e584cb4cd86485a8c).
 
 **Disable or remove AI** (turn off LLM calls, stop Ollama, revoke tokens, delete `ollama_data` safely): [UNINSTALL.md](UNINSTALL.md#disabling-or-removing-the-ai-helper).
 
