@@ -43,6 +43,11 @@
                 <p class="mt-1 text-sm text-gray-500">{{ _('Use positive values to increase stock, negative values to decrease') }}</p>
             </div>
             <div>
+                <label for="location" class="form-label">{{ _('Bin / Location') }}</label>
+                <input type="text" name="location" id="location" class="form-input" maxlength="100" placeholder="{{ _('e.g., Aisle 3 / Shelf B') }}">
+                <p class="mt-1 text-sm text-gray-500">{{ _('Optional. Updates the warehouse stock location for this item.') }}</p>
+            </div>
+            <div>
                 <label for="reason" class="form-label">{{ _('Reason') }} *</label>
                 <input type="text" name="reason" id="reason" class="form-input" required placeholder="{{ _('e.g., Physical count correction, Damage, Found items') }}">
             </div>

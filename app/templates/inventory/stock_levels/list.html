@@ -11,7 +11,8 @@
     icon_class='fas fa-list-ul',
     title_text='Stock Levels',
     subtitle_text='View inventory levels across warehouses',
-    breadcrumbs=breadcrumbs
+    breadcrumbs=breadcrumbs,
+    actions_html=('<a href="' + url_for('inventory.export_stock_levels_csv') + (('?' + request.query_string.decode('utf-8')) if request.query_string else '') + '" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"><i class="fas fa-file-csv mr-2"></i>' + _('Export CSV') + '</a>')
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
