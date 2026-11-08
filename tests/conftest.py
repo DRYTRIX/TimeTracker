@@ -67,6 +67,7 @@ from app.models import (
     Activity,
     ApiToken,
     AuditLog,
+    BankTransaction,
     BudgetAlert,
     CalendarEvent,
     Client,

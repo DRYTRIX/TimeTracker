@@ -98,15 +98,16 @@ class Config:
     API_TOKEN_RATE_LIMIT_PER_MINUTE = int(os.getenv("API_TOKEN_RATE_LIMIT_PER_MINUTE", "100"))
     API_TOKEN_RATE_LIMIT_PER_HOUR = int(os.getenv("API_TOKEN_RATE_LIMIT_PER_HOUR", "1000"))
 
-    # Authentication method: 'none' | 'local' | 'oidc' | 'ldap' | 'both' | 'all'
+    # Authentication method: 'none' | 'local' | 'oidc' | 'ldap' | 'saml' | 'both' | 'all'
     # 'none' = no password authentication (username only)
     # 'local' = password authentication required
     # 'oidc' = OIDC/Single Sign-On only
     # 'ldap' = LDAP bind only
+    # 'saml' = SAML 2.0 SSO only
     # 'both' = OIDC + local password (backwards compatible)
-    # 'all' = local + OIDC + LDAP
+    # 'all' = local + OIDC + LDAP + SAML
     _auth_method_raw = os.getenv("AUTH_METHOD", "local").strip().lower()
-    _auth_method_valid = frozenset({"none", "local", "oidc", "ldap", "both", "all"})
+    _auth_method_valid = frozenset({"none", "local", "oidc", "ldap", "saml", "both", "all"})
     AUTH_METHOD = _auth_method_raw if _auth_method_raw in _auth_method_valid else "local"
 
     # LDAP settings (used when AUTH_METHOD is 'ldap' or 'all')
@@ -395,9 +396,24 @@ class Config:
         "You are TimeTracker's AI helper. Be concise, explain assumptions, and return suggested actions only when the user asks for changes.",
     ).strip()
 
-    # SCIM 2.0 user provisioning (stub routes; see docs/design/SAML_SCIM.md)
+    # SCIM 2.0 user provisioning (see docs/design/SAML_SCIM.md)
     SCIM_ENABLED = os.getenv("SCIM_ENABLED", "false").lower() == "true"
     SCIM_BEARER_TOKEN = os.getenv("SCIM_BEARER_TOKEN", "").strip()
+
+    # SAML 2.0 SSO (see docs/design/SAML_SCIM.md)
+    SAML_ENABLED = os.getenv("SAML_ENABLED", "false").lower() == "true" or AUTH_METHOD in ("saml", "all")
+    SAML_SP_ENTITY_ID = os.getenv("SAML_SP_ENTITY_ID", "").strip()
+    SAML_SP_ACS_URL = os.getenv("SAML_SP_ACS_URL", "").strip()
+    SAML_SP_X509_CERT = os.getenv("SAML_SP_X509_CERT", "").strip()
+    SAML_SP_PRIVATE_KEY = os.getenv("SAML_SP_PRIVATE_KEY", "").strip()
+    SAML_IDP_ENTITY_ID = os.getenv("SAML_IDP_ENTITY_ID", "").strip()
+    SAML_IDP_SSO_URL = os.getenv("SAML_IDP_SSO_URL", "").strip()
+    SAML_IDP_X509_CERT = os.getenv("SAML_IDP_X509_CERT", "").strip()
+    SAML_IDP_METADATA_URL = os.getenv("SAML_IDP_METADATA_URL", "").strip()
+    SAML_WANT_ASSERTIONS_SIGNED = os.getenv("SAML_WANT_ASSERTIONS_SIGNED", "true").lower() == "true"
+    SAML_CLOCK_SKEW_SECONDS = int(os.getenv("SAML_CLOCK_SKEW_SECONDS", "120"))
+    SAML_ADMIN_GROUP = os.getenv("SAML_ADMIN_GROUP", "").strip() or None
+    SAML_ADMIN_EMAILS = [e.strip().lower() for e in os.getenv("SAML_ADMIN_EMAILS", "").split(",") if e.strip()]
 
     # Password reset
     PASSWORD_RESET_TOKEN_MAX_AGE_SECONDS = max(300, int(os.getenv("PASSWORD_RESET_TOKEN_MAX_AGE_SECONDS", "3600")))

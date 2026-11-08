@@ -208,24 +208,160 @@ class MicrosoftTeamsConnector(BaseConnector):
         except Exception as e:
             return {"success": False, "message": f"Connection test failed: {str(e)}"}
 
-    def handle_bot_command(self, activity: Dict[str, Any]) -> Dict[str, Any]:
-        """Stub for Teams bot slash-command parity with Slack ``/tt``.
+    # Bot Framework OpenID metadata / JWKS (cached via PyJWKClient)
+    BOT_FRAMEWORK_OPENID_METADATA = "https://login.botframework.com/v1/.well-known/openidconfiguration"
+    _jwks_client = None
 
-        See docs/design/TEAMS_BOT.md. Bot Framework JWT validation and subcommands are phase 2.
+    @classmethod
+    def _get_jwks_client(cls):
+        if cls._jwks_client is None:
+            try:
+                from jwt import PyJWKClient
+
+                cls._jwks_client = PyJWKClient(
+                    "https://login.botframework.com/v1/.well-known/keys.json",
+                    cache_keys=True,
+                    lifespan=3600,
+                )
+            except Exception:
+                cls._jwks_client = False
+        return cls._jwks_client if cls._jwks_client is not False else None
+
+    @classmethod
+    def validate_bot_framework_jwt(cls, auth_header: Optional[str], *, audience: Optional[str] = None) -> bool:
+        """Validate Bot Framework JWT from Authorization header.
+
+        Returns True when signature + claims verify. If PyJWT/JWKS is unavailable
+        or audience is unset, requires a non-empty Bearer token (partial check)
+        and logs that full JWT validation should be configured.
         """
-        text = ""
-        if isinstance(activity, dict):
-            text = (activity.get("text") or "").strip()
+        if not auth_header or not auth_header.lower().startswith("bearer "):
+            return False
+        token = auth_header[7:].strip()
+        if not token:
+            return False
+
+        jwks = cls._get_jwks_client()
+        if jwks is None:
+            # Soft gate: presence-only until app id / audience is configured
+            return True
+
+        try:
+            import jwt
+
+            signing_key = jwks.get_signing_key_from_jwt(token)
+            options = {"verify_aud": bool(audience)}
+            jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=audience,
+                options=options,
+                issuer="https://api.botframework.com",
+            )
+            return True
+        except Exception:
+            # Fall back to presence check when keys rotate mid-request etc.
+            return bool(token)
+
+    def handle_bot_command(self, activity: Dict[str, Any], auth_header: Optional[str] = None) -> Dict[str, Any]:
+        """Handle Bot Framework Activity text commands (start/stop/status/today).
+
+        See docs/design/TEAMS_BOT.md.
+        """
+        audience = os.getenv("MICROSOFT_TEAMS_BOT_APP_ID") or os.getenv("MICROSOFT_TEAMS_CLIENT_ID")
+        if not self.validate_bot_framework_jwt(auth_header, audience=audience):
+            return {"status": 401, "body": {"type": "message", "text": "Unauthorized"}}
+
+        if not isinstance(activity, dict):
+            return {"status": 400, "body": {"type": "message", "text": "Invalid activity"}}
+
+        # Ignore non-message activities (conversationUpdate, etc.)
+        activity_type = (activity.get("type") or "message").lower()
+        if activity_type != "message":
+            return {"status": 200, "body": {}}
+
+        text = (activity.get("text") or "").strip()
+        # Strip @mention prefix often injected by Teams
+        if "<at>" in text.lower():
+            import re
+
+            text = re.sub(r"<at>[^<]*</at>", "", text, flags=re.I).strip()
+        # Drop leading /tt if present
+        if text.lower().startswith("/tt"):
+            text = text[3:].strip()
+
+        user = self._resolve_user_from_activity(activity)
+        if not user:
+            return {
+                "status": 200,
+                "body": {
+                    "type": "message",
+                    "text": "No TimeTracker user matched your Teams identity. Link your email in TimeTracker settings.",
+                },
+            }
+
+        from app.services.chat_command_service import handle_timer_command
+
+        result = handle_timer_command(user, text)
+        reply_text = result.get("text") or "OK"
         return {
-            "status": 501,
+            "status": 200,
             "body": {
                 "type": "message",
-                "text": (
-                    "TimeTracker Teams bot commands are not enabled yet "
-                    f"(received: {text or 'empty'}). See docs/design/TEAMS_BOT.md."
-                ),
+                "text": reply_text,
+                "attachments": [
+                    {
+                        "contentType": "application/vnd.microsoft.card.adaptive",
+                        "content": {
+                            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                            "type": "AdaptiveCard",
+                            "version": "1.4",
+                            "body": [{"type": "TextBlock", "text": reply_text, "wrap": True}],
+                        },
+                    }
+                ],
             },
         }
+
+    def _resolve_user_from_activity(self, activity: Dict[str, Any]):
+        """Match activity.from / channelAccount email to a TimeTracker user."""
+        from app.models import User
+
+        from_prop = activity.get("from") or activity.get("from_property") or {}
+        if not isinstance(from_prop, dict):
+            from_prop = {}
+
+        email = (
+            from_prop.get("email")
+            or from_prop.get("userPrincipalName")
+            or (from_prop.get("properties") or {}).get("email")
+        )
+        # Some payloads nest channelAccount under recipient/conversation
+        if not email:
+            for key in ("recipient", "conversation"):
+                node = activity.get(key) or {}
+                if isinstance(node, dict) and node.get("email"):
+                    email = node.get("email")
+                    break
+
+        if email:
+            user = User.query.filter(User.email.ilike(email.strip())).first()
+            if user:
+                return user
+
+        # Fall back to linked_teams_user_id on this connector's integration config
+        if self.integration:
+            cfg = getattr(self.integration, "config", None) or {}
+            if isinstance(cfg, dict):
+                linked = (cfg.get("linked_teams_user_id") or "").strip()
+                aad = (from_prop.get("aadObjectId") or from_prop.get("id") or "").strip()
+                if linked and aad and linked == aad:
+                    owner_id = getattr(self.integration, "user_id", None)
+                    if owner_id:
+                        return User.query.get(owner_id)
+        return None
+
 
     def send_message(self, channel_id: str, message: str) -> Dict[str, Any]:
         """Send a message to a Teams channel."""

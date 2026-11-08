@@ -63,6 +63,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     # Fonts
     fonts-liberation \
     fonts-dejavu-core \
+    # python3-saml / xmlsec (SAML SSO — see docs/design/SAML_SCIM.md)
+    libxml2-dev \
+    libxmlsec1-dev \
+    libxmlsec1-openssl \
+    pkg-config \
     # PostgreSQL client dependencies
     gnupg \
     wget \

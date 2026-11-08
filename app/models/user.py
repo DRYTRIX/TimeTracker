@@ -13,7 +13,10 @@ class User(UserMixin, db.Model):
     """User model for username-based authentication"""
 
     __tablename__ = "users"
-    __table_args__ = (db.UniqueConstraint("oidc_issuer", "oidc_sub", name="uq_users_oidc_issuer_sub"),)
+    __table_args__ = (
+        db.UniqueConstraint("oidc_issuer", "oidc_sub", name="uq_users_oidc_issuer_sub"),
+        db.Index("ix_users_external_issuer_subject", "external_issuer", "external_subject", unique=True),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
@@ -30,7 +33,12 @@ class User(UserMixin, db.Model):
     dismissed_release_version = db.Column(db.String(64), nullable=True)
     oidc_sub = db.Column(db.String(255), nullable=True)
     oidc_issuer = db.Column(db.String(255), nullable=True)
-    # Authentication source: local password, OIDC, or LDAP (synced on login where applicable)
+    # Generic external IdP subject/issuer (SAML, and mirrored for OIDC)
+    external_subject = db.Column(db.String(255), nullable=True)
+    external_issuer = db.Column(db.String(255), nullable=True)
+    # SCIM provisioning external id (unique when set)
+    scim_external_id = db.Column(db.String(255), nullable=True, unique=True, index=True)
+    # Authentication source: local password, OIDC, LDAP, or SAML (synced on login where applicable)
     auth_provider = db.Column(db.String(20), nullable=False, default="local", server_default="local")
     avatar_filename = db.Column(db.String(255), nullable=True)
     password_hash = db.Column(db.String(255), nullable=True)

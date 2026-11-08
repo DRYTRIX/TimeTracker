@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('OAuth Apps') }} - {{ _('Admin') }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': 'Admin', 'url': url_for('admin.admin_dashboard')},
+    {'text': 'OAuth Apps'}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-key',
+    title_text=_('OAuth Applications'),
+    subtitle_text=_('Register third-party apps for API access via OAuth 2.0'),
+    breadcrumbs=breadcrumbs
+) }}
+
+{% if error %}
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 text-red-800 dark:text-red-200">
+    {{ error }}
+</div>
+{% endif %}
+
+{% if new_secret and new_app %}
+<div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
+    <h3 class="font-semibold text-amber-900 dark:text-amber-200 mb-2">{{ _('Client secret (shown once)') }}</h3>
+    <p class="text-sm mb-2">{{ _('Application') }}: <strong>{{ new_app.name }}</strong> ({{ new_app.client_id }})</p>
+    <code class="block break-all bg-white dark:bg-gray-800 p-2 rounded text-sm">{{ new_secret }}</code>
+    <p class="text-xs mt-2 text-amber-800 dark:text-amber-300">{{ _('Copy this secret now — it will not be shown again.') }}</p>
+</div>
+{% endif %}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6 mb-8">
+    <h2 class="text-lg font-semibold mb-4">{{ _('Create application') }}</h2>
+    <form method="post" action="{{ url_for('oauth_server.admin_create_app') }}" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div>
+            <label class="block text-sm font-medium mb-1">{{ _('Name') }}</label>
+            <input type="text" name="name" required class="form-input w-full" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">{{ _('Description') }}</label>
+            <textarea name="description" rows="2" class="form-input w-full"></textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">{{ _('Redirect URIs') }} ({{ _('one per line') }})</label>
+            <textarea name="redirect_uris" rows="3" class="form-input w-full" placeholder="https://example.com/callback"></textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">{{ _('Allowed scopes') }} ({{ _('comma-separated') }})</label>
+            <input type="text" name="allowed_scopes" class="form-input w-full"
+                   value="read:projects,read:time_entries,write:time_entries" />
+        </div>
+        <div class="flex items-center gap-2">
+            <input type="checkbox" name="is_confidential" value="1" id="is_confidential" checked />
+            <label for="is_confidential" class="text-sm">{{ _('Confidential client (issues a client secret)') }}</label>
+        </div>
+        <button type="submit" class="btn btn-primary">{{ _('Create') }}</button>
+    </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg shadow overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-background-light dark:bg-background-dark">
+            <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium uppercase">{{ _('Name') }}</th>
+                <th class="px-4 py-3 text-left text-xs font-medium uppercase">{{ _('Client ID') }}</th>
+                <th class="px-4 py-3 text-left text-xs font-medium uppercase">{{ _('Scopes') }}</th>
+                <th class="px-4 py-3 text-left text-xs font-medium uppercase">{{ _('Active') }}</th>
+                <th class="px-4 py-3 text-left text-xs font-medium uppercase">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            {% for app in apps %}
+            <tr>
+                <td class="px-4 py-3 text-sm">{{ app.name }}</td>
+                <td class="px-4 py-3 text-sm"><code>{{ app.client_id }}</code></td>
+                <td class="px-4 py-3 text-sm">{{ app.allowed_scopes }}</td>
+                <td class="px-4 py-3 text-sm">{{ _('Yes') if app.is_active else _('No') }}</td>
+                <td class="px-4 py-3 text-sm space-x-2">
+                    <form method="post" action="{{ url_for('oauth_server.admin_rotate_secret', app_id=app.id) }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="text-blue-600 hover:underline">{{ _('Rotate secret') }}</button>
+                    </form>
+                    <form method="post" action="{{ url_for('oauth_server.admin_delete_app', app_id=app.id) }}" class="inline"
+                          onsubmit="return confirm('{{ _('Delete this OAuth application?') }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="text-red-600 hover:underline">{{ _('Delete') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" class="px-4 py-6 text-sm text-center text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('No OAuth applications yet.') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

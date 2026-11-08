@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Authorize application') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto mt-12">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-6">
+        {% if error %}
+        <h1 class="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">{{ _('Authorization error') }}</h1>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ error }}</p>
+        {% else %}
+        <h1 class="text-xl font-semibold mb-2">{{ _('Authorize') }} {{ application.name }}</h1>
+        {% if application.description %}
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ application.description }}</p>
+        {% endif %}
+        <p class="text-sm mb-4">
+            {{ _('This application is requesting access to your TimeTracker account with the following scopes:') }}
+        </p>
+        <ul class="list-disc list-inside mb-6 text-sm">
+            {% for s in scope_list %}
+            <li><code>{{ s }}</code></li>
+            {% else %}
+            <li>{{ _('(no scopes)') }}</li>
+            {% endfor %}
+        </ul>
+        <form method="post" action="{{ url_for('oauth_server.authorize') }}" class="flex gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="client_id" value="{{ client_id }}"/>
+            <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}"/>
+            <input type="hidden" name="scope" value="{{ scope }}"/>
+            <input type="hidden" name="state" value="{{ state }}"/>
+            <input type="hidden" name="code_challenge" value="{{ code_challenge }}"/>
+            <input type="hidden" name="code_challenge_method" value="{{ code_challenge_method }}"/>
+            <button type="submit" name="decision" value="approve" class="btn btn-primary flex-1">{{ _('Approve') }}</button>
+            <button type="submit" name="decision" value="deny" class="btn btn-secondary flex-1">{{ _('Deny') }}</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

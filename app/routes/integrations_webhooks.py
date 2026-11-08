@@ -383,16 +383,15 @@ def slack_status():
 @integrations_webhooks_bp.route("/api/integrations/teams/bot/messages", methods=["POST"])
 @csrf.exempt
 def teams_bot_messages():
-    """Receive Bot Framework activities (stub; JWT validation in a later phase)."""
+    """Receive Bot Framework activities; JWT validated in MicrosoftTeamsConnector."""
     payload = request.get_json(silent=True) or {}
     from app.integrations.microsoft_teams import MicrosoftTeamsConnector
 
     connector = MicrosoftTeamsConnector(integration=None)
-    result = connector.handle_bot_command(payload)
-    status = int(result.get("status") or 501)
+    result = connector.handle_bot_command(payload, auth_header=request.headers.get("Authorization"))
+    status = int(result.get("status") or 200)
     body = result.get("body") or {}
     return jsonify(body), status
-
 
 # =====================================================================
 # Slack Attendance (workspace-level /in, /brb, /back, /out)

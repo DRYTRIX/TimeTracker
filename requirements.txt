@@ -9,6 +9,9 @@ Flask-SocketIO==5.7.1
 Authlib==1.9.2
 PyJWT==2.15.1
 
+# SAML 2.0 SSO (requires xmlsec system libs — see Dockerfile / docs/design/SAML_SCIM.md)
+python3-saml==1.16.0
+
 # LDAP (directory authentication)
 ldap3==2.9.1
 

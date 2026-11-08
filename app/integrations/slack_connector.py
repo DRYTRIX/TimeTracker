@@ -201,7 +201,7 @@ class SlackConnector(BaseConnector):
         return {"status": 200, "body": {"ok": True}}
 
     def handle_slash_command(self, form: Dict[str, str]) -> Dict[str, Any]:
-        """Dispatch ``/tt ...`` slash commands.
+        """Dispatch ``/tt ...`` slash commands via shared chat_command_service.
 
         Returns ``{"status": int, "body": dict-or-text}`` for the route to
         serialise. All replies are ``response_type=ephemeral`` JSON.
@@ -218,79 +218,30 @@ class SlackConnector(BaseConnector):
         if not owner:
             return self._ephemeral("No TimeTracker user is linked to this integration.")
 
-        raw_text = (form.get("text") or "").strip()
-        parts = raw_text.split(None, 1)
-        subcommand = (parts[0] or "").lower() if parts else ""
-        argument = parts[1] if len(parts) > 1 else ""
+        from app.services.chat_command_service import handle_timer_command
 
-        if subcommand == "start":
-            return self._cmd_start(owner, argument)
-        if subcommand == "stop":
-            return self._cmd_stop(owner)
-        if subcommand == "status":
-            return self._cmd_status(owner)
-        if subcommand == "today":
-            return self._cmd_today(owner)
-        return self._ephemeral(
-            "Available commands:\n"
-            "• `/tt start <project>` — start a timer\n"
-            "• `/tt stop` — stop the active timer\n"
-            "• `/tt status` — show the current timer\n"
-            "• `/tt today` — today's hours summary"
-        )
-
-    def _cmd_start(self, owner, argument: str) -> Dict[str, Any]:
-        from app.models import Project
-        from app.services.time_tracking_service import TimeTrackingService
-
-        argument = (argument or "").strip()
-        if not argument:
-            return self._ephemeral("Usage: `/tt start <project name or ID>`")
-
-        project = None
-        try:
-            project = Project.query.get(int(argument))
-        except (TypeError, ValueError):
-            project = None
-        if not project:
-            project = Project.query.filter(Project.name.ilike(f"%{argument}%")).first()
-        if not project:
-            return self._ephemeral(f"Project not found: `{argument}`")
-
-        result = TimeTrackingService().start_timer(user_id=owner.id, project_id=project.id)
-        if result.get("success"):
-            return self._ephemeral(f":stopwatch: Timer started for *{project.name}*.")
-        return self._ephemeral(f"Could not start timer: {result.get('message') or 'unknown error'}")
-
-    def _cmd_stop(self, owner) -> Dict[str, Any]:
-        from app.services.time_tracking_service import TimeTrackingService
-
-        result = TimeTrackingService().stop_timer(user_id=owner.id)
-        if result.get("success"):
-            entry = result.get("entry")
-            duration = getattr(entry, "duration_formatted", "")
-            return self._ephemeral(f":white_check_mark: Timer stopped (duration {duration}).")
-        return self._ephemeral(f"Could not stop timer: {result.get('message') or 'no active timer'}")
-
-    def _cmd_status(self, owner) -> Dict[str, Any]:
-        active = getattr(owner, "active_timer", None)
-        if not active:
-            return self._ephemeral("No active timer.")
-        project_name = active.project.name if getattr(active, "project", None) else "—"
-        return self._ephemeral(
-            f":hourglass_flowing_sand: Active timer on *{project_name}* " f"(running {active.duration_formatted})."
-        )
-
-    def _cmd_today(self, owner) -> Dict[str, Any]:
-        try:
-            from app.services.notification_service import get_today_summary_for_user
-
-            summary = get_today_summary_for_user(owner)
-        except Exception as exc:
-            return self._ephemeral(f"Could not fetch today's summary: {exc}")
-        hours = summary.get("hours", 0)
-        projects = summary.get("projects", 0)
-        return self._ephemeral(f":bar_chart: Today: *{hours}h* across *{projects}* project(s).")
+        result = handle_timer_command(owner, form.get("text") or "")
+        text = result.get("text") or ""
+        # Preserve Slack emoji prefixes for familiar UX on known replies
+        if text.startswith("Timer started"):
+            text = f":stopwatch: {text}"
+        elif text.startswith("Timer stopped"):
+            text = f":white_check_mark: {text}"
+        elif text.startswith("Active timer"):
+            text = f":hourglass_flowing_sand: {text}"
+        elif text.startswith("Today:"):
+            text = f":bar_chart: {text}"
+        elif text.startswith("Available commands:"):
+            text = (
+                "Available commands:\n"
+                "• `/tt start <project>` — start a timer\n"
+                "• `/tt stop` — stop the active timer\n"
+                "• `/tt status` — show the current timer\n"
+                "• `/tt today` — today's hours summary"
+            )
+        elif text.startswith("Usage:"):
+            text = "Usage: `/tt start <project name or ID>`"
+        return self._ephemeral(text)
 
     @staticmethod
     def _ephemeral(text: str) -> Dict[str, Any]:
