@@ -31,6 +31,8 @@ class ElementType(str, Enum):
     LINE = "line"
     TABLE = "table"
     SPACER = "spacer"
+    QR_CODE = "qr_code"
+    BARCODE = "barcode"
 
 
 class TextAlign(str, Enum):
@@ -118,6 +120,8 @@ def validate_template_json(template_json: Dict[str, Any]) -> tuple[bool, Optiona
         elif element_type == ElementType.TABLE:
             if "columns" not in element:
                 return False, f"Table element {idx} must specify 'columns'"
+        elif element_type in (ElementType.QR_CODE, ElementType.BARCODE):
+            pass
 
     return True, None
 

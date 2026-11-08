@@ -1269,6 +1269,50 @@ def export_invoice_ubl(invoice_id):
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
 
 
+@invoices_bp.route("/invoices/<int:invoice_id>/export/xrechnung")
+@login_required
+def export_invoice_xrechnung(invoice_id):
+    """Export invoice as XRechnung 3.0 UBL XML (CIUS-DE)."""
+    from app.models import Settings
+    from app.utils.xrechnung import build_xrechnung_ubl_invoice_xml, validate_xrechnung_ready
+
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        flash(_("You do not have permission to export this invoice"), "error")
+        return safe_redirect(
+            request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices")
+        )
+
+    settings = Settings.get_settings()
+    client = getattr(invoice, "client", None)
+    errors = validate_xrechnung_ready(invoice, settings, client)
+    if errors:
+        return Response(
+            json.dumps({"error": "xrechnung_not_ready", "messages": errors}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    try:
+        xml, _sha = build_xrechnung_ubl_invoice_xml(invoice, settings, client)
+        fn = f"{invoice.invoice_number}-xrechnung.xml"
+        return Response(
+            xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"}
+        )
+    except Exception as e:
+        from app.utils.error_reporting import log_and_capture
+
+        log_and_capture(
+            current_app.logger,
+            "XRechnung export failed for invoice %s",
+            invoice_id,
+            exc=e,
+            level="exception",
+        )
+        flash(_("XRechnung export failed. Please try again."), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
+
+
 @invoices_bp.route("/invoices/<int:invoice_id>/export/pdf")
 @login_required
 def export_invoice_pdf(invoice_id):

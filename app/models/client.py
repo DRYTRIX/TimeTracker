@@ -29,6 +29,7 @@ class Client(db.Model):
     city = db.Column(db.String(100), nullable=True)
     country = db.Column(db.String(2), nullable=True)  # ISO 3166-1 alpha-2
     vat_id = db.Column(db.String(50), nullable=True)
+    leitweg_id = db.Column(db.String(100), nullable=True)  # XRechnung BT-10 / German Leitweg-ID
     default_hourly_rate = db.Column(db.Numeric(9, 2), nullable=True)
     status = db.Column(db.String(20), default="active", nullable=False)  # 'active' or 'inactive'
     prepaid_hours_monthly = db.Column(db.Numeric(7, 2), nullable=True)
@@ -68,6 +69,7 @@ class Client(db.Model):
         city=None,
         country=None,
         vat_id=None,
+        leitweg_id=None,
         default_hourly_rate=None,
         company=None,
         prepaid_hours_monthly=None,
@@ -91,6 +93,7 @@ class Client(db.Model):
         self.city = city.strip() if city else None
         self.country = country.strip().upper()[:2] if country else None
         self.vat_id = vat_id.strip() if vat_id else None
+        self.leitweg_id = leitweg_id.strip() if leitweg_id else None
         self.default_hourly_rate = Decimal(str(default_hourly_rate)) if default_hourly_rate else None
         self.prepaid_hours_monthly = (
             Decimal(str(prepaid_hours_monthly)) if prepaid_hours_monthly not in (None, "") else None
@@ -294,6 +297,7 @@ class Client(db.Model):
             "city": getattr(self, "city", None),
             "country": getattr(self, "country", None),
             "vat_id": getattr(self, "vat_id", None),
+            "leitweg_id": getattr(self, "leitweg_id", None),
             "default_hourly_rate": str(self.default_hourly_rate) if self.default_hourly_rate else None,
             "status": self.status,
             "is_active": self.is_active,

@@ -87,6 +87,10 @@
                         <label for="vat_id" class="form-label">{{ _('VAT ID') }}</label>
                         <input type="text" id="vat_id" name="vat_id" value="{{ request.form.get('vat_id', client.vat_id or '') }}" class="form-input" placeholder="ATU12345678">
                     </div>
+                    <div>
+                        <label for="leitweg_id" class="form-label">{{ _('Leitweg-ID (XRechnung BT-10)') }}</label>
+                        <input type="text" id="leitweg_id" name="leitweg_id" value="{{ request.form.get('leitweg_id', client.leitweg_id or '') }}" class="form-input" placeholder="993-1234567890-00">
+                    </div>
                 </div>
 
                 {% if custom_field_definitions %}

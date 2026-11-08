@@ -10,6 +10,7 @@ import json
 import os
 import tempfile
 from datetime import datetime
+from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional, Union
 
@@ -38,6 +39,37 @@ from app.utils.pdf_template_schema import (
     validate_template_json,
 )
 from app.utils.pdf_watermark import make_page_callback, should_draw_watermark
+
+
+def build_epc_sepa_qr_payload(
+    *,
+    name: str,
+    iban: str,
+    amount: Any,
+    remittance: str = "",
+    bic: str = "",
+) -> str:
+    """Build EPC/GiroCode SEPA credit transfer QR payload (version 002)."""
+    try:
+        amt = amount if isinstance(amount, Decimal) else Decimal(str(amount or 0))
+    except Exception:
+        amt = Decimal("0")
+    amount_line = f"EUR{amt.quantize(Decimal('0.01'))}"
+    return "\n".join(
+        [
+            "BCD",
+            "002",
+            "1",
+            "SCT",
+            (bic or "").replace(" ", ""),
+            (name or "").strip(),
+            (iban or "").replace(" ", ""),
+            amount_line,
+            "",
+            "",
+            (remittance or "").strip(),
+        ]
+    )
 
 
 class AbsolutePositionedFlowable(Flowable):
@@ -397,6 +429,8 @@ class ReportLabTemplateRenderer:
             return self._render_line(element)
         elif element_type == ElementType.TABLE:
             return self._render_table(element)
+        elif element_type in (ElementType.QR_CODE, ElementType.BARCODE):
+            return Spacer(1, 1)
 
         return None
 
@@ -937,6 +971,77 @@ class ReportLabTemplateRenderer:
         }
         return align_map.get(align.lower(), TA_LEFT)
 
+    def _is_epc_qr_element(self, element: Dict[str, Any]) -> bool:
+        flags = (
+            element.get("epc"),
+            element.get("sepa"),
+            element.get("girocode"),
+            element.get("dataField"),
+            element.get("mode"),
+            element.get("barcodeType"),
+        )
+        for flag in flags:
+            if isinstance(flag, str) and flag.strip().lower() in {"epc", "sepa", "girocode", "epc_sepa"}:
+                return True
+            if flag is True:
+                return True
+        return False
+
+    def _resolve_qr_barcode_payload(self, element: Dict[str, Any]) -> str:
+        if self._is_epc_qr_element(element):
+            ctx = getattr(self, "context", {}) or {}
+            settings = ctx.get("settings") or getattr(self, "settings", None) or Settings.get_settings()
+            invoice = ctx.get("invoice") or getattr(self, "invoice", None)
+            amount = getattr(invoice, "total_amount", 0) if invoice is not None else 0
+            remittance = getattr(invoice, "invoice_number", "") if invoice is not None else ""
+            return build_epc_sepa_qr_payload(
+                name=(getattr(settings, "company_name", None) or "").strip(),
+                iban=(getattr(settings, "company_iban", None) or "").strip(),
+                bic=(getattr(settings, "company_bic", None) or "").strip(),
+                amount=amount,
+                remittance=str(remittance or ""),
+            )
+        for key in ("value", "text", "dataField"):
+            raw = element.get(key)
+            if raw:
+                return self._process_template_variables(str(raw)).strip()
+        return ""
+
+    def _draw_qr_code_on_canvas(
+        self, canv: canvas.Canvas, element: Dict[str, Any], actual_x: float, actual_y: float, page_height: float
+    ) -> None:
+        from reportlab.graphics import renderPDF
+        from reportlab.graphics.barcode.qr import QrCodeWidget
+        from reportlab.graphics.shapes import Drawing
+
+        data = self._resolve_qr_barcode_payload(element)
+        if not data:
+            return
+        width = float(element.get("width", 80) or 80)
+        height = float(element.get("height", width) or width)
+        qr = QrCodeWidget(data)
+        bounds = qr.getBounds()
+        bw = bounds[2] - bounds[0] or 1.0
+        bh = bounds[3] - bounds[1] or 1.0
+        drawing = Drawing(width, height, transform=[width / bw, 0, 0, height / bh, 0, 0])
+        drawing.add(qr)
+        draw_y = actual_y - height
+        renderPDF.draw(drawing, canv, actual_x, draw_y)
+
+    def _draw_barcode_on_canvas(
+        self, canv: canvas.Canvas, element: Dict[str, Any], actual_x: float, actual_y: float, page_height: float
+    ) -> None:
+        from reportlab.graphics.barcode import code128
+
+        data = self._resolve_qr_barcode_payload(element)
+        if not data:
+            return
+        width = float(element.get("width", 200) or 200)
+        height = float(element.get("height", 50) or 50)
+        bar = code128.Code128(data, barHeight=max(12.0, height * 0.75), barWidth=0.55)
+        _w, bar_h = bar.wrap(width, height)
+        bar.drawOn(canv, actual_x, actual_y - bar_h)
+
     def _process_template_variables(self, text: str) -> str:
         """Process Jinja2-style template variables in text"""
         from app.utils.safe_template_render import render_sandboxed_string
@@ -1127,6 +1232,10 @@ class ReportLabTemplateRenderer:
                     self._draw_circle_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
                 elif element_type == ElementType.LINE:
                     self._draw_line_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
+                elif element_type == ElementType.QR_CODE:
+                    self._draw_qr_code_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
+                elif element_type == ElementType.BARCODE:
+                    self._draw_barcode_on_canvas(canv, element_copy, actual_x, actual_y, page_height)
             except Exception as e:
                 if current_app:
                     current_app.logger.error(f"Error drawing element {element_type} on canvas: {e}")

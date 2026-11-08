@@ -271,6 +271,7 @@ def create_client():
         city = sanitize_input(request.form.get("city", "").strip(), max_length=100)
         country = (request.form.get("country", "") or "").strip().upper()[:2] or None
         vat_id = sanitize_input(request.form.get("vat_id", "").strip(), max_length=50)
+        leitweg_id = sanitize_input(request.form.get("leitweg_id", "").strip(), max_length=100)
         default_hourly_rate = request.form.get("default_hourly_rate", "").strip()
         prepaid_hours_input = request.form.get("prepaid_hours_monthly", "").strip()
         prepaid_reset_day_input = request.form.get("prepaid_reset_day", "").strip()
@@ -382,6 +383,7 @@ def create_client():
             city=city or None,
             country=country,
             vat_id=vat_id or None,
+            leitweg_id=leitweg_id or None,
             default_hourly_rate=default_hourly_rate,
             prepaid_hours_monthly=prepaid_hours_monthly,
             prepaid_reset_day=prepaid_reset_day,
@@ -624,6 +626,7 @@ def edit_client(client_id):
         city = request.form.get("city", "").strip()
         country = (request.form.get("country", "") or "").strip().upper()[:2] or None
         vat_id = request.form.get("vat_id", "").strip()
+        leitweg_id = request.form.get("leitweg_id", "").strip()
         default_hourly_rate = request.form.get("default_hourly_rate", "").strip()
         prepaid_hours_input = request.form.get("prepaid_hours_monthly", "").strip()
         prepaid_reset_day_input = request.form.get("prepaid_reset_day", "").strip()
@@ -733,6 +736,7 @@ def edit_client(client_id):
         client.city = city or None
         client.country = country
         client.vat_id = vat_id or None
+        client.leitweg_id = leitweg_id or None
         client.default_hourly_rate = default_hourly_rate
         client.prepaid_hours_monthly = prepaid_hours_monthly
         client.prepaid_reset_day = prepaid_reset_day
