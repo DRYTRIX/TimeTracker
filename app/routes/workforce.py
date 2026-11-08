@@ -833,14 +833,9 @@ def audit_events_export_csv():
     )
 
 
-@workforce_bp.route("/workforce/reports/belgium-attendance.csv", methods=["GET"])
-@login_required
-def belgium_attendance_export_csv():
-    if not _can_approve():
-        flash(_("Access denied"), "error")
-        return redirect(url_for("workforce.dashboard"))
-
-    from app.services.attendance_compliance_service import AttendanceComplianceService
+def _labor_compliance_csv_response(preset_id: str):
+    """Shared CSV builder for labor-compliance presets (incl. belgium-attendance)."""
+    from app.services.labor_compliance_service import LaborComplianceService
 
     start = _parse_date(request.args.get("start_date"))
     end = _parse_date(request.args.get("end_date"))
@@ -853,7 +848,21 @@ def belgium_attendance_export_csv():
     if not current_user.is_admin:
         user_id = current_user.id
 
-    rows = AttendanceComplianceService().belgium_inspector_rows(start_date=start, end_date=end, user_id=user_id)
+    weekly_threshold = request.args.get("weekly_threshold", type=float)
+    overages_only = request.args.get("overages_only", "false").lower() == "true"
+
+    try:
+        rows, meta = LaborComplianceService().export_rows(
+            preset_id,
+            start_date=start,
+            end_date=end,
+            user_id=user_id,
+            weekly_threshold=weekly_threshold,
+            overages_only=overages_only,
+        )
+    except ValueError:
+        flash(_("Unknown labor-compliance preset"), "error")
+        return redirect(url_for("workforce.dashboard"))
 
     output = io.StringIO()
     if rows:
@@ -865,9 +874,28 @@ def belgium_attendance_export_csv():
         writer.writerow(["message"])
         writer.writerow(["No records in range"])
 
-    filename = f"belgium_attendance_{start.isoformat()}_{end.isoformat()}.csv"
+    slug = meta.get("preset_id") or preset_id
+    filename = f"{slug.replace('-', '_')}_{start.isoformat()}_{end.isoformat()}.csv"
     return Response(
         output.getvalue(),
         mimetype="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@workforce_bp.route("/workforce/reports/belgium-attendance.csv", methods=["GET"])
+@login_required
+def belgium_attendance_export_csv():
+    if not _can_approve():
+        flash(_("Access denied"), "error")
+        return redirect(url_for("workforce.dashboard"))
+    return _labor_compliance_csv_response("belgium-attendance")
+
+
+@workforce_bp.route("/workforce/reports/labor-compliance/<preset_id>.csv", methods=["GET"])
+@login_required
+def labor_compliance_export_csv(preset_id):
+    if not _can_approve():
+        flash(_("Access denied"), "error")
+        return redirect(url_for("workforce.dashboard"))
+    return _labor_compliance_csv_response(preset_id)
