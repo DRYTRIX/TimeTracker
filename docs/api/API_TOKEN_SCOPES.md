@@ -127,12 +127,15 @@ curl -X POST https://your-domain.com/api/v1/timer/start \
 **Endpoints**:
 - `GET /api/v1/tasks` - List tasks
 - `GET /api/v1/tasks/{id}` - Get task details
+- `GET /api/v1/gantt` - Gantt chart data (`read:projects` or `read:tasks`)
+- `GET /api/v1/resource-scheduling` - Team schedule / allocations (`read:projects` or `read:tasks`)
 
 **Use Cases**:
 - Task management integrations
 - Kanban board displays
 - Progress tracking
 - Task reporting
+- Gantt / capacity planning clients
 
 **Example**:
 ```bash
@@ -146,12 +149,14 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 - `POST /api/v1/tasks` - Create task
 - `PUT /api/v1/tasks/{id}` - Update task
 - `DELETE /api/v1/tasks/{id}` - Delete task
+- `POST /api/v1/resource-scheduling/allocations` - Assign a task to a user/date (`write:tasks` or `write:projects`)
 
 **Use Cases**:
 - Task synchronization
 - Automated task creation
 - Task status updates
 - Project planning automation
+- Capacity schedule updates
 
 **Example**:
 ```bash
@@ -599,6 +604,17 @@ curl -X POST https://your-domain.com/api/v1/projects \
 | `read:reports` | ✅ | ❌ | ❌ | View own reports |
 | `read:users` | ✅ | ❌ | Partial | `/users/me` for all, `/users` admin only |
 | `admin:all` | ✅ | ✅ | ✅ | Full access |
+
+## Additional API coverage notes
+
+### Workflows & team chat
+- `GET /api/v1/workflows/templates` and `GET /api/v1/workflows/templates/{id}` — workflow template library (`read:projects`)
+- `GET /api/v1/workflows/executions` — workflow run history (`read:projects`)
+- `GET|POST /api/v1/team-chat/channels` — list/create channels (`read:projects` / `write:projects`)
+- `GET|POST /api/v1/team-chat/channels/{id}/messages` — list/post messages (`read:projects` / `write:projects`)
+
+### Kiosk (web-only)
+Time clock **kiosk** mode is intentionally **web-only**. There is no public API v1 surface for kiosk PIN/session flows; use the browser kiosk UI. Do not grant or expect dedicated `kiosk:*` API scopes.
 
 ## Need Help?
 

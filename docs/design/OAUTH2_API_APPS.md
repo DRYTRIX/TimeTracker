@@ -2,7 +2,7 @@
 
 Design for turning TimeTracker into an **OAuth 2.0 authorization server** so third-party apps (mobile clients, partner integrations, Zapier custom apps) can obtain scoped access tokens instead of long-lived personal API tokens.
 
-This is **foundational design + model stubs** only. Full Authlib wiring, admin UI, and consent screens are follow-up work.
+Models and design are in place. Authlib is already pinned in `requirements.txt` (`Authlib==1.9.2`). Full authorization-server routes, admin UI, and consent screens are tracked under Phase 6 in [GAP_ROADMAP.md](../GAP_ROADMAP.md).
 
 ## Goals
 
@@ -20,7 +20,7 @@ This is **foundational design + model stubs** only. Full Authlib wiring, admin U
 ## Library
 
 - **[Authlib](https://docs.authlib.org/)** Flask integration (`AuthorizationServer`, `ResourceProtector`, SQLAlchemy mixins where applicable).
-- Dependency to add in a later PR: `authlib` (not pinned in this scaffolding pass).
+- Already pinned: `Authlib==1.9.2` in `requirements.txt`.
 
 ## Data model
 

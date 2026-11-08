@@ -2,7 +2,9 @@
 
 Enterprise identity design: **SAML 2.0** for browser login and **SCIM 2.0** for automated user lifecycle from Okta, Azure AD, Google Workspace, etc.
 
-Scaffolding: `app/routes/api_scim.py` (Users list stub), feature flag `SCIM_ENABLED`. SAML is design-only until `python3-saml` integration is scheduled.
+Implemented: `app/routes/api_scim.py` (Users CRUD + discovery), `app/routes/auth_saml.py`, feature flags `SCIM_ENABLED` / `SAML_*`.
+
+**Docker / xmlsec:** `python3-saml` needs system packages `libxmlsec1-dev`, `libxmlsec1-openssl`, `libxml2-dev`, and `pkg-config`. These are installed in the project `Dockerfile` apt-get section. If building without those packages, install them on the host or expect `import onelogin.saml2` to fail.
 
 ## SAML 2.0 (login)
 

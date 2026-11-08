@@ -12,6 +12,7 @@ Tracking document for the whole-app gap analysis (implementation, UI/UX, clients
 | 3 | Client parity | Done (first pass) |
 | 4 | High-return missing features | Done (first slices) |
 | 5 | Strategic / enterprise | Done (foundations / design + stubs) |
+| 6 | Close remaining product gaps | Done (implementation pass) |
 
 ## Phase notes
 
@@ -155,3 +156,19 @@ Design docs and minimal scaffolding only—no full OAuth server, SAML IdP, or SC
 - Full XRechnung CIUS-DE field mapping and invoice download wiring.
 - Admin UI button for GDPR erase on user row; import/export page link for account erasure.
 - Custom field rendering on project/task/time entry forms (definitions only extended).
+
+### Phase 6 (Close remaining product gaps)
+
+Canonical workstream for finishing Phase 5 stubs and product polish. Stale planning docs (`INCOMPLETE_IMPLEMENTATIONS_ANALYSIS.md`, `PROJECT_ANALYSIS_REPORT.md`) are archived under `docs/archive/`.
+
+| Area | Status | Notes |
+|------|--------|--------|
+| Docs | Done | Archived stale analyses; refreshed DESKTOP_WEBAPP_GAP, OAUTH2 design, GAP_RUBRIC |
+| Clients | Done | Extension 2FA + Firefox zip + URL suggest; desktop failed-queue + i18n; mobile retry/backoff |
+| Web polish | Done | Kanban WIP enforce; custom fields on task/time entry; inventory location/PO email/CSV; PDF QR/barcode; API v1 gantt/workflows/scheduling/chat |
+| XRechnung | Done | CIUS-DE 3.0 builder, `leitweg_id`, `/export/xrechnung` |
+| Enterprise | Done | OAuth server (`tto_`), SAML ACS, SCIM Users CRUD, Teams bot + `chat_command_service` |
+| Strategic | Done | Template-aware payroll API; labor-compliance presets; bank reconciliation; autotracker design + stub |
+| Architecture | Done | Payroll export extracted; `make check-route-sizes` CI guard |
+
+**Migrations:** `201` time_entries.custom_fields → `202` client.leitweg_id → `203` oauth_access_tokens → `204` user external identity → `205` scim_external_id → `206` bank_transactions.

@@ -1,6 +1,14 @@
 # Microsoft Teams bot — slash command parity with Slack `/tt`
 
-Slack integration (`app/integrations/slack_connector.py`) supports **`/tt`** subcommands: `start`, `stop`, `status`, `today`. Microsoft Teams today uses `MicrosoftTeamsConnector` for OAuth, channel notifications, and Graph API messaging—not interactive bot commands.
+Slack integration (`app/integrations/slack_connector.py`) supports **`/tt`** subcommands: `start`, `stop`, `status`, `today`. Microsoft Teams uses `MicrosoftTeamsConnector` for OAuth, channel notifications, Graph API messaging, and interactive bot commands.
+
+## Status (implemented)
+
+- Shared command logic lives in `app/services/chat_command_service.py` (`handle_timer_command`).
+- Slack `/tt` and Teams bot both call that service.
+- Route: `POST /api/integrations/teams/bot/messages` validates Bot Framework JWT (PyJWT + cached JWKS from `login.botframework.com`) when possible; requires `Authorization: Bearer` at minimum. Set `MICROSOFT_TEAMS_BOT_APP_ID` (or `MICROSOFT_TEAMS_CLIENT_ID`) for audience verification.
+- User resolution: activity `from.email` / UPN → `User.email`, or `linked_teams_user_id` on the integration config.
+- Replies: plain text + Adaptive Card attachment.
 
 ## Goal
 
@@ -21,12 +29,11 @@ Provide the **same timer operations** from Teams via:
 
 ## Identity linking
 
-| Slack | Teams (proposed) |
-|-------|------------------|
-| `User.slack_user_id` | New `User.teams_aad_id` or store in integration config `linked_teams_user_id` |
-| Per-integration `linked_slack_user_id` | Per-integration `linked_teams_user_id` |
+| Slack | Teams |
+|-------|-------|
+| `User.slack_user_id` / `linked_slack_user_id` | `linked_teams_user_id` in integration config, or email match |
 
-Match incoming activity `from.aadObjectId` to TimeTracker user.
+Match incoming activity `from.aadObjectId` / email to TimeTracker user.
 
 ## Architecture
 
@@ -35,7 +42,7 @@ Teams client → Azure Bot Service → POST /api/integrations/teams/bot/messages
                                               ↓
                               MicrosoftTeamsConnector.handle_bot_command()
                                               ↓
-                              TimeTrackingService (same as Slack)
+                              chat_command_service → TimeTrackingService
 ```
 
 ### Azure resources (setup checklist)
@@ -45,26 +52,20 @@ Teams client → Azure Bot Service → POST /api/integrations/teams/bot/messages
 - Teams channel enabled for the bot.
 - Optional: single-tenant vs multi-tenant bot (align with `microsoft_teams_tenant_id`).
 
-## Stub (current)
-
-- `MicrosoftTeamsConnector.handle_bot_command()` returns **501** with a short message pointing to this doc.
-- Route: `POST /api/integrations/teams/bot/messages` in `app/routes/integrations_webhooks.py` (JSON body placeholder; Bot Framework JWT validation in phase 2).
-
-## Security (implementation)
+## Security
 
 - Validate Bot Framework **JWT** on each activity (`Authorization: Bearer`).
 - Do not trust `from.id` without mapping to a TimeTracker user.
-- Rate-limit per `conversation.id`.
+- Rate-limit per `conversation.id` (follow-up).
 
-## Implementation phases
+## Follow-ups
 
-1. Stub route + handler (this phase).
-2. Bot Framework auth + user linking UI in user settings.
-3. Implement subcommands reusing Slack private methods (shared `ChatTimerCommandMixin` optional refactor).
-4. Proactive notifications (already partial via Graph `send_message`).
+- Stronger multi-tenant audience checks and proactive Graph replies.
+- User settings UI to link Teams AAD object id.
 
 ## References
 
 - `docs/integrations/SLACK.md`
 - `app/integrations/microsoft_teams.py`
 - `app/integrations/slack_connector.py`
+- `app/services/chat_command_service.py`

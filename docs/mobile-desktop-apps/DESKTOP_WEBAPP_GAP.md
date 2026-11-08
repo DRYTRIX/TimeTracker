@@ -6,9 +6,9 @@ Living checklist for bringing the Electron desktop client up to speed with the F
 
 | Component | Version | Source |
 |-----------|---------|--------|
-| Web / backend | 5.14.1 | `setup.py` |
-| Desktop | 5.14.1 | `desktop/package.json` |
-| Mobile | 5.14.1 | `mobile/pubspec.yaml` |
+| Web / backend | 5.19.1 | `setup.py` / `VERSION` |
+| Desktop | 5.19.1 | `desktop/package.json` |
+| Mobile | 5.19.1 | `mobile/pubspec.yaml` |
 
 ## What desktop has
 
@@ -23,18 +23,22 @@ Living checklist for bringing the Electron desktop client up to speed with the F
 - System tray (start/stop/pause/resume), minimize-to-tray, global shortcuts
 - React + Vite renderer (primary); legacy esbuild renderer kept as fallback
 
-## Gap matrix (5.8.3 → 5.9.3)
+## Gap matrix (current)
 
 | Area | Web | Mobile | Desktop |
 |------|-----|--------|---------|
-| Timer pause/resume | Yes | No | Done |
+| Timer pause/resume | Yes | Yes | Done |
 | Reports summary UI | Yes | Partial | Done |
 | Workday clock in/out + breaks | Yes | Yes | Done |
 | Belgium compliance / corrections UI | Yes | Partial | Deferred |
-| Kanban board | Yes (5.9.3) | No | Done |
-| CRM (leads/deals/contacts/notes) | Yes | No | Done |
+| Kanban board | Yes | Yes | Done |
+| CRM (leads/deals/contacts/notes) | Yes | Yes (hub) | Done |
 | Payments, mileage, quotes, recurring, credit notes | Yes | Partial | Done |
-| Peppol, PDF designer, AI, portal, kiosk | Yes | No | Out of scope |
+| Offline sync (idempotent queue) | PWA | Yes | Done |
+| API login + 2FA | Yes | Yes | Done |
+| Failed offline-queue UI | N/A | Phase 6 | Phase 6 |
+| Peppol, PDF designer, AI, portal, kiosk | Yes | Out of scope | Out of scope |
+| Inventory | Yes | Out of scope | Out of scope |
 
 ## Delivery checklist
 
