@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Payments** — Stripe checkout now sends JPY and other zero-decimal currencies (and three-decimal ones such as KWD) in the unit Stripe expects; before, every amount was multiplied by 100, so a JPY invoice was charged 100 times its balance, and the webhook amount was divided by 100 the same way.
+- **Peppol** — The UBL invoice now reports payments already recorded on the invoice as `PrepaidAmount` and sets `PayableAmount` to the total minus those payments (BR-CO-16), never below zero, as the Factur-X/ZUGFeRD export already does; before, a partly paid invoice sent or exported as UBL asked the buyer for the full total.
 
 ### Documentation
 
