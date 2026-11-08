@@ -964,10 +964,22 @@
           headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
           body: JSON.stringify({ status: targetStatus })
         });
-        if (!resp.ok) {
-          throw new Error('{{ _('Failed to update status') }}');
+        const data = await resp.json().catch(() => ({}));
+        if (resp.status === 409 && data.code === 'WIP_LIMIT') {
+          if (originalParent) originalParent.appendChild(card);
+          card.dataset.status = originalStatus;
+          updateCounts();
+          const msg = data.error || '{{ _('Work-in-progress limit reached for this column') }}';
+          if (window.ttAlert) {
+            window.ttAlert(msg);
+          } else {
+            alert(msg);
+          }
+          return;
         }
-        const data = await resp.json();
+        if (!resp.ok) {
+          throw new Error(data.error || '{{ _('Failed to update status') }}');
+        }
         if (!data.success) {
           throw new Error(data.error || 'Update rejected');
         }
@@ -976,7 +988,13 @@
         if (originalParent) originalParent.appendChild(card);
         card.dataset.status = originalStatus;
         updateCounts();
-        alert('{{ _('Failed to update task status') }}');
+        const fallback = '{{ _('Failed to update task status') }}';
+        const msg = err && err.message ? err.message : fallback;
+        if (window.ttAlert) {
+          window.ttAlert(msg);
+        } else {
+          alert(msg);
+        }
       }
     });
   });

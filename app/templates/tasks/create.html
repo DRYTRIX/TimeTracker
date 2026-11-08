@@ -136,6 +136,10 @@
                             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: Color for this task on the Gantt chart. If unset, the project color is used. Pick or enter a hex code (e.g. #3b82f6).') }}</p>
                         </div>
 
+                        {% with section_help=_('These custom fields are defined globally and available for all tasks.') %}
+                        {% include 'partials/_custom_fields.html' %}
+                        {% endwith %}
+
                         <!-- Form Actions -->
                         <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
                             <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>

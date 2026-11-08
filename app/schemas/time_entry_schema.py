@@ -27,6 +27,7 @@ class TimeEntrySchema(Schema):
     billable = fields.Bool(load_default=True)
     paid = fields.Bool(load_default=False)
     invoice_number = fields.Str(allow_none=True, validate=validate.Length(max=100))
+    custom_fields = fields.Dict(keys=fields.Str(), values=fields.Raw(), allow_none=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
@@ -52,6 +53,7 @@ class TimeEntryCreateSchema(Schema):
     billable = fields.Bool(load_default=True)
     paid = fields.Bool(load_default=False)
     invoice_number = fields.Str(allow_none=True, validate=validate.Length(max=100))
+    custom_fields = fields.Dict(keys=fields.Str(), values=fields.Raw(), allow_none=True)
 
     @validates("end_time")
     def validate_end_time(self, value, **kwargs):
@@ -108,6 +110,7 @@ class TimeEntryUpdateSchema(Schema):
     billable = fields.Bool(allow_none=True)
     paid = fields.Bool(allow_none=True)
     invoice_number = fields.Str(allow_none=True, validate=validate.Length(max=100))
+    custom_fields = fields.Dict(keys=fields.Str(), values=fields.Raw(), allow_none=True)
 
 
 class TimerStartSchema(Schema):

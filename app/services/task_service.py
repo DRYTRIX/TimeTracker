@@ -230,11 +230,30 @@ class TaskService:
         if not task:
             return {"success": False, "message": "Task not found", "error": "not_found"}
 
+        new_status = kwargs.get("status")
+        if new_status is not None and new_status != task.status:
+            from app.models import KanbanColumn
+
+            wip_error = KanbanColumn.wip_violation_message(task.project_id, new_status, task_id=task.id)
+            if wip_error:
+                return {
+                    "success": False,
+                    "message": wip_error,
+                    "error": "wip_limit",
+                    "code": "WIP_LIMIT",
+                }
+
         # Extract assignee fields before generic update (not model columns)
         assignee_ids = kwargs.pop("assignee_ids", None)
         assignee_id = kwargs.pop("assignee_id", None)
         assigned_to = kwargs.pop("assigned_to", None)
         update_assignees = assignee_ids is not None or assignee_id is not None or assigned_to is not None
+
+        custom_fields = kwargs.pop("custom_fields", None)
+        if custom_fields is not None:
+            from app.services.custom_field_service import CustomFieldService
+
+            CustomFieldService().apply_from_dict(task, "task", custom_fields, merge=True)
 
         # Update scalar fields
         self.task_repo.update(task, **kwargs)

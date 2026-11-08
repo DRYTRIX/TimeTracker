@@ -436,6 +436,7 @@ class TimeTrackingService:
         billable: bool = True,
         paid: bool = False,
         invoice_number: Optional[str] = None,
+        custom_fields: Optional[dict] = None,
         skip_entry_requirements: bool = False,
     ) -> Dict[str, Any]:
         """
@@ -578,6 +579,7 @@ class TimeTrackingService:
             billable=billable,
             paid=paid,
             invoice_number=invoice_number,
+            custom_fields=custom_fields,
         )
 
         commit_data = {"user_id": user_id}
@@ -659,6 +661,7 @@ class TimeTrackingService:
         invoice_number: Optional[str] = None,
         reason: Optional[str] = None,
         expected_updated_at: Optional[datetime] = None,
+        custom_fields: Optional[dict] = None,
     ) -> Dict[str, Any]:
         """
         Update a time entry.
@@ -783,6 +786,10 @@ class TimeTrackingService:
                 entry.invoice_number = None
         if invoice_number is not None:
             entry.invoice_number = invoice_number.strip() if invoice_number else None
+        if custom_fields is not None:
+            from app.services.custom_field_service import CustomFieldService
+
+            CustomFieldService().apply_from_dict(entry, "time_entry", custom_fields, merge=True)
 
         # Validate time entry requirements on updated state (entry reflects changes applied above)
         settings = Settings.get_settings()

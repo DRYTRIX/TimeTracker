@@ -247,6 +247,20 @@
                     </p>
                 </div>
                 {% endif %}
+                {% if task.custom_fields %}
+                <div class="md:col-span-2">
+                    <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-2">{{ _('Custom Fields') }}</h3>
+                    <div class="space-y-2">
+                        {% for key, value in task.custom_fields.items() %}
+                        {% set field_definition = custom_field_definitions_by_key.get(key) if custom_field_definitions_by_key else none %}
+                        <div>
+                            <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{% if field_definition %}{{ field_definition.label }}{% else %}{{ key }}{% endif %}</span>
+                            <p class="text-text-light dark:text-text-dark">{{ value }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
                 {% if task.due_date %}
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Due Date</h3>

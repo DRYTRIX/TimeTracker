@@ -171,9 +171,13 @@ def update_task(task_id):
     if "tags" in data:
         update_kwargs["tags"] = data["tags"]
 
+    if "custom_fields" in data:
+        update_kwargs["custom_fields"] = data["custom_fields"]
+
     result = task_service.update_task(task_id=task_id, user_id=g.api_user.id, **update_kwargs)
     if not result.get("success"):
-        return error_response(result.get("message", "Could not update task"), status_code=400)
+        status_code = 409 if result.get("code") == "WIP_LIMIT" or result.get("error") == "wip_limit" else 400
+        return error_response(result.get("message", "Could not update task"), status_code=status_code)
     return jsonify({"message": "Task updated successfully", "task": result["task"].to_dict()})
 
 

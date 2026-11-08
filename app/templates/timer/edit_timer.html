@@ -555,6 +555,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Explain why you are making these changes') }}</p>
                 </div>
 
+                {% with entity=timer, section_help=_('These custom fields are defined globally and available for time entries.') %}
+                {% include 'partials/_custom_fields.html' %}
+                {% endwith %}
+
                 <!-- Action Buttons -->
                 <div class="flex flex-col sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-border-light dark:border-border-dark">
                     <div class="flex flex-col sm:flex-row gap-2">
@@ -681,6 +685,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <textarea class="form-input" id="reason" name="reason" rows="3" placeholder="{{ _('e.g., Corrected duration, updated project assignment, etc.') }}"></textarea>
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Explain why you are making these changes') }}</p>
                 </div>
+
+                {% with entity=timer, section_help=_('These custom fields are defined globally and available for time entries.') %}
+                {% include 'partials/_custom_fields.html' %}
+                {% endwith %}
 
                 <!-- Action Buttons -->
                 <div class="flex flex-col sm:flex-row justify-between gap-3 mt-8 pt-6 border-t border-border-light dark:border-border-dark">

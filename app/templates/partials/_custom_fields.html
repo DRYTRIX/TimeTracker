@@ -1,0 +1,32 @@
+{% if custom_field_definitions %}
+<div class="{{ section_class|default('mt-6 border-t border-border-light dark:border-border-dark pt-6') }}">
+    <h3 class="text-lg font-semibold mb-4">{{ _('Custom Fields') }}</h3>
+    {% if section_help %}
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ section_help }}</p>
+    {% endif %}
+    <div class="space-y-4">
+        {% for definition in custom_field_definitions %}
+        {% set cf = entity.custom_fields if entity and entity.custom_fields else {} %}
+        {% set stored = cf.get(definition.field_key, '') if cf else '' %}
+        <div>
+            <label for="custom_field_{{ definition.field_key }}" class="form-label">
+                {{ definition.label }}
+                {% if definition.is_mandatory %}<span class="text-red-600 dark:text-red-400">*</span>{% endif %}
+            </label>
+            <input
+                type="text"
+                id="custom_field_{{ definition.field_key }}"
+                name="custom_field_{{ definition.field_key }}"
+                value="{{ request.form.get('custom_field_' + definition.field_key, stored) }}"
+                placeholder="{{ definition.description or _('Enter value') }}"
+                class="form-input w-full"
+                {% if definition.is_mandatory %}required{% endif %}
+            >
+            {% if definition.description %}
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ definition.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
