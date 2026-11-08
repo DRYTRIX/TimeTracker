@@ -8,6 +8,7 @@ import '../../utils/auth/auth_service.dart';
 import '../../utils/network/server_info.dart';
 import '../providers/theme_mode_provider.dart';
 import 'package:timetracker_mobile/data/api/api_client.dart';
+import 'failed_sync_screen.dart';
 import 'login_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -375,6 +376,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.error_outline),
+            title: const Text('Failed sync items'),
+            subtitle: const Text('Retry or discard operations that exhausted retries'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const FailedSyncScreen()),
+              );
+            },
           ),
           ListTile(
             leading: _syncing
