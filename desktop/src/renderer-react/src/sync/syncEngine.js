@@ -34,18 +34,36 @@ async function getQueueDepth() {
   return db.queue.where('status').equals('pending').count();
 }
 
+async function getFailedDepth() {
+  return db.queue.where('status').equals('failed').count();
+}
+
+function serializeFailedItem(item) {
+  return {
+    id: item.id,
+    type: item.type,
+    attempts: item.attempts || 0,
+    lastError: item.lastError || '',
+    createdAt: item.createdAt || null,
+    updatedAt: item.updatedAt || null,
+    payload: item.payload || {},
+  };
+}
+
 export function createSyncEngine({ apiClient, settings, onStatus, onToast, onRefresh }) {
   let interval = null;
   let stopped = false;
 
   async function publish(partial = {}) {
-    const [queueDepth, lastSyncAt, lastError] = await Promise.all([
+    const [queueDepth, failedDepth, lastSyncAt, lastError] = await Promise.all([
       getQueueDepth(),
+      getFailedDepth(),
       db.meta.get('lastSyncAt'),
       db.meta.get('lastError'),
     ]);
     onStatus({
       queueDepth,
+      failedDepth,
       syncing: false,
       lastSyncAt: lastSyncAt?.value || null,
       lastError: lastError?.value || '',
@@ -59,6 +77,7 @@ export function createSyncEngine({ apiClient, settings, onStatus, onToast, onRef
       payload: { ...(payload || {}) },
       status: 'pending',
       attempts: 0,
+      lastError: '',
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -92,6 +111,32 @@ export function createSyncEngine({ apiClient, settings, onStatus, onToast, onRef
     } else if (item.type === 'timer_stop') {
       await apiClient.stopTimer(payload);
     }
+  }
+
+  async function listFailed() {
+    const items = await db.queue.where('status').equals('failed').sortBy('updatedAt');
+    return items.map(serializeFailedItem).reverse();
+  }
+
+  async function retryItem(id) {
+    const item = await db.queue.get(id);
+    if (!item || item.status !== 'failed') return false;
+    await db.queue.update(id, {
+      status: 'pending',
+      attempts: 0,
+      lastError: '',
+      updatedAt: Date.now(),
+    });
+    await publish();
+    return true;
+  }
+
+  async function discardItem(id) {
+    const item = await db.queue.get(id);
+    if (!item) return false;
+    await db.queue.delete(id);
+    await publish();
+    return true;
   }
 
   async function syncNow() {
@@ -180,5 +225,8 @@ export function createSyncEngine({ apiClient, settings, onStatus, onToast, onRef
     queueOperation,
     cacheReadData,
     clearAll,
+    listFailed,
+    retryItem,
+    discardItem,
   };
 }

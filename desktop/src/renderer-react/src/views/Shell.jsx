@@ -71,7 +71,7 @@ export function AuthFlow(props) {
             </label>
             <div className="button-row">
               <button type="button" className="btn ghost" onClick={onBackFrom2fa}>
-                Back
+                {t('common.back')}
               </button>
               <button className="btn primary" type="submit">
                 Verify
@@ -100,7 +100,7 @@ export function AuthFlow(props) {
               </label>
               <div className="button-row">
                 <button type="button" className="btn ghost" onClick={() => setStep('server')}>
-                  Back
+                  {t('common.back')}
                 </button>
                 <button className="btn primary" type="submit">
                   Sign in
@@ -192,7 +192,7 @@ export function Sidebar({ activeView, onChange }) {
         <img src="../assets/logo.svg" alt="" />
         <div>
           <strong>TimeTracker</strong>
-          <span>{`Desktop ${APP_VERSION}`}</span>
+          <span>{t('shell.desktopVersion', { version: APP_VERSION })}</span>
         </div>
       </div>
       <nav>
@@ -216,21 +216,39 @@ export function Sidebar({ activeView, onChange }) {
   );
 }
 
-export function TopBar({ connection, user, syncStatus, theme, setTheme, onSyncNow, onLogout }) {
+export function TopBar({ connection, user, syncStatus, theme, setTheme, onSyncNow, onLogout, onOpenSettings }) {
+  const failedDepth = Number(syncStatus?.failedDepth || 0);
+  const welcome = user?.username
+    ? t('shell.welcomeNamed', { name: user.username })
+    : t('shell.welcome');
+
   return (
     <header className="topbar">
       <div>
-        <p className="eyebrow">Welcome{user?.username ? `, ${user.username}` : ''}</p>
+        <p className="eyebrow">{welcome}</p>
         <h1>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</h1>
       </div>
       <div className="topbar-actions">
         <ConnectionPill connection={connection} />
-        <button className="sync-pill" onClick={onSyncNow} title={syncStatus.lastError || 'Sync now'}>
-          {syncStatus.syncing ? 'Syncing…' : `Queue ${syncStatus.queueDepth}`}
+        <button className="sync-pill" onClick={onSyncNow} title={syncStatus.lastError || t('shell.syncNow')}>
+          {syncStatus.syncing ? t('shell.syncing') : t('shell.queue', { count: syncStatus.queueDepth })}
+          {failedDepth > 0 && (
+            <span
+              className="sync-failed-badge"
+              role="status"
+              title={t('settings.syncProblems')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenSettings?.();
+              }}
+            >
+              {t('shell.failedBadge', { count: failedDepth })}
+            </span>
+          )}
         </button>
         <ThemeSwitch theme={theme} setTheme={setTheme} />
         <button className="btn ghost" onClick={onLogout}>
-          Sign out
+          {t('common.signOut')}
         </button>
       </div>
     </header>
