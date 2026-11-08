@@ -41,7 +41,13 @@ export function classifyError(error, response, data) {
       return { ok: false, code: 'UNAUTHORIZED', message: 'Authentication failed. Sign in again.', status };
     }
     if (status === 403) {
-      return { ok: false, code: 'FORBIDDEN', message: data?.error || 'Access denied for this account.', status };
+      return {
+        ok: false,
+        code: data?.requires_2fa ? 'REQUIRES_2FA' : 'FORBIDDEN',
+        message: data?.error || 'Access denied for this account.',
+        status,
+        data,
+      };
     }
     if (status === 409) {
       return {

@@ -9,6 +9,9 @@
     "idle",
     "notifications"
   ],
+  "optional_permissions": [
+    "activeTab"
+  ],
   "optional_host_permissions": [
     "http://*/*",
     "https://*/*"

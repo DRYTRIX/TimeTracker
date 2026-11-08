@@ -9,6 +9,7 @@ import {
   formatElapsedHhMm,
 } from './lib/api.js';
 import { enhanceSelect } from './lib/picker.js';
+import { suggestProjectFromUrl } from './lib/url_suggest.js';
 
 const els = {
   message: document.getElementById('message'),
@@ -236,6 +237,19 @@ async function loadTasksForProject(projectId, selectedTaskId = null) {
   }
 }
 
+async function readActiveTabUrl() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const url = tabs?.[0]?.url;
+    if (!url || url.startsWith('chrome://') || url.startsWith('about:') || url.startsWith('moz-extension:')) {
+      return null;
+    }
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 async function loadProjects(preferredProjectId = null) {
   if (!client) return;
   const clientId = els.clientSelect.value ? Number(els.clientSelect.value) : null;
@@ -253,6 +267,7 @@ async function loadProjects(preferredProjectId = null) {
     .map((p) => ({
       id: p.id,
       name: p.name,
+      code: p.code ?? null,
       client_id: p.client_id ?? null,
       favorite: favIds.has(p.id),
       last_used_at: p.last_used_at ?? null,
@@ -265,7 +280,20 @@ async function loadProjects(preferredProjectId = null) {
       return a.name.localeCompare(b.name);
     });
 
-  fillProjectSelect(preferredProjectId);
+  let selectedId = preferredProjectId;
+  if (!selectedId) {
+    const { suggest_from_tab } = await chrome.storage.local.get(['suggest_from_tab']);
+    if (suggest_from_tab) {
+      const tabUrl = await readActiveTabUrl();
+      const suggested = suggestProjectFromUrl(tabUrl, projects);
+      if (suggested) {
+        selectedId = suggested.id;
+        showMessage(`Suggested project from tab: ${suggested.name}`, 'success');
+      }
+    }
+  }
+
+  fillProjectSelect(selectedId);
   const selected = Number(els.projectSelect.value);
   if (selected) await loadTasksForProject(selected);
   else await loadTasksForProject(null);

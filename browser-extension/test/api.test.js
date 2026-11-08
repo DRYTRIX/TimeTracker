@@ -63,3 +63,57 @@ test('ApiClient.stopTimer posts stop_time when provided', async () => {
 
   delete globalThis.fetch;
 });
+
+test('loginWithPassword returns REQUIRES_2FA when server asks for TOTP', async () => {
+  globalThis.fetch = async () => ({
+    ok: false,
+    status: 403,
+    text: async () =>
+      JSON.stringify({
+        requires_2fa: true,
+        temp_token: 'tmp_abc',
+        error: 'Two-factor authentication required.',
+      }),
+  });
+
+  const result = await ApiClient.loginWithPassword('https://tracker.test', 'alice', 'secret');
+  assert.equal(result.ok, false);
+  assert.equal(result.code, 'REQUIRES_2FA');
+  assert.equal(result.requires_2fa, true);
+  assert.equal(result.temp_token, 'tmp_abc');
+
+  delete globalThis.fetch;
+});
+
+test('verifyLogin2fa posts temp_token and code then returns API token', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, init });
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ token: 'tt_final' }),
+    };
+  };
+
+  const result = await ApiClient.verifyLogin2fa('https://tracker.test', 'tmp_abc', '123456');
+  assert.equal(result.ok, true);
+  assert.equal(result.token, 'tt_final');
+  assert.equal(calls[0].url, 'https://tracker.test/api/v1/auth/2fa/verify');
+  const body = JSON.parse(calls[0].init.body);
+  assert.equal(body.temp_token, 'tmp_abc');
+  assert.equal(body.code, '123456');
+
+  delete globalThis.fetch;
+});
+
+test('suggestProjectFromUrl matches project name substring in hostname/path', async () => {
+  const { suggestProjectFromUrl } = await import('../lib/url_suggest.js');
+  const projects = [
+    { id: 1, name: 'Acme Website', code: 'ACME' },
+    { id: 2, name: 'Internal', code: null },
+  ];
+  assert.equal(suggestProjectFromUrl('https://acme.example.com/dashboard', projects)?.id, 1);
+  assert.equal(suggestProjectFromUrl('https://example.com/acme-website/tickets', projects)?.id, 1);
+  assert.equal(suggestProjectFromUrl('https://other.example.com/', projects), null);
+});

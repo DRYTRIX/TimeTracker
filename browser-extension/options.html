@@ -20,16 +20,31 @@
         </div>
         <p class="hint">Base URL only — no path. Example: <code>http://localhost:8080</code></p>
 
-        <div class="section-title" style="margin-top: 0">Sign in with password</div>
-        <div class="field">
-          <label for="username">Username</label>
-          <input type="text" id="username" autocomplete="username" />
+        <div id="login-section">
+          <div class="section-title" style="margin-top: 0">Sign in with password</div>
+          <div class="field">
+            <label for="username">Username</label>
+            <input type="text" id="username" autocomplete="username" />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input type="password" id="password" autocomplete="current-password" />
+          </div>
+          <button type="button" class="btn btn-primary" id="login-btn">Connect with password</button>
         </div>
-        <div class="field">
-          <label for="password">Password</label>
-          <input type="password" id="password" autocomplete="current-password" />
+
+        <div id="totp-section" class="hidden">
+          <div class="section-title" style="margin-top: 0">Two-factor authentication</div>
+          <p class="hint">Enter the 6-digit code from your authenticator app.</p>
+          <div class="field">
+            <label for="totp-code">Authentication code</label>
+            <input type="text" id="totp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456" />
+          </div>
+          <div class="row" style="gap: 8px">
+            <button type="button" class="btn btn-primary" id="totp-btn">Verify and connect</button>
+            <button type="button" class="btn btn-secondary" id="totp-cancel-btn">Cancel</button>
+          </div>
         </div>
-        <button type="button" class="btn btn-primary" id="login-btn">Connect with password</button>
 
         <hr class="sep" />
 
@@ -43,6 +58,18 @@
           <input type="password" id="api-token" placeholder="tt_…" autocomplete="off" />
         </div>
         <button type="button" class="btn btn-secondary" id="token-btn">Save token</button>
+
+        <hr class="sep" />
+
+        <div class="section-title" style="margin-top: 0">Suggestions from the current tab</div>
+        <p class="hint">
+          When enabled, the popup can suggest a project whose name or code appears in the active tab URL
+          (requires the optional <code>activeTab</code> permission).
+        </p>
+        <label class="row" style="gap: 8px; align-items: center">
+          <input type="checkbox" id="suggest-from-tab" />
+          <span>Suggest project from current tab URL</span>
+        </label>
 
         <hr class="sep" />
 
