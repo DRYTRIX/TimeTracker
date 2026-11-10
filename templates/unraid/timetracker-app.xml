@@ -12,7 +12,7 @@
   <Overview>Self-hosted time tracking and project management. Requires TimeTracker-DB on the same timetracker network.</Overview>
   <Category>Productivity: Tools</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/drytrix/TimeTracker/main/templates/unraid/timetracker-app.xml</TemplateURL>
+  <TemplateURL>https://raw.githubusercontent.com/DRYTRIX/TimeTracker/unraid-ca/timetracker-app.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/drytrix/TimeTracker/main/app/static/images/timetracker-logo-icon.svg</Icon>
   <ExtraParams/>
   <PostArgs/>

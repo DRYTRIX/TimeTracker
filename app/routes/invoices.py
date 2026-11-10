@@ -29,6 +29,7 @@ from app.models import (
     Invoice,
     InvoiceImage,
     InvoiceItem,
+    PeppolInboundDocument,
     Project,
     ProjectCost,
     RateOverride,
@@ -1269,6 +1270,48 @@ def export_invoice_ubl(invoice_id):
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
 
 
+@invoices_bp.route("/invoices/<int:invoice_id>/export/xrechnung")
+@login_required
+def export_invoice_xrechnung(invoice_id):
+    """Export invoice as XRechnung 3.0 UBL XML (CIUS-DE)."""
+    from app.models import Settings
+    from app.utils.xrechnung import build_xrechnung_ubl_invoice_xml, validate_xrechnung_ready
+
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        flash(_("You do not have permission to export this invoice"), "error")
+        return safe_redirect(
+            request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices")
+        )
+
+    settings = Settings.get_settings()
+    client = getattr(invoice, "client", None)
+    errors = validate_xrechnung_ready(invoice, settings, client)
+    if errors:
+        return Response(
+            json.dumps({"error": "xrechnung_not_ready", "messages": errors}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    try:
+        xml, _sha = build_xrechnung_ubl_invoice_xml(invoice, settings, client)
+        fn = f"{invoice.invoice_number}-xrechnung.xml"
+        return Response(xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"})
+    except Exception as e:
+        from app.utils.error_reporting import log_and_capture
+
+        log_and_capture(
+            current_app.logger,
+            "XRechnung export failed for invoice %s",
+            invoice_id,
+            exc=e,
+            level="exception",
+        )
+        flash(_("XRechnung export failed. Please try again."), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
+
+
 @invoices_bp.route("/invoices/<int:invoice_id>/export/pdf")
 @login_required
 def export_invoice_pdf(invoice_id):
@@ -2037,3 +2080,79 @@ def get_invoice_image_base64(invoice_id, image_id):
     except Exception as e:
         current_app.logger.error(f"Error serving image file: {e}")
         return jsonify({"error": "Error serving image file"}), 500
+
+
+@invoices_bp.route("/invoices/peppol-inbox")
+@login_required
+@module_enabled("invoices")
+def peppol_inbox():
+    """List inbound Peppol documents received via the bridge inbox."""
+    status = (request.args.get("status") or "").strip().lower()
+    query = PeppolInboundDocument.query.order_by(PeppolInboundDocument.created_at.desc())
+    if status in {"new", "acknowledged", "error"}:
+        query = query.filter(PeppolInboundDocument.status == status)
+    documents = query.limit(200).all()
+    settings = Settings.get_settings()
+    inbox_enabled = bool(getattr(settings, "peppol_inbox_enabled", False))
+    return render_template(
+        "invoices/peppol_inbox.html",
+        documents=documents,
+        status_filter=status,
+        inbox_enabled=inbox_enabled,
+    )
+
+
+@invoices_bp.route("/invoices/peppol-inbox/<int:doc_id>")
+@login_required
+@module_enabled("invoices")
+def peppol_inbox_detail(doc_id: int):
+    doc = PeppolInboundDocument.query.get_or_404(doc_id)
+    return render_template("invoices/peppol_inbox_detail.html", document=doc)
+
+
+@invoices_bp.route("/invoices/peppol-inbox/<int:doc_id>/ubl")
+@login_required
+@module_enabled("invoices")
+def peppol_inbox_download_ubl(doc_id: int):
+    doc = PeppolInboundDocument.query.get_or_404(doc_id)
+    if not doc.ubl_xml:
+        flash(_("No UBL XML is stored for this document."), "error")
+        return redirect(url_for("invoices.peppol_inbox_detail", doc_id=doc.id))
+    filename = f"{doc.document_number or doc.external_id or 'inbound'}.xml"
+    return Response(
+        doc.ubl_xml,
+        mimetype="application/xml",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@invoices_bp.route("/invoices/peppol-inbox/poll", methods=["POST"])
+@login_required
+@module_enabled("invoices")
+def peppol_inbox_poll_now():
+    """Manually trigger an inbox poll (admins / invoice managers)."""
+    if not (getattr(current_user, "is_admin", False) or current_user.has_permission("manage_invoices")):
+        flash(_("You do not have permission to poll the Peppol inbox."), "error")
+        return redirect(url_for("invoices.peppol_inbox"))
+    try:
+        from app.services.peppol_inbound_service import PeppolInboundService
+
+        result = PeppolInboundService().poll_and_import()
+        if result.get("skipped"):
+            flash(_("Peppol inbox polling is disabled. Enable it in Peppol settings."), "warning")
+        elif result.get("ok"):
+            flash(
+                _("Peppol inbox poll finished: %(fetched)s fetched, %(created)s new, %(updated)s updated.")
+                % {
+                    "fetched": result.get("fetched", 0),
+                    "created": result.get("created", 0),
+                    "updated": result.get("updated", 0),
+                },
+                "success",
+            )
+        else:
+            flash(_("Peppol inbox poll completed with errors."), "warning")
+    except Exception:
+        current_app.logger.exception("Manual Peppol inbox poll failed")
+        flash(_("Failed to poll Peppol inbox."), "error")
+    return redirect(url_for("invoices.peppol_inbox"))

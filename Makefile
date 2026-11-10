@@ -2,7 +2,8 @@
 # Common development and testing tasks
 
 .PHONY: help install test test-smoke test-unit test-integration test-security test-coverage \
-        test-fast test-parallel lint format clean docker-build docker-run setup dev security-scan frontend-a11y
+        test-fast test-parallel lint format clean docker-build docker-run setup dev security-scan frontend-a11y \
+        check-route-sizes
 
 # Default target
 help:
@@ -33,6 +34,7 @@ help:
 	@echo "  make lint           - Run linters (flake8)"
 	@echo "  make format         - Format code (black + isort)"
 	@echo "  make format-check   - Check code formatting"
+	@echo "  make check-route-sizes - Soft route file line-count guard (warn >2000, fail >2500)"
 	@echo "  make security-scan  - Run security scanners"
 	@echo "  make frontend-a11y  - Run accessibility check on web app (requires app running; set FRONTEND_URL)"
 	@echo ""
@@ -112,6 +114,10 @@ lint:
 	@echo "Running flake8..."
 	flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
 	flake8 app/ --count --max-complexity=10 --max-line-length=120 --statistics
+
+check-route-sizes:
+	@echo "Checking app/routes/*.py line counts..."
+	python3 scripts/ci/check_route_file_sizes.py
 
 format:
 	@echo "Running black..."

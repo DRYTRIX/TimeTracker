@@ -360,7 +360,7 @@ class InvoiceItem(db.Model):
     total_amount = db.Column(db.Numeric(10, 2), nullable=False)
 
     # Time entry reference (optional)
-    time_entry_ids = db.Column(db.String(500), nullable=True)  # Comma-separated IDs
+    time_entry_ids = db.Column(db.Text, nullable=True)  # Comma-separated IDs
 
     # Inventory integration
     stock_item_id = db.Column(db.Integer, db.ForeignKey("stock_items.id"), nullable=True, index=True)

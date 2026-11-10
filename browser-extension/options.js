@@ -1,5 +1,5 @@
 /**
- * Options page: server URL + password login or pasted API token.
+ * Options page: server URL + password login (with 2FA) or pasted API token.
  */
 
 import { ApiClient, normalizeServerUrl, originFromServerUrl } from './lib/api.js';
@@ -14,7 +14,16 @@ const els = {
   disconnectBtn: document.getElementById('disconnect-btn'),
   message: document.getElementById('message'),
   statusLine: document.getElementById('status-line'),
+  loginSection: document.getElementById('login-section'),
+  totpSection: document.getElementById('totp-section'),
+  totpCode: document.getElementById('totp-code'),
+  totpBtn: document.getElementById('totp-btn'),
+  totpCancelBtn: document.getElementById('totp-cancel-btn'),
+  suggestFromTab: document.getElementById('suggest-from-tab'),
 };
+
+/** @type {{ serverUrl: string, tempToken: string }|null} */
+let pending2fa = null;
 
 function showMessage(text, kind = 'error') {
   els.message.textContent = text;
@@ -25,6 +34,21 @@ function showMessage(text, kind = 'error') {
 function clearMessage() {
   els.message.classList.add('hidden');
   els.message.textContent = '';
+}
+
+function showTotpStep(serverUrl, tempToken) {
+  pending2fa = { serverUrl, tempToken };
+  els.loginSection.classList.add('hidden');
+  els.totpSection.classList.remove('hidden');
+  els.totpCode.value = '';
+  els.totpCode.focus();
+}
+
+function hideTotpStep() {
+  pending2fa = null;
+  els.totpSection.classList.add('hidden');
+  els.loginSection.classList.remove('hidden');
+  els.totpCode.value = '';
 }
 
 async function requestHostAccess(serverUrl) {
@@ -53,13 +77,30 @@ async function persistSession(serverUrl, token) {
   chrome.runtime.sendMessage({ type: 'refresh_timer' }).catch(() => {});
 }
 
+async function finishWithToken(serverUrl, token) {
+  const client = new ApiClient(serverUrl, token);
+  const session = await client.validateSession();
+  if (!session.ok) {
+    showMessage(session.message);
+    return false;
+  }
+  await persistSession(serverUrl, token);
+  els.password.value = '';
+  hideTotpStep();
+  showMessage('Connected successfully.', 'success');
+  await updateStatus();
+  return true;
+}
+
 async function updateStatus() {
-  const { server_url, api_token, logged_out } = await chrome.storage.local.get([
+  const { server_url, api_token, logged_out, suggest_from_tab } = await chrome.storage.local.get([
     'server_url',
     'api_token',
     'logged_out',
+    'suggest_from_tab',
   ]);
   if (server_url) els.serverUrl.value = server_url;
+  els.suggestFromTab.checked = Boolean(suggest_from_tab);
   if (!server_url || !api_token || logged_out) {
     els.statusLine.textContent = 'Not connected.';
     return;
@@ -99,26 +140,48 @@ async function connectWithPassword() {
     }
 
     const login = await ApiClient.loginWithPassword(serverUrl, username, password);
+    if (login.requires_2fa && login.temp_token) {
+      showTotpStep(serverUrl, login.temp_token);
+      showMessage('Enter your two-factor authentication code.', 'success');
+      return;
+    }
     if (!login.ok) {
       showMessage(login.message);
       return;
     }
 
-    const client = new ApiClient(serverUrl, login.token);
-    const session = await client.validateSession();
-    if (!session.ok) {
-      showMessage(session.message);
-      return;
-    }
-
-    await persistSession(serverUrl, login.token);
-    els.password.value = '';
-    showMessage('Connected successfully.', 'success');
-    await updateStatus();
+    await finishWithToken(serverUrl, login.token);
   } catch (error) {
     showMessage(error?.message || 'Connect failed. Check the URL and try again.');
   } finally {
     els.loginBtn.disabled = false;
+  }
+}
+
+async function verifyTotp() {
+  clearMessage();
+  if (!pending2fa) {
+    hideTotpStep();
+    return;
+  }
+  const code = els.totpCode.value.trim();
+  if (!code) {
+    showMessage('Enter the authentication code.');
+    return;
+  }
+
+  els.totpBtn.disabled = true;
+  try {
+    const result = await ApiClient.verifyLogin2fa(pending2fa.serverUrl, pending2fa.tempToken, code);
+    if (!result.ok) {
+      showMessage(result.message);
+      return;
+    }
+    await finishWithToken(pending2fa.serverUrl, result.token);
+  } catch (error) {
+    showMessage(error?.message || 'Verification failed.');
+  } finally {
+    els.totpBtn.disabled = false;
   }
 }
 
@@ -169,6 +232,7 @@ async function connectWithToken() {
 
 async function disconnect() {
   clearMessage();
+  hideTotpStep();
   await chrome.storage.local.set({
     api_token: null,
     logged_out: true,
@@ -180,7 +244,34 @@ async function disconnect() {
 }
 
 els.loginBtn.addEventListener('click', connectWithPassword);
+els.totpBtn.addEventListener('click', verifyTotp);
+els.totpCancelBtn.addEventListener('click', () => {
+  clearMessage();
+  hideTotpStep();
+});
+els.totpCode.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    verifyTotp();
+  }
+});
 els.tokenBtn.addEventListener('click', connectWithToken);
 els.disconnectBtn.addEventListener('click', disconnect);
+els.suggestFromTab.addEventListener('change', async () => {
+  const enabled = els.suggestFromTab.checked;
+  if (enabled) {
+    try {
+      const granted = await chrome.permissions.request({ permissions: ['activeTab'] });
+      if (!granted) {
+        els.suggestFromTab.checked = false;
+        showMessage('activeTab permission is required for URL suggestions.');
+        return;
+      }
+    } catch {
+      // Firefox may grant activeTab implicitly when used from the popup.
+    }
+  }
+  await chrome.storage.local.set({ suggest_from_tab: els.suggestFromTab.checked });
+});
 
 updateStatus();

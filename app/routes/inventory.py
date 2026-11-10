@@ -813,6 +813,75 @@ def stock_levels():
     )
 
 
+@inventory_bp.route("/inventory/stock-levels/export.csv")
+@login_required
+@module_enabled("inventory")
+@admin_or_permission_required("view_stock_levels")
+def export_stock_levels_csv():
+    """Export filtered stock levels as CSV."""
+    import csv
+    import io
+
+    warehouse_id = request.args.get("warehouse_id", type=int)
+    category = request.args.get("category", "")
+    low_stock_only = request.args.get("low_stock", "false").lower() == "true"
+
+    query = WarehouseStock.query.join(StockItem).join(Warehouse)
+    if warehouse_id:
+        query = query.filter_by(warehouse_id=warehouse_id)
+    if category:
+        query = query.filter(StockItem.category == category)
+
+    stock_levels = query.order_by(Warehouse.code, StockItem.name).all()
+    if low_stock_only:
+        stock_levels = [
+            sl
+            for sl in stock_levels
+            if sl.stock_item.reorder_point and sl.quantity_on_hand < sl.stock_item.reorder_point
+        ]
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        [
+            "warehouse_code",
+            "warehouse_name",
+            "sku",
+            "item_name",
+            "quantity_on_hand",
+            "quantity_reserved",
+            "quantity_available",
+            "location",
+            "category",
+        ]
+    )
+    for stock in stock_levels:
+        item = stock.stock_item
+        warehouse = stock.warehouse
+        writer.writerow(
+            [
+                warehouse.code if warehouse else "",
+                warehouse.name if warehouse else "",
+                item.sku if item else "",
+                item.name if item else "",
+                float(stock.quantity_on_hand or 0),
+                float(stock.quantity_reserved or 0),
+                float(stock.quantity_available or 0),
+                stock.location or "",
+                item.category if item else "",
+            ]
+        )
+
+    data = io.BytesIO(buffer.getvalue().encode("utf-8"))
+    data.seek(0)
+    return send_file(
+        data,
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=f"stock-levels-{datetime.utcnow().strftime('%Y%m%d')}.csv",
+    )
+
+
 @inventory_bp.route("/inventory/stock-levels/warehouse/<int:warehouse_id>")
 @login_required
 @admin_or_permission_required("view_stock_levels")
@@ -1236,6 +1305,7 @@ def new_transfer():
             to_warehouse_id = int(request.form.get("to_warehouse_id"))
             quantity = Decimal(request.form.get("quantity"))
             notes = request.form.get("notes", "").strip() or None
+            location = request.form.get("location", "").strip() or None
 
             # Validate warehouses are different
             if from_warehouse_id == to_warehouse_id:
@@ -1294,7 +1364,7 @@ def new_transfer():
             )
 
             # Create positive movement (to destination warehouse)
-            in_movement, _unused = StockMovement.record_movement(
+            in_movement, dest_stock = StockMovement.record_movement(
                 movement_type="transfer",
                 stock_item_id=stock_item_id,
                 warehouse_id=to_warehouse_id,
@@ -1306,6 +1376,15 @@ def new_transfer():
                 notes=notes,
                 update_stock=True,
             )
+
+            if location and dest_stock is not None:
+                dest_stock.location = location
+            elif location:
+                dest_stock = WarehouseStock.query.filter_by(
+                    warehouse_id=to_warehouse_id, stock_item_id=stock_item_id
+                ).first()
+                if dest_stock:
+                    dest_stock.location = location
 
             safe_commit()
 
@@ -1401,6 +1480,7 @@ def new_adjustment():
             quantity = Decimal(request.form.get("quantity"))
             reason = request.form.get("reason", "").strip() or None
             notes = request.form.get("notes", "").strip() or None
+            location = request.form.get("location", "").strip() or None
 
             movement, updated_stock = StockMovement.record_movement(
                 movement_type="adjustment",
@@ -1412,6 +1492,14 @@ def new_adjustment():
                 notes=notes,
                 update_stock=True,
             )
+
+            if location:
+                stock = (
+                    updated_stock
+                    or WarehouseStock.query.filter_by(warehouse_id=warehouse_id, stock_item_id=stock_item_id).first()
+                )
+                if stock:
+                    stock.location = location
 
             safe_commit()
 
@@ -1978,6 +2066,51 @@ def purchase_order_pdf(po_id):
         as_attachment=True,
         download_name=filename,
     )
+
+
+@inventory_bp.route("/inventory/purchase-orders/<int:po_id>/email", methods=["POST"])
+@login_required
+@module_enabled("inventory")
+@admin_or_permission_required("manage_purchase_orders")
+def email_purchase_order(po_id):
+    """Email the purchase order PDF to the supplier."""
+    purchase_order = PurchaseOrder.query.get_or_404(po_id)
+    supplier = purchase_order.supplier
+    recipient = (supplier.email if supplier else None) or ""
+    recipient = recipient.strip()
+    if not recipient:
+        flash(_("Supplier has no email address configured."), "error")
+        return redirect(url_for("inventory.view_purchase_order", po_id=po_id))
+
+    try:
+        from app.utils.email import send_email
+        from app.utils.purchase_order_pdf import PurchaseOrderPDFGenerator
+
+        pdf_bytes = PurchaseOrderPDFGenerator(purchase_order, settings=Settings.get_settings()).generate_pdf()
+        filename = f"{purchase_order.po_number or f'PO-{po_id}'}.pdf".replace("/", "-")
+        subject = _("Purchase Order %(po_number)s", po_number=purchase_order.po_number)
+        text_body = _(
+            "Please find attached purchase order %(po_number)s.",
+            po_number=purchase_order.po_number,
+        )
+        html_body = f"<p>{text_body}</p>"
+        send_email(
+            subject=subject,
+            recipients=[recipient],
+            text_body=text_body,
+            html_body=html_body,
+            attachments=[(filename, "application/pdf", pdf_bytes)],
+        )
+        if purchase_order.status == "draft":
+            purchase_order.mark_as_sent()
+            safe_commit("email_purchase_order", {"purchase_order_id": po_id})
+        log_event("purchase_order_emailed", purchase_order_id=po_id, recipient=recipient)
+        flash(_("Purchase order emailed to %(email)s.", email=recipient), "success")
+    except Exception as e:
+        current_app.logger.exception("Failed to email purchase order %s", po_id)
+        flash(_("Error emailing purchase order: %(error)s", error=str(e)), "error")
+
+    return redirect(url_for("inventory.view_purchase_order", po_id=po_id))
 
 
 @inventory_bp.route("/inventory/purchase-orders/<int:po_id>/edit", methods=["GET", "POST"])

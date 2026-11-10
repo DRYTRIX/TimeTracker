@@ -359,11 +359,17 @@ pytest tests/test_payment_model.py -v
 pytest tests/test_payment_smoke.py -v
 ```
 
+## Overdue invoices vs payment reminders
+
+Past-due **invoice status and notifications** (daily job → mark `overdue`, staff email, client portal ping) are implemented. That is **not** multi-step dunning or payment-collection reminders. Details: [Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md).
+
+**Recurring invoices** (generate draft invoices on a schedule) are separate from **recurring payments** (automatic charge processing), which is not implemented here.
+
 ## Future Enhancements
 
 Potential improvements for future versions:
 
-1. **Payment Reminders**: Automated reminders for overdue invoices
+1. **Multi-step payment reminders / dunning**: Offset-based schedules (`InvoiceReminderSchedule` exists unused)
 2. **Payment Plans**: Support for installment payment schedules
 3. **Recurring Payments**: Automatic payment processing for recurring invoices
 4. **Payment Export**: Export payment history to CSV/Excel
@@ -377,6 +383,7 @@ Potential improvements for future versions:
 ## Related Features
 
 - **Invoices**: Core invoicing functionality
+- **Overdue & recurring**: [Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)
 - **Clients**: Client management and billing
 - **Reports**: Financial reporting including payment analytics
 - **Analytics**: Payment trends and statistics

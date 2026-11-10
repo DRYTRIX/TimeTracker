@@ -32,6 +32,9 @@
     <i class="fas fa-file-code mr-1"></i>{{ _('Download UBL') }}
 </a>
 {% endif %}
+<a href="{{ url_for('invoices.export_invoice_xrechnung', invoice_id=invoice.id) }}" class="btn bg-amber-700 text-white hover:bg-amber-800">
+    <i class="fas fa-file-export mr-1"></i>{{ _('Download XRechnung') }}
+</a>
 {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
 <a href="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" class="btn bg-blue-500 text-white hover:bg-blue-600">
     <i class="fas fa-credit-card mr-1"></i>{{ _('Pay Online') }}

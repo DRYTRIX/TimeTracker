@@ -222,6 +222,10 @@
             </details>
         </div>
 
+        {% with section_help=_('These custom fields are defined globally and available for time entries.') %}
+        {% include 'partials/_custom_fields.html' %}
+        {% endwith %}
+
         <div class="mt-8 border-t border-border-light dark:border-border-dark pt-6 flex flex-col sm:flex-row justify-end gap-3">
             <button type="reset" class="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark font-medium transition-all">{{ _('Clear') }}</button>
             <button type="submit" class="w-full sm:w-auto bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200">{{ _('Log Time') }}</button>

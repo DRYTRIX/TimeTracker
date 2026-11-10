@@ -3,6 +3,7 @@ const { createWindow, registerAppProtocol } = require('./window');
 const { createTray, destroyTray } = require('./tray');
 const { createIdleMonitor } = require('./idle');
 const { createSecureStore } = require('./secure-store');
+const activityTracker = require('./activity-tracker');
 
 let store = null;
 let idleMonitor = null;
@@ -198,6 +199,14 @@ app.whenReady().then(() => {
   });
   idleMonitor.start();
 
+  // Privacy-first activity tracker: disabled by default; no window capture yet.
+  // See docs/design/DESKTOP_ACTIVITY_AUTOTRACKER.md
+  try {
+    activityTracker.start({ store });
+  } catch (e) {
+    console.warn('TimeTracker: activity tracker stub failed to start:', e.message);
+  }
+
   try {
     powerMonitor.on('resume', () => {
       notifyAppResume('power-resume');
@@ -261,6 +270,11 @@ app.on('before-quit', () => {
   app.isQuitting = true;
   unregisterGlobalShortcuts();
   if (idleMonitor) idleMonitor.stop();
+  try {
+    activityTracker.stop();
+  } catch (_) {
+    /* ignore */
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -364,6 +378,7 @@ const ALLOWED_STORE_KEYS = new Set([
   'sync_interval',
   'minimize_to_tray',
   'global_shortcuts',
+  'activity_tracker_enabled',
   '__migrated_from_plaintext',
 ]);
 

@@ -5314,72 +5314,7 @@ def delete_holiday_api(holiday_id):
 
 
 # ==================== Payroll Export ====================
-
-
-@api_v1_bp.route("/exports/payroll", methods=["GET"])
-@require_api_token("read:reports")
-def export_payroll_csv():
-    import csv
-    import io
-
-    from app.services.workforce_governance_service import WorkforceGovernanceService
-
-    start = _parse_date(request.args.get("start_date"))
-    end = _parse_date(request.args.get("end_date"))
-    if not start or not end:
-        return jsonify({"error": "start_date and end_date are required (YYYY-MM-DD)"}), 400
-
-    user_id = request.args.get("user_id", type=int)
-    if not g.api_user.is_admin:
-        user_id = g.api_user.id
-
-    approved_only = request.args.get("approved_only", "false").lower() == "true"
-    closed_only = request.args.get("closed_only", "false").lower() == "true"
-
-    rows = WorkforceGovernanceService().payroll_rows(
-        start_date=start,
-        end_date=end,
-        user_id=user_id,
-        approved_only=approved_only,
-        closed_only=closed_only,
-    )
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(
-        [
-            "user_id",
-            "username",
-            "week_year",
-            "week_number",
-            "period_start",
-            "period_end",
-            "hours",
-            "billable_hours",
-            "non_billable_hours",
-        ]
-    )
-    for row in rows:
-        writer.writerow(
-            [
-                row.get("user_id"),
-                row.get("username"),
-                row.get("week_year"),
-                row.get("week_number"),
-                row.get("period_start"),
-                row.get("period_end"),
-                row.get("hours"),
-                row.get("billable_hours"),
-                row.get("non_billable_hours"),
-            ]
-        )
-
-    filename = f"payroll_export_{start.isoformat()}_{end.isoformat()}.csv"
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
-    )
+# Handler lives in app.routes.api_v1_exports (imported via blueprint_registry).
 
 
 # ==================== Capacity and Compliance ====================

@@ -3,7 +3,7 @@
 import pytest
 
 from app import db
-from app.models import KanbanColumn
+from app.models import KanbanColumn, Task
 
 pytestmark = [pytest.mark.integration, pytest.mark.routes]
 
@@ -99,3 +99,63 @@ def test_edit_column_route_updates_wip_limit(app, admin_authenticated_client):
     assert resp.status_code == 200
     with app.app_context():
         assert KanbanColumn.query.get(column_id).wip_limit is None
+
+
+def test_wip_enforcement_blocks_move_at_limit(app, authenticated_client, project, user):
+    """Moving a task into a full column returns 409 WIP_LIMIT."""
+    with app.app_context():
+        col = KanbanColumn(
+            key="wip_test_col",
+            label="WIP Test",
+            project_id=project.id,
+            wip_limit=1,
+            position=50,
+        )
+        db.session.add(col)
+        t1 = Task(
+            name="Occupant",
+            project_id=project.id,
+            created_by=user.id,
+            status="wip_test_col",
+        )
+        t2 = Task(name="Mover", project_id=project.id, created_by=user.id, status="todo")
+        db.session.add_all([t1, t2])
+        db.session.commit()
+        mover_id = t2.id
+
+    resp = authenticated_client.put(f"/api/tasks/{mover_id}/status", json={"status": "wip_test_col"})
+    assert resp.status_code == 409
+    data = resp.get_json()
+    assert data.get("code") == "WIP_LIMIT"
+    with app.app_context():
+        assert Task.query.get(mover_id).status == "todo"
+
+
+def test_wip_unlimited_column_allows_moves(app, authenticated_client, project, user):
+    """Columns without a WIP limit do not block status updates."""
+    with app.app_context():
+        col = KanbanColumn(
+            key="wip_open_col",
+            label="Open WIP",
+            project_id=project.id,
+            wip_limit=None,
+            position=51,
+        )
+        db.session.add(col)
+        t1 = Task(
+            name="First",
+            project_id=project.id,
+            created_by=user.id,
+            status="wip_open_col",
+        )
+        t2 = Task(name="Second", project_id=project.id, created_by=user.id, status="todo")
+        db.session.add_all([t1, t2])
+        db.session.commit()
+        second_id = t2.id
+
+    resp = authenticated_client.put(f"/api/tasks/{second_id}/status", json={"status": "wip_open_col"})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data.get("success") is True
+    with app.app_context():
+        assert Task.query.get(second_id).status == "wip_open_col"

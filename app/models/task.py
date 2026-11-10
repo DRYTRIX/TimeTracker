@@ -407,6 +407,7 @@ class Task(db.Model):
             "is_blocked": self.is_blocked,
             "blocker_ids": [link.depends_on_id for link in self.blocking_links],
             "dependent_ids": [link.task_id for link in self.dependent_links],
+            "custom_fields": self.custom_fields or {},
         }
 
     @classmethod

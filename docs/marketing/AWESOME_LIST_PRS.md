@@ -9,6 +9,12 @@ Opened refresh PR: https://github.com/awesome-selfhosted/awesome-selfhosted-data
 
 ## Suggested new listings
 
+Full copy-paste packages (AlternativeTo, selfh.st, OpenAlternative, Elestio): **[LISTING_SUBMISSIONS.md](LISTING_SUBMISSIONS.md)**.
+
+Cadence and forum guidance: **[PUBLISHING_CHECKLIST.md](PUBLISHING_CHECKLIST.md)**.
+
+Unraid CA: **[UNRAID_CA_SUBMIT.md](UNRAID_CA_SUBMIT.md)**.
+
 ### AlternativeTo
 
 1. Create/claim [TimeTracker](https://alternativeto.net/) page.
@@ -25,6 +31,10 @@ Submit with:
 - Repo: https://github.com/DRYTRIX/TimeTracker
 - Demo: https://timetracker-demo.drytrix.com (login `test` / `test123!`)
 - Website: https://timetracker.drytrix.com
+
+### selfh.st
+
+Email `hello@selfh.st` using the draft in [LISTING_SUBMISSIONS.md](LISTING_SUBMISSIONS.md#2-selfhst).
 
 ## Do not
 

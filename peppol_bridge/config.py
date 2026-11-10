@@ -23,6 +23,13 @@ class BridgeConfig:
     getpeppr_base_url: str
     getpeppr_api_key: Optional[str]
 
+    # Let’s Peppol (hosted)
+    letspeppol_base_url: str
+    letspeppol_client_id: Optional[str]
+    letspeppol_client_secret: Optional[str]
+    letspeppol_peppol_id: Optional[str]
+    letspeppol_token_url: Optional[str]
+
     # Generic passthrough
     generic_forward_url: Optional[str]
     generic_forward_token: Optional[str]
@@ -45,6 +52,12 @@ def load_config() -> BridgeConfig:
     getpeppr_base_url = (os.getenv("GETPEPPR_BASE_URL") or "https://api.getpeppr.dev/v1").strip().rstrip("/")
     getpeppr_api_key = (os.getenv("GETPEPPR_API_KEY") or "").strip() or None
 
+    letspeppol_base_url = (os.getenv("LETSPEPPOL_BASE_URL") or "https://be.letspeppol.org").strip().rstrip("/")
+    letspeppol_client_id = (os.getenv("LETSPEPPOL_CLIENT_ID") or "").strip() or None
+    letspeppol_client_secret = (os.getenv("LETSPEPPOL_CLIENT_SECRET") or "").strip() or None
+    letspeppol_peppol_id = (os.getenv("LETSPEPPOL_PEPPOL_ID") or "").strip() or None
+    letspeppol_token_url = (os.getenv("LETSPEPPOL_TOKEN_URL") or "").strip() or None
+
     # Generic passthrough
     generic_forward_url = (os.getenv("GENERIC_FORWARD_URL") or "").strip()
     generic_forward_token = (os.getenv("GENERIC_FORWARD_TOKEN") or "").strip() or None
@@ -59,6 +72,11 @@ def load_config() -> BridgeConfig:
         peppyrus_api_key=peppyrus_api_key,
         getpeppr_base_url=getpeppr_base_url,
         getpeppr_api_key=getpeppr_api_key,
+        letspeppol_base_url=letspeppol_base_url,
+        letspeppol_client_id=letspeppol_client_id,
+        letspeppol_client_secret=letspeppol_client_secret,
+        letspeppol_peppol_id=letspeppol_peppol_id,
+        letspeppol_token_url=letspeppol_token_url,
         generic_forward_url=generic_forward_url or None,
         generic_forward_token=generic_forward_token,
     )

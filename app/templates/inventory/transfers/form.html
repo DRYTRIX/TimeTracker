@@ -51,6 +51,11 @@
                 <input type="number" name="quantity" id="quantity" step="0.01" min="0.01" class="form-input" required>
             </div>
             <div>
+                <label for="location" class="form-label">{{ _('Destination Bin / Location') }}</label>
+                <input type="text" name="location" id="location" class="form-input" maxlength="100" placeholder="{{ _('e.g., Receiving / Bay 2') }}">
+                <p class="mt-1 text-sm text-gray-500">{{ _('Optional. Sets the location on the destination warehouse stock record.') }}</p>
+            </div>
+            <div>
                 <label for="notes" class="form-label">{{ _('Notes') }}</label>
                 <textarea name="notes" id="notes" rows="3" class="form-input" placeholder="{{ _('Optional notes about this transfer') }}"></textarea>
             </div>

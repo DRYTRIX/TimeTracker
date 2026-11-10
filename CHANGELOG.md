@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.20.0] - 2026-11-10
+### Added
+
+- **Enterprise identity** — OAuth 2.0 API apps (authorization code + PKCE, admin CRUD), SAML 2.0 login, SCIM Users provisioning, and shared Slack/Teams timer bot commands.
+- **Bank reconciliation & payroll** — Bank reconciliation workflows plus payroll/labor export APIs and UI.
+- **Inventory** — Stock locations, purchase-order email, and stock-levels CSV export.
+- **Invoicing** — XRechnung export and PDF QR/barcode elements on invoice/quote layouts.
+- **Peppol bridge: Let’s Peppol + inbox** — `PEPPOL_BRIDGE_PROVIDER=letspeppol` for Belgian access-point delivery, plus inbound Peppol inbox poll/ack in the bridge and admin UI.
+- **Kanban & custom fields** — Enforce kanban WIP limits; extend custom fields coverage.
+- **Clients** — Mobile sync retry backoff and failed-sync screen; desktop failed offline-sync surfacing and broader i18n; browser extension 2FA login, Firefox packaging, and tab URL suggestions.
+- **DigitalOcean one-click** — `.do/deploy.template.yaml` (Docker Hub image + Dev Database) and Deploy to DigitalOcean button in the README / Distribution guide.
+- **Unraid CA profile** — Root `ca_profile.xml` (`CommunityApplications` + `<Profile>`) required for Community Applications submission.
+
+### Security
+
+- **CodeQL** — Clear open redirect, stack-trace, weak-hashing, and XML-related alerts on develop paths used by auth/OAuth and related utilities.
+
+### Fixed
+
+- **Invoices** — Generating an invoice from many time entries no longer fails on PostgreSQL: `invoice_items.time_entry_ids` is now `TEXT` (was `VARCHAR(500)`).
+- **Report export** — CSV and Excel exports from the report form now apply the client, task, billable, source and tags filters.
+- **Payments** — Stripe checkout now sends JPY and other zero-decimal currencies (and three-decimal ones such as KWD) in the unit Stripe expects; before, every amount was multiplied by 100, so a JPY invoice was charged 100 times its balance, and the webhook amount was divided by 100 the same way.
+- **Peppol** — The UBL invoice now reports payments already recorded on the invoice as `PrepaidAmount` and sets `PayableAmount` to the total minus those payments (BR-CO-16), never below zero, as the Factur-X/ZUGFeRD export already does; before, a partly paid invoice sent or exported as UBL asked the buyer for the full total.
+- **CI / Docker** — Restore gunicorn 25.x (eventlet worker) after a major bump broke image boot; isolate setup-wizard fixture state; use push `before` SHA for migration drift; keep mobile on Riverpod 2.x.
+
+### Changed
+
+- **Mobile Android** — Bump Gradle wrapper to 8.14 so Flutter 3.47 release builds satisfy the minimum Gradle version.
+- **Dependencies** — Pip, Actions, npm (root + desktop), and Flutter mobile dependency bumps (with Dependabot major ignores for gunicorn and flutter_riverpod).
+
+### Documentation
+
+- **OrcaRouter** — AI Helper docs and Admin settings include a signup link for an OrcaRouter API key (`https://www.orcarouter.ai/ref/ref_984e584cb4cd86485a8c`).
+- **Deploy & discovery** — DigitalOcean and Railway deploy guides; Unraid CA + directory listing submission packages; publishing checklist (`docs/deploy/*`, `docs/marketing/*`).
+- **Gap roadmap** — Archive stale gap analyses; Phase 6 marked done for the implementation pass.
+
 ## [5.19.1] - 2026-11-07
 ### Added
 

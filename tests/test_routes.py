@@ -777,6 +777,42 @@ def test_export_time_entries_csv(authenticated_client, multiple_time_entries, ap
 
 @pytest.mark.integration
 @pytest.mark.routes
+def test_export_csv_applies_filters(authenticated_client, user, project, app):
+    """The export form's billable and tags filters limit the exported rows."""
+    from datetime import datetime, timedelta
+
+    from app import db
+    from app.models import TimeEntry
+
+    with app.app_context():
+        start = datetime.utcnow() - timedelta(days=1)
+        for notes, billable, tags in (("paid-work", True, "a"), ("free-work", False, "b")):
+            db.session.add(
+                TimeEntry(
+                    user_id=user.id,
+                    project_id=project.id,
+                    start_time=start,
+                    end_time=start + timedelta(hours=1),
+                    notes=notes,
+                    tags=tags,
+                    billable=billable,
+                )
+            )
+        db.session.commit()
+
+        dates = {
+            "start_date": (start - timedelta(days=1)).strftime("%Y-%m-%d"),
+            "end_date": datetime.utcnow().strftime("%Y-%m-%d"),
+        }
+        for extra in ({"billable": "yes"}, {"tags": "a"}):
+            response = authenticated_client.get("/reports/export/csv", query_string={**dates, **extra})
+            assert response.status_code == 200
+            assert b"paid-work" in response.data
+            assert b"free-work" not in response.data
+
+
+@pytest.mark.integration
+@pytest.mark.routes
 def test_export_invoice_pdf(authenticated_client, invoice_with_items, app):
     """Test exporting invoice as PDF."""
     with app.app_context():

@@ -1,63 +1,50 @@
 # Inventory Management — Remaining Gaps
 
-**Status:** Updated to reflect current implementation. Previously listed "missing" items (stock transfers, adjustments, inventory reports, stock item history, PO edit/send/cancel/delete/receive, supplier code validation, API for transfers and reports) are **now implemented**. See [INVENTORY_IMPLEMENTATION_STATUS.md](INVENTORY_IMPLEMENTATION_STATUS.md) for what is done.
+**Status:** Updated for current implementation. Core inventory flows (items, warehouses, stock levels, transfers, adjustments, reports, suppliers, purchase orders including PDF/email, CSV stock export) are implemented. Navigation for Transfers / Adjustments / Reports is done.
 
 This document lists what is still missing or partial.
 
 ---
 
-## 1. Menu and navigation
+## 1. API endpoints (optional / partial)
 
-- Add **Transfers** link to inventory menu
-- Add **Adjustments** link to inventory menu
-- Add **Reports** link to inventory menu
-- Update navigation active states for new routes
-
----
-
-## 2. API endpoints (optional / partial)
-
-- Optional: `read:inventory` / `write:inventory` scopes for closer alignment with web permissions
+- Optional: tighter least-privilege usage of `read:inventory` / `write:inventory` across all clients
 - Optional: `GET /api/v1/inventory/movements` (list movements with filters)
-- Supplier and Purchase Order API completeness (verify against current API; some CRUD may exist)
+- Supplier and Purchase Order API completeness (verify remaining write paths against web parity)
 
 ---
 
-## 3. Tests
+## 2. Tests
 
-- Supplier model and route tests (web)
-- Purchase Order model and route tests (web)
-- **Done:** API tests for inventory transfers and inventory reports (see INVENTORY_IMPLEMENTATION_STATUS.md)
+- Purchase Order model and route tests (web) beyond basic smoke coverage
+- Broader end-to-end receive / transfer / adjustment coverage
 
 ---
 
-## 4. Documentation
+## 3. Documentation
 
-- User guide: `docs/features/INVENTORY_MANAGEMENT.md`
+- User guide polish: `docs/features/INVENTORY_MANAGEMENT.md`
 - API documentation: `docs/features/INVENTORY_API.md`
-- Update main README with inventory features
+- Keep main README inventory feature list in sync
 
 ---
 
-## 5. Configuration and UI improvements
+## 4. Configuration and UI improvements
 
 - Configuration settings not fully utilized (e.g. reservation expiry, low-stock alert toggle, approval workflow for adjustments)
-- Warehouse stock **location** field: implemented in model but not exposed in forms/views
-- Stock item view: supplier management section, quick actions (adjust, transfer)
-- Purchase order view: print PO, email PO to supplier (future)
-- Stock levels page: bulk operations, export CSV/Excel, advanced filtering
+- Stock item view: richer supplier management section / quick actions
+- Stock levels page: bulk operations and advanced filtering beyond current filters + CSV export
 
 ---
 
-## 6. Integration gaps
+## 5. Integration gaps
 
-- Project cost integration: link POs to project costs, project-specific inventory tracking
+- **Project cost from PO receive:** `PurchaseOrder` has no `project_id` column today, so receiving a PO cannot create/link a `ProjectCost`. Add `project_id` (migration) before wiring receive → ProjectCost.
 - ExtraGood integration: auto-create or link stock items from ExtraGoods
 
 ---
 
 ## Priority summary
 
-- **High:** Menu links so users can discover Transfers, Adjustments, Reports
-- **Medium:** Supplier and PO web tests; optional API endpoints; location field in UI
-- **Low:** User guide and INVENTORY_API.md; advanced analytics; PO print/email
+- **Medium:** PO ↔ project cost once `project_id` exists; optional inventory API completeness
+- **Low:** Advanced analytics, reservation/approval config, ExtraGood linkage

@@ -340,13 +340,7 @@ Indexes on (user\_id, start\_utc), (project\_id, start\_utc), and active entries
 
 ## 14. Future Enhancements (Backlog)
 
-* Idle detection and retroactive adjustments.
-* Mobile PWA installability and offline caching for UI.
-* Calendar and Kanban views; week grid editor.
-* Rate cards by client; multi-currency.
-* LDAP/SSO or reverse-proxy auth (e.g., Authelia) for stronger security.
-* REST API (if needed) or WebDAV/ICS export.
-* PDF report templates and invoice drafts.
+> **Superseded.** Most items formerly listed here (idle detection, PWA offline, Kanban, LDAP/OIDC, REST API, PDF invoices) have shipped. Track remaining product gaps in [GAP_ROADMAP.md](GAP_ROADMAP.md) (Phase 6).
 
 ---
 

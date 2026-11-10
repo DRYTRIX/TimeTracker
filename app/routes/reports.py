@@ -329,6 +329,24 @@ def export_form():
     )
 
 
+def _apply_export_filters(query, client_id, task_id, billable, source, tags):
+    """Apply the export form's client, task, billable, source and tags filters."""
+    if client_id:
+        query = query.filter(
+            or_(TimeEntry.client_id == client_id, TimeEntry.project.has(Project.client_id == client_id))
+        )
+    if task_id:
+        query = query.filter(TimeEntry.task_id == task_id)
+    if billable in ("yes", "no"):
+        query = query.filter(TimeEntry.billable == (billable == "yes"))
+    if source and source != "all":
+        query = query.filter(TimeEntry.source == source)
+    tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+    if tag_list:
+        query = query.filter(or_(*[TimeEntry.tags.ilike(f"%{tag}%") for tag in tag_list]))
+    return query
+
+
 @reports_bp.route("/reports/export/csv")
 @login_required
 @module_enabled("reports")
@@ -389,6 +407,8 @@ def export_csv():
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
+
+    query = _apply_export_filters(query, client_id, task_id, billable, source, tags)
 
     entries = (
         query.options(
@@ -1057,6 +1077,8 @@ def time_entries_export_csv():
 @module_enabled("reports")
 def export_excel():
     """Export time entries as Excel file"""
+    from app.utils.client_lock import enforce_locked_client_id
+
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
     user_id = request.args.get("user_id", type=int)
@@ -1095,6 +1117,15 @@ def export_excel():
 
     if project_id:
         query = query.filter(TimeEntry.project_id == project_id)
+
+    query = _apply_export_filters(
+        query,
+        enforce_locked_client_id(request.args.get("client_id", type=int)),
+        request.args.get("task_id", type=int),
+        request.args.get("billable"),
+        request.args.get("source"),
+        request.args.get("tags", "").strip(),
+    )
 
     entries = (
         query.options(

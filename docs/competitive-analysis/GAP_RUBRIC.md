@@ -132,23 +132,23 @@ This document scores each missing or underpowered capability from the Competitiv
 
 ## Summary: Ranked by Priority
 
-| Rank | Capability | Priority | Phase suggestion |
-|------|------------|----------|------------------|
-| 1 | Focus mode packaging for solo users | 7.00 | Phase 1 (quick) |
-| 2 | Mileage GPS UI/routes (backend done) | 5.00 | Phase 1 (quick) |
-| 3 | Payroll-ready exports and payroll connectors | 4.50 | Phase 1 |
-| 4 | Mobile/desktop parity (invoicing, expenses, reporting) | 3.00 | Phase 1 |
-| 5 | Formal timesheet periods and locking | 2.67 | Phase 2 |
-| 6 | Recurring cost engine | 2.50 | Phase 1 or 2 |
-| 7 | PTO/leave and time-off workflow | 2.33 | Phase 2 |
-| 8 | Native accounting depth | 1.50 | Backlog |
-| 9 | Automated activity capture parity | 1.40 | Backlog |
-| 10 | Field workforce controls | 0.80 | Backlog |
+| Rank | Capability | Priority | Phase suggestion | Status (2026-11) |
+|------|------------|----------|------------------|------------------|
+| 1 | Focus mode packaging for solo users | 7.00 | Phase 1 (quick) | Partial — Pomodoro/focus exists; solo packaging polish remains |
+| 2 | Mileage GPS UI/routes (backend done) | 5.00 | Phase 1 (quick) | **Done** — web + API GPS mileage |
+| 3 | Payroll-ready exports and payroll connectors | 4.50 | Phase 1 | **Done** — templates, CSV/XLSX, Gusto/ADP; API template-aware export in Phase 6 |
+| 4 | Mobile/desktop parity (invoicing, expenses, reporting) | 3.00 | Phase 1 | Partial — desktop strong; mobile hubs expanding (Phase 6 polish) |
+| 5 | Formal timesheet periods and locking | 2.67 | Phase 2 | **Done** |
+| 6 | Recurring cost engine | 2.50 | Phase 1 or 2 | **Done** |
+| 7 | PTO/leave and time-off workflow | 2.33 | Phase 2 | **Done** — accrual, holidays, approvals |
+| 8 | Native accounting depth | 1.50 | Backlog | Partial — QBO/Xero outbound; bank reconciliation in Phase 6 |
+| 9 | Automated activity capture parity | 1.40 | Backlog | Partial — ActivityWatch import; native desktop agent in Phase 6 |
+| 10 | Field workforce controls | 0.80 | Backlog | Substantial — geofencing + workday enforcement shipped |
 
 ---
 
 ## Recommended Phase Allocation
 
-- **Phase 1 (freelancer-critical):** Focus mode packaging, mileage GPS UI, payroll exports/connectors, mobile/desktop parity for invoicing/expenses/reporting, optional start on recurring costs.
-- **Phase 2 (enterprise controls):** Timesheet period close and locking, PTO/time-off workflow, capacity and compliance reporting.
-- **Backlog:** Native accounting depth, automated activity capture, field workforce controls (revisit if targeting operations/field verticals).
+- **Phase 1 (freelancer-critical):** Focus mode packaging, mileage GPS UI, payroll exports/connectors, mobile/desktop parity for invoicing/expenses/reporting, optional start on recurring costs. *(Mostly shipped; see Status column.)*
+- **Phase 2 (enterprise controls):** Timesheet period close and locking, PTO/time-off workflow, capacity and compliance reporting. *(Mostly shipped; labor-compliance presets remain in Phase 6.)*
+- **Backlog / Phase 6:** Native accounting depth (bank reconciliation), automated activity capture (desktop agent), remaining client/API polish. Canonical tracker: [GAP_ROADMAP.md](../GAP_ROADMAP.md).

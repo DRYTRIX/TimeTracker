@@ -77,8 +77,19 @@ browser-extension/
   icons/             # idle + running PNGs
 ```
 
+## Packaging
+
+```bash
+npm test
+npm run zip          # Chromium / Chrome Web Store
+npm run zip:firefox  # Firefox (gecko id + background.scripts overlay)
+```
+
+## Optional: suggest project from the current tab
+
+Enable **Suggest project from current tab URL** in the extension options (requests optional `activeTab`). The popup matches project name/code tokens against the active tab hostname and path. No content scripts are injected.
+
 ## Not in this version
 
-- Firefox-specific packaging
-- Page content scripts / automatic project detection
+- Page content scripts / DOM scraping
 - OIDC device flow inside the extension

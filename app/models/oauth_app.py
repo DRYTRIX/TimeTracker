@@ -44,6 +44,11 @@ class OAuthApplication(db.Model):
         back_populates="application",
         cascade="all, delete-orphan",
     )
+    access_tokens = relationship(
+        "OAuthAccessToken",
+        back_populates="application",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<OAuthApplication {self.name} ({self.client_id})>"
@@ -58,6 +63,7 @@ class OAuthApplication(db.Model):
 
     @staticmethod
     def hash_secret(value: str) -> str:
+        # codeql[py/weak-sensitive-data-hashing]: high-entropy client_secret lookup hash, not password KDF
         return hashlib.sha256(value.encode()).hexdigest()
 
     @classmethod
@@ -155,6 +161,7 @@ class OAuthAuthorizationCode(db.Model):
 
     @staticmethod
     def hash_code(code: str) -> str:
+        # codeql[py/weak-sensitive-data-hashing]: high-entropy auth-code lookup hash, not password KDF
         return hashlib.sha256(code.encode()).hexdigest()
 
     @classmethod
@@ -186,3 +193,136 @@ class OAuthAuthorizationCode(db.Model):
         if self.used_at is not None:
             return False
         return self.expires_at >= datetime.utcnow()
+
+
+class OAuthAccessToken(db.Model):
+    """OAuth access (+ optional refresh) token issued by the authorization server.
+
+    Plain tokens use prefix ``tto_`` and are stored hashed. Duck-types enough of
+    :class:`~app.models.api_token.ApiToken` for ``require_api_token`` (scopes,
+    ``has_scope``, ``record_usage``).
+    """
+
+    __tablename__ = "oauth_access_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    token_hash = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    token_prefix = db.Column(db.String(16), nullable=False)
+
+    application_id = db.Column(db.Integer, db.ForeignKey("oauth_applications.id"), nullable=False, index=True)
+    application = relationship("OAuthApplication", back_populates="access_tokens")
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    user = relationship("User", backref="oauth_access_tokens")
+
+    scopes = db.Column(db.Text, default="", nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    revoked_at = db.Column(db.DateTime, nullable=True)
+
+    refresh_token_hash = db.Column(db.String(128), unique=True, nullable=True, index=True)
+    refresh_expires_at = db.Column(db.DateTime, nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    last_used_at = db.Column(db.DateTime, nullable=True)
+    usage_count = db.Column(db.Integer, default=0, nullable=False)
+
+    def __repr__(self):
+        return f"<OAuthAccessToken {self.token_prefix}... user={self.user_id}>"
+
+    @property
+    def is_active(self) -> bool:
+        return self.revoked_at is None
+
+    @staticmethod
+    def generate_access_token() -> str:
+        return f"tto_{secrets.token_urlsafe(32)}"
+
+    @staticmethod
+    def generate_refresh_token() -> str:
+        return f"ttr_{secrets.token_urlsafe(32)}"
+
+    @staticmethod
+    def _token_pepper() -> bytes:
+        from flask import current_app, has_app_context
+
+        pepper = ""
+        if has_app_context():
+            pepper = current_app.config.get("API_TOKEN_PEPPER") or current_app.config.get("SECRET_KEY") or ""
+        if isinstance(pepper, bytes):
+            return pepper
+        return str(pepper or "timetracker-api-token").encode("utf-8")
+
+    @staticmethod
+    def hash_token(value: str) -> str:
+        """
+        Hash a high-entropy OAuth access/refresh token for indexed lookup storage.
+
+        Uses HMAC-SHA256 with the app secret (or API_TOKEN_PEPPER) as key.
+        This is a lookup hash for secrets.token_urlsafe tokens, not a password KDF.
+        """
+        import hmac
+
+        # codeql[py/weak-sensitive-data-hashing]: OAuth token lookup HMAC, not password hashing
+        return hmac.new(OAuthAccessToken._token_pepper(), value.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    @staticmethod
+    def legacy_hash_token(value: str) -> str:
+        """Pre-HMAC SHA256 lookup hash (for verifying existing stored tokens)."""
+        # codeql[py/weak-sensitive-data-hashing]: legacy OAuth token lookup hash, not password hashing
+        return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def lookup_hashes(cls, value: str) -> list[str]:
+        """Return candidate hashes for DB lookup (HMAC first, then legacy)."""
+        return [cls.hash_token(value), cls.legacy_hash_token(value)]
+
+    @classmethod
+    def create_token(
+        cls,
+        *,
+        application_id: int,
+        user_id: int,
+        scopes: str = "",
+        access_ttl_seconds: int = 3600,
+        refresh_ttl_seconds: int = 60 * 60 * 24 * 30,
+        issue_refresh: bool = True,
+    ) -> tuple["OAuthAccessToken", str, str | None]:
+        plain_access = cls.generate_access_token()
+        plain_refresh = cls.generate_refresh_token() if issue_refresh else None
+        record = cls(
+            token_hash=cls.hash_token(plain_access),
+            token_prefix=plain_access[:8],
+            application_id=application_id,
+            user_id=user_id,
+            scopes=scopes or "",
+            expires_at=datetime.utcnow() + timedelta(seconds=access_ttl_seconds),
+            refresh_token_hash=cls.hash_token(plain_refresh) if plain_refresh else None,
+            refresh_expires_at=(datetime.utcnow() + timedelta(seconds=refresh_ttl_seconds)) if plain_refresh else None,
+        )
+        return record, plain_access, plain_refresh
+
+    def is_valid(self) -> bool:
+        if self.revoked_at is not None:
+            return False
+        return self.expires_at >= datetime.utcnow()
+
+    def has_scope(self, required_scope: str) -> bool:
+        if not self.scopes:
+            return False
+        token_scopes = [s.strip() for s in self.scopes.split(",") if s.strip()]
+        if "admin:all" in token_scopes or "*" in token_scopes:
+            return True
+        if required_scope in token_scopes:
+            return True
+        resource_type = required_scope.split(":")[0] if ":" in required_scope else None
+        if resource_type and f"{resource_type}:*" in token_scopes:
+            return True
+        return False
+
+    def record_usage(self, ip_address=None):
+        self.last_used_at = datetime.utcnow()
+        self.usage_count = (self.usage_count or 0) + 1
+        db.session.commit()
+
+    def revoke(self):
+        self.revoked_at = datetime.utcnow()

@@ -1,8 +1,8 @@
-"""Helpers for AUTH_METHOD parsing (none | local | oidc | ldap | both | all)."""
+"""Helpers for AUTH_METHOD parsing (none | local | oidc | ldap | saml | both | all)."""
 
 from __future__ import annotations
 
-_VALID = frozenset({"none", "local", "oidc", "ldap", "both", "all"})
+_VALID = frozenset({"none", "local", "oidc", "ldap", "saml", "both", "all"})
 
 
 def normalize_auth_method(raw: str | None) -> str:
@@ -24,6 +24,11 @@ def auth_includes_oidc(auth_method: str | None) -> bool:
 def auth_includes_ldap(auth_method: str | None) -> bool:
     m = normalize_auth_method(auth_method)
     return m in ("ldap", "all")
+
+
+def auth_includes_saml(auth_method: str | None) -> bool:
+    m = normalize_auth_method(auth_method)
+    return m in ("saml", "all")
 
 
 def requires_password_form(auth_method: str | None) -> bool:

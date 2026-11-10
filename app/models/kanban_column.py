@@ -43,6 +43,52 @@ class KanbanColumn(db.Model):
         project_info = f" project_id={self.project_id}" if self.project_id else " global"
         return f"<KanbanColumn {self.key}: {self.label}{project_info}>"
 
+    def has_wip_limit(self):
+        """Return True when this column enforces a positive WIP limit."""
+        return self.wip_limit is not None and self.wip_limit > 0
+
+    def count_tasks_in_column(self, project_id, exclude_task_id=None):
+        """Count tasks in this column (status key) for the given project."""
+        from app.models import Task
+
+        query = Task.query.filter_by(project_id=project_id, status=self.key)
+        if exclude_task_id:
+            query = query.filter(Task.id != exclude_task_id)
+        return query.count()
+
+    def would_exceed_wip(self, project_id, extra=1, exclude_task_id=None):
+        """Return True if adding ``extra`` tasks would exceed this column's WIP limit."""
+        if not self.has_wip_limit():
+            return False
+        current = self.count_tasks_in_column(project_id, exclude_task_id=exclude_task_id)
+        return current + extra > self.wip_limit
+
+    @classmethod
+    def column_for_status(cls, status_key, project_id=None):
+        """Resolve the kanban column used for WIP checks (project columns, else global)."""
+        col = cls.get_column_by_key(status_key, project_id=project_id)
+        if col is None and project_id is not None:
+            col = cls.get_column_by_key(status_key, project_id=None)
+        return col
+
+    @classmethod
+    def wip_violation_message(cls, project_id, new_status, task_id=None):
+        """Return a user-facing error if moving into ``new_status`` would exceed WIP, else None."""
+        if not project_id or not new_status:
+            return None
+        if task_id:
+            from app.models import Task
+
+            task = Task.query.get(task_id)
+            if task and task.status == new_status:
+                return None
+        column = cls.column_for_status(new_status, project_id=project_id)
+        if not column or not column.has_wip_limit():
+            return None
+        if column.would_exceed_wip(project_id, extra=1, exclude_task_id=task_id):
+            return f'Column "{column.label}" has reached its work-in-progress limit ' f"({column.wip_limit} tasks)."
+        return None
+
     def to_dict(self):
         """Convert column to dictionary for API responses"""
         return {

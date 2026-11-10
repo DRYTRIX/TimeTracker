@@ -12,6 +12,7 @@ from .attendance_compliance import (
     DailyAttendanceRecord,
 )
 from .audit_log import AuditLog
+from .bank_transaction import BankTransaction
 from .budget_alert import BudgetAlert
 from .calendar_event import CalendarEvent
 from .calendar_integration import CalendarIntegration, CalendarSyncEvent
@@ -53,7 +54,7 @@ from .invoice_approval import InvoiceApproval
 from .invoice_email import InvoiceEmail
 from .invoice_image import InvoiceImage
 from .invoice_pdf_template import InvoicePDFTemplate
-from .invoice_peppol import InvoicePeppolTransmission
+from .invoice_peppol import InvoicePeppolTransmission, PeppolInboundDocument
 from .invoice_template import InvoiceTemplate
 from .issue import Issue
 from .kanban_board_template import KanbanBoardTemplate
@@ -63,7 +64,7 @@ from .lead_activity import LeadActivity
 from .link_template import LinkTemplate
 from .mileage import Mileage
 from .milestone import Milestone
-from .oauth_app import OAuthApplication, OAuthAuthorizationCode
+from .oauth_app import OAuthAccessToken, OAuthApplication, OAuthAuthorizationCode
 from .payment_gateway import PaymentGateway, PaymentTransaction
 from .payments import CreditNote, InvoiceReminderSchedule, Payment
 from .payroll_export_template import PayrollExportTemplate
@@ -186,6 +187,7 @@ __all__ = [
     "ApiToken",
     "OAuthApplication",
     "OAuthAuthorizationCode",
+    "OAuthAccessToken",
     "CalendarEvent",
     "BudgetAlert",
     "DataImport",
@@ -193,10 +195,12 @@ __all__ = [
     "InvoicePDFTemplate",
     "ClientPrepaidConsumption",
     "AuditLog",
+    "BankTransaction",
     "RecurringInvoice",
     "RecurringProjectCost",
     "InvoiceEmail",
     "InvoicePeppolTransmission",
+    "PeppolInboundDocument",
     "Webhook",
     "WebhookDelivery",
     "Quote",

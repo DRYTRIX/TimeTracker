@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header, breadcrumb_nav %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Payments'), 'url': url_for('payments.list_payments')},
+    {'text': _('Bank reconciliation'), 'url': url_for('bank_reconciliation.reconciliation_queue')},
+    {'text': _('Upload')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-import',
+    title_text=_('Upload bank statement'),
+    subtitle_text=_('Import CAMT.053 XML or CSV (date, amount, reference, counterparty)'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-xl">
+    <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <div>
+            <label for="account_label" class="form-label">{{ _('Account label') }}</label>
+            <input type="text" name="account_label" id="account_label" class="form-input" placeholder="{{ _('Operating account') }}">
+        </div>
+        <div>
+            <label for="statement" class="form-label">{{ _('Statement file') }}</label>
+            <input type="file" name="statement" id="statement" class="form-input" accept=".csv,.xml,text/csv,application/xml,text/xml" required>
+            <p class="text-sm text-gray-500 mt-1">{{ _('CSV columns: date, amount, reference, counterparty (flexible headers).') }}</p>
+        </div>
+        <div class="flex gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">{{ _('Import') }}</button>
+            <a href="{{ url_for('bank_reconciliation.reconciliation_queue') }}" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

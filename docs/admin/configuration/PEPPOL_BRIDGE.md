@@ -60,6 +60,24 @@ Environment variables:
 
 Peppyrus authenticates API requests with the `X-Api-Key` header (not `Authorization: Bearer`).
 
+### Let’s Peppol (Belgium, hosted)
+
+Environment variables:
+
+- `PEPPOL_BRIDGE_PROVIDER=letspeppol`
+- `LETSPEPPOL_BASE_URL=https://be.letspeppol.org` (optional)
+- `LETSPEPPOL_CLIENT_ID=...` (OAuth2 client credentials with `service` scope)
+- `LETSPEPPOL_CLIENT_SECRET=...`
+- `LETSPEPPOL_PEPPOL_ID=...` (your company Peppol ID, e.g. `0208:0123456789`)
+- `LETSPEPPOL_TOKEN_URL=...` (optional override; default `{LETSPEPPOL_BASE_URL}/kyc/auth/oauth2/token`)
+
+Complete KYC registration at [be.letspeppol.org](https://be.letspeppol.org) first (Belgian companies). The bridge:
+
+- `POST /test` fetches an OAuth token and reads `/proxy/sapi/registry`
+- `POST /send` creates an outbound document (`POST /proxy/sapi/document`) then queues it (`PUT …/reschedule`)
+- `GET /message/<id>/status` polls `POST /proxy/sapi/document/status` and maps `processedStatus` to bridge folders (`outbox` / `sent` / `failed`)
+- `GET /inbox` and `POST /inbox/ack` poll and acknowledge inbound documents for TimeTracker’s Peppol Inbox
+
 ### getpeppr
 
 Environment variables:
@@ -92,7 +110,10 @@ The bridge exposes:
 - `GET /health`
 - `POST /test` (validates provider credentials)
 - `POST /send` (TimeTracker adapter contract)
+- `GET /message/<id>/status` (AP-side delivery status)
+- `GET /inbox` (inbound documents; provider must support inbox)
+- `POST /inbox/ack` (acknowledge downloaded inbound ids)
 
-If `PEPPOL_BRIDGE_AUTH_TOKEN` is set, `/test` and `/send` require:
+If `PEPPOL_BRIDGE_AUTH_TOKEN` is set, `/test`, `/send`, `/message/.../status`, `/inbox`, and `/inbox/ack` require:
 
 - `Authorization: Bearer <token>`

@@ -34,6 +34,7 @@ class TimeEntry(db.Model):
     billable = db.Column(db.Boolean, default=True, nullable=False)
     paid = db.Column(db.Boolean, default=False, nullable=False, index=True)
     invoice_number = db.Column(db.String(100), nullable=True)
+    custom_fields = db.Column(db.JSON, nullable=True)
     # Idle timeout: clients POST /timer/heartbeat while active; server job auto-stops when stale
     last_heartbeat_at = db.Column(db.DateTime, nullable=True, index=True)
     idle_notified_at = db.Column(db.DateTime, nullable=True)
@@ -431,6 +432,7 @@ class TimeEntry(db.Model):
             "billable": self.billable,
             "paid": self.paid,
             "invoice_number": self.invoice_number,
+            "custom_fields": self.custom_fields or {},
             "is_active": self.is_active,
             "last_heartbeat_at": self.last_heartbeat_at.isoformat() if self.last_heartbeat_at else None,
             "idle_notified": bool(self.idle_notified_at),

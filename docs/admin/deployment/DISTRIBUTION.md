@@ -9,7 +9,7 @@ This is the canonical list of where to get and install TimeTracker. Pick the pat
 | Run on a NAS (QNAP, Synology, Portainer) | [NAS Deployment Guide](NAS_DEPLOYMENT.md) + [`docker-compose.nas.yml`](../../../docker-compose.nas.yml) |
 | Pull a Docker image | [Docker Hub](https://hub.docker.com/r/drytrix/timetracker) or `docker pull ghcr.io/drytrix/timetracker:latest` |
 | Deploy on a server with Docker Compose | [INSTALLATION.md](../../../INSTALLATION.md) |
-| One-click cloud deploy | [Render](#render) · [Railway](#railway) · [Fly.io](#flyio) · [Coolify](#coolify) |
+| One-click cloud deploy | [Render](#render) · [DigitalOcean](#digitalocean) · [Railway](#railway) · [Fly.io](#flyio) · [Coolify](#coolify) |
 | Install from Unraid Community Apps | [Unraid](#unraid-community-applications) |
 | Add to Portainer App Templates | [Portainer](#portainer-app-templates) |
 | Download desktop/mobile clients | [GitHub Releases](https://github.com/drytrix/TimeTracker/releases) |
@@ -125,21 +125,17 @@ Template XML files live in [`templates/unraid/`](../../../templates/unraid/):
 
 ### Submit to Community Applications
 
-To list TimeTracker in the official Unraid CA catalog:
+Submit the template-only branch **`unraid-ca`** (not `main`/`develop`). Default branches include Android and other XML that CA flags as `not_unraid_application`.
 
-1. Ensure [`templates/unraid/ca_profile.xml`](../../../templates/unraid/ca_profile.xml) metadata is current
-2. Go to [ca.unraid.net/submit](https://ca.unraid.net/submit/new)
-3. Point the repository URL at this repo (or a dedicated `unraid-ca-templates` repo containing `templates/unraid/`)
+1. Use the copy-paste package in [`docs/marketing/UNRAID_CA_SUBMIT.md`](../../marketing/UNRAID_CA_SUBMIT.md)
+2. Go to [ca.unraid.net/submit](https://ca.unraid.net/submit/new) (Unraid account required)
+3. Repository: `https://github.com/DRYTRIX/TimeTracker` · **Branch: `unraid-ca`**
 4. Run **Validate**, then **Scan**
 5. Wait for moderator review (typically 1–2 weeks)
 
-Checklist before submitting:
+A duplicate warning for `postgres:16-alpine` is expected (official Postgres image already in CA).
 
-- [ ] `Repository` in each XML points to a valid image (`ghcr.io/drytrix/timetracker:latest`, `postgres:16-alpine`)
-- [ ] `TemplateURL` in each XML points to the raw GitHub URL for that file
-- [ ] `Support`, `Project`, and `Overview` fields are filled in
-- [ ] `WebUI` is set to `http://[IP]:[PORT:8080]/` on the app template
-- [ ] Tested on a clean Unraid install
+Branch contents: [`unraid-ca`](https://github.com/DRYTRIX/TimeTracker/tree/unraid-ca) · manual templates also in [`templates/unraid/`](../../../templates/unraid/)
 
 ---
 
@@ -151,15 +147,29 @@ One-click Blueprint deploy (PostgreSQL + web service from GHCR image):
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/drytrix/TimeTracker)
 
-Blueprint file: [`render.yaml`](../../../render.yaml)
+Blueprint file: [`render.yaml`](../../../render.yaml) · Guide: [`docs/deploy/RENDER.md`](../../deploy/RENDER.md)
+
+### DigitalOcean
+
+One-click App Platform deploy (Docker Hub image + Dev Database):
+
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/DRYTRIX/TimeTracker/tree/develop)
+
+Template: [`.do/deploy.template.yaml`](../../../.do/deploy.template.yaml) · Guide: [`docs/deploy/DIGITALOCEAN.md`](../../deploy/DIGITALOCEAN.md)
+
+Dev Database is for trials; use managed Postgres or self-host for production.
 
 ### Railway
+
+Manual (works today):
 
 1. Create a new project at [railway.app](https://railway.app)
 2. Add a **PostgreSQL** plugin
 3. Add a **Docker image** service: `ghcr.io/drytrix/timetracker:latest`
 4. Set environment variables (see [`railway.toml`](../../../railway.toml))
 5. Set `DATABASE_URL` from the Postgres plugin connection string
+
+One-click: publish a Railway marketplace template (app + Postgres), then add the Deploy button — full steps in [`docs/deploy/RAILWAY.md`](../../deploy/RAILWAY.md).
 
 ### Fly.io
 

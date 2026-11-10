@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Dict, Optional
 
 from app.payments.base import CheckoutResult, PaymentProvider, WebhookResult
-from app.utils.stripe_integration import StripeIntegration
+from app.utils.stripe_integration import StripeIntegration, from_stripe_amount
 
 
 class StripeProvider(PaymentProvider):
@@ -64,9 +64,10 @@ class StripeProvider(PaymentProvider):
             data_obj.get("payment_intent") if event_type == "checkout.session.completed" else data_obj.get("id")
         ) or ""
 
+        currency = (data_obj.get("currency") or "EUR").upper()
         amount_cents = data_obj.get("amount_received") or data_obj.get("amount_total") or data_obj.get("amount") or 0
         try:
-            amount = (Decimal(str(amount_cents)) / 100) if amount_cents else Decimal("0")
+            amount = from_stripe_amount(amount_cents, currency) if amount_cents else Decimal("0")
         except Exception:
             amount = Decimal("0")
 
@@ -76,6 +77,6 @@ class StripeProvider(PaymentProvider):
             transaction_id=transaction_id,
             invoice_id=invoice_id or None,
             amount=amount,
-            currency=(data_obj.get("currency") or "EUR").upper(),
+            currency=currency,
             raw=data_obj,
         )

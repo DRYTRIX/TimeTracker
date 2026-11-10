@@ -184,6 +184,9 @@ jobs:
             app/utils/integration_http.py
       - name: Silent exception ratchet
         run: python scripts/check_silent_excepts.py
+      - name: Route file size guard (soft)
+        run: python scripts/ci/check_route_file_sizes.py
+        continue-on-error: true
       - name: Translation coverage
         run: python scripts/check_translation_coverage.py
       - name: Version consistency

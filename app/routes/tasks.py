@@ -45,6 +45,12 @@ tasks_bp = Blueprint("tasks", __name__)
 ALLOWED_NEXT_PREFIXES = ("/kanban", "/gantt", "/tasks", "/projects")
 
 
+def _task_custom_field_definitions():
+    from app.services.custom_field_service import CustomFieldService
+
+    return CustomFieldService().get_definitions("task")
+
+
 def _user_can_access_task(task):
     """Admin, any assignee, or creator may view/act on a task."""
     return current_user.is_admin or task.is_assigned_to(current_user.id) or task.created_by == current_user.id
@@ -346,6 +352,24 @@ def create_task():
 
         task = result["task"]
 
+        from app.services.custom_field_service import CustomFieldService
+
+        cf_service = CustomFieldService()
+        missing_label = cf_service.apply_from_form(task, "task", request.form)
+        if missing_label:
+            flash(_("Custom field '%(field)s' is required", field=missing_label), "error")
+            projects = Project.query.filter_by(status="active").order_by(Project.name).all()
+            users = User.query.order_by(User.username).all()
+            return render_template(
+                "tasks/create.html",
+                projects=projects,
+                users=users,
+                kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=project_id),
+                custom_field_definitions=_task_custom_field_definitions(),
+            )
+        if not safe_commit("create_task_custom_fields", {"task_id": task.id}):
+            flash(_("Could not save custom fields due to a database error."), "error")
+
         # Log task creation
         app_module.log_event(
             "task.created", user_id=current_user.id, task_id=task.id, project_id=project_id, priority=priority
@@ -384,6 +408,7 @@ def create_task():
         projects=projects,
         users=users,
         kanban_columns=KanbanColumn.get_active_columns(project_id=None),
+        custom_field_definitions=_task_custom_field_definitions(),
     )
 
 
@@ -456,6 +481,11 @@ def view_task(task_id):
     comments = [c for c in all_comments if c.parent_id is None]
     sibling_tasks = Task.query.filter(Task.project_id == task.project_id, Task.id != task.id).order_by(Task.name).all()
 
+    from app.services.custom_field_service import CustomFieldService
+
+    cf_service = CustomFieldService()
+    task_cf_defs = cf_service.get_definitions("task")
+
     return render_template(
         "tasks/view.html",
         task=task,
@@ -463,6 +493,7 @@ def view_task(task_id):
         activities=activities,
         comments=comments,
         sibling_tasks=sibling_tasks,
+        custom_field_definitions_by_key=CustomFieldService.definitions_by_key(task_cf_defs),
     )
 
 
@@ -620,6 +651,24 @@ def edit_task(task_id):
         selected_status = request.form.get("status", "").strip()
         valid_statuses = KanbanColumn.get_valid_status_keys(project_id=task.project_id)
         if selected_status and selected_status in valid_statuses and selected_status != task.status:
+            wip_error = KanbanColumn.wip_violation_message(task.project_id, selected_status, task_id=task.id)
+            if wip_error:
+                flash(wip_error, "error")
+                from app.services.custom_field_service import CustomFieldService
+
+                cf_service = CustomFieldService()
+                task_custom_defs = cf_service.get_definitions("task")
+                return render_template(
+                    "tasks/edit.html",
+                    task=task,
+                    projects=projects,
+                    users=users,
+                    kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
+                    milestones=Milestone.query.filter_by(project_id=task.project_id)
+                    .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
+                    .all(),
+                    custom_field_definitions=task_custom_defs,
+                )
             try:
                 previous_status = task.status
                 if selected_status == "in_progress":
@@ -732,6 +781,24 @@ def edit_task(task_id):
                     kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
                 )
 
+        from app.services.custom_field_service import CustomFieldService
+
+        cf_service = CustomFieldService()
+        missing_label = cf_service.apply_from_form(task, "task", request.form)
+        if missing_label:
+            flash(_("Custom field '%(field)s' is required", field=missing_label), "error")
+            return render_template(
+                "tasks/edit.html",
+                task=task,
+                projects=projects,
+                users=users,
+                kanban_columns=KanbanColumn.get_columns_with_global_fallback(project_id=task.project_id),
+                milestones=Milestone.query.filter_by(project_id=task.project_id)
+                .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
+                .all(),
+                custom_field_definitions=_task_custom_field_definitions(),
+            )
+
         # Always update the updated_at timestamp to local time after edits
         task.updated_at = now_in_app_timezone()
 
@@ -777,6 +844,7 @@ def edit_task(task_id):
         milestones=Milestone.query.filter_by(project_id=task.project_id)
         .order_by(Milestone.due_date.asc().nullslast(), Milestone.name)
         .all(),
+        custom_field_definitions=_task_custom_field_definitions(),
     )
 
 
@@ -796,6 +864,11 @@ def update_task_status(task_id):
     valid_statuses = KanbanColumn.get_valid_status_keys(project_id=task.project_id)
     if new_status not in valid_statuses:
         flash(_("Invalid status"), "error")
+        return redirect(url_for("tasks.view_task", task_id=task.id))
+
+    wip_error = KanbanColumn.wip_violation_message(task.project_id, new_status, task_id=task.id)
+    if wip_error:
+        flash(wip_error, "error")
         return redirect(url_for("tasks.view_task", task_id=task.id))
 
     # Update status
@@ -1723,6 +1796,10 @@ def api_update_status(task_id):
     valid_statuses = KanbanColumn.get_valid_status_keys(project_id=task.project_id)
     if new_status not in valid_statuses:
         return jsonify({"error": "Invalid status"}), 400
+
+    wip_error = KanbanColumn.wip_violation_message(task.project_id, new_status, task_id=task.id)
+    if wip_error:
+        return jsonify({"error": wip_error, "code": "WIP_LIMIT"}), 409
 
     previous_status = task.status
     # Update status

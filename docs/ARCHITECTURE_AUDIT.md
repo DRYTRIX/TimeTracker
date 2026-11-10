@@ -62,3 +62,10 @@ This document captures a concise architecture audit of the TimeTracker repositor
 | 10 | Precompute task counts and budget in views | Done |
 
 *(Update status to Done as refactors are completed.)*
+
+---
+
+## Phase 6 notes (route size + exports)
+
+- **Payroll export** lives in `app/routes/api_v1_exports.py` (imported via `blueprint_registry`) rather than growing `api_v1.py` further. Prefer extracting additional fat `/exports/*` or report handlers into the same module or sibling `api_v1_*.py` files.
+- **Route file size guard**: `scripts/ci/check_route_file_sizes.py` (also `make check-route-sizes`) warns when any `app/routes/*.py` exceeds **2000** lines and fails when any exceeds **2500**. Wired in CI lint as a soft step (`continue-on-error: true`) so warnings are visible without blocking merge unless the hard limit is hit and the soft step is later tightened.

@@ -5298,12 +5298,20 @@ async function initializePDFEditor() {
                     reportLabFont += '-Oblique';
                 }
 
+                const elementName = (attrs.name || '').toLowerCase();
+                let reportType = 'text';
+                if (elementName === 'qr-code') {
+                    reportType = 'qr_code';
+                } else if (elementName === 'barcode') {
+                    reportType = 'barcode';
+                }
                 const textEl = {
-                    type: 'text',
+                    type: reportType,
                     x: pxToPt(x),
                     y: pxToPt(y),
                     text: text,
                     width: pxToPt(attrs.width || 400),
+                    height: pxToPt(attrs.height || (reportType === 'qr_code' ? 100 : 50)),
                     style: {
                         font: reportLabFont,
                         size: fontSize,

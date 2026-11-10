@@ -22,6 +22,7 @@ from app.utils.auth_method import (
     auth_includes_ldap,
     auth_includes_local,
     auth_includes_oidc,
+    auth_includes_saml,
     forgot_password_available,
     normalize_auth_method,
     requires_password_form,
@@ -64,6 +65,7 @@ def _login_template_vars():
         "requires_password": requires_password,
         "auth_includes_ldap": auth_includes_ldap(auth_method),
         "auth_includes_oidc": auth_includes_oidc(auth_method),
+        "auth_includes_saml": auth_includes_saml(auth_method) or bool(current_app.config.get("SAML_ENABLED")),
         "show_forgot_password": forgot_password_available(auth_method) and auth_method != "ldap",
     }
     if current_app.config.get("DEMO_MODE"):
@@ -1473,117 +1475,29 @@ def oidc_callback():
             else:
                 username = f"user-{sub[-8:]}"
 
-        # Find or create user
-        user = User.query.filter_by(oidc_issuer=issuer, oidc_sub=sub).first()
+        from app.services.external_identity_service import provision_external_user
 
-        if not user and email:
-            # Attempt match by email
-            user = User.query.filter_by(email=email).first()
-
-        if not user:
-            # Attempt match by username
-            user = User.query.filter_by(username=username).first()
-
-        if not user:
-            # Demo mode: do not create users via OIDC
-            if current_app.config.get("DEMO_MODE"):
-                current_app.logger.info("OIDC callback redirect to login: reason=demo_mode_no_oidc_create")
-                flash(
-                    _("Demo mode: only the demo account can be used. Please use the credentials on the login page."),
-                    "error",
-                )
-                return redirect(url_for("auth.login"))
-            # Create if allowed (use ConfigManager to respect database settings)
-            allow_self_register = ConfigManager.get_setting("allow_self_register", Config.ALLOW_SELF_REGISTER)
-            if not allow_self_register:
-                current_app.logger.info("OIDC callback redirect to login: reason=self_registration_disabled")
-                flash(_("User account does not exist and self-registration is disabled."), "error")
-                return redirect(url_for("auth.login"))
-            if is_username_reserved(username):
-                current_app.logger.info("OIDC callback redirect to login: reason=deleted_username_reserved")
-                flash(_("User account does not exist and self-registration is disabled."), "error")
-                return redirect(url_for("auth.login"))
-            role_name = "user"
-            try:
-                user = User(username=username, role=role_name, email=email, full_name=full_name)
-                user.is_active = True
-                user.oidc_issuer = issuer
-                user.oidc_sub = sub
-                user.auth_provider = "oidc"
-                # Apply company default for daily working hours (overtime)
-                try:
-                    from app.models import Settings
-
-                    settings = Settings.get_settings()
-                    user.standard_hours_per_day = float(getattr(settings, "default_daily_working_hours", 8.0) or 8.0)
-                except Exception:
-                    current_app.logger.debug("Could not apply default daily working hours for OIDC user", exc_info=True)
-
-                # Assign role from the new Role system
-                from app.models import Role
-
-                role_obj = Role.query.filter_by(name=role_name).first()
-                if role_obj:
-                    user.roles.append(role_obj)
-
-                db.session.add(user)
-                if not safe_commit("oidc_create_user", {"username": username, "email": email}):
-                    raise RuntimeError("db commit failed on user create")
-
-                # Track onboarding started for new OIDC user
-                track_onboarding_started(
-                    user.id,
-                    {
-                        "auth_method": "oidc",
-                        "self_registered": True,
-                        "is_admin": role_name == "admin",
-                        "has_email": bool(email),
-                    },
-                )
-
-                flash(_("Welcome! Your account has been created."), "success")
-            except Exception as e:
-                current_app.logger.exception("Failed to create user from OIDC claims: %s", e)
-                current_app.logger.info("OIDC callback redirect to login: reason=db_create_user_failed")
-                flash(_("Could not create your account due to a database error."), "error")
-                return redirect(url_for("auth.login"))
-        else:
-            # Update linkage and profile fields
-            changed = False
-            if getattr(user, "auth_provider", "local") != "oidc":
-                user.auth_provider = "oidc"
-                changed = True
-            if not user.oidc_issuer or not user.oidc_sub:
-                user.oidc_issuer = issuer
-                user.oidc_sub = sub
-                changed = True
-            # Update profile fields when provided
-            if email and user.email != email:
-                user.email = email
-                changed = True
-            if full_name and user.full_name != full_name:
-                user.full_name = full_name
-                changed = True
-            if changed:
-                if not safe_commit("oidc_update_user", {"user_id": user.id}):
-                    current_app.logger.warning("DB commit failed updating user from OIDC; continuing")
-
-        # Admin role mapping based on configured group or emails
-        try:
-            admin_set = False
-            admin_group = getattr(Config, "OIDC_ADMIN_GROUP", None)
-            admin_emails = getattr(Config, "OIDC_ADMIN_EMAILS", []) or []
-            if admin_group and isinstance(groups, (list, tuple)) and admin_group in groups and user.role != "admin":
-                user.role = "admin"
-                admin_set = True
-            if email and email in [e.strip().lower() for e in admin_emails] and user.role != "admin":
-                user.role = "admin"
-                admin_set = True
-            if admin_set:
-                if not safe_commit("oidc_promote_admin", {"user_id": user.id}):
-                    current_app.logger.warning("DB commit failed promoting user to admin from OIDC; continuing")
-        except Exception:
-            current_app.logger.warning("OIDC admin role mapping failed", exc_info=True)
+        admin_group = getattr(Config, "OIDC_ADMIN_GROUP", None)
+        admin_emails = getattr(Config, "OIDC_ADMIN_EMAILS", []) or []
+        provision = provision_external_user(
+            provider="oidc",
+            subject=sub,
+            issuer=issuer,
+            email=email,
+            full_name=full_name,
+            groups=groups if isinstance(groups, (list, tuple)) else [],
+            admin_emails=admin_emails,
+            admin_groups=[admin_group] if admin_group else None,
+            username=username,
+        )
+        if not provision.user:
+            reason = provision.error or "provision_failed"
+            current_app.logger.info("OIDC callback redirect to login: reason=%s", reason)
+            flash(_(provision.error_flash or "Authentication failed."), "error")
+            return redirect(url_for("auth.login"))
+        user = provision.user
+        if provision.created:
+            flash(_("Welcome! Your account has been created."), "success")
 
         # OIDC group -> RBAC Role mapping (additive by default).
         # When OIDC_ROLE_GROUP_MAP is configured, sync user.roles based on the

@@ -69,7 +69,7 @@
             <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark text-center">{{ _('Tip: Enter a new username to create your account.') }}</p>
             {% endif %}
 
-            {% if not demo_mode and auth_includes_oidc %}
+            {% if not demo_mode and (auth_includes_oidc or auth_includes_saml) %}
             <div class="relative my-6">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
                     <div class="w-full border-t border-border-light dark:border-border-dark"></div>
@@ -78,10 +78,18 @@
                     <span class="px-2 bg-card-light dark:bg-card-dark text-text-muted-light dark:text-text-muted-dark">{{ _('Or continue with') }}</span>
                 </div>
             </div>
+            {% if auth_includes_oidc %}
             <a href="{{ url_for('auth.login_oidc') }}" class="btn btn-secondary w-full">
                 <i class="fa-solid fa-right-to-bracket"></i>
                 {{ _('Single Sign-On') }}
             </a>
+            {% endif %}
+            {% if auth_includes_saml %}
+            <a href="{{ url_for('auth_saml.saml_login') }}" class="btn btn-secondary w-full {% if auth_includes_oidc %}mt-3{% endif %}">
+                <i class="fa-solid fa-building-lock"></i>
+                {{ _('Sign in with SSO (SAML)') }}
+            </a>
+            {% endif %}
             {% endif %}
         </form>
     </div>

@@ -67,6 +67,7 @@ from app.models import (
     Activity,
     ApiToken,
     AuditLog,
+    BankTransaction,
     BudgetAlert,
     CalendarEvent,
     Client,
@@ -1178,21 +1179,27 @@ def test_task(task):
 
 
 @pytest.fixture
-def installation_config(temp_dir):
-    """Create a temporary installation config for testing"""
+def installation_config(temp_dir, monkeypatch):
+    """Create a temporary installation config for testing.
+
+    InstallationConfig prefers INSTALLATION_CONFIG_DIR over CONFIG_DIR, so both
+    must be pointed at the per-test temp dir. Also clear the process singleton so
+    earlier tests cannot leave setup_complete=True and force /setup to 302.
+    """
+    import app.utils.installation as installation_mod
     from app.utils.installation import InstallationConfig
 
-    # Override the config directory to use temp directory
-    original_config_dir = InstallationConfig.CONFIG_DIR
-    InstallationConfig.CONFIG_DIR = temp_dir
+    monkeypatch.setattr(InstallationConfig, "CONFIG_DIR", temp_dir)
+    monkeypatch.setenv("INSTALLATION_CONFIG_DIR", temp_dir)
+    installation_mod._installation_config = None
+    installation_mod._installation_config_path = None
 
-    # Create the config instance
     config = InstallationConfig()
 
     yield config
 
-    # Restore original config directory
-    InstallationConfig.CONFIG_DIR = original_config_dir
+    installation_mod._installation_config = None
+    installation_mod._installation_config_path = None
 
 
 # ============================================================================

@@ -3,17 +3,20 @@ Flask==3.1.3
 Flask-SQLAlchemy==3.1.1
 Flask-Migrate==4.1.0
 Flask-Login==0.6.3
-Flask-SocketIO==5.7.1
+Flask-SocketIO==5.7.2
 
 # OAuth / OIDC
-Authlib==1.9.2
+Authlib==1.9.5
 PyJWT==2.15.1
+
+# SAML 2.0 SSO (requires xmlsec system libs — see Dockerfile / docs/design/SAML_SCIM.md)
+python3-saml==1.16.0
 
 # LDAP (directory authentication)
 ldap3==2.9.1
 
 # Database
-SQLAlchemy==2.1.6
+SQLAlchemy==2.1.8
 alembic==1.20.1
 psycopg2-binary==2.9.13
 psycogreen==1.0.2
@@ -30,7 +33,7 @@ Flask-Limiter==4.1.1
 # Utilities
 python-dotenv==1.2.4
 tzdata>=2026.6
-pytz>=2025.2
+pytz>=2026.6
 python-dateutil==4.0.0
 Werkzeug==3.1.9
 requests==2.34.2
@@ -64,13 +67,14 @@ Babel==2.18.0
 
 # Security
 cryptography==50.0.2
-markdown==3.11.2
+defusedxml==0.7.1
+markdown==3.11.3
 bleach==6.4.0
 pyotp==2.10.0
 
 # Analytics and Monitoring
 python-json-logger==4.2.0
-sentry-sdk==2.73.0
+sentry-sdk==2.74.0
 prometheus-client==0.26.0
 
 # OpenTelemetry (OTLP traces + metrics; aligns instrumentation 0.66b1 with SDK 1.45)
@@ -83,9 +87,9 @@ opentelemetry-instrumentation-sqlalchemy==0.66b2
 opentelemetry-semantic-conventions==0.66b2
 
 # API Documentation
-flask-swagger-ui==5.34.0
-apispec==6.10.0
-marshmallow==4.3.1
+flask-swagger-ui==5.34.1
+apispec==6.10.1
+marshmallow==4.4.0
 
 # OCR for receipt scanning
 pytesseract==0.3.13

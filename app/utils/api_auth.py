@@ -6,7 +6,7 @@ from functools import wraps
 from flask import current_app, g, jsonify, request
 
 from app import db
-from app.models import ApiToken, User
+from app.models import ApiToken, OAuthAccessToken, User
 
 
 def extract_token_from_request():
@@ -37,17 +37,49 @@ def extract_token_from_request():
     return None
 
 
+def _authenticate_oauth_access_token(token_string, record_usage: bool = True):
+    """Resolve a ``tto_`` OAuth access token to (User, OAuthAccessToken, error)."""
+    hashes = OAuthAccessToken.lookup_hashes(token_string)
+    oauth_token = OAuthAccessToken.query.filter(OAuthAccessToken.token_hash.in_(hashes)).first()
+    if not oauth_token:
+        return None, None, "Token not found"
+    if oauth_token.revoked_at is not None:
+        return None, None, "Token has been revoked"
+    if oauth_token.expires_at and oauth_token.expires_at < datetime.utcnow():
+        return None, None, "Token has expired"
+
+    user = User.query.get(oauth_token.user_id)
+    if not user or not user.is_active:
+        return None, None, "User account is inactive"
+
+    if record_usage:
+        try:
+            oauth_token.record_usage(request.remote_addr)
+        except Exception as e:
+            current_app.logger.warning(f"Failed to record OAuth token usage: {e}")
+
+    return user, oauth_token, None
+
+
 def authenticate_token(token_string, record_usage: bool = True):
-    """Authenticate an API token and return the associated user
+    """Authenticate an API or OAuth access token and return the associated user
 
     Args:
         token_string: The plain token string
         record_usage: If True, increment usage counters (commit). Set False when rate limit runs first.
 
     Returns:
-        tuple: (User, ApiToken, error_message) if invalid, (User, ApiToken, None) if valid
+        tuple: (User, token_record, error_message) if invalid, (User, token_record, None) if valid.
+        token_record is ApiToken or OAuthAccessToken (duck-typed for scopes / has_scope / record_usage).
     """
-    if not token_string or not token_string.startswith("tt_"):
+    if not token_string:
+        return None, None, "Invalid token format"
+
+    # OAuth access tokens use prefix tto_ (must be checked before tt_)
+    if token_string.startswith("tto_"):
+        return _authenticate_oauth_access_token(token_string, record_usage=record_usage)
+
+    if not token_string.startswith("tt_"):
         return None, None, "Invalid token format"
 
     # Lookup by HMAC hash (current) or legacy SHA256 hash
@@ -100,10 +132,11 @@ def authenticate_token(token_string, record_usage: bool = True):
         return None, None, "User account is inactive"
 
     # Record usage
-    try:
-        api_token.record_usage(request.remote_addr)
-    except Exception as e:
-        current_app.logger.warning(f"Failed to record API token usage: {e}")
+    if record_usage:
+        try:
+            api_token.record_usage(request.remote_addr)
+        except Exception as e:
+            current_app.logger.warning(f"Failed to record API token usage: {e}")
 
     return user, api_token, None
 

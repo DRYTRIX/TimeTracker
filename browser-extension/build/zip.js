@@ -1,9 +1,11 @@
 /**
- * Package the extension into dist/timetracker-extension-vX.Y.Z.zip
- * for Chrome Web Store / sideload distribution.
+ * Package the extension into dist/timetracker-extension-vX.Y.Z[.firefox].zip
+ * for Chrome Web Store / Firefox AMO / sideload distribution.
  *
  * Usage (from browser-extension/):
  *   npm run zip
+ *   npm run zip:firefox
+ *   node build/zip.js --target firefox
  *
  * Pure Node — no npm dependencies.
  */
@@ -26,6 +28,8 @@ const INCLUDE = [
   'options.js',
   'lib/api.js',
   'lib/picker.js',
+  'lib/url_suggest.js',
+  'lib/browser.js',
   'icons',
 ];
 
@@ -51,6 +55,30 @@ function collectFiles(entry, base = ROOT, out = []) {
 function readManifestVersion() {
   const manifest = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
   return manifest.version || '0.0.0';
+}
+
+function deepMerge(base, overlay) {
+  if (Array.isArray(overlay)) return overlay.slice();
+  if (overlay && typeof overlay === 'object') {
+    const out = { ...(base && typeof base === 'object' && !Array.isArray(base) ? base : {}) };
+    for (const [k, v] of Object.entries(overlay)) {
+      out[k] = deepMerge(out[k], v);
+    }
+    return out;
+  }
+  return overlay;
+}
+
+function buildManifestForTarget(target) {
+  const chromeManifest = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
+  if (target !== 'firefox') return chromeManifest;
+  const overlay = JSON.parse(readFileSync(join(ROOT, 'build/manifest.firefox.json'), 'utf8'));
+  const merged = deepMerge(chromeManifest, overlay);
+  // Firefox MV3 uses background.scripts; drop Chromium-only service_worker key if both present.
+  if (merged.background?.scripts) {
+    delete merged.background.service_worker;
+  }
+  return merged;
 }
 
 function crc32(buf) {
@@ -81,7 +109,7 @@ function buildZipStore(files) {
   let offset = 0;
 
   for (const file of files) {
-    const data = readFileSync(file.abs);
+    const data = file.data || readFileSync(file.abs);
     const nameBuf = Buffer.from(file.rel, 'utf8');
     const crc = crc32(data);
     const localHeader = Buffer.concat([
@@ -138,21 +166,40 @@ function buildZipStore(files) {
   return Buffer.concat([...localParts, central, end]);
 }
 
+function parseTarget() {
+  const idx = process.argv.indexOf('--target');
+  if (idx >= 0 && process.argv[idx + 1]) return process.argv[idx + 1];
+  return 'chromium';
+}
+
 function main() {
   mkdirSync(DIST, { recursive: true });
+  const target = parseTarget();
+  if (target !== 'chromium' && target !== 'firefox') {
+    throw new Error(`Unknown target: ${target} (use chromium or firefox)`);
+  }
 
   const files = [];
   for (const entry of INCLUDE) {
+    if (entry === 'manifest.json') continue;
     collectFiles(entry, ROOT, files);
   }
 
+  const manifest = buildManifestForTarget(target);
+  files.unshift({
+    abs: join(ROOT, 'manifest.json'),
+    rel: 'manifest.json',
+    data: Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, 'utf8'),
+  });
+
   const version = readManifestVersion();
-  const zipName = `timetracker-extension-v${version}.zip`;
+  const suffix = target === 'firefox' ? '.firefox' : '';
+  const zipName = `timetracker-extension-v${version}${suffix}.zip`;
   const zipPath = join(DIST, zipName);
   const buffer = buildZipStore(files);
   writeFileSync(zipPath, buffer);
 
-  console.log(`Wrote ${zipPath}`);
+  console.log(`Wrote ${zipPath} (target=${target})`);
   console.log(`  ${files.length} files, ${(buffer.length / 1024).toFixed(1)} KiB`);
   for (const f of files) console.log(`  + ${f.rel}`);
 }

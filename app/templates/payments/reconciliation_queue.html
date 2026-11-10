@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Payments'), 'url': url_for('payments.list_payments')},
+    {'text': _('Bank reconciliation')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-balance-scale',
+    title_text=_('Bank reconciliation'),
+    subtitle_text=_('Match imported bank lines to open invoices'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for('bank_reconciliation.reconciliation_upload') + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 inline-flex items-center"><i class="fas fa-upload mr-2"></i>' + _('Upload statement') + '</a>'
+) }}
+
+<div class="mb-4 flex gap-2">
+    <a href="{{ url_for('bank_reconciliation.reconciliation_queue', status='pending') }}" class="px-3 py-1.5 rounded-lg text-sm {% if status == 'pending' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark border{% endif %}">{{ _('Pending') }}</a>
+    <a href="{{ url_for('bank_reconciliation.reconciliation_queue', status='matched') }}" class="px-3 py-1.5 rounded-lg text-sm {% if status == 'matched' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark border{% endif %}">{{ _('Matched') }}</a>
+    <a href="{{ url_for('bank_reconciliation.reconciliation_queue', status='ignored') }}" class="px-3 py-1.5 rounded-lg text-sm {% if status == 'ignored' %}bg-primary text-white{% else %}bg-card-light dark:bg-card-dark border{% endif %}">{{ _('Ignored') }}</a>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="min-w-full text-sm">
+        <thead class="border-b border-border-light dark:border-border-dark text-left">
+            <tr>
+                <th class="px-4 py-3">{{ _('Date') }}</th>
+                <th class="px-4 py-3">{{ _('Amount') }}</th>
+                <th class="px-4 py-3">{{ _('Counterparty') }}</th>
+                <th class="px-4 py-3">{{ _('Reference') }}</th>
+                <th class="px-4 py-3">{{ _('Suggestions') }}</th>
+                <th class="px-4 py-3">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for txn in transactions %}
+            <tr class="border-b border-border-light dark:border-border-dark align-top">
+                <td class="px-4 py-3 whitespace-nowrap">{{ txn.booking_date }}</td>
+                <td class="px-4 py-3 whitespace-nowrap">{{ txn.currency }} {{ '%.2f'|format(txn.amount) }}</td>
+                <td class="px-4 py-3">{{ txn.counterparty or '—' }}</td>
+                <td class="px-4 py-3">{{ txn.reference or '—' }}</td>
+                <td class="px-4 py-3">
+                    {% if txn.match_status == 'pending' %}
+                        {% set sug = suggestions.get(txn.id, []) %}
+                        {% if sug %}
+                        <ul class="space-y-1">
+                            {% for s in sug %}
+                            <li>{{ s.invoice_number }} — {{ s.currency }} {{ '%.2f'|format(s.outstanding_amount) }} <span class="text-gray-500">(score {{ s.score }})</span></li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <span class="text-gray-500">{{ _('No matches') }}</span>
+                        {% endif %}
+                    {% elif txn.matched_invoice_id %}
+                        {{ _('Invoice') }} #{{ txn.matched_invoice_id }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    {% if txn.match_status == 'pending' %}
+                    <form method="POST" action="{{ url_for('bank_reconciliation.reconciliation_confirm', txn_id=txn.id) }}" class="flex flex-col gap-2 mb-2">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <select name="invoice_id" class="form-input text-sm" required>
+                            <option value="">{{ _('Select invoice') }}</option>
+                            {% for s in suggestions.get(txn.id, []) %}
+                            <option value="{{ s.invoice_id }}">{{ s.invoice_number }} ({{ '%.2f'|format(s.outstanding_amount) }})</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm">{{ _('Confirm') }}</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('bank_reconciliation.reconciliation_ignore', txn_id=txn.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="text-sm text-gray-600 hover:underline">{{ _('Ignore') }}</button>
+                    </form>
+                    {% else %}
+                    <span class="text-gray-500">{{ txn.match_status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">{{ _('No transactions in this queue.') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

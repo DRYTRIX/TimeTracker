@@ -205,6 +205,7 @@ def create_time_entry():
         billable=validated.get("billable", True),
         paid=validated.get("paid", False),
         invoice_number=validated.get("invoice_number"),
+        custom_fields=validated.get("custom_fields"),
     )
 
     if not result.get("success"):
@@ -296,6 +297,7 @@ def update_time_entry(entry_id):
         invoice_number=validated.get("invoice_number"),
         reason=data.get("reason"),
         expected_updated_at=validated.get("if_updated_at"),
+        custom_fields=validated.get("custom_fields"),
     )
 
     if not result.get("success"):

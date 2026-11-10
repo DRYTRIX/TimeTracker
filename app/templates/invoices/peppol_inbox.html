@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Invoices'), 'url': url_for('invoices.list_invoices')},
+    {'text': _('Peppol Inbox')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-inbox',
+    title_text=_('Peppol Inbox'),
+    subtitle_text=_('Inbound e-invoices received via Peppol'),
+    breadcrumbs=breadcrumbs,
+    actions_html=''
+        + '<div class="flex flex-wrap gap-2 items-center">'
+        +   '<a href="' + url_for("invoices.list_invoices") + '" class="btn btn-ghost"><i class="fas fa-file-invoice mr-2"></i>' + _('Invoices') + '</a>'
+        +   ('<form method="post" action="' + url_for("invoices.peppol_inbox_poll_now") + '" class="inline">'
+             + '<input type="hidden" name="csrf_token" value="' + csrf_token() + '">'
+             + '<button type="submit" class="btn btn-primary"><i class="fas fa-sync-alt mr-2"></i>' + _('Poll now') + '</button>'
+             + '</form>' if current_user.is_admin or has_permission('manage_invoices') else '')
+        + '</div>'
+) }}
+
+{% if not inbox_enabled %}
+<div class="mb-4 p-4 rounded-tt border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 text-sm">
+  {{ _('Peppol inbox polling is disabled. Configure Let’s Peppol in the Peppol setup wizard to enable inbound receive.') }}
+</div>
+{% endif %}
+
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-tt border border-border-light dark:border-border-dark mb-4">
+  <form method="get" class="flex flex-wrap gap-3 items-end">
+    <div>
+      <label for="status" class="form-label">{{ _('Status') }}</label>
+      <select name="status" id="status" class="form-input">
+        <option value="">{{ _('All') }}</option>
+        <option value="new" {% if status_filter == 'new' %}selected{% endif %}>{{ _('New') }}</option>
+        <option value="acknowledged" {% if status_filter == 'acknowledged' %}selected{% endif %}>{{ _('Acknowledged') }}</option>
+        <option value="error" {% if status_filter == 'error' %}selected{% endif %}>{{ _('Error') }}</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-secondary">{{ _('Filter') }}</button>
+  </form>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-tt border border-border-light dark:border-border-dark overflow-x-auto">
+  <table class="min-w-full text-sm">
+    <thead class="bg-background-light dark:bg-background-dark text-left">
+      <tr>
+        <th class="px-4 py-3 font-semibold">{{ _('Received') }}</th>
+        <th class="px-4 py-3 font-semibold">{{ _('Number') }}</th>
+        <th class="px-4 py-3 font-semibold">{{ _('Type') }}</th>
+        <th class="px-4 py-3 font-semibold">{{ _('Supplier Peppol ID') }}</th>
+        <th class="px-4 py-3 font-semibold">{{ _('Amount') }}</th>
+        <th class="px-4 py-3 font-semibold">{{ _('Status') }}</th>
+        <th class="px-4 py-3 font-semibold">{{ _('Matched client') }}</th>
+        <th class="px-4 py-3 font-semibold"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if documents %}
+        {% for doc in documents %}
+        <tr class="border-t border-border-light dark:border-border-dark">
+          <td class="px-4 py-3 whitespace-nowrap">{{ doc.created_at.strftime('%Y-%m-%d %H:%M') if doc.created_at else '—' }}</td>
+          <td class="px-4 py-3">{{ doc.document_number or '—' }}</td>
+          <td class="px-4 py-3">{{ doc.document_type or '—' }}</td>
+          <td class="px-4 py-3 font-mono text-xs">{{ doc.partner_peppol_id or '—' }}</td>
+          <td class="px-4 py-3 whitespace-nowrap">
+            {% if doc.total_amount is not none %}
+              {{ doc.total_amount }}{% if doc.currency %} {{ doc.currency }}{% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <span class="inline-flex px-2 py-0.5 rounded text-xs
+              {% if doc.status == 'acknowledged' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300
+              {% elif doc.status == 'error' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300
+              {% else %}bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200{% endif %}">
+              {{ doc.status }}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            {% if doc.matched_client %}
+              {{ doc.matched_client.name }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-right">
+            <a href="{{ url_for('invoices.peppol_inbox_detail', doc_id=doc.id) }}" class="text-primary hover:underline">{{ _('View') }}</a>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="8" class="px-4 py-8 text-center text-text-muted-light dark:text-text-muted-dark">
+            {{ _('No inbound Peppol documents yet.') }}
+          </td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

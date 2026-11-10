@@ -288,9 +288,20 @@ def build_peppol_ubl_invoice_xml(
     tax_incl = ET.SubElement(legal_total, cbc + "TaxInclusiveAmount")
     tax_incl.set("currencyID", currency)
     tax_incl.text = _money(getattr(invoice, "total_amount", 0))
+    # Payments already recorded on the invoice are the prepaid amount (BT-113) and
+    # PayableAmount = TaxInclusiveAmount - PrepaidAmount (BR-CO-16).
+    # As in the CII export, the amount due is never negative; here the prepaid amount is
+    # capped at the total so BR-CO-16 holds, and an overpayment is not shown in full in BT-113.
+    total = Decimal(str(getattr(invoice, "total_amount", 0) or 0))
+    paid = Decimal(str(getattr(invoice, "amount_paid", 0) or 0))
+    prepaid = min(max(paid, Decimal("0")), max(total, Decimal("0")))
+    if prepaid > 0:
+        prepaid_el = ET.SubElement(legal_total, cbc + "PrepaidAmount")
+        prepaid_el.set("currencyID", currency)
+        prepaid_el.text = _money(prepaid)
     payable = ET.SubElement(legal_total, cbc + "PayableAmount")
     payable.set("currencyID", currency)
-    payable.text = _money(getattr(invoice, "total_amount", 0))
+    payable.text = _money(total - prepaid)
 
     # Invoice lines (items + expenses + extra goods)
     line_id = 1

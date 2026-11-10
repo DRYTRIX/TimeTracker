@@ -305,8 +305,13 @@
                             {% set nav_active_budget = ep.startswith('budget_alerts.') %}
                             {% if is_module_enabled('invoices') %}
                             <li>
-                                <a class="block px-2 py-1 rounded {% if nav_active_invoices %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">
+                                <a class="block px-2 py-1 rounded {% if nav_active_invoices and 'peppol_inbox' not in ep %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.list_invoices') }}">
                                     <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoices') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if 'peppol_inbox' in ep %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoices.peppol_inbox') }}">
+                                    <i class="fas fa-inbox w-4 mr-2"></i>{{ _('Peppol Inbox') }}
                                 </a>
                             </li>
                             {% endif %}

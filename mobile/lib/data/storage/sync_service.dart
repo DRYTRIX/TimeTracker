@@ -16,10 +16,81 @@ String newSyncIdempotencyKey() {
   return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
 }
 
+/// After this many failed attempts, a queued op is marked `failed`.
+const int maxSyncAttempts = 8;
+
+String syncErrorMessage(Object error) {
+  if (error is DioException) {
+    final data = error.response?.data;
+    if (data is Map && data['error'] != null) return data['error'].toString();
+    if (error.message != null && error.message!.isNotEmpty) return error.message!;
+  }
+  return error.toString();
+}
+
+/// Exponential backoff delay after [attempts] failures (1-based).
+Duration syncBackoffForAttempt(int attempts) {
+  final capped = attempts.clamp(1, maxSyncAttempts);
+  final seconds = min(300, 1 << (capped - 1)); // 1,2,4,...,128, then cap 300
+  return Duration(seconds: seconds);
+}
+
+Map<String, dynamic> normalizeQueueOp(Map<String, dynamic> op) {
+  final next = Map<String, dynamic>.from(op);
+  next['status'] = (next['status'] ?? 'pending').toString();
+  next['attempts'] = (next['attempts'] as num?)?.toInt() ?? 0;
+  next['lastError'] = next['lastError']?.toString() ?? '';
+  next['id'] = next['id']?.toString() ??
+      '${next['op']}-${next['createdAt'] ?? DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(1 << 20)}';
+  next['createdAt'] ??= DateTime.now().toUtc().toIso8601String();
+  return next;
+}
+
+bool shouldSkipUntilNextAttempt(Map<String, dynamic> op, {DateTime? now}) {
+  final status = (op['status'] ?? 'pending').toString();
+  if (status == 'failed') return true;
+  final raw = op['nextAttemptAt']?.toString();
+  if (raw == null || raw.isEmpty) return false;
+  final nextAt = DateTime.tryParse(raw);
+  if (nextAt == null) return false;
+  return nextAt.isAfter(now ?? DateTime.now().toUtc());
+}
+
+Map<String, dynamic> markOpAttemptFailure(Map<String, dynamic> op, Object error, {DateTime? now}) {
+  final next = normalizeQueueOp(op);
+  final attempts = ((next['attempts'] as num?)?.toInt() ?? 0) + 1;
+  final failed = attempts >= maxSyncAttempts;
+  final when = now ?? DateTime.now().toUtc();
+  next['attempts'] = attempts;
+  next['lastError'] = syncErrorMessage(error);
+  next['status'] = failed ? 'failed' : 'pending';
+  if (failed) {
+    next.remove('nextAttemptAt');
+  } else {
+    next['nextAttemptAt'] = when.add(syncBackoffForAttempt(attempts)).toIso8601String();
+  }
+  return next;
+}
+
+Map<String, dynamic> resetOpForRetry(Map<String, dynamic> op) {
+  final next = normalizeQueueOp(op);
+  next['status'] = 'pending';
+  next['attempts'] = 0;
+  next['lastError'] = '';
+  next.remove('nextAttemptAt');
+  return next;
+}
+
 class SyncService {
   SyncService(this._api);
 
   final ApiClient? _api;
+
+  static Future<void> _enqueue(Map<String, dynamic> op) async {
+    final q = await LocalStorage.getSyncQueue();
+    q.add(normalizeQueueOp(op));
+    await LocalStorage.setSyncQueue(q);
+  }
 
   static Future<void> queueCreateTimeEntry({
     required int projectId,
@@ -30,8 +101,7 @@ class SyncService {
     String? tags,
     bool? billable,
   }) async {
-    final q = await LocalStorage.getSyncQueue();
-    q.add({
+    await _enqueue({
       'op': 'create_time_entry',
       'idempotency_key': newSyncIdempotencyKey(),
       'project_id': projectId,
@@ -42,7 +112,6 @@ class SyncService {
       if (tags != null) 'tags': tags,
       if (billable != null) 'billable': billable,
     });
-    await LocalStorage.setSyncQueue(q);
   }
 
   /// Queue timer start (offline). Processed before manual entry creates when syncing.
@@ -51,34 +120,28 @@ class SyncService {
     int? taskId,
     String? notes,
   }) async {
-    final q = await LocalStorage.getSyncQueue();
-    q.add({
+    await _enqueue({
       'op': 'timer_start',
       'project_id': projectId,
       if (taskId != null) 'task_id': taskId,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
       'start_time': DateTime.now().toUtc().toIso8601String(),
     });
-    await LocalStorage.setSyncQueue(q);
   }
 
   /// Queue timer stop (offline). Server creates the time entry on sync.
   static Future<void> queueTimerStop({String? stopTime}) async {
-    final q = await LocalStorage.getSyncQueue();
-    q.add({
+    await _enqueue({
       'op': 'timer_stop',
       if (stopTime != null) 'stop_time': stopTime,
     });
-    await LocalStorage.setSyncQueue(q);
   }
 
   static Future<void> queueDeleteTimeEntry(int entryId) async {
-    final q = await LocalStorage.getSyncQueue();
-    q.add({
+    await _enqueue({
       'op': 'delete_time_entry',
       'entry_id': entryId,
     });
-    await LocalStorage.setSyncQueue(q);
   }
 
   /// Queue a PATCH for when offline; sends [if_updated_at] for optimistic locking (409 drops op).
@@ -93,8 +156,7 @@ class SyncService {
     String? tags,
     bool? billable,
   }) async {
-    final q = await LocalStorage.getSyncQueue();
-    q.add({
+    await _enqueue({
       'op': 'update_time_entry',
       'entry_id': entryId,
       if (ifUpdatedAt != null) 'if_updated_at': ifUpdatedAt,
@@ -106,7 +168,40 @@ class SyncService {
       if (tags != null) 'tags': tags,
       if (billable != null) 'billable': billable,
     });
-    await LocalStorage.setSyncQueue(q);
+  }
+
+  static Future<List<Map<String, dynamic>>> listFailed() async {
+    final q = await LocalStorage.getSyncQueue();
+    return q
+        .map(normalizeQueueOp)
+        .where((op) => (op['status'] ?? '') == 'failed')
+        .toList();
+  }
+
+  static Future<bool> retry(String id) async {
+    final q = await LocalStorage.getSyncQueue();
+    var found = false;
+    final next = <Map<String, dynamic>>[];
+    for (final raw in q) {
+      final op = normalizeQueueOp(raw);
+      if (op['id']?.toString() == id) {
+        found = true;
+        next.add(resetOpForRetry(op));
+      } else {
+        next.add(op);
+      }
+    }
+    if (!found) return false;
+    await LocalStorage.setSyncQueue(next);
+    return true;
+  }
+
+  static Future<bool> discard(String id) async {
+    final q = await LocalStorage.getSyncQueue();
+    final next = q.where((op) => normalizeQueueOp(op)['id']?.toString() != id).toList();
+    if (next.length == q.length) return false;
+    await LocalStorage.setSyncQueue(next);
+    return true;
   }
 
   Future<void> syncAll() async {
@@ -120,9 +215,23 @@ class SyncService {
 
     final q = await LocalStorage.getSyncQueue();
     final remaining = <Map<String, dynamic>>[];
+    final now = DateTime.now().toUtc();
 
-    for (final op in q) {
+    for (final raw in q) {
+      final op = normalizeQueueOp(raw);
       final type = op['op']?.toString();
+      final status = (op['status'] ?? 'pending').toString();
+
+      if (status == 'failed') {
+        remaining.add(op);
+        continue;
+      }
+
+      if (shouldSkipUntilNextAttempt(op, now: now)) {
+        remaining.add(op);
+        continue;
+      }
+
       try {
         if (type == 'create_time_entry') {
           final idem = op['idempotency_key']?.toString();
@@ -169,7 +278,7 @@ class SyncService {
         if (type == 'update_time_entry' && e.response?.statusCode == 409) {
           continue;
         }
-        remaining.add(op);
+        remaining.add(markOpAttemptFailure(op, e, now: now));
       } catch (e, st) {
         developer.log(
           'Sync queue op failed (non-Dio): $type',
@@ -177,7 +286,7 @@ class SyncService {
           error: e,
           stackTrace: st,
         );
-        remaining.add(op);
+        remaining.add(markOpAttemptFailure(op, e, now: now));
       }
     }
 
