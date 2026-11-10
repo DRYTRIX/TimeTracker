@@ -5,10 +5,11 @@ from __future__ import annotations
 import csv
 import io
 import re
-import defusedxml.ElementTree as ET
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple
+
+import defusedxml.ElementTree as ET
 
 from app import db
 from app.models import Invoice
