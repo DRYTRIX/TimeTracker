@@ -12,7 +12,7 @@ dependencies:
 
   # State Management
   # Stay on Riverpod 2 until providers are migrated off StateNotifier (removed in 3.x).
-  flutter_riverpod: ^3.5.0
+  flutter_riverpod: ">=2.6.1 <3.0.0"
 
   # HTTP Client
   dio: ^5.11.1

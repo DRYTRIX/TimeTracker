@@ -90,7 +90,9 @@ def _cmd_today(user) -> dict[str, Any]:
     except Exception:
         import logging
 
-        logging.getLogger(__name__).exception("Could not fetch today's summary for user_id=%s", getattr(user, "id", None))
+        logging.getLogger(__name__).exception(
+            "Could not fetch today's summary for user_id=%s", getattr(user, "id", None)
+        )
         return {"text": "Could not fetch today's summary."}
     hours = summary.get("hours", 0)
     projects = summary.get("projects", 0)

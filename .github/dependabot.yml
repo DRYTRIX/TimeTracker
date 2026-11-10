@@ -77,6 +77,10 @@ updates:
     labels:
       - dependencies
       - mobile
+    # Riverpod 3 removed StateNotifier; stay on 2.x until providers are migrated.
+    ignore:
+      - dependency-name: flutter_riverpod
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
