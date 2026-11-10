@@ -30,7 +30,7 @@ dependencies:
   flutter_foreground_task: ^11.0.3
 
   # Notifications
-  flutter_local_notifications: ^22.3.3
+  flutter_local_notifications: ^23.0.0
   permission_handler: ^13.0.2
   # Optional FCM for idle "Still working?" wake-up (Issue #722). Requires
   # google-services.json / GoogleService-Info.plist when building with Firebase.

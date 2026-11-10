@@ -9,7 +9,7 @@ pytest-xdist==3.8.0  # Parallel test execution
 pytest-split==0.11.0  # Shard tests across CI jobs
 pytest-timeout==2.4.0  # Timeout for long-running tests
 pytest-mock==3.17.0  # Mocking support
-pytest-env==1.8.4  # Environment variable management for tests
+pytest-env==1.8.5  # Environment variable management for tests
 pre-commit==4.7.0  # Same hooks as local / CI lint job
 
 # Code quality and linting
@@ -23,7 +23,7 @@ mypy==2.4.1
 types-requests==2.33.0.20261030
 types-bleach==6.4.0.20260728
 types-Markdown==3.11.2.20261029
-types-python-dateutil==2.9.0.20261029
+types-python-dateutil==2.9.0.20261104
 
 # Security testing
 bandit==1.9.4  # Security linting
@@ -45,7 +45,7 @@ factur-x>=7.9
 sqlalchemy-utils==0.43.0  # Database utilities for testing
 
 # HTML/Coverage report
-coverage[toml]==7.17.0
+coverage[toml]==7.17.2
 pytest-html==4.2.0  # HTML test reports
 
 # Additional utilities
