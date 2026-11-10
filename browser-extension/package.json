@@ -1,8 +1,8 @@
 {
   "name": "timetracker-browser-extension",
   "private": true,
-  "version": "5.19.1",
-  "description": "TimeTracker browser extension (Manifest V3 — Chromium + Firefox)",
+  "version": "5.20.0",
+  "description": "TimeTracker browser extension (Manifest V3 \u2014 Chromium + Firefox)",
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.js",

@@ -34,7 +34,7 @@ docker compose -f docker-compose.nas.yml up -d
 # open http://localhost:8080 — first login creates the admin
 ```
 
-**Latest release: v5.19.1** — see [CHANGELOG.md](CHANGELOG.md).
+**Latest release: v5.20.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 ### First 5 minutes
 
