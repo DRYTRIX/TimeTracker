@@ -854,6 +854,11 @@ jobs:
         working-directory: mobile
         run: flutter test
 
+      - name: Install CocoaPods deps
+        working-directory: mobile/ios
+        run: |
+          pod install --repo-update
+
       # Release mode is invalid for iOS simulator; this validates compilation and produces Runner.app for the artifact zip.
       - name: Build iOS (simulator)
         working-directory: mobile
