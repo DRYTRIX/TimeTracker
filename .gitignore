@@ -273,3 +273,7 @@ mobile/.flutter-plugins-dependencies.lock.lock.lock.lock.lock.lock.lock.lock.loc
 ## License Files
 donate_hide_private.pem
 .claude/skills/
+
+# Flutter iOS generated (machine-local FLUTTER_ROOT)
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/flutter_export_environment.sh
