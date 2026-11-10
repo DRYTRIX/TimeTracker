@@ -166,15 +166,18 @@ def create_resource_allocation():
             return validation_error_response({"estimated_hours": ["Must be a number"]})
 
     db.session.commit()
-    return jsonify(
-        {
-            "allocation": {
-                "user_id": user.id,
-                "task_id": task.id,
-                "project_id": task.project_id,
-                "date": due_date.isoformat(),
-                "planned_hours": float(task.estimated_hours or 0),
-                "task_name": task.name,
+    return (
+        jsonify(
+            {
+                "allocation": {
+                    "user_id": user.id,
+                    "task_id": task.id,
+                    "project_id": task.project_id,
+                    "date": due_date.isoformat(),
+                    "planned_hours": float(task.estimated_hours or 0),
+                    "task_name": task.name,
+                }
             }
-        }
-    ), 201
+        ),
+        201,
+    )

@@ -24,9 +24,7 @@ class TeamChatService:
     def user_can_access_channel(self, channel_id: int, user_id: int, *, is_admin: bool = False) -> bool:
         if is_admin:
             return True
-        return (
-            ChatChannelMember.query.filter_by(channel_id=channel_id, user_id=user_id).first() is not None
-        )
+        return ChatChannelMember.query.filter_by(channel_id=channel_id, user_id=user_id).first() is not None
 
     def list_messages(
         self,

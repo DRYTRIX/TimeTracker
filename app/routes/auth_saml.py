@@ -133,9 +133,11 @@ def saml_acs():
 
     attributes = auth.get_attributes() or {}
     nameid = auth.get_nameid() or ""
-    issuer = (current_app.config.get("SAML_IDP_ENTITY_ID") or auth.get_issuers() or [""])[0] if hasattr(
-        auth, "get_issuers"
-    ) else (current_app.config.get("SAML_IDP_ENTITY_ID") or "")
+    issuer = (
+        (current_app.config.get("SAML_IDP_ENTITY_ID") or auth.get_issuers() or [""])[0]
+        if hasattr(auth, "get_issuers")
+        else (current_app.config.get("SAML_IDP_ENTITY_ID") or "")
+    )
     try:
         issuers = auth.get_issuers() or []
         if issuers:
@@ -153,7 +155,11 @@ def saml_acs():
                 return vals
         return None
 
-    email = (_attr(["email", "mail", "Email", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"]) or nameid or "").strip().lower() or None
+    email = (
+        _attr(["email", "mail", "Email", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"])
+        or nameid
+        or ""
+    ).strip().lower() or None
     given = _attr(["givenName", "firstName", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname"]) or ""
     family = _attr(["sn", "surname", "lastName", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname"]) or ""
     display = _attr(["displayName", "cn", "http://schemas.microsoft.com/identity/claims/displayname"]) or ""

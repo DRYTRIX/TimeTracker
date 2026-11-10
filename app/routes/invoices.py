@@ -1296,9 +1296,7 @@ def export_invoice_xrechnung(invoice_id):
     try:
         xml, _sha = build_xrechnung_ubl_invoice_xml(invoice, settings, client)
         fn = f"{invoice.invoice_number}-xrechnung.xml"
-        return Response(
-            xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"}
-        )
+        return Response(xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={fn}"})
     except Exception as e:
         from app.utils.error_reporting import log_and_capture
 

@@ -63,11 +63,16 @@ jobs:
       - name: Check for migration changes
         id: migration_check
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          # PRs use the PR base; pushes use the previous tip (github.event.before).
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          # Compare against the PR base (not HEAD~1) so multi-commit PRs are covered
+          # All-zero "before" means first push / force-push with no prior tip.
+          if [ "${BASE_SHA:-}" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA=""
+          fi
+          # Compare against the PR/push base (not HEAD~1) so multi-commit ranges are covered
           if [ -z "$BASE_SHA" ]; then
-            echo "⚠️ No PR base SHA; falling back to HEAD~1"
+            echo "⚠️ No PR/push base SHA; falling back to HEAD~1"
             DIFF_RANGE="HEAD~1"
           else
             DIFF_RANGE="${BASE_SHA}...HEAD"
@@ -88,16 +93,21 @@ jobs:
           DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
           FLASK_APP: app.py
           FLASK_ENV: testing
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           set -euo pipefail
+
+          # All-zero "before" means first push / force-push with no prior tip.
+          if [ "${BASE_SHA:-}" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA=""
+          fi
 
           echo "🔍 Validating migration consistency..."
           echo "Current directory: $(pwd)"
           echo "Migration files:"
           ls -la migrations/versions/ | tail -5
 
-          # Ensure PR base commit is available for checkout (fork PRs / shallow edges)
+          # Ensure PR/push base commit is available for checkout (fork PRs / shallow edges)
           if [ -n "${BASE_SHA:-}" ]; then
             git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null || git fetch --no-tags origin "$BASE_SHA" || true
           fi

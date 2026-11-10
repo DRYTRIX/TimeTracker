@@ -163,9 +163,7 @@ class BankReconciliationService:
         open_statuses = ("unpaid", "partially_paid")
         candidates = Invoice.query.filter(Invoice.payment_status.in_(open_statuses)).all()
 
-        ref_haystack = " ".join(
-            filter(None, [transaction.reference or "", transaction.counterparty or ""])
-        ).lower()
+        ref_haystack = " ".join(filter(None, [transaction.reference or "", transaction.counterparty or ""])).lower()
 
         scored: List[Tuple[float, Invoice]] = []
         for inv in candidates:
@@ -243,7 +241,11 @@ class BankReconciliationService:
         txn.matched_invoice_id = invoice.id
         txn.matched_payment_id = payment.id
         if not safe_commit("bank_txn_confirm", {"txn_id": txn.id, "invoice_id": invoice.id}):
-            return {"success": False, "message": "Payment created but could not update transaction", "error": "database_error"}
+            return {
+                "success": False,
+                "message": "Payment created but could not update transaction",
+                "error": "database_error",
+            }
 
         return {"success": True, "message": "Matched", "transaction": txn, "payment": payment}
 

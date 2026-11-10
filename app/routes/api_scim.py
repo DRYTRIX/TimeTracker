@@ -89,9 +89,9 @@ def _user_to_scim(user: User) -> dict:
         "meta": {
             "resourceType": "User",
             "created": user.created_at.isoformat() + "Z" if user.created_at else None,
-            "lastModified": (user.last_login or user.created_at).isoformat() + "Z"
-            if (user.last_login or user.created_at)
-            else None,
+            "lastModified": (
+                (user.last_login or user.created_at).isoformat() + "Z" if (user.last_login or user.created_at) else None
+            ),
             "location": f"/scim/v2/Users/{user.id}",
         },
     }
@@ -334,7 +334,7 @@ def _apply_user_fields(user: User, data: dict) -> None:
         user.username = str(data["userName"]).strip().lower()
     if "externalId" in data:
         val = data.get("externalId")
-        user.scim_external_id = (str(val).strip() if val else None)
+        user.scim_external_id = str(val).strip() if val else None
     if "active" in data and data["active"] is not None:
         user.is_active = bool(data["active"])
     name = _parse_name_from_scim(data)
@@ -418,7 +418,11 @@ def scim_patch_user(user_id: str):
     deactivated = not user.is_active
     if not safe_commit("scim_patch_user", {"user_id": user.id}):
         return _scim_error("Failed to patch user", 500)
-    _audit("updated" if not deactivated else "updated", user, "SCIM user patched" + (" (deactivated)" if deactivated and not user.is_active else ""))
+    _audit(
+        "updated" if not deactivated else "updated",
+        user,
+        "SCIM user patched" + (" (deactivated)" if deactivated and not user.is_active else ""),
+    )
     return jsonify(_user_to_scim(user)), 200, {"Content-Type": SCIM_JSON}
 
 

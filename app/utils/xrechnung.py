@@ -13,9 +13,7 @@ from typing import Any, List, Optional, Tuple
 
 from app.integrations.peppol import PeppolParty, build_peppol_ubl_invoice_xml
 
-XRECHNUNG_30_CUSTOMIZATION_ID = (
-    "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0"
-)
+XRECHNUNG_30_CUSTOMIZATION_ID = "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0"
 LEITWEG_SCHEME_ID = "0204"
 DE_VAT_SCHEME_ID = "9930"
 
@@ -113,9 +111,11 @@ def build_supplier_party(settings: Any) -> PeppolParty:
         endpoint_id = tax_id or "SELLER"
         scheme_id = scheme_id or DE_VAT_SCHEME_ID
 
-    country = _strip(getattr(settings, "company_country", None)) or _strip(
-        getattr(settings, "peppol_sender_country", None)
-    ) or None
+    country = (
+        _strip(getattr(settings, "company_country", None))
+        or _strip(getattr(settings, "peppol_sender_country", None))
+        or None
+    )
 
     return PeppolParty(
         endpoint_id=endpoint_id,
@@ -208,9 +208,7 @@ def _ensure_supplier_contact(supplier_party: ET.Element, contact_name: str) -> N
         contact.insert(0, _set_text(contact, f"{CBC}Name", contact_name))
 
 
-def _insert_payment_means(
-    root: ET.Element, *, iban: str, bic: Optional[str], payment_id: Optional[str]
-) -> None:
+def _insert_payment_means(root: ET.Element, *, iban: str, bic: Optional[str], payment_id: Optional[str]) -> None:
     if root.find(f"{CAC}PaymentMeans") is not None:
         return
     pm = ET.Element(f"{CAC}PaymentMeans")
@@ -329,9 +327,7 @@ def build_xrechnung_ubl_invoice_xml(
     inv = _invoice_with_buyer_reference(invoice, buyer_reference)
 
     xml, sha = build_peppol_ubl_invoice_xml(invoice=inv, supplier=supplier, customer=customer, attachments=None)
-    xml = _patch_xrechnung_ubl(
-        xml, invoice=invoice, settings=settings, client=client, buyer_reference=buyer_reference
-    )
+    xml = _patch_xrechnung_ubl(xml, invoice=invoice, settings=settings, client=client, buyer_reference=buyer_reference)
     import hashlib
 
     sha256_hex = hashlib.sha256(xml.encode("utf-8")).hexdigest()

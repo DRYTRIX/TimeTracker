@@ -13,6 +13,10 @@ updates:
     labels:
       - dependencies
       - python
+    # Gunicorn 26 removed the eventlet worker used by docker/start-fixed.py.
+    ignore:
+      - dependency-name: gunicorn
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /

@@ -137,9 +137,7 @@ def provision_external_user(
                 settings = Settings.get_settings()
                 user.standard_hours_per_day = float(getattr(settings, "default_daily_working_hours", 8.0) or 8.0)
             except Exception:
-                current_app.logger.debug(
-                    "Could not apply default daily working hours for external user", exc_info=True
-                )
+                current_app.logger.debug("Could not apply default daily working hours for external user", exc_info=True)
 
             role_obj = Role.query.filter_by(name=role_name).first()
             if role_obj:
