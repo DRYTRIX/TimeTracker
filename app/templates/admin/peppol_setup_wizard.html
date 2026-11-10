@@ -30,6 +30,7 @@
           <option value="einvoice">e-invoice.be</option>
           <option value="peppyrus">Peppyrus</option>
           <option value="getpeppr">getpeppr</option>
+          <option value="letspeppol">Let’s Peppol (Belgium)</option>
           <option value="generic_custom">generic_custom (forward URL)</option>
         </select>
         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
@@ -157,6 +158,14 @@ function buildComposeSnippet() {
       '      - GETPEPPR_BASE_URL=${GETPEPPR_BASE_URL:-https://api.getpeppr.dev/v1}',
       '      - GETPEPPR_API_KEY=${GETPEPPR_API_KEY:?Set GETPEPPR_API_KEY}',
     ].join('\\n');
+  } else if (preset === 'letspeppol') {
+    providerEnv = [
+      '      - PEPPOL_BRIDGE_PROVIDER=letspeppol',
+      '      - LETSPEPPOL_BASE_URL=${LETSPEPPOL_BASE_URL:-https://be.letspeppol.org}',
+      '      - LETSPEPPOL_CLIENT_ID=${LETSPEPPOL_CLIENT_ID:?Set LETSPEPPOL_CLIENT_ID}',
+      '      - LETSPEPPOL_CLIENT_SECRET=${LETSPEPPOL_CLIENT_SECRET:?Set LETSPEPPOL_CLIENT_SECRET}',
+      '      - LETSPEPPOL_PEPPOL_ID=${LETSPEPPOL_PEPPOL_ID:?Set LETSPEPPOL_PEPPOL_ID}',
+    ].join('\\n');
   } else {
     providerEnv = [
       '      - PEPPOL_BRIDGE_PROVIDER=generic_custom',
@@ -198,9 +207,21 @@ async function postJson(url, body) {
 document.addEventListener('DOMContentLoaded', function() {
   const presetEl = document.getElementById('wizardProviderPreset');
   const tokenEl = document.getElementById('wizardBridgeAuthToken');
-  if (presetEl) presetEl.addEventListener('change', buildComposeSnippet);
+  const labelEl = document.getElementById('wizardProviderLabel');
+  function onPresetChange() {
+    buildComposeSnippet();
+    if (labelEl && presetEl) {
+      const preset = presetEl.value || 'einvoice';
+      if (preset === 'letspeppol') labelEl.value = 'letspeppol';
+      else if (preset === 'getpeppr') labelEl.value = 'getpeppr';
+      else if (preset === 'peppyrus') labelEl.value = 'peppyrus';
+      else if (preset === 'einvoice') labelEl.value = 'e-invoice.be';
+      else if (preset === 'generic_custom') labelEl.value = 'generic';
+    }
+  }
+  if (presetEl) presetEl.addEventListener('change', onPresetChange);
   if (tokenEl) tokenEl.addEventListener('input', buildComposeSnippet);
-  buildComposeSnippet();
+  onPresetChange();
 
   const checkBtn = document.getElementById('wizardCheckBridgeBtn');
   const applyBtn = document.getElementById('wizardApplyBtn');

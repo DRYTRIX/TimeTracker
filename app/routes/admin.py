@@ -2259,6 +2259,10 @@ def admin_peppol_setup_wizard_apply():
     settings_obj.peppol_access_point_url = f"{bridge_base_url}/send"
     if bridge_token:
         settings_obj.set_secret("peppol_access_point_token", bridge_token)
+    # Enable Peppol Inbox polling when configuring Let’s Peppol (supports inbound).
+    if "letspeppol" in provider_label.lower().replace(" ", "").replace("-", ""):
+        if hasattr(settings_obj, "peppol_inbox_enabled"):
+            settings_obj.peppol_inbox_enabled = True
 
     if not safe_commit("admin_peppol_setup_wizard_apply"):
         return jsonify({"ok": False, "error": "Database error while saving settings"}), 500

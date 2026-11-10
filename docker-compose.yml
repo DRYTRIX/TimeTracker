@@ -158,6 +158,11 @@ services:
       # Alternative provider: getpeppr
       - GETPEPPR_BASE_URL=${GETPEPPR_BASE_URL:-https://api.getpeppr.dev/v1}
       - GETPEPPR_API_KEY=${GETPEPPR_API_KEY:-}
+      # Alternative provider: Let’s Peppol (hosted Belgium AP)
+      - LETSPEPPOL_BASE_URL=${LETSPEPPOL_BASE_URL:-https://be.letspeppol.org}
+      - LETSPEPPOL_CLIENT_ID=${LETSPEPPOL_CLIENT_ID:-}
+      - LETSPEPPOL_CLIENT_SECRET=${LETSPEPPOL_CLIENT_SECRET:-}
+      - LETSPEPPOL_PEPPOL_ID=${LETSPEPPOL_PEPPOL_ID:-}
       # generic_custom passthrough
       - GENERIC_FORWARD_URL=${GENERIC_FORWARD_URL:-}
       - GENERIC_FORWARD_TOKEN=${GENERIC_FORWARD_TOKEN:-}

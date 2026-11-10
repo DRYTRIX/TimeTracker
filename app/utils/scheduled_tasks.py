@@ -713,6 +713,28 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered webhook retry task")
 
+        def poll_peppol_inbox_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for Peppol inbox poll")
+                    return
+            with external_url_context(app_instance):
+                poll_peppol_inbox()
+
+        _add_job(
+            scheduler,
+            func=poll_peppol_inbox_with_app,
+            trigger="cron",
+            minute="*/10",
+            id="poll_peppol_inbox",
+            name="Poll Peppol bridge inbox",
+            replace_existing=True,
+        )
+        logger.info("Registered Peppol inbox poll task")
+
         # Check for expiring quotes daily at 9:30 AM
         # Create a closure that captures the app instance
         def check_expiring_quotes_with_app():
@@ -1814,6 +1836,32 @@ def retry_failed_webhooks():
             logger.info(f"Retried {retried_count} failed webhook deliveries")
     except Exception as e:
         logger.error(f"Error retrying failed webhooks: {e}")
+
+
+def poll_peppol_inbox():
+    """Poll peppol-bridge /inbox and store inbound UBL documents.
+
+    Note: This function should be called within an app context.
+    """
+    try:
+        from app.services.peppol_inbound_service import PeppolInboundService
+
+        result = PeppolInboundService().poll_and_import()
+        if result.get("skipped"):
+            return
+        if result.get("fetched"):
+            logger.info(
+                "Peppol inbox poll: fetched=%s created=%s updated=%s acked=%s errors=%s",
+                result.get("fetched"),
+                result.get("created"),
+                result.get("updated"),
+                result.get("acked"),
+                len(result.get("errors") or []),
+            )
+        elif not result.get("ok"):
+            logger.warning("Peppol inbox poll failed: %s", result.get("error") or result.get("errors"))
+    except Exception as e:
+        logger.error(f"Error polling Peppol inbox: {e}")
 
 
 def check_expiring_quotes():

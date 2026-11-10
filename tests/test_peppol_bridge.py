@@ -552,3 +552,140 @@ def test_getpeppr_status_unknown_document(monkeypatch):
     resp = c.get("/message/nope/status")
     assert resp.status_code == 502
     assert len(responses.calls) == 1
+
+
+def _letspeppol_app(monkeypatch):
+    monkeypatch.setenv("PEPPOL_BRIDGE_PROVIDER", "letspeppol")
+    monkeypatch.setenv("LETSPEPPOL_BASE_URL", "https://be.letspeppol.org")
+    monkeypatch.setenv("LETSPEPPOL_CLIENT_ID", "client-id")
+    monkeypatch.setenv("LETSPEPPOL_CLIENT_SECRET", "client-secret")
+    monkeypatch.setenv("LETSPEPPOL_PEPPOL_ID", "0208:0123456789")
+    monkeypatch.delenv("PEPPOL_BRIDGE_AUTH_TOKEN", raising=False)
+
+    from peppol_bridge.app import create_app
+
+    app = create_app()
+    app.config["TESTING"] = True
+    return app.test_client()
+
+
+def _mock_letspeppol_token():
+    responses.add(
+        responses.POST,
+        "https://be.letspeppol.org/kyc/auth/oauth2/token",
+        json={"access_token": "tok_test", "expires_in": 3600, "token_type": "Bearer"},
+        status=200,
+    )
+
+
+@responses.activate
+def test_letspeppol_test_credentials(monkeypatch):
+    c = _letspeppol_app(monkeypatch)
+    _mock_letspeppol_token()
+    responses.add(
+        responses.GET,
+        "https://be.letspeppol.org/proxy/sapi/registry?peppolId=0208%3A0123456789",
+        json={"peppolId": "0208:0123456789", "peppolActive": True, "accessPoint": "scrada"},
+        status=200,
+    )
+    resp = c.post("/test")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["provider"] == "letspeppol"
+    assert data["data"]["peppol_active"] is True
+    assert responses.calls[0].request.url.endswith("/kyc/auth/oauth2/token")
+    assert responses.calls[1].request.headers["Authorization"] == "Bearer tok_test"
+
+
+@responses.activate
+def test_letspeppol_send_creates_and_reschedules(monkeypatch):
+    c = _letspeppol_app(monkeypatch)
+    _mock_letspeppol_token()
+    created = {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "direction": "OUTGOING",
+        "type": "INVOICE",
+        "ownerPeppolId": "0208:0123456789",
+        "partnerPeppolId": "0208:0123456789",
+        "ubl": "<Invoice/>",
+    }
+    responses.add(
+        responses.POST,
+        "https://be.letspeppol.org/proxy/sapi/document",
+        json=created,
+        status=200,
+    )
+    responses.add(
+        responses.PUT,
+        "https://be.letspeppol.org/proxy/sapi/document/11111111-1111-1111-1111-111111111111/reschedule",
+        json={**created, "processedStatus": "scheduled"},
+        status=200,
+    )
+    resp = c.post("/send", json=_tt_payload())
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["message_id"] == "11111111-1111-1111-1111-111111111111"
+    assert len(responses.calls) == 3  # token + create + reschedule
+    create_body = responses.calls[1].request.body
+    assert b'"direction": "OUTGOING"' in create_body or b'"direction":"OUTGOING"' in create_body
+
+
+@responses.activate
+def test_letspeppol_status_maps_failed(monkeypatch):
+    c = _letspeppol_app(monkeypatch)
+    _mock_letspeppol_token()
+    responses.add(
+        responses.POST,
+        "https://be.letspeppol.org/proxy/sapi/document/status",
+        json=[
+            {
+                "id": "11111111-1111-1111-1111-111111111111",
+                "processedStatus": "failed",
+                "partnerPeppolId": "0208:0999999999",
+            }
+        ],
+        status=200,
+    )
+    resp = c.get("/message/11111111-1111-1111-1111-111111111111/status")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["folder"] == "failed"
+    assert data["fatal_rules"][0]["id"] == "letspeppol:failed"
+
+
+@responses.activate
+def test_letspeppol_inbox_and_ack(monkeypatch):
+    c = _letspeppol_app(monkeypatch)
+    _mock_letspeppol_token()
+    doc = {
+        "id": "22222222-2222-2222-2222-222222222222",
+        "direction": "INCOMING",
+        "type": "INVOICE",
+        "ownerPeppolId": "0208:0123456789",
+        "partnerPeppolId": "0208:0999999999",
+        "ubl": '<?xml version="1.0"?><Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"><cbc:ID xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">SUP-1</cbc:ID></Invoice>',
+    }
+    responses.add(
+        responses.GET,
+        "https://be.letspeppol.org/proxy/sapi/document?size=100",
+        json=[doc],
+        status=200,
+    )
+    responses.add(
+        responses.PUT,
+        "https://be.letspeppol.org/proxy/sapi/document/downloaded",
+        status=200,
+        body="",
+    )
+
+    inbox = c.get("/inbox?size=100")
+    assert inbox.status_code == 200
+    inbox_data = inbox.get_json()
+    assert inbox_data["ok"] is True
+    assert len(inbox_data["documents"]) == 1
+
+    ack = c.post("/inbox/ack", json={"ids": [doc["id"]]})
+    assert ack.status_code == 200
+    assert ack.get_json()["acked"] == 1

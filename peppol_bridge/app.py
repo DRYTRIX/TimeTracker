@@ -12,6 +12,7 @@ from peppol_bridge.providers.base import ProviderBase, ProviderError
 from peppol_bridge.providers.einvoice import EInvoiceProvider
 from peppol_bridge.providers.generic_custom import GenericCustomProvider
 from peppol_bridge.providers.getpeppr import GetpepprProvider
+from peppol_bridge.providers.letspeppol import LetsPeppolProvider
 from peppol_bridge.providers.peppyrus import PeppyrusProvider
 
 _CLIENT_ERROR = "An unexpected error occurred"
@@ -95,6 +96,19 @@ def _build_provider(cfg: BridgeConfig) -> ProviderBase:
         if not cfg.getpeppr_api_key:
             raise ProviderError("GETPEPPR_API_KEY is not set")
         return GetpepprProvider(base_url=cfg.getpeppr_base_url, api_key=cfg.getpeppr_api_key, timeout_s=cfg.timeout_s)
+    if cfg.provider in {"letspeppol", "lets-peppol"}:
+        if not cfg.letspeppol_client_id or not cfg.letspeppol_client_secret:
+            raise ProviderError("LETSPEPPOL_CLIENT_ID and LETSPEPPOL_CLIENT_SECRET are required")
+        if not cfg.letspeppol_peppol_id:
+            raise ProviderError("LETSPEPPOL_PEPPOL_ID is not set")
+        return LetsPeppolProvider(
+            base_url=cfg.letspeppol_base_url,
+            client_id=cfg.letspeppol_client_id,
+            client_secret=cfg.letspeppol_client_secret,
+            peppol_id=cfg.letspeppol_peppol_id,
+            timeout_s=cfg.timeout_s,
+            token_url=cfg.letspeppol_token_url,
+        )
     if cfg.provider in {"generic_custom", "generic"}:
         if not cfg.generic_forward_url:
             raise ProviderError("GENERIC_FORWARD_URL is not set for generic_custom provider")
@@ -183,12 +197,72 @@ def create_app() -> Flask:
         except Exception:
             return _json_error(_CLIENT_ERROR, 500)
 
+    def _require_bridge_auth() -> Optional[Response]:
+        if not cfg.bridge_auth_token:
+            return None
+        token = _require_bearer(request.headers.get("Authorization", ""))
+        if not token or token != cfg.bridge_auth_token:
+            return _json_error("Unauthorized", 401)
+        return None
+
+    @app.get("/inbox")
+    def inbox() -> Response:
+        auth_err = _require_bridge_auth()
+        if auth_err is not None:
+            return auth_err
+        try:
+            size = int(request.args.get("size") or 100)
+        except Exception:
+            size = 100
+        try:
+            provider = _build_provider(cfg)
+            documents = provider.list_inbox(size=size)
+            return jsonify({"ok": True, "provider": provider.name, "documents": documents})
+        except ProviderError:
+            return _json_error(_CLIENT_ERROR, 502)
+        except Exception:
+            return _json_error(_CLIENT_ERROR, 500)
+
+    @app.post("/inbox/ack")
+    def inbox_ack() -> Response:
+        auth_err = _require_bridge_auth()
+        if auth_err is not None:
+            return auth_err
+        try:
+            payload = request.get_json(force=True, silent=False)
+        except Exception:
+            return _json_error(_CLIENT_ERROR, 400)
+        if not isinstance(payload, dict):
+            return _json_error("Payload must be a JSON object", 400)
+        ids = payload.get("ids")
+        if not isinstance(ids, list) or not ids:
+            return _json_error("Missing ids[]", 400)
+        clean_ids = [str(i).strip() for i in ids if str(i).strip()]
+        if not clean_ids:
+            return _json_error("Missing ids[]", 400)
+        no_archive = bool(payload.get("no_archive") or payload.get("noArchive"))
+        try:
+            provider = _build_provider(cfg)
+            provider.ack_downloaded(clean_ids, no_archive=no_archive)
+            return jsonify({"ok": True, "provider": provider.name, "acked": len(clean_ids)})
+        except ProviderError:
+            return _json_error(_CLIENT_ERROR, 502)
+        except Exception:
+            return _json_error(_CLIENT_ERROR, 500)
+
     @app.get("/")
     def index() -> Response:
         return jsonify(
             {
                 "service": "peppol-bridge",
-                "endpoints": ["/health", "/test", "/send", "/message/<id>/status"],
+                "endpoints": [
+                    "/health",
+                    "/test",
+                    "/send",
+                    "/message/<id>/status",
+                    "/inbox",
+                    "/inbox/ack",
+                ],
             }
         )
 

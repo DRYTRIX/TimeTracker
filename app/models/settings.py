@@ -138,6 +138,8 @@ class Settings(db.Model):
     peppol_sml_url = db.Column(db.String(500), default="", nullable=True)
     peppol_native_cert_path = db.Column(db.String(500), default="", nullable=True)
     peppol_native_key_path = db.Column(db.String(500), default="", nullable=True)
+    # When True, poll peppol-bridge /inbox for inbound documents (Let’s Peppol).
+    peppol_inbox_enabled = db.Column(db.Boolean, default=False, nullable=False)
     invoices_peppol_compliant = db.Column(db.Boolean, default=False, nullable=False)
     # When True, exported invoice PDFs embed EN 16931 UBL XML (ZugFerd/Factur-X)
     invoices_zugferd_pdf = db.Column(db.Boolean, default=False, nullable=False)
@@ -353,6 +355,7 @@ class Settings(db.Model):
         self.peppol_sml_url = kwargs.get("peppol_sml_url", "")
         self.peppol_native_cert_path = kwargs.get("peppol_native_cert_path", "")
         self.peppol_native_key_path = kwargs.get("peppol_native_key_path", "")
+        self.peppol_inbox_enabled = kwargs.get("peppol_inbox_enabled", False)
         self.invoices_peppol_compliant = kwargs.get("invoices_peppol_compliant", False)
         self.invoices_zugferd_pdf = kwargs.get("invoices_zugferd_pdf", False)
         self.invoices_pdfa3_compliant = kwargs.get("invoices_pdfa3_compliant", False)
@@ -691,6 +694,7 @@ class Settings(db.Model):
             "peppol_sml_url": getattr(self, "peppol_sml_url", "") or "",
             "peppol_native_cert_path": getattr(self, "peppol_native_cert_path", "") or "",
             "peppol_native_key_path": getattr(self, "peppol_native_key_path", "") or "",
+            "peppol_inbox_enabled": bool(getattr(self, "peppol_inbox_enabled", False)),
             "invoices_peppol_compliant": getattr(self, "invoices_peppol_compliant", False),
             "invoices_zugferd_pdf": getattr(self, "invoices_zugferd_pdf", False),
             "invoices_pdfa3_compliant": getattr(self, "invoices_pdfa3_compliant", False),

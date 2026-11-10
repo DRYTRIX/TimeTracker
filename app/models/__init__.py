@@ -54,7 +54,7 @@ from .invoice_approval import InvoiceApproval
 from .invoice_email import InvoiceEmail
 from .invoice_image import InvoiceImage
 from .invoice_pdf_template import InvoicePDFTemplate
-from .invoice_peppol import InvoicePeppolTransmission
+from .invoice_peppol import InvoicePeppolTransmission, PeppolInboundDocument
 from .invoice_template import InvoiceTemplate
 from .issue import Issue
 from .kanban_board_template import KanbanBoardTemplate
@@ -200,6 +200,7 @@ __all__ = [
     "RecurringProjectCost",
     "InvoiceEmail",
     "InvoicePeppolTransmission",
+    "PeppolInboundDocument",
     "Webhook",
     "WebhookDelivery",
     "Quote",

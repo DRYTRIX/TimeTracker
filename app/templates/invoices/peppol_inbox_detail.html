@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Invoices'), 'url': url_for('invoices.list_invoices')},
+    {'text': _('Peppol Inbox'), 'url': url_for('invoices.peppol_inbox')},
+    {'text': document.document_number or document.external_id}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-invoice',
+    title_text=document.document_number or document.external_id,
+    subtitle_text=_('Inbound Peppol document'),
+    breadcrumbs=breadcrumbs,
+    actions_html=''
+        + '<div class="flex flex-wrap gap-2">'
+        +   '<a href="' + url_for("invoices.peppol_inbox") + '" class="btn btn-ghost"><i class="fas fa-arrow-left mr-2"></i>' + _('Back') + '</a>'
+        +   ('<a href="' + url_for("invoices.peppol_inbox_download_ubl", doc_id=document.id) + '" class="btn btn-primary"><i class="fas fa-download mr-2"></i>' + _('Download UBL') + '</a>' if document.ubl_xml else '')
+        + '</div>'
+) }}
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-tt border border-border-light dark:border-border-dark space-y-3">
+    <h2 class="text-lg font-semibold mb-2">{{ _('Document') }}</h2>
+    <dl class="grid grid-cols-1 gap-2 text-sm">
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('External ID') }}</dt><dd class="font-mono text-xs break-all">{{ document.external_id }}</dd></div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Type') }}</dt><dd>{{ document.document_type or '—' }}</dd></div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Number') }}</dt><dd>{{ document.document_number or '—' }}</dd></div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Issue date') }}</dt><dd>{{ document.issue_date or '—' }}</dd></div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Amount') }}</dt>
+        <dd>{% if document.total_amount is not none %}{{ document.total_amount }}{% if document.currency %} {{ document.currency }}{% endif %}{% else %}—{% endif %}</dd>
+      </div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Status') }}</dt><dd>{{ document.status }}</dd></div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Provider') }}</dt><dd>{{ document.provider }}</dd></div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Processed status') }}</dt><dd>{{ document.processed_status or '—' }}</dd></div>
+    </dl>
+  </div>
+
+  <div class="bg-card-light dark:bg-card-dark p-6 rounded-tt border border-border-light dark:border-border-dark space-y-3">
+    <h2 class="text-lg font-semibold mb-2">{{ _('Parties') }}</h2>
+    <dl class="grid grid-cols-1 gap-2 text-sm">
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Supplier Peppol ID') }}</dt><dd class="font-mono text-xs break-all">{{ document.partner_peppol_id or '—' }}</dd></div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Owner Peppol ID') }}</dt><dd class="font-mono text-xs break-all">{{ document.owner_peppol_id or '—' }}</dd></div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Matched client') }}</dt>
+        <dd>
+          {% if document.matched_client %}
+            <a class="text-primary hover:underline" href="{{ url_for('clients.view_client', client_id=document.matched_client.id) }}">{{ document.matched_client.name }}</a>
+          {% else %}
+            {{ _('No match') }}
+          {% endif %}
+        </dd>
+      </div>
+      {% if document.error_message %}
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Error') }}</dt><dd class="text-red-600 dark:text-red-400">{{ document.error_message }}</dd></div>
+      {% endif %}
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Received') }}</dt><dd>{{ document.created_at }}</dd></div>
+      <div><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Acknowledged') }}</dt><dd>{{ document.acknowledged_at or '—' }}</dd></div>
+    </dl>
+  </div>
+</div>
+
+{% if document.ubl_xml %}
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-tt border border-border-light dark:border-border-dark">
+  <h2 class="text-lg font-semibold mb-3">{{ _('UBL preview') }}</h2>
+  <pre class="text-xs overflow-x-auto max-h-96 p-3 rounded bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark">{{ document.ubl_xml[:8000] }}{% if document.ubl_xml|length > 8000 %}
+…
+{% endif %}</pre>
+</div>
+{% endif %}
+{% endblock %}
