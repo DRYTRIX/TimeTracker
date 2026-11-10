@@ -45,4 +45,3 @@ def forgot_password_available(auth_method: str | None) -> bool:
 def ldap_enabled_from_auth_method(auth_method: str | None) -> bool:
     """LDAP auth is active for this AUTH_METHOD (same as Config LDAP_ENABLED)."""
     return auth_includes_ldap(auth_method)
-

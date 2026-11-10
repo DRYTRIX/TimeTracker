@@ -1494,9 +1494,10 @@ def new_adjustment():
             )
 
             if location:
-                stock = updated_stock or WarehouseStock.query.filter_by(
-                    warehouse_id=warehouse_id, stock_item_id=stock_item_id
-                ).first()
+                stock = (
+                    updated_stock
+                    or WarehouseStock.query.filter_by(warehouse_id=warehouse_id, stock_item_id=stock_item_id).first()
+                )
                 if stock:
                     stock.location = location
 

@@ -393,6 +393,7 @@ def teams_bot_messages():
     body = result.get("body") or {}
     return jsonify(body), status
 
+
 # =====================================================================
 # Slack Attendance (workspace-level /in, /brb, /back, /out)
 # =====================================================================

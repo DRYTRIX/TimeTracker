@@ -362,7 +362,6 @@ class MicrosoftTeamsConnector(BaseConnector):
                         return User.query.get(owner_id)
         return None
 
-
     def send_message(self, channel_id: str, message: str) -> Dict[str, Any]:
         """Send a message to a Teams channel."""
         token = self.get_access_token()

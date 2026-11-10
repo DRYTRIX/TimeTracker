@@ -63,8 +63,8 @@ def _authenticate_client() -> tuple[OAuthApplication | None, str | None]:
             return None, "invalid_client"
 
     client_id = client_id or request.form.get("client_id") or (request.get_json(silent=True) or {}).get("client_id")
-    client_secret = client_secret or request.form.get("client_secret") or (request.get_json(silent=True) or {}).get(
-        "client_secret"
+    client_secret = (
+        client_secret or request.form.get("client_secret") or (request.get_json(silent=True) or {}).get("client_secret")
     )
 
     if not client_id:
@@ -350,7 +350,9 @@ def admin_create_app():
     name = (request.form.get("name") or "").strip()
     description = (request.form.get("description") or "").strip()
     redirect_uris_raw = (request.form.get("redirect_uris") or "").strip()
-    allowed_scopes = (request.form.get("allowed_scopes") or "read:projects,read:time_entries,write:time_entries").strip()
+    allowed_scopes = (
+        request.form.get("allowed_scopes") or "read:projects,read:time_entries,write:time_entries"
+    ).strip()
     is_confidential = request.form.get("is_confidential") == "1"
 
     if not name:

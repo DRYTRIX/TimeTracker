@@ -23,7 +23,7 @@ psycogreen==1.0.2
 
 # Web server
 # Gunicorn 26 removed the eventlet worker; keep 25.x while SocketIO uses eventlet.
-gunicorn==26.2.0
+gunicorn==25.3.0
 eventlet==0.41.3
 
 # Security and forms

@@ -64,8 +64,7 @@ def test_payroll_export_xlsx(client_with_token, payroll_template, payroll_time_e
     start = (datetime.utcnow() - timedelta(days=7)).date().isoformat()
     end = datetime.utcnow().date().isoformat()
     resp = client_with_token.get(
-        f"/api/v1/exports/payroll?start_date={start}&end_date={end}"
-        f"&template_id={payroll_template.id}&format=xlsx"
+        f"/api/v1/exports/payroll?start_date={start}&end_date={end}" f"&template_id={payroll_template.id}&format=xlsx"
     )
     assert resp.status_code == 200
     assert "spreadsheetml" in (resp.content_type or "") or "octet-stream" in (resp.content_type or "")

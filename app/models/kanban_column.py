@@ -86,10 +86,7 @@ class KanbanColumn(db.Model):
         if not column or not column.has_wip_limit():
             return None
         if column.would_exceed_wip(project_id, extra=1, exclude_task_id=task_id):
-            return (
-                f'Column "{column.label}" has reached its work-in-progress limit '
-                f"({column.wip_limit} tasks)."
-            )
+            return f'Column "{column.label}" has reached its work-in-progress limit ' f"({column.wip_limit} tasks)."
         return None
 
     def to_dict(self):

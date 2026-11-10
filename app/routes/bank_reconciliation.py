@@ -95,9 +95,7 @@ def reconciliation_confirm(txn_id):
         flash(_("Invoice is required"), "error")
         return redirect(url_for("bank_reconciliation.reconciliation_queue"))
 
-    result = BankReconciliationService().confirm_match(
-        txn_id, invoice_id, received_by=current_user.id
-    )
+    result = BankReconciliationService().confirm_match(txn_id, invoice_id, received_by=current_user.id)
     if result.get("success"):
         flash(_("Payment recorded and transaction matched"), "success")
     else:

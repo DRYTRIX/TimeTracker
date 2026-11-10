@@ -88,9 +88,15 @@ class TestSetupWizardPreset:
                 assert f'value="{preset.value}"' in html
 
     def test_submitting_solo_preset_disables_modules(self, app, client, installation_config):
+        assert not installation_config.is_setup_complete()
         with patch("app.routes.setup.get_installation_config") as mock_config:
             mock_config.return_value = installation_config
-            client.post("/setup", data={"timezone": "UTC", "module_preset": ModulePreset.SOLO.value})
+            response = client.post(
+                "/setup",
+                data={"timezone": "UTC", "module_preset": ModulePreset.SOLO.value},
+                follow_redirects=False,
+            )
+            assert response.status_code in (302, 303)
 
         with app.app_context():
             settings = Settings.get_settings()
@@ -100,9 +106,11 @@ class TestSetupWizardPreset:
 
     def test_omitting_preset_keeps_everything_enabled(self, app, client, installation_config):
         """Backwards compatibility: an older form post must not disable modules."""
+        assert not installation_config.is_setup_complete()
         with patch("app.routes.setup.get_installation_config") as mock_config:
             mock_config.return_value = installation_config
-            client.post("/setup", data={"timezone": "UTC"})
+            response = client.post("/setup", data={"timezone": "UTC"}, follow_redirects=False)
+            assert response.status_code in (302, 303)
 
         with app.app_context():
             settings = Settings.get_settings()
