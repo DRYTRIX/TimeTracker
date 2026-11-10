@@ -2142,9 +2142,7 @@ def peppol_inbox_poll_now():
             flash(_("Peppol inbox polling is disabled. Enable it in Peppol settings."), "warning")
         elif result.get("ok"):
             flash(
-                _(
-                    "Peppol inbox poll finished: %(fetched)s fetched, %(created)s new, %(updated)s updated."
-                )
+                _("Peppol inbox poll finished: %(fetched)s fetched, %(created)s new, %(updated)s updated.")
                 % {
                     "fetched": result.get("fetched", 0),
                     "created": result.get("created", 0),

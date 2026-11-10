@@ -244,7 +244,9 @@ class PeppolInboundService:
         if resp.status_code >= 400:
             raise RuntimeError(f"Bridge inbox ack HTTP {resp.status_code}: {resp.text[:300]}")
 
-    def upsert_document(self, payload: Dict[str, Any], *, provider: str = "letspeppol") -> Tuple[PeppolInboundDocument, bool]:
+    def upsert_document(
+        self, payload: Dict[str, Any], *, provider: str = "letspeppol"
+    ) -> Tuple[PeppolInboundDocument, bool]:
         """Create or update a local inbound row. Returns (row, created)."""
         external_id = str(payload.get("id") or "").strip()
         if not external_id:
@@ -285,7 +287,9 @@ class PeppolInboundService:
         if ubl_xml:
             row.ubl_xml = ubl_xml
             row.ubl_sha256 = _sha256(ubl_xml)
-        row.processed_status = (payload.get("processedStatus") or None) if payload.get("processedStatus") else row.processed_status
+        row.processed_status = (
+            (payload.get("processedStatus") or None) if payload.get("processedStatus") else row.processed_status
+        )
         # Keep a trimmed copy of transport metadata (not the full UBL again).
         row.raw_payload = {
             k: payload.get(k)

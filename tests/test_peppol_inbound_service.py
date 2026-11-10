@@ -7,7 +7,6 @@ import responses
 from app import db
 from app.models import Client, PeppolInboundDocument, Settings
 
-
 SAMPLE_UBL = """<?xml version="1.0" encoding="UTF-8"?>
 <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
          xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
