@@ -591,7 +591,6 @@ def view_project(project_id):
     from sqlalchemy.exc import ProgrammingError
 
     from app.models import LinkTemplate, Milestone
-
     from app.services.custom_field_service import CustomFieldService
 
     cf_service = CustomFieldService()

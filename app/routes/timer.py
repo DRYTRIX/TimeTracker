@@ -150,8 +150,8 @@ def _edit_timer_form_projects_tasks(timer, can_edit_schedule):
 
 
 def _edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown):
-    from app.utils.scope_filter import get_active_clients_for_user
     from app.services.custom_field_service import CustomFieldService
+    from app.utils.scope_filter import get_active_clients_for_user
 
     projects, tasks = _edit_timer_form_projects_tasks(timer, can_edit_schedule)
     clients = get_active_clients_for_user(current_user) if can_edit_schedule else []

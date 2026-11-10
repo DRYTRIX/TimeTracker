@@ -250,12 +250,10 @@ def _token_refresh(app_rec: OAuthApplication):
         return jsonify({"error": "invalid_request"}), 400
 
     refresh_hashes = OAuthAccessToken.lookup_hashes(refresh)
-    existing = (
-        OAuthAccessToken.query.filter(
-            OAuthAccessToken.refresh_token_hash.in_(refresh_hashes),
-            OAuthAccessToken.application_id == app_rec.id,
-        ).first()
-    )
+    existing = OAuthAccessToken.query.filter(
+        OAuthAccessToken.refresh_token_hash.in_(refresh_hashes),
+        OAuthAccessToken.application_id == app_rec.id,
+    ).first()
     if not existing or existing.revoked_at is not None:
         return jsonify({"error": "invalid_grant"}), 400
     if existing.refresh_expires_at and existing.refresh_expires_at < datetime.utcnow():
@@ -419,8 +417,9 @@ def admin_delete_app(app_id: int):
 @oauth_server_bp.route("/api/v1/oauth/applications", methods=["GET"])
 @csrf.exempt
 def api_list_applications():
-    from app.utils.api_auth import authenticate_token, extract_token_from_request
     from flask import g
+
+    from app.utils.api_auth import authenticate_token, extract_token_from_request
 
     token_string = extract_token_from_request()
     user, api_token, err = authenticate_token(token_string or "", record_usage=True)

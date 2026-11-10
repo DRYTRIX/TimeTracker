@@ -68,6 +68,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api_v1_contacts import api_v1_contacts_bp
     from app.routes.api_v1_deals import api_v1_deals_bp
     from app.routes.api_v1_expenses import api_v1_expenses_bp
+    from app.routes.api_v1_gantt import api_v1_gantt_bp
     from app.routes.api_v1_invoices import api_v1_invoices_bp
     from app.routes.api_v1_issues import api_v1_issues_bp
     from app.routes.api_v1_leads import api_v1_leads_bp
@@ -76,7 +77,6 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api_v1_project_templates import api_v1_project_templates_bp
     from app.routes.api_v1_projects import api_v1_projects_bp
     from app.routes.api_v1_recurring_tasks import api_v1_recurring_tasks_bp
-    from app.routes.api_v1_gantt import api_v1_gantt_bp
     from app.routes.api_v1_resource_scheduling import api_v1_resource_scheduling_bp
     from app.routes.api_v1_tasks import api_v1_tasks_bp
     from app.routes.api_v1_team_chat import api_v1_team_chat_bp
@@ -84,6 +84,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api_v1_weekly_goals import api_v1_weekly_goals_bp
     from app.routes.api_v1_workflows import api_v1_workflows_bp
     from app.routes.auth import auth_bp
+    from app.routes.bank_reconciliation import bank_reconciliation_bp
     from app.routes.budget_alerts import budget_alerts_bp
     from app.routes.calendar import calendar_bp
     from app.routes.client_notes import client_notes_bp
@@ -108,7 +109,6 @@ def register_all_blueprints(app, logger=None):
     from app.routes.main import main_bp
     from app.routes.mileage import mileage_bp
     from app.routes.milestones import milestones_bp
-    from app.routes.bank_reconciliation import bank_reconciliation_bp
     from app.routes.payments import payments_bp
     from app.routes.per_diem import per_diem_bp
     from app.routes.permissions import permissions_bp
