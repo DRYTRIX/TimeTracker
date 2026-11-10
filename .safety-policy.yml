@@ -10,5 +10,11 @@ security:
   ignore-unpinned-requirements: false
   ignore-cvss-severity-below: 0
   ignore-cvss-unknown-severity: false
-  ignore-vulnerabilities: {}
+  ignore-vulnerabilities:
+    # No fixed 3.x release yet (advisory range <3.12; latest is 3.11.3). We use the
+    # default MemoryJobStore only — not Redis/Mongo/SQLAlchemy stores that pickle
+    # job_state — so the persistent job-store deserialization path does not apply.
+    SFTY-20261008-90293:
+      reason: APScheduler MemoryJobStore only; no fixed 3.x release available
+      expires: '2027-05-01'
   continue-on-vulnerability-error: false
