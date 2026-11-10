@@ -22,7 +22,7 @@ mypy==2.4.1
 # Type stubs (consumed by mypy)
 types-requests==2.33.0.20261030
 types-bleach==6.4.0.20260728
-types-Markdown==3.11.2.20261029
+types-Markdown==3.11.2.20261107
 types-python-dateutil==2.9.0.20261104
 
 # Security testing
