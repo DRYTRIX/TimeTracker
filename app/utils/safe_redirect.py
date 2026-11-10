@@ -9,6 +9,24 @@ from flask import redirect, request, url_for
 from werkzeug.wrappers import Response
 
 
+def match_registered_redirect(candidate: Optional[str], allowed: Sequence[str]) -> Optional[str]:
+    """
+    Return the registered redirect URI from ``allowed`` that equals ``candidate``.
+
+    Used by the OAuth authorize consent flow so the redirect sink uses the
+    allowlisted (DB-sourced) string rather than the raw request value.
+    """
+    if not candidate or not isinstance(candidate, str):
+        return None
+    needle = candidate.strip()
+    if not needle:
+        return None
+    for uri in allowed or ():
+        if isinstance(uri, str) and uri == needle:
+            return uri
+    return None
+
+
 def is_safe_relative_url(next_url: Optional[str]) -> bool:
     """
     Return True if next_url is a same-origin relative path (not protocol-relative).

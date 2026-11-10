@@ -4,6 +4,7 @@ extensions:
       extensible: barrierModel
     data:
       - ["app.utils.safe_redirect", "Member[safe_redirect_target].ReturnValue", "url-redirection"]
+      - ["app.utils.safe_redirect", "Member[match_registered_redirect].ReturnValue", "url-redirection"]
       - ["app.utils.safe_redirect", "Member[_rebuild_relative].ReturnValue", "url-redirection"]
       - ["app.utils.safe_redirect", "Member[_rebuild_same_host].ReturnValue", "url-redirection"]
       - ["app.utils.error_handling", "Member[sanitize_log_value].ReturnValue", "log-injection"]

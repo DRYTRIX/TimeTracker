@@ -119,8 +119,8 @@ def labor_compliance_report_api(preset_id):
             weekly_threshold=weekly_threshold,
             overages_only=overages_only,
         )
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 404
+    except ValueError:
+        return jsonify({"error": "Unknown labor-compliance preset"}), 404
 
     if fmt == "csv":
         output = io.StringIO()

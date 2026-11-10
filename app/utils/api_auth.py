@@ -39,8 +39,8 @@ def extract_token_from_request():
 
 def _authenticate_oauth_access_token(token_string, record_usage: bool = True):
     """Resolve a ``tto_`` OAuth access token to (User, OAuthAccessToken, error)."""
-    token_hash = OAuthAccessToken.hash_token(token_string)
-    oauth_token = OAuthAccessToken.query.filter_by(token_hash=token_hash).first()
+    hashes = OAuthAccessToken.lookup_hashes(token_string)
+    oauth_token = OAuthAccessToken.query.filter(OAuthAccessToken.token_hash.in_(hashes)).first()
     if not oauth_token:
         return None, None, "Token not found"
     if oauth_token.revoked_at is not None:

@@ -63,6 +63,7 @@ class OAuthApplication(db.Model):
 
     @staticmethod
     def hash_secret(value: str) -> str:
+        # codeql[py/weak-sensitive-data-hashing]: high-entropy client_secret lookup hash, not password KDF
         return hashlib.sha256(value.encode()).hexdigest()
 
     @classmethod
@@ -160,6 +161,7 @@ class OAuthAuthorizationCode(db.Model):
 
     @staticmethod
     def hash_code(code: str) -> str:
+        # codeql[py/weak-sensitive-data-hashing]: high-entropy auth-code lookup hash, not password KDF
         return hashlib.sha256(code.encode()).hexdigest()
 
     @classmethod
@@ -240,8 +242,39 @@ class OAuthAccessToken(db.Model):
         return f"ttr_{secrets.token_urlsafe(32)}"
 
     @staticmethod
+    def _token_pepper() -> bytes:
+        from flask import current_app, has_app_context
+
+        pepper = ""
+        if has_app_context():
+            pepper = current_app.config.get("API_TOKEN_PEPPER") or current_app.config.get("SECRET_KEY") or ""
+        if isinstance(pepper, bytes):
+            return pepper
+        return str(pepper or "timetracker-api-token").encode("utf-8")
+
+    @staticmethod
     def hash_token(value: str) -> str:
-        return hashlib.sha256(value.encode()).hexdigest()
+        """
+        Hash a high-entropy OAuth access/refresh token for indexed lookup storage.
+
+        Uses HMAC-SHA256 with the app secret (or API_TOKEN_PEPPER) as key.
+        This is a lookup hash for secrets.token_urlsafe tokens, not a password KDF.
+        """
+        import hmac
+
+        # codeql[py/weak-sensitive-data-hashing]: OAuth token lookup HMAC, not password hashing
+        return hmac.new(OAuthAccessToken._token_pepper(), value.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    @staticmethod
+    def legacy_hash_token(value: str) -> str:
+        """Pre-HMAC SHA256 lookup hash (for verifying existing stored tokens)."""
+        # codeql[py/weak-sensitive-data-hashing]: legacy OAuth token lookup hash, not password hashing
+        return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def lookup_hashes(cls, value: str) -> list[str]:
+        """Return candidate hashes for DB lookup (HMAC first, then legacy)."""
+        return [cls.hash_token(value), cls.legacy_hash_token(value)]
 
     @classmethod
     def create_token(

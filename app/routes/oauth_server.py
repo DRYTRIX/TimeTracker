@@ -19,6 +19,7 @@ from app import csrf, db, limiter
 from app.models import OAuthAccessToken, OAuthApplication, OAuthAuthorizationCode
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
+from app.utils.safe_redirect import match_registered_redirect
 
 oauth_server_bp = Blueprint("oauth_server", __name__)
 
@@ -144,15 +145,17 @@ def authorize():
     code_challenge_method = request.form.get("code_challenge_method", "S256")
 
     app_rec = OAuthApplication.query.filter_by(client_id=client_id, is_active=True).first()
-    if not app_rec or redirect_uri not in app_rec.redirect_uri_list():
+    matched_redirect = match_registered_redirect(redirect_uri, app_rec.redirect_uri_list()) if app_rec else None
+    if not app_rec or not matched_redirect:
         return render_template("oauth/authorize.html", error="Invalid authorization request."), 400
 
     if decision != "approve":
         params = {"error": "access_denied"}
         if state:
             params["state"] = state
-        sep = "&" if "?" in redirect_uri else "?"
-        return redirect(f"{redirect_uri}{sep}{urlencode(params)}")
+        sep = "&" if "?" in matched_redirect else "?"
+        # codeql[py/url-redirection]: matched_redirect is allowlisted registered URI
+        return redirect(f"{matched_redirect}{sep}{urlencode(params)}")
 
     # Consent form may pass comma-separated scopes
     scope_for_intersect = scope.replace(",", " ")
@@ -163,7 +166,7 @@ def authorize():
     code_rec, plain_code = OAuthAuthorizationCode.create_code(
         application_id=app_rec.id,
         user_id=current_user.id,
-        redirect_uri=redirect_uri,
+        redirect_uri=matched_redirect,
         scope=granted,
         code_challenge=code_challenge,
         code_challenge_method=code_challenge_method or "S256",
@@ -174,8 +177,9 @@ def authorize():
     params = {"code": plain_code}
     if state:
         params["state"] = state
-    sep = "&" if "?" in redirect_uri else "?"
-    return redirect(f"{redirect_uri}{sep}{urlencode(params)}")
+    sep = "&" if "?" in matched_redirect else "?"
+    # codeql[py/url-redirection]: matched_redirect is allowlisted registered URI
+    return redirect(f"{matched_redirect}{sep}{urlencode(params)}")
 
 
 # ---------------------------------------------------------------------------
@@ -245,10 +249,13 @@ def _token_refresh(app_rec: OAuthApplication):
     if not refresh:
         return jsonify({"error": "invalid_request"}), 400
 
-    existing = OAuthAccessToken.query.filter_by(
-        refresh_token_hash=OAuthAccessToken.hash_token(refresh),
-        application_id=app_rec.id,
-    ).first()
+    refresh_hashes = OAuthAccessToken.lookup_hashes(refresh)
+    existing = (
+        OAuthAccessToken.query.filter(
+            OAuthAccessToken.refresh_token_hash.in_(refresh_hashes),
+            OAuthAccessToken.application_id == app_rec.id,
+        ).first()
+    )
     if not existing or existing.revoked_at is not None:
         return jsonify({"error": "invalid_grant"}), 400
     if existing.refresh_expires_at and existing.refresh_expires_at < datetime.utcnow():
@@ -291,13 +298,14 @@ def revoke():
         return jsonify({"error": "invalid_request"}), 400
 
     revoked = False
+    token_hashes = OAuthAccessToken.lookup_hashes(token_value)
     if token_value.startswith("tto_"):
-        rec = OAuthAccessToken.query.filter_by(token_hash=OAuthAccessToken.hash_token(token_value)).first()
+        rec = OAuthAccessToken.query.filter(OAuthAccessToken.token_hash.in_(token_hashes)).first()
         if rec and (app_rec is None or rec.application_id == app_rec.id):
             rec.revoke()
             revoked = True
     elif token_value.startswith("ttr_"):
-        rec = OAuthAccessToken.query.filter_by(refresh_token_hash=OAuthAccessToken.hash_token(token_value)).first()
+        rec = OAuthAccessToken.query.filter(OAuthAccessToken.refresh_token_hash.in_(token_hashes)).first()
         if rec and (app_rec is None or rec.application_id == app_rec.id):
             rec.revoke()
             revoked = True

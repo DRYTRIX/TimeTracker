@@ -87,8 +87,11 @@ def _cmd_today(user) -> dict[str, Any]:
         from app.services.notification_service import get_today_summary_for_user
 
         summary = get_today_summary_for_user(user)
-    except Exception as exc:
-        return {"text": f"Could not fetch today's summary: {exc}"}
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception("Could not fetch today's summary for user_id=%s", getattr(user, "id", None))
+        return {"text": "Could not fetch today's summary."}
     hours = summary.get("hours", 0)
     projects = summary.get("projects", 0)
     return {"text": f"Today: *{hours}h* across *{projects}* project(s)."}
