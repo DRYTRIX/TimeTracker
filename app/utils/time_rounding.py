@@ -42,8 +42,8 @@ def round_time_duration(duration_seconds: int, rounding_minutes: int = 1, roundi
         rounded_minutes = math.ceil(duration_minutes / rounding_minutes) * rounding_minutes
     elif rounding_method == "down":
         rounded_minutes = math.floor(duration_minutes / rounding_minutes) * rounding_minutes
-    else:  # 'nearest'
-        rounded_minutes = round(duration_minutes / rounding_minutes) * rounding_minutes
+    else:  # 'nearest', halves round up (round() would round them to even)
+        rounded_minutes = math.floor(duration_minutes / rounding_minutes + 0.5) * rounding_minutes
 
     # Convert back to seconds
     return int(rounded_minutes * 60)

@@ -22,6 +22,8 @@ from app.utils.time_rounding import round_time_duration
         pytest.param(3720, 60, "nearest", 3600, id="62m->nearest-60m=60m"),
         pytest.param(5400, 60, "nearest", 7200, id="90m->nearest-60m=120m"),
         pytest.param(5340, 60, "nearest", 3600, id="89m->nearest-60m=60m"),
+        pytest.param(900, 30, "nearest", 1800, id="15m->nearest-30m=30m"),
+        pytest.param(9000, 60, "nearest", 10800, id="150m->nearest-60m=180m"),
     ],
 )
 def test_round_time_duration_parametrized(seconds, interval, method, expected):
