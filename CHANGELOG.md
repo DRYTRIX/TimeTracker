@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **FatturaPA / SDI (Italy)** — Export FatturaPA 1.2 XML (`FPR12` B2B and `FPA12` public administration), send via a configurable SDI intermediary HTTP adapter, track transmissions and SDI notifications (`RC`/`NS`/`MC`/`NE`/`DT`), and poll status every 15 minutes. See `docs/admin/configuration/FATTURAPA_SDI.md`.
+
 ## [5.20.0] - 2026-11-10
 ### Added
 

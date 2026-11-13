@@ -735,6 +735,28 @@ def register_scheduled_tasks(scheduler, app=None):
         )
         logger.info("Registered Peppol inbox poll task")
 
+        def poll_sdi_status_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for SDI status poll")
+                    return
+            with external_url_context(app_instance):
+                poll_sdi_status()
+
+        _add_job(
+            scheduler,
+            func=poll_sdi_status_with_app,
+            trigger="cron",
+            minute="*/15",
+            id="poll_sdi_status",
+            name="Poll SDI transmission statuses",
+            replace_existing=True,
+        )
+        logger.info("Registered SDI status poll task")
+
         # Check for expiring quotes daily at 9:30 AM
         # Create a closure that captures the app instance
         def check_expiring_quotes_with_app():
@@ -1862,6 +1884,21 @@ def poll_peppol_inbox():
             logger.warning("Peppol inbox poll failed: %s", result.get("error") or result.get("errors"))
     except Exception as e:
         logger.error(f"Error polling Peppol inbox: {e}")
+
+
+def poll_sdi_status():
+    """Refresh non-final SDI (FatturaPA) transmission statuses via the intermediary.
+
+    Note: This function should be called within an app context.
+    """
+    try:
+        from app.services.sdi_service import SdiService
+
+        count = SdiService().poll_pending(max_age_days=30)
+        if count:
+            logger.info("SDI status poll refreshed %s transmission(s)", count)
+    except Exception as e:
+        logger.error(f"Error polling SDI statuses: {e}")
 
 
 def check_expiring_quotes():

@@ -110,6 +110,8 @@ def create_invoice():
             vat_category = None
         vat_exemption_reason = (request.form.get("vat_exemption_reason", "") or "").strip() or None
         vat_exemption_code = (request.form.get("vat_exemption_code", "") or "").strip() or None
+        cig = (request.form.get("cig", "") or "").strip() or None
+        cup = (request.form.get("cup", "") or "").strip() or None
         due_date_str = request.form.get("due_date", "").strip()
         tax_rate = request.form.get("tax_rate", "0").strip()
         notes = request.form.get("notes", "").strip()
@@ -196,6 +198,8 @@ def create_invoice():
             vat_category=vat_category,
             vat_exemption_reason=vat_exemption_reason,
             vat_exemption_code=vat_exemption_code,
+            cig=cig,
+            cup=cup,
         )
 
         db.session.add(invoice)
@@ -321,6 +325,40 @@ def view_invoice(invoice_id):
         )
         peppol_history = []
 
+    # SDI / FatturaPA history and readiness
+    sdi_history = []
+    sdi_enabled_flag = False
+    sdi_recipient_ready = False
+    try:
+        from app.models import InvoiceSdiTransmission
+        from app.utils.fatturapa import resolve_codice_destinatario
+
+        settings_for_sdi = Settings.get_settings()
+        sdi_enabled_flag = bool(getattr(settings_for_sdi, "sdi_enabled", False))
+        sdi_history = (
+            InvoiceSdiTransmission.query.filter_by(invoice_id=invoice_id)
+            .order_by(InvoiceSdiTransmission.created_at.desc())
+            .all()
+        )
+        try:
+            client = invoice.client
+            code, pec = resolve_codice_destinatario(client) if client else ("", None)
+            sdi_recipient_ready = bool(client and code)
+        except Exception:
+            current_app.logger.debug(
+                "Could not determine SDI recipient readiness for invoice %s",
+                invoice_id,
+                exc_info=True,
+            )
+            sdi_recipient_ready = False
+    except Exception:
+        current_app.logger.debug(
+            "SDI history unavailable for invoice %s (migration may be pending)",
+            invoice_id,
+            exc_info=True,
+        )
+        sdi_history = []
+
     # PEPPOL compliance warnings when invoices_peppol_compliant is on
     peppol_compliance_warnings = []
     try:
@@ -393,6 +431,9 @@ def view_invoice(invoice_id):
         peppol_recipient_ready=peppol_recipient_ready,
         peppol_compliance_warnings=peppol_compliance_warnings,
         invoices_peppol_compliant=getattr(Settings.get_settings(), "invoices_peppol_compliant", False),
+        sdi_history=sdi_history,
+        sdi_enabled=sdi_enabled_flag,
+        sdi_recipient_ready=sdi_recipient_ready,
         approval=approval,
         link_templates_by_field=link_templates_by_field,
     )
@@ -420,6 +461,8 @@ def edit_invoice(invoice_id):
         if _vc and _vc not in ("S", "Z", "E", "AE", "K", "G", "O", "L", "M"):
             _vc = None
         invoice.vat_category = _vc
+        invoice.cig = (request.form.get("cig", "") or "").strip() or None
+        invoice.cup = (request.form.get("cup", "") or "").strip() or None
         invoice.vat_exemption_reason = (request.form.get("vat_exemption_reason", "") or "").strip() or None
         invoice.vat_exemption_code = (request.form.get("vat_exemption_code", "") or "").strip() or None
         invoice.due_date = datetime.strptime(request.form.get("due_date"), "%Y-%m-%d").date()
@@ -1312,6 +1355,50 @@ def export_invoice_xrechnung(invoice_id):
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
 
 
+@invoices_bp.route("/invoices/<int:invoice_id>/export/fatturapa")
+@login_required
+def export_invoice_fatturapa(invoice_id):
+    """Export invoice as FatturaPA 1.2 XML (FPR12 / FPA12)."""
+    from app.models import Settings
+    from app.utils.fatturapa import build_fatturapa_xml, progressivo_from_id, validate_fatturapa_ready
+
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        flash(_("You do not have permission to export this invoice"), "error")
+        return safe_redirect(
+            request.referrer, allow_absolute_same_host=True, fallback=url_for("invoices.list_invoices")
+        )
+
+    settings = Settings.get_settings()
+    client = getattr(invoice, "client", None)
+    errors = validate_fatturapa_ready(invoice, settings, client)
+    if errors:
+        return Response(
+            json.dumps({"error": "fatturapa_not_ready", "messages": errors}),
+            status=400,
+            mimetype="application/json",
+        )
+
+    try:
+        progressivo = progressivo_from_id(invoice.id or 1)
+        xml, filename, _sha = build_fatturapa_xml(invoice, settings, client, progressivo)
+        return Response(
+            xml, mimetype="application/xml", headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        from app.utils.error_reporting import log_and_capture
+
+        log_and_capture(
+            current_app.logger,
+            "FatturaPA export failed for invoice %s",
+            invoice_id,
+            exc=e,
+            level="exception",
+        )
+        flash(_("FatturaPA export failed. Please try again."), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
+
+
 @invoices_bp.route("/invoices/<int:invoice_id>/export/pdf")
 @login_required
 def export_invoice_pdf(invoice_id):
@@ -1698,6 +1785,52 @@ def send_invoice_peppol_route(invoice_id):
         logger.error(f"Error sending invoice via Peppol: {type(e).__name__}: {str(e)}")
         logger.exception("Full error traceback:")
         return client_error_response(status=500)
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/send-sdi", methods=["POST"])
+@login_required
+def send_invoice_sdi_route(invoice_id):
+    """Send invoice via SDI intermediary (FatturaPA)."""
+    invoice = Invoice.query.get_or_404(invoice_id)
+
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        return jsonify({"error": "Permission denied"}), 403
+
+    try:
+        from app.services import SdiService
+
+        service = SdiService()
+        success, tx, message = service.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
+        if success:
+            flash(_("Invoice sent via SDI"), "success")
+            return jsonify(
+                {"success": True, "message": message or "Invoice sent via SDI", "sdi_tx_id": tx.id if tx else None}
+            )
+        return jsonify(
+            {"error": message or "Failed to send invoice via SDI", "sdi_tx_id": tx.id if tx else None}
+        ), 400
+    except Exception as e:
+        logger.error(f"Error sending invoice via SDI: {type(e).__name__}: {str(e)}")
+        logger.exception("Full error traceback:")
+        return client_error_response(status=500)
+
+
+@invoices_bp.route("/invoices/sdi/<int:tx_id>/refresh", methods=["POST"])
+@login_required
+def refresh_sdi_transmission(tx_id):
+    """Refresh status of an SDI transmission from the intermediary."""
+    from app.models import InvoiceSdiTransmission
+    from app.services import SdiService
+
+    tx = InvoiceSdiTransmission.query.get_or_404(tx_id)
+    invoice = Invoice.query.get_or_404(tx.invoice_id)
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        return jsonify({"error": "Permission denied"}), 403
+
+    result = SdiService().refresh_status(tx)
+    if not result.get("ok"):
+        return jsonify({"error": result.get("error") or "Refresh failed"}), 400
+    return jsonify({"success": True, "status": result.get("status"), "transmission": tx.to_dict()})
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/email-history", methods=["GET"])

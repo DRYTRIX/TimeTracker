@@ -16,6 +16,7 @@ from .invoice_service import InvoiceService
 from .notification_service import NotificationService
 from .payment_service import PaymentService
 from .peppol_service import PeppolService
+from .sdi_service import SdiService
 from .permission_service import PermissionService
 from .project_service import ProjectService
 from .quote_service import QuoteService
@@ -44,6 +45,7 @@ __all__ = [
     "ImportService",
     "EmailService",
     "PeppolService",
+    "SdiService",
     "PermissionService",
     "BackupService",
     "HealthService",

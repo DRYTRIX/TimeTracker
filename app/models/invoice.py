@@ -58,6 +58,10 @@ class Invoice(db.Model):
     vat_exemption_reason = db.Column(db.Text, nullable=True)
     vat_exemption_code = db.Column(db.String(50), nullable=True)
 
+    # Italian public-administration procurement codes (FatturaPA DatiOrdineAcquisto)
+    cig = db.Column(db.String(15), nullable=True)
+    cup = db.Column(db.String(15), nullable=True)
+
     # Metadata
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -108,6 +112,14 @@ class Invoice(db.Model):
         self.vat_category = kwargs.get("vat_category")
         self.vat_exemption_reason = kwargs.get("vat_exemption_reason")
         self.vat_exemption_code = kwargs.get("vat_exemption_code")
+        self.cig = kwargs.get("cig")
+        self.cup = kwargs.get("cup")
+        if "subtotal" in kwargs and kwargs.get("subtotal") is not None:
+            self.subtotal = Decimal(str(kwargs["subtotal"]))
+        if "tax_amount" in kwargs and kwargs.get("tax_amount") is not None:
+            self.tax_amount = Decimal(str(kwargs["tax_amount"]))
+        if "total_amount" in kwargs and kwargs.get("total_amount") is not None:
+            self.total_amount = Decimal(str(kwargs["total_amount"]))
 
     def __repr__(self):
         return f"<Invoice {self.invoice_number} ({self.client_name})>"

@@ -64,6 +64,14 @@
                         <label for="vat_exemption_reason" class="form-label">{{ _('VAT exemption reason') }}</label>
                         <input type="text" name="vat_exemption_reason" id="vat_exemption_reason" value="{{ invoice.vat_exemption_reason or '' }}" class="form-input">
                     </div>
+                    <div class="min-w-0">
+                        <label for="cig" class="form-label">{{ _('CIG (FatturaPA PA)') }}</label>
+                        <input type="text" name="cig" id="cig" value="{{ invoice.cig or '' }}" class="form-input" maxlength="15" placeholder="{{ _('Optional procurement code') }}">
+                    </div>
+                    <div class="min-w-0">
+                        <label for="cup" class="form-label">{{ _('CUP (FatturaPA PA)') }}</label>
+                        <input type="text" name="cup" id="cup" value="{{ invoice.cup or '' }}" class="form-input" maxlength="15" placeholder="{{ _('Optional project code') }}">
+                    </div>
                     <div class="md:col-span-2 min-w-0">
                         <label for="notes" class="form-label">{{ _('Notes') }}</label>
                         <textarea name="notes" id="notes" rows="3" class="form-input">{{ invoice.notes or '' }}</textarea>
