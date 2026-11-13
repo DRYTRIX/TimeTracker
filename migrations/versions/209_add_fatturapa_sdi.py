@@ -21,6 +21,7 @@ def _has_column(inspector, table_name: str, column_name: str) -> bool:
     try:
         return column_name in {c["name"] for c in inspector.get_columns(table_name)}
     except Exception:
+        # Table may not exist yet during partial upgrades.
         return False
 
 
@@ -47,7 +48,9 @@ def upgrade():
         inspector, "settings", sa.Column("sdi_enabled", sa.Boolean(), nullable=False, server_default=sa.false())
     )
     _add_column_if_missing(inspector, "settings", sa.Column("sdi_transport_url", sa.String(length=500), nullable=True))
-    _add_column_if_missing(inspector, "settings", sa.Column("sdi_transport_token", sa.String(length=255), nullable=True))
+    _add_column_if_missing(
+        inspector, "settings", sa.Column("sdi_transport_token", sa.String(length=255), nullable=True)
+    )
     _add_column_if_missing(inspector, "settings", sa.Column("sdi_transmitter_id", sa.String(length=16), nullable=True))
     _add_column_if_missing(
         inspector, "settings", sa.Column("sdi_timeout", sa.Integer(), nullable=True, server_default="30")
@@ -111,10 +114,12 @@ def downgrade():
         try:
             op.drop_index("ix_invoice_sdi_transmissions_status", table_name="invoice_sdi_transmissions")
         except Exception:
+            # Index may already be absent on some backends after partial downgrades.
             pass
         try:
             op.drop_index("ix_invoice_sdi_transmissions_invoice_id", table_name="invoice_sdi_transmissions")
         except Exception:
+            # Index may already be absent on some backends after partial downgrades.
             pass
         op.drop_table("invoice_sdi_transmissions")
 

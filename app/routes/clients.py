@@ -272,9 +272,7 @@ def create_client():
         country = (request.form.get("country", "") or "").strip().upper()[:2] or None
         vat_id = sanitize_input(request.form.get("vat_id", "").strip(), max_length=50)
         leitweg_id = sanitize_input(request.form.get("leitweg_id", "").strip(), max_length=100)
-        sdi_codice_destinatario = sanitize_input(
-            request.form.get("sdi_codice_destinatario", "").strip(), max_length=7
-        )
+        sdi_codice_destinatario = sanitize_input(request.form.get("sdi_codice_destinatario", "").strip(), max_length=7)
         pec_email = sanitize_input(request.form.get("pec_email", "").strip(), max_length=200)
         codice_fiscale = sanitize_input(request.form.get("codice_fiscale", "").strip(), max_length=16)
         provincia = sanitize_input(request.form.get("provincia", "").strip(), max_length=2)

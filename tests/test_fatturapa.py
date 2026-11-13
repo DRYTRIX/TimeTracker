@@ -118,9 +118,7 @@ def test_resolve_codice_pec_and_foreign():
 
 
 def test_validate_fails_without_recipient():
-    issues = validate_fatturapa_ready(
-        _invoice(), _settings(), _client(sdi_codice_destinatario="", pec_email="")
-    )
+    issues = validate_fatturapa_ready(_invoice(), _settings(), _client(sdi_codice_destinatario="", pec_email=""))
     assert any("Codice Destinatario" in msg or "PEC" in msg for msg in issues)
 
 
@@ -131,7 +129,7 @@ def test_validate_fails_without_provincia_for_it():
 
 def test_build_fpr12_structure():
     xml, filename, sha = build_fatturapa_xml(_invoice(), _settings(), _client(), "0002A")
-    assert "versione=\"FPR12\"" in xml or "versione='FPR12'" in xml
+    assert 'versione="FPR12"' in xml or "versione='FPR12'" in xml
     assert "FatturaElettronicaHeader" in xml
     assert "CedentePrestatore" in xml
     assert "CessionarioCommittente" in xml
@@ -147,7 +145,7 @@ def test_build_fpa12_with_cig_cup():
     client = _client(sdi_codice_destinatario="UFABC1")
     inv = _invoice(cig="Z1234567890", cup="J12C3400010001")
     xml, _fn, _sha = build_fatturapa_xml(inv, _settings(), client, "00001")
-    assert "versione=\"FPA12\"" in xml or "versione='FPA12'" in xml
+    assert 'versione="FPA12"' in xml or "versione='FPA12'" in xml
     assert "CodiceCIG" in xml
     assert "Z1234567890" in xml
     assert "CodiceCUP" in xml

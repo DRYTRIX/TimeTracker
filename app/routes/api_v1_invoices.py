@@ -465,17 +465,18 @@ def send_invoice_sdi_api(invoice_id):
         return error_response("Invoice not found", status_code=404)
     try:
         service = SdiService()
-        success, tx, message = service.send_invoice(invoice=invoice, triggered_by_user_id=g.api_user.id)
+        success, tx, _message = service.send_invoice(invoice=invoice, triggered_by_user_id=g.api_user.id)
     except Exception as e:
         current_app.logger.error(f"API SDI send failed: {type(e).__name__}: {e}")
         return error_response("Failed to send via SDI", status_code=502)
     payload = {
         "success": success,
-        "message": message,
         "sdi_tx_id": tx.id if tx else None,
         "status": tx.status if tx else None,
         "filename": tx.filename if tx else None,
     }
     if success:
+        payload["message"] = "Invoice sent via SDI"
         return jsonify(payload)
+    payload["message"] = "Failed to send via SDI"
     return jsonify(payload), 400

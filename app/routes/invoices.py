@@ -1800,15 +1800,12 @@ def send_invoice_sdi_route(invoice_id):
         from app.services import SdiService
 
         service = SdiService()
-        success, tx, message = service.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
+        success, tx, _message = service.send_invoice(invoice=invoice, triggered_by_user_id=current_user.id)
         if success:
             flash(_("Invoice sent via SDI"), "success")
-            return jsonify(
-                {"success": True, "message": message or "Invoice sent via SDI", "sdi_tx_id": tx.id if tx else None}
-            )
-        return jsonify(
-            {"error": message or "Failed to send invoice via SDI", "sdi_tx_id": tx.id if tx else None}
-        ), 400
+            return jsonify({"success": True, "message": "Invoice sent via SDI", "sdi_tx_id": tx.id if tx else None})
+        # Static client copy only — do not echo service/exception text (CodeQL).
+        return jsonify({"error": "Failed to send invoice via SDI", "sdi_tx_id": tx.id if tx else None}), 400
     except Exception as e:
         logger.error(f"Error sending invoice via SDI: {type(e).__name__}: {str(e)}")
         logger.exception("Full error traceback:")
@@ -1829,7 +1826,8 @@ def refresh_sdi_transmission(tx_id):
 
     result = SdiService().refresh_status(tx)
     if not result.get("ok"):
-        return jsonify({"error": result.get("error") or "Refresh failed"}), 400
+        # Do not forward intermediary/exception detail to the browser (CodeQL).
+        return jsonify({"error": "Refresh failed"}), 400
     return jsonify({"success": True, "status": result.get("status"), "transmission": tx.to_dict()})
 
 

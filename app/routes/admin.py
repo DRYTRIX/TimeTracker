@@ -1791,9 +1791,7 @@ def settings():
             settings_obj.company_country = country
             settings_obj.company_iban = (request.form.get("company_iban", "") or "").strip().replace(" ", "")
             settings_obj.company_bic = (request.form.get("company_bic", "") or "").strip().replace(" ", "")
-            settings_obj.company_codice_fiscale = (
-                request.form.get("company_codice_fiscale", "") or ""
-            ).strip().upper()
+            settings_obj.company_codice_fiscale = (request.form.get("company_codice_fiscale", "") or "").strip().upper()
             settings_obj.company_regime_fiscale = (
                 request.form.get("company_regime_fiscale", "") or "RF01"
             ).strip().upper() or "RF01"

@@ -100,10 +100,11 @@ class SdiService:
                 return True, tx, "Sent via SDI, but failed to persist send status"
             return True, tx, "Invoice sent via SDI"
         except SdiTransportError as e:
+            # Persist detail on the transmission; return a generic client message.
             tx.mark_failed(str(e))
             safe_commit("sdi_mark_failed", {"invoice_id": invoice.id, "tx_id": tx.id})
             current_app.logger.exception("SDI send failed")
-            return False, tx, f"SDI send failed: {e}"
+            return False, tx, "SDI send failed"
         except Exception as e:
             tx.mark_failed(type(e).__name__)
             safe_commit("sdi_mark_failed", {"invoice_id": invoice.id, "tx_id": tx.id})
@@ -122,10 +123,11 @@ class SdiService:
             transport = self._transport(settings)
             data = transport.get_status(tx.message_id)
         except SdiTransportError as e:
-            return {"ok": False, "error": str(e)}
-        except Exception as e:
+            current_app.logger.warning("SDI status refresh transport error: %s", e)
+            return {"ok": False, "error": "SDI status refresh failed"}
+        except Exception:
             current_app.logger.exception("SDI status refresh failed")
-            return {"ok": False, "error": str(e)}
+            return {"ok": False, "error": "SDI status refresh failed"}
 
         sdi_id = data.get("sdi_identifier") or data.get("sdiIdentifier")
         if sdi_id:

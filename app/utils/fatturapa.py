@@ -178,9 +178,7 @@ def validate_fatturapa_ready(invoice: Any, settings: Any, client: Any) -> List[s
 
     if not _strip(getattr(settings, "company_name", None)):
         issues.append("Settings: company name is required (seller).")
-    if not (
-        _strip(getattr(settings, "company_street", None)) or _strip(getattr(settings, "company_address", None))
-    ):
+    if not (_strip(getattr(settings, "company_street", None)) or _strip(getattr(settings, "company_address", None))):
         issues.append("Settings: company street or address is required.")
     if not _strip(getattr(settings, "company_postcode", None)):
         issues.append("Settings: company postcode (CAP) is required.")
@@ -292,6 +290,7 @@ def _collect_lines(invoice: Any) -> List[Dict[str, Any]]:
                 }
             )
     except Exception:
+        # Detached/lazy-load failures: fall through to expenses/goods/total fallback.
         pass
     try:
         expenses_rel = getattr(invoice, "expenses", None)
@@ -302,6 +301,7 @@ def _collect_lines(invoice: Any) -> List[Dict[str, Any]]:
             amt = getattr(ex, "total_amount", 0) or 0
             lines.append({"description": desc, "quantity": 1, "unit_price": amt, "line_total": amt})
     except Exception:
+        # Detached/lazy-load failures: skip expenses and continue.
         pass
     try:
         goods_rel = getattr(invoice, "extra_goods", None)
@@ -315,6 +315,7 @@ def _collect_lines(invoice: Any) -> List[Dict[str, Any]]:
                 }
             )
     except Exception:
+        # Detached/lazy-load failures: skip extra goods and continue.
         pass
     if not lines:
         # Fallback single line from invoice totals
