@@ -784,6 +784,16 @@ def edit_client(client_id):
             client.portal_username = None
             client.portal_password_hash = None
 
+        # Reminder policy (Phase 4)
+        rp_id_raw = request.form.get("reminder_policy_id", "").strip()
+        if rp_id_raw:
+            try:
+                client.reminder_policy_id = int(rp_id_raw)
+            except ValueError:
+                client.reminder_policy_id = None
+        else:
+            client.reminder_policy_id = None
+
         client.updated_at = datetime.utcnow()
 
         if not safe_commit("edit_client", {"client_id": client.id}):
@@ -799,7 +809,19 @@ def edit_client(client_id):
 
     # Load active custom field definitions for the form
     custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-    return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+    # Load reminder policies for the dropdown (Phase 4)
+    try:
+        from app.models.reminder_policy import ReminderPolicy as _RP
+
+        reminder_policies = _RP.query.filter_by(active=True).order_by(_RP.name).all()
+    except Exception:
+        reminder_policies = []
+    return render_template(
+        "clients/edit.html",
+        client=client,
+        custom_field_definitions=custom_field_definitions,
+        reminder_policies=reminder_policies,
+    )
 
 
 @clients_bp.route("/clients/<int:client_id>/send-portal-password-email", methods=["POST"])

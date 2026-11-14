@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if policy else 'New' }} Reminder Policy{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-3xl">
+  <h1 class="text-2xl font-bold mb-6">{{ 'Edit' if policy else 'New' }} Reminder Policy</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} mb-4">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="card p-4 mb-6">
+      <div class="mb-4">
+        <label class="form-label" for="name">Policy Name</label>
+        <input type="text" id="name" name="name" class="form-input" required
+               value="{{ policy.name if policy else '' }}">
+      </div>
+      <div class="flex gap-6">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="active" value="1" {{ 'checked' if (not policy or policy.active) }}>
+          Active
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="is_default" value="1" {{ 'checked' if policy and policy.is_default }}>
+          System Default
+        </label>
+      </div>
+    </div>
+
+    <h2 class="text-lg font-semibold mb-3">Levels</h2>
+    <p class="text-sm text-muted mb-4">
+      Days offset: negative = before due date, positive = after due date.
+    </p>
+
+    <div id="levels-container">
+      {% set existing_levels = policy.levels.all() if policy else [] %}
+      {% for lv in existing_levels %}
+      <div class="card p-4 mb-3 level-row">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div>
+            <label class="form-label">Days offset</label>
+            <input type="number" name="level_days_offset[]" class="form-input" value="{{ lv.days_offset }}" required>
+          </div>
+          <div>
+            <label class="form-label">Template name</label>
+            <input type="text" name="level_template_name[]" class="form-input" value="{{ lv.template_name or '' }}">
+          </div>
+          <div>
+            <label class="form-label">Late fee type</label>
+            <select name="level_late_fee_type[]" class="form-select">
+              <option value="">None</option>
+              <option value="fixed" {{ 'selected' if lv.late_fee_type == 'fixed' }}>Fixed amount</option>
+              <option value="percent_annual" {{ 'selected' if lv.late_fee_type == 'percent_annual' }}>Annual % interest</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Late fee value</label>
+            <input type="number" step="0.01" name="level_late_fee_value[]" class="form-input" value="{{ lv.late_fee_value or '' }}">
+          </div>
+          <div>
+            <label class="form-label">Sort order</label>
+            <input type="number" name="level_sort_order[]" class="form-input" value="{{ lv.sort_order }}">
+          </div>
+          <div class="flex items-end">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" name="level_active[]" value="1" {{ 'checked' if lv.active }}>
+              Active
+            </label>
+          </div>
+        </div>
+        <button type="button" onclick="this.closest('.level-row').remove()" class="btn btn-sm btn-danger mt-2">Remove</button>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button type="button" id="add-level" class="btn btn-secondary mb-6">+ Add Level</button>
+
+    <div>
+      <button type="submit" class="btn btn-primary">Save Policy</button>
+      <a href="{{ url_for('reminder_policies.list_policies') }}" class="btn btn-secondary ml-2">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+document.getElementById('add-level').addEventListener('click', function() {
+  const html = `<div class="card p-4 mb-3 level-row">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div>
+        <label class="form-label">Days offset</label>
+        <input type="number" name="level_days_offset[]" class="form-input" required>
+      </div>
+      <div>
+        <label class="form-label">Template name</label>
+        <input type="text" name="level_template_name[]" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">Late fee type</label>
+        <select name="level_late_fee_type[]" class="form-select">
+          <option value="">None</option>
+          <option value="fixed">Fixed amount</option>
+          <option value="percent_annual">Annual % interest</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Late fee value</label>
+        <input type="number" step="0.01" name="level_late_fee_value[]" class="form-input">
+      </div>
+      <div>
+        <label class="form-label">Sort order</label>
+        <input type="number" name="level_sort_order[]" class="form-input" value="0">
+      </div>
+      <div class="flex items-end">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="level_active[]" value="1" checked>
+          Active
+        </label>
+      </div>
+    </div>
+    <button type="button" onclick="this.closest('.level-row').remove()" class="btn btn-sm btn-danger mt-2">Remove</button>
+  </div>`;
+  document.getElementById('levels-container').insertAdjacentHTML('beforeend', html);
+});
+</script>
+{% endblock %}

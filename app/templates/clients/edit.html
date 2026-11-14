@@ -190,6 +190,22 @@
                     </div>
                 </div>
 
+                {# ── Reminder Policy ─────────────────────────────────────────── #}
+                <div class="mt-4">
+                    <label for="reminder_policy_id" class="form-label">{{ _('Invoice Reminder Policy') }}</label>
+                    <select id="reminder_policy_id" name="reminder_policy_id" class="form-select">
+                        <option value="">{{ _('Use system default') }}</option>
+                        {% for rp in reminder_policies %}
+                        <option value="{{ rp.id }}" {{ 'selected' if client.reminder_policy_id == rp.id }}>
+                            {{ rp.name }}{% if rp.is_default %} (default){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                        {{ _('Override the reminder schedule for invoices sent to this client.') }}
+                    </p>
+                </div>
+
                 <div class="mt-6 flex justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
                     <a href="{{ url_for('clients.view_client', client_id=client.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
                     <button type="submit" class="btn btn-primary">{{ _('Update Client') }}</button>

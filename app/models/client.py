@@ -57,6 +57,9 @@ class Client(db.Model):
     # Custom fields for flexible data storage (e.g., debtor_number, ERP IDs, etc.)
     custom_fields = db.Column(db.JSON, nullable=True)
 
+    # Optional reminder policy override (falls back to system default)
+    reminder_policy_id = db.Column(db.Integer, db.ForeignKey("reminder_policies.id"), nullable=True)
+
     # Relationships
     projects = db.relationship("Project", backref="client_obj", lazy="dynamic", cascade="all, delete-orphan")
     time_entries = db.relationship("TimeEntry", backref="client", lazy="dynamic", cascade="all, delete-orphan")
