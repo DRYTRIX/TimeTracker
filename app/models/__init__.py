@@ -86,10 +86,10 @@ from .quote_template import QuoteTemplate
 from .quote_version import QuoteVersion
 from .rate_override import RateOverride
 from .recurring_block import RecurringBlock
-from .reminder_policy import ReminderPolicy, ReminderPolicyLevel
 from .recurring_invoice import RecurringInvoice
 from .recurring_project_cost import RecurringProjectCost
 from .recurring_task import RecurringTask
+from .reminder_policy import ReminderPolicy, ReminderPolicyLevel
 from .reporting import ReportEmailSchedule, SavedReportView
 from .salesman_email_mapping import SalesmanEmailMapping
 from .saved_filter import SavedFilter

@@ -51,10 +51,11 @@ def test_check_overdue_skips_draft_and_paid(app, user, project):
     from datetime import date, timedelta
     from decimal import Decimal
 
+    from factories import ClientFactory, InvoiceFactory
+
     from app import db
     from app.models import Invoice
     from app.utils.scheduled_tasks import check_overdue_invoices
-    from factories import ClientFactory, InvoiceFactory
 
     client = ClientFactory(name="Overdue Job Client")
     db.session.commit()
