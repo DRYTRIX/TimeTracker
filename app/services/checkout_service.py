@@ -67,6 +67,8 @@ class CheckoutService:
             "payment_intent.succeeded",
             "checkout.session.completed",
             "PAYMENT.CAPTURE.COMPLETED",
+            # Mollie payment statuses that indicate a successful payment
+            "paid",
         ):
             return {"success": True, "message": "ignored", "status": 200}
 
@@ -151,17 +153,17 @@ class CheckoutService:
         if not invoice:
             return None
 
-        payment = Payment(
+        from app.services.payment_service import PaymentService
+
+        result = PaymentService().create_payment(
             invoice_id=webhook.invoice_id,
             amount=webhook.amount or Decimal("0"),
-            currency=(webhook.currency or invoice.currency_code or "EUR").upper(),
             payment_date=date.today(),
+            received_by=invoice.created_by or 0,
+            currency=(webhook.currency or invoice.currency_code or "EUR").upper(),
             method=gateway.provider,
             reference=webhook.transaction_id,
             status="completed",
-            received_by=invoice.created_by,
             gateway_transaction_id=webhook.transaction_id,
         )
-        db.session.add(payment)
-        safe_commit("checkout_payment_ledger", {"invoice_id": webhook.invoice_id})
-        return payment
+        return result.get("payment")

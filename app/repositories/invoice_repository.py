@@ -52,10 +52,25 @@ class InvoiceRepository(BaseRepository[Invoice]):
         return query.order_by(Invoice.issue_date.desc()).all()
 
     def get_overdue(self, include_relations: bool = False) -> List[Invoice]:
-        """Get overdue invoices"""
+        """Get overdue invoices (past due, not fully paid)."""
         today = date.today()
+        # PARTIALLY_PAID lives on PaymentStatus, not InvoiceStatus (lifecycle).
+        # Treat sent/issued/overdue invoices that are still unpaid or partially paid.
         query = self.model.query.filter(
-            Invoice.due_date < today, Invoice.status.in_([InvoiceStatus.SENT.value, InvoiceStatus.PARTIALLY_PAID.value])
+            Invoice.due_date < today,
+            Invoice.status.in_(
+                [
+                    InvoiceStatus.SENT.value,
+                    InvoiceStatus.ISSUED.value,
+                    InvoiceStatus.OVERDUE.value,
+                ]
+            ),
+            Invoice.payment_status.in_(
+                [
+                    PaymentStatus.UNPAID.value,
+                    PaymentStatus.PARTIALLY_PAID.value,
+                ]
+            ),
         )
 
         if include_relations:

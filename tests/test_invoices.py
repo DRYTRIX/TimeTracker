@@ -2423,3 +2423,72 @@ def test_delete_invoice_with_complex_data_smoke(app, client, user, project):
 
     # Verify invoice and all related data are deleted
     assert Invoice.query.get(invoice_id) is None
+
+
+@pytest.mark.routes
+def test_edit_sent_invoice_locks_financial_fields(app, client, user, project):
+    """Sent invoices cannot change amounts or line items; notes/due date still update."""
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    cl = ClientFactory(name="Lock Test Client", email="lock@test.com")
+    db.session.commit()
+
+    inv = InvoiceFactory(
+        invoice_number="INV-LOCK-001",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=14),
+        created_by=user.id,
+        tax_rate=Decimal("10.00"),
+        notes="Original notes",
+        terms="Original terms",
+        client_email="lock@test.com",
+    )
+    # Invoice.__init__ ignores status kwargs from the factory
+    inv.status = "sent"
+    db.session.commit()
+    InvoiceItemFactory(
+        invoice_id=inv.id, description="Line A", quantity=Decimal("2.00"), unit_price=Decimal("50.00")
+    )
+    db.session.commit()
+    inv.calculate_totals()
+    db.session.commit()
+    original_total = inv.total_amount
+    original_tax = inv.tax_rate
+
+    resp = client.post(
+        f"/invoices/{inv.id}/edit",
+        data={
+            "client_name": "Hacked Name",
+            "client_email": "hacked@test.com",
+            "client_address": inv.client_address or "",
+            "due_date": (date.today() + timedelta(days=30)).strftime("%Y-%m-%d"),
+            "tax_rate": "99.00",
+            "notes": "Updated notes only",
+            "terms": "Updated terms",
+            "description[]": ["Should Not Apply"],
+            "quantity[]": ["99"],
+            "unit_price[]": ["999"],
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+    db.session.refresh(inv)
+    assert inv.client_name == cl.name
+    assert inv.tax_rate == original_tax
+    assert inv.total_amount == original_total
+    assert inv.notes == "Updated notes only"
+    assert inv.terms == "Updated terms"
+    assert inv.due_date == date.today() + timedelta(days=30)
+    assert inv.items.count() == 1
+
+
+def test_invoice_status_enum_has_issued(app):
+    from app.constants import InvoiceStatus, PaymentStatus
+
+    assert InvoiceStatus.ISSUED.value == "issued"
+    assert "partially_paid" not in {s.value for s in InvoiceStatus}
+    assert PaymentStatus.OVERPAID.value == "overpaid"
