@@ -383,3 +383,26 @@ def build_minimal_xrechnung_xml(invoice: Any, *, seller_name: str, buyer_name: s
     )
     xml, _ = build_xrechnung_ubl_invoice_xml(inv, settings, client)
     return xml
+
+
+def build_xrechnung_ubl_credit_note_xml(credit_note, invoice, settings, client) -> Tuple[str, str]:
+    """Build XRechnung-flavoured UBL CreditNote (type 381) from Peppol credit note XML."""
+    import hashlib
+
+    from app.integrations.peppol import build_peppol_ubl_credit_note_xml
+
+    buyer_reference = effective_buyer_reference(invoice, client)
+    supplier = build_supplier_party(settings)
+    customer = build_customer_party(invoice, client, buyer_reference)
+    xml, _doc_id = build_peppol_ubl_credit_note_xml(credit_note, invoice, supplier, customer)
+    # Patch CustomizationID to XRechnung 3.0
+    try:
+        root = ET.fromstring(xml.encode("utf-8"))
+        for el in root.iter():
+            if el.tag.endswith("CustomizationID"):
+                el.text = XRECHNUNG_30_CUSTOMIZATION_ID
+                break
+        xml = ET.tostring(root, encoding="utf-8", xml_declaration=True).decode("utf-8")
+    except Exception:
+        pass
+    return xml, hashlib.sha256(xml.encode("utf-8")).hexdigest()

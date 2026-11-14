@@ -87,7 +87,11 @@ def check_overdue_invoices():
 
         # Calendar "today" in app timezone (not UTC / host local)
         today = now_in_app_timezone().date()
-        overdue_invoices = Invoice.query.filter(Invoice.due_date < today, Invoice.status.in_(["draft", "sent"])).all()
+        overdue_invoices = Invoice.query.filter(
+            Invoice.due_date < today,
+            Invoice.status.in_(["sent", "issued"]),
+            Invoice.payment_status != "fully_paid",
+        ).all()
 
         logger.info(f"Found {len(overdue_invoices)} overdue invoices")
 
@@ -97,6 +101,17 @@ def check_overdue_invoices():
             if invoice.status != "overdue":
                 invoice.status = "overdue"
                 db.session.commit()
+                try:
+                    from app.constants import WebhookEvent
+                    from app.utils.invoice_events import emit_invoice_event
+
+                    emit_invoice_event(WebhookEvent.INVOICE_OVERDUE.value, invoice)
+                except Exception as emit_exc:
+                    logger.debug(
+                        "Failed to emit invoice.overdue for %s: %s",
+                        invoice.invoice_number,
+                        emit_exc,
+                    )
 
             # Get users to notify (creator and admins)
             users_to_notify = set()
@@ -138,6 +153,17 @@ def check_overdue_invoices():
                     )
 
         logger.info(f"Sent {notifications_sent} overdue invoice notifications")
+
+        # --- Phase 4: multi-level reminder sends & late fees ---
+        try:
+            from app.services.invoice_reminder_service import process_due_reminders
+
+            reminders_sent = process_due_reminders(today=today)
+            if reminders_sent:
+                logger.info("Invoice reminder service sent %d reminder(s)", reminders_sent)
+        except Exception as reminder_exc:
+            logger.error("Invoice reminder service failed: %s", reminder_exc, exc_info=True)
+
         return notifications_sent
 
     except Exception as e:

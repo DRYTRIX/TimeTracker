@@ -262,3 +262,102 @@ def test_export_invoice_pdf_forbidden_for_other_user(client, api_token, other_to
 def test_export_invoice_pdf_not_found(client, api_token):
     r = client.get("/api/v1/invoices/999999/pdf", headers=_auth_header(api_token))
     assert r.status_code == 404
+
+
+# --- POST /invoices/<id>/send-email ---
+
+
+def test_send_invoice_email_api(client, api_token, project, client_model, user):
+    from unittest.mock import MagicMock, patch
+
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    mock_email = MagicMock()
+    mock_email.id = 42
+    with patch(
+        "app.utils.email.send_invoice_email",
+        return_value=(True, mock_email, "ok"),
+    ) as mock_send:
+        r = client.post(
+            f"/api/v1/invoices/{invoice_id}/send-email",
+            headers=_auth_header(api_token),
+            json={"recipient_email": "billing@example.com", "subject": "Your invoice"},
+        )
+    assert r.status_code == 200, r.get_json()
+    body = r.get_json()
+    assert body["success"] is True
+    assert body["invoice_email_id"] == 42
+    mock_send.assert_called_once()
+    kwargs = mock_send.call_args.kwargs
+    assert kwargs["recipient_email"] == "billing@example.com"
+    assert kwargs["subject"] == "Your invoice"
+
+
+def test_send_invoice_email_requires_recipient(client, api_token, project, client_model, app):
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    with app.app_context():
+        inv = Invoice.query.get(invoice_id)
+        inv.client_email = None
+        db.session.commit()
+    r = client.post(
+        f"/api/v1/invoices/{invoice_id}/send-email",
+        headers=_auth_header(api_token),
+        json={},
+    )
+    assert r.status_code == 400
+
+
+# --- GET /invoices/<id>/ubl|xrechnung|fatturapa ---
+
+
+def test_export_invoice_ubl_api(client, api_token, project, client_model):
+    from unittest.mock import MagicMock, patch
+
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    fake_party = MagicMock()
+    with (
+        patch("app.services.peppol_service.PeppolService") as MockSvc,
+        patch(
+            "app.integrations.peppol.build_peppol_ubl_invoice_xml",
+            return_value=("<Invoice/>", "doc-id"),
+        ),
+    ):
+        svc = MockSvc.return_value
+        svc._get_sender_party.return_value = fake_party
+        svc._get_recipient_party.return_value = (fake_party, None, None)
+        r = client.get(f"/api/v1/invoices/{invoice_id}/ubl", headers=_auth_header(api_token))
+    assert r.status_code == 200
+    assert "xml" in (r.content_type or "")
+    assert b"<Invoice" in r.data
+
+
+def test_export_invoice_xrechnung_api(client, api_token, project, client_model):
+    from unittest.mock import patch
+
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    with (
+        patch("app.utils.xrechnung.validate_xrechnung_ready", return_value=[]),
+        patch(
+            "app.utils.xrechnung.build_xrechnung_ubl_invoice_xml",
+            return_value=("<rsm:CrossIndustryInvoice/>", "sha"),
+        ),
+    ):
+        r = client.get(f"/api/v1/invoices/{invoice_id}/xrechnung", headers=_auth_header(api_token))
+    assert r.status_code == 200
+    assert "xml" in (r.content_type or "")
+
+
+def test_export_invoice_fatturapa_api(client, api_token, project, client_model):
+    from unittest.mock import patch
+
+    invoice_id = _create_draft_invoice(client, api_token, project, client_model)
+    with (
+        patch("app.utils.fatturapa.validate_fatturapa_ready", return_value=[]),
+        patch("app.utils.fatturapa.progressivo_from_id", return_value="00001"),
+        patch(
+            "app.utils.fatturapa.build_fatturapa_xml",
+            return_value=("<p:FatturaElettronica/>", "IT123.xml", "sha"),
+        ),
+    ):
+        r = client.get(f"/api/v1/invoices/{invoice_id}/fatturapa", headers=_auth_header(api_token))
+    assert r.status_code == 200
+    assert "xml" in (r.content_type or "")

@@ -21,7 +21,7 @@ TimeTracker uses a **single CI pipeline** ([`.github/workflows/ci.yml`](../../.g
       │
  ┌────┴──────────────────────────────────────────────────────────┐
  │ parallel (skipped when paths don't match)                     │
- │  lint │ security │ tests(×4 shards) │ frontend │ migrations   │
+ │  lint │ security │ tests(×8 shards) │ frontend │ migrations   │
  │  docker+e2e │ desktop │ mobile                                │
  └────┬──────────────────────────────────────────────────────────┘
       │
@@ -36,7 +36,7 @@ Docs-only PRs (`**/*.md`, `docs/**`) complete in about a minute: every heavy job
 
 ### Tests
 
-- Run **once**, sharded 4 ways with `pytest-split` against Postgres.
+- Run **once**, sharded **8** ways with `pytest-split` (`least_duration`) against Postgres. Durations are cached across runs so shards stay balanced.
 - Coverage shards are averaged; gate is **40%** (ratchet upward over time).
 - Integration no longer runs as a separate 15-minute job that timed out every release.
 

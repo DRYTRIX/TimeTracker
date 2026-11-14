@@ -389,8 +389,9 @@ def dashboard():
     if is_module_enabled("invoices") and (current_user.is_admin or current_user.has_permission("create_invoices")):
         overdue_rows = (
             Invoice.query.filter(
-                Invoice.status.in_(["sent", "overdue", "partially_paid"]),
+                Invoice.status.in_(["sent", "issued", "overdue"]),
                 Invoice.due_date < today_date,
+                Invoice.payment_status.in_(["unpaid", "partially_paid"]),
             )
             .order_by(Invoice.due_date.asc())
             .all()

@@ -12,6 +12,13 @@
 {% endset %}
 {{ page_header('fas fa-file-invoice', _('Edit Invoice') ~ ' ' ~ invoice.invoice_number, subtitle_text=_('Update invoice details, items, and terms'), actions_html=actions, breadcrumbs=[{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': _('Edit Invoice')}]) }}
 
+{% if financial_locked %}
+<div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
+    <i class="fas fa-lock mr-2"></i>
+    {{ _('This invoice is no longer a draft. Only notes, terms and due date can be changed. Issue a credit note to correct amounts or line items.') }}
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 pb-28 sm:pb-6">
     <div class="lg:col-span-2 min-w-0">
         <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
@@ -20,11 +27,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 min-w-0">
                     <div class="min-w-0">
                         <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
-                        <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input text-base min-h-[44px]">
+                        <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>
                     </div>
                     <div class="min-w-0">
                         <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
-                        <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="form-input text-base min-h-[44px]">
+                        <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>
                     </div>
                     <div class="min-w-0">
                         <label for="due_date" class="form-label">{{ _('Due Date') }} *</label>
@@ -32,7 +39,15 @@
                     </div>
                     <div class="min-w-0">
                         <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
-                        <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" inputmode="decimal" class="form-input text-base min-h-[44px]">
+                        <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" inputmode="decimal" class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>
+                    </div>
+                    <div class="min-w-0">
+                        <label for="discount_percent" class="form-label">{{ _('Invoice Discount (%)') }}</label>
+                        <input type="number" name="discount_percent" id="discount_percent" value="{{ invoice.discount_percent or '' }}" step="0.01" min="0" max="100" inputmode="decimal" class="form-input text-base min-h-[44px]" placeholder="0" {% if financial_locked %}readonly{% endif %}>
+                    </div>
+                    <div class="min-w-0">
+                        <label for="discount_amount" class="form-label">{{ _('Invoice Discount (amount)') }}</label>
+                        <input type="number" name="discount_amount" id="discount_amount" value="{{ invoice.discount_amount or '' }}" step="0.01" min="0" inputmode="decimal" class="form-input text-base min-h-[44px]" placeholder="0.00" {% if financial_locked %}readonly{% endif %}>
                     </div>
                     <div class="md:col-span-2">
                         <label for="client_address" class="form-label">{{ _('Client Address') }}</label>
@@ -109,10 +124,12 @@
 
                     <div id="invoice-items" class="space-y-2">
                         {% for item in invoice.items %}
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 md:p-3 rounded-xl md:rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row min-w-0 hover:shadow-sm transition shadow-sm md:shadow-none" data-is-time-based="{{ 'true' if item.time_entry_ids else 'false' }}">
+                        <div class="rounded-xl md:rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row min-w-0 hover:shadow-sm transition shadow-sm md:shadow-none" data-is-time-based="{{ 'true' if item.time_entry_ids else 'false' }}">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 md:p-3">
                             <input type="hidden" name="item_stock_item_id[]" value="{{ item.stock_item_id if item.stock_item_id else '' }}">
                             <input type="hidden" name="item_warehouse_id[]" value="{{ item.warehouse_id if item.warehouse_id else '' }}">
                             <input type="hidden" name="item_time_entry_ids[]" value="{{ item.time_entry_ids or '' }}">
+                            <input type="hidden" name="item_position[]" value="{{ item.position or loop.index0 }}">
                             {% if item.time_entry_ids %}
                             {# Time-based item: show Project and Task #}
                             <div class="md:col-span-2 min-w-0 flex flex-col justify-center">
@@ -166,6 +183,41 @@
                                 </button>
                             </div>
                         </div>
+                        {# Per-line advanced: tax rate, discounts, reorder #}
+                        <div class="flex flex-wrap items-center gap-2 px-3 pb-2 text-xs">
+                            <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Line:') }}</span>
+                            <label class="flex items-center gap-1 text-text-muted-light dark:text-text-muted-dark">
+                                {{ _('Tax%') }}
+                                <input type="number" name="item_tax_rate[]" value="{{ item.tax_rate if item.tax_rate is not none else '' }}" step="0.01" min="0" max="100" class="form-input text-xs py-0.5 w-16" placeholder="{{ '%.2f'|format(invoice.tax_rate) }}" {% if financial_locked %}readonly{% endif %}>
+                            </label>
+                            <label class="flex items-center gap-1 text-text-muted-light dark:text-text-muted-dark">
+                                {{ _('Disc%') }}
+                                <input type="number" name="item_discount_percent[]" value="{{ item.discount_percent or '' }}" step="0.01" min="0" max="100" class="form-input text-xs py-0.5 w-16" placeholder="0" data-calc-trigger {% if financial_locked %}readonly{% endif %}>
+                            </label>
+                            <label class="flex items-center gap-1 text-text-muted-light dark:text-text-muted-dark">
+                                {{ _('Disc amt') }}
+                                <input type="number" name="item_discount_amount[]" value="{{ item.discount_amount or '' }}" step="0.01" min="0" class="form-input text-xs py-0.5 w-20" placeholder="0.00" data-calc-trigger {% if financial_locked %}readonly{% endif %}>
+                            </label>
+                            <label class="flex items-center gap-1 text-text-muted-light dark:text-text-muted-dark" title="{{ _('VAT category override') }}">
+                                {{ _('VAT') }}
+                                <select name="item_vat_category[]" class="form-input text-xs py-0.5" {% if financial_locked %}disabled{% endif %}>
+                                    <option value="">—</option>
+                                    {% set ivc = item.vat_category or '' %}
+                                    <option value="S" {% if ivc == 'S' %}selected{% endif %}>S</option>
+                                    <option value="Z" {% if ivc == 'Z' %}selected{% endif %}>Z</option>
+                                    <option value="E" {% if ivc == 'E' %}selected{% endif %}>E</option>
+                                    <option value="AE" {% if ivc == 'AE' %}selected{% endif %}>AE</option>
+                                    <option value="K" {% if ivc == 'K' %}selected{% endif %}>K</option>
+                                    <option value="G" {% if ivc == 'G' %}selected{% endif %}>G</option>
+                                    <option value="O" {% if ivc == 'O' %}selected{% endif %}>O</option>
+                                </select>
+                            </label>
+                            <span class="ml-auto flex gap-1">
+                                <button type="button" class="item-move-up text-text-muted-light hover:text-blue-600 px-1 py-0.5 rounded" title="{{ _('Move up') }}">▲</button>
+                                <button type="button" class="item-move-down text-text-muted-light hover:text-blue-600 px-1 py-0.5 rounded" title="{{ _('Move down') }}">▼</button>
+                            </span>
+                        </div>
+                        </div>{# /invoice-item-row outer #}
                         {% endfor %}
                     </div>
 
@@ -573,10 +625,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
+        // Determine position for new row (after existing items)
+        const existingRows = itemsContainer.querySelectorAll('.invoice-item-row');
+        const newPos = existingRows.length;
         row.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3">
             <input type="hidden" name="item_stock_item_id[]" value="">
             <input type="hidden" name="item_warehouse_id[]" value="">
             <input type="hidden" name="item_time_entry_ids[]" value="">
+            <input type="hidden" name="item_position[]" value="${newPos}">
             <div class="md:col-span-2 min-w-0 flex flex-col">
                 <select class="form-input item-stock-select text-sm">
                     ${stockItemsHtml}
@@ -600,6 +657,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button type="button" class="remove-item bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 px-3 py-2 rounded hover:bg-rose-200 dark:hover:bg-rose-900/50 transition" title="{{ _('Remove item') }}">
                     <i class="fas fa-trash"></i>
                 </button>
+            </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 px-3 pb-2 text-xs">
+                <span class="text-gray-400">{{ _('Line:') }}</span>
+                <label class="flex items-center gap-1 text-gray-500">{{ _('Tax%') }} <input type="number" name="item_tax_rate[]" step="0.01" min="0" max="100" class="form-input text-xs py-0.5 w-16" placeholder="—"></label>
+                <label class="flex items-center gap-1 text-gray-500">{{ _('Disc%') }} <input type="number" name="item_discount_percent[]" value="" step="0.01" min="0" max="100" class="form-input text-xs py-0.5 w-16" placeholder="0" data-calc-trigger></label>
+                <label class="flex items-center gap-1 text-gray-500">{{ _('Disc amt') }} <input type="number" name="item_discount_amount[]" value="" step="0.01" min="0" class="form-input text-xs py-0.5 w-20" placeholder="0.00" data-calc-trigger></label>
+                <label class="flex items-center gap-1 text-gray-500" title="{{ _('VAT category') }}">{{ _('VAT') }}
+                    <select name="item_vat_category[]" class="form-input text-xs py-0.5">
+                        <option value="">—</option>
+                        <option value="S">S</option><option value="Z">Z</option><option value="E">E</option>
+                        <option value="AE">AE</option><option value="K">K</option><option value="G">G</option><option value="O">O</option>
+                    </select>
+                </label>
+                <span class="ml-auto flex gap-1">
+                    <button type="button" class="item-move-up text-gray-400 hover:text-blue-600 px-1 py-0.5 rounded" title="{{ _('Move up') }}">▲</button>
+                    <button type="button" class="item-move-down text-gray-400 hover:text-blue-600 px-1 py-0.5 rounded" title="{{ _('Move down') }}">▼</button>
+                </span>
             </div>
         `;
         itemsContainer.appendChild(row);
@@ -698,11 +773,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     row.remove();
+                    _renumberItemPositions();
                     calculateTotals();
                 }, 200);
             }
         }
+        // Move up / down handlers
+        if (e.target.closest('.item-move-up') || e.target.closest('.item-move-down')) {
+            const btn = e.target.closest('.item-move-up') || e.target.closest('.item-move-down');
+            const row = btn.closest('.invoice-item-row');
+            if (!row) return;
+            const container = row.parentElement;
+            if (btn.classList.contains('item-move-up')) {
+                const prev = row.previousElementSibling;
+                if (prev && prev.classList.contains('invoice-item-row')) {
+                    container.insertBefore(row, prev);
+                }
+            } else {
+                const next = row.nextElementSibling;
+                if (next && next.classList.contains('invoice-item-row')) {
+                    container.insertBefore(next, row);
+                }
+            }
+            _renumberItemPositions();
+        }
     });
+
+    function _renumberItemPositions() {
+        const rows = itemsContainer ? itemsContainer.querySelectorAll('.invoice-item-row') : [];
+        rows.forEach((row, idx) => {
+            const posInput = row.querySelector('input[name="item_position[]"]');
+            if (posInput) posInput.value = idx;
+        });
+    }
 
     // Add expense button - redirect to generate from time page which includes expenses
     const addExpenseBtn = document.getElementById('add-expense');

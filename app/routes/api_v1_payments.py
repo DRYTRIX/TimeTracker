@@ -99,7 +99,11 @@ def create_payment():
         trigger_payment_sync(result.get("payment"))
     except Exception:
         pass
-    return jsonify({"message": "Payment created successfully", "payment": result["payment"].to_dict()}), 201
+    payload = {"message": "Payment created successfully", "payment": result["payment"].to_dict()}
+    if result.get("warning"):
+        payload["warning"] = result["warning"]
+        payload["overpayment"] = True
+    return jsonify(payload), 201
 
 
 @api_v1_payments_bp.route("/payments/<int:payment_id>", methods=["PUT", "PATCH"])

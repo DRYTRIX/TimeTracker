@@ -89,3 +89,27 @@ class TestPaymentService:
         total = service.get_total_paid(invoice.id)
 
         assert total == Decimal("100.00")
+
+
+def test_create_payment_sets_overpaid_status(db_session, invoice, user):
+    """Overpaying an invoice sets payment_status to overpaid and returns a warning."""
+    invoice.total_amount = Decimal("100.00")
+    invoice.amount_paid = Decimal("0")
+    invoice.payment_status = "unpaid"
+    db_session.commit()
+
+    service = PaymentService()
+    result = service.create_payment(
+        invoice_id=invoice.id,
+        amount=Decimal("150.00"),
+        payment_date=date.today(),
+        received_by=user.id,
+    )
+
+    assert result["success"] is True
+    assert result.get("overpayment") is True
+    assert "warning" in result
+    db_session.refresh(invoice)
+    assert invoice.payment_status == "overpaid"
+    assert invoice.amount_paid == Decimal("150.00")
+    assert invoice.status == "paid"

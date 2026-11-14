@@ -379,6 +379,12 @@ class WebhookService:
             "invoice.sent",
             "invoice.paid",
             "invoice.overdue",
+            # Credit note / payment events
+            "credit_note.created",
+            "payment.created",
+            "payment.processed",
+            "payment.failed",
+            "payment.refunded",
             # Client events
             "client.created",
             "client.updated",

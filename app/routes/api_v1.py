@@ -2886,17 +2886,16 @@ def create_credit_note():
         amt = Decimal(str(data["amount"]))
     except Exception:
         return jsonify({"error": "Invalid amount"}), 400
-    # Generate credit number (simple: CN-<invoice_id>-<timestamp>)
-    credit_number = f"CN-{inv.id}-{int(datetime.utcnow().timestamp())}"
-    cn = CreditNote(
-        invoice_id=inv.id,
-        credit_number=credit_number,
-        amount=amt,
+    from app.services.credit_note_service import CreditNoteService
+
+    cn = CreditNoteService.create_amount_credit(
+        inv,
+        g.api_user.id,
+        amt,
         reason=data.get("reason"),
-        created_by=g.api_user.id,
+        description=data.get("reason") or "Credit",
+        auto_issue=False,
     )
-    db.session.add(cn)
-    db.session.commit()
     return (
         jsonify(
             {
@@ -2949,6 +2948,61 @@ def delete_credit_note(cn_id):
     db.session.delete(cn)
     db.session.commit()
     return jsonify({"message": "Credit note deleted successfully"})
+
+
+@api_v1_bp.route("/credit-notes/<int:cn_id>/pdf", methods=["GET"])
+@require_api_token("read:invoices")
+def download_credit_note_pdf_api(cn_id):
+    """Download credit note as PDF."""
+    from app.utils.credit_note_pdf import generate_credit_note_pdf
+
+    cn = CreditNote.query.get_or_404(cn_id)
+    try:
+        pdf_bytes = generate_credit_note_pdf(cn)
+    except Exception as e:
+        current_app.logger.error("Credit note PDF failed for cn=%s: %s", cn_id, e, exc_info=True)
+        return error_response("Failed to generate credit note PDF", status_code=500)
+    filename = f"credit-note-{cn.credit_number}.pdf"
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@api_v1_bp.route("/credit-notes/<int:cn_id>/ubl", methods=["GET"])
+@require_api_token("read:invoices")
+def download_credit_note_ubl_api(cn_id):
+    """Download credit note as Peppol UBL CreditNote XML."""
+    from app.integrations.peppol import PeppolParty, build_peppol_ubl_credit_note_xml
+    from app.models import Settings
+
+    cn = CreditNote.query.get_or_404(cn_id)
+    invoice = Invoice.query.get_or_404(cn.invoice_id)
+    try:
+        settings = Settings.get_settings()
+        supplier = PeppolParty(
+            endpoint_id=getattr(settings, "peppol_sender_id", "") or "",
+            endpoint_scheme_id=getattr(settings, "peppol_sender_scheme", "0088") or "0088",
+            name=getattr(settings, "company_name", "Supplier") or "Supplier",
+            tax_id=getattr(settings, "company_tax_id", None),
+        )
+        customer = PeppolParty(
+            endpoint_id=getattr(invoice, "buyer_reference", "") or "",
+            endpoint_scheme_id="0088",
+            name=invoice.client_name or "Customer",
+        )
+        xml_str, _ = build_peppol_ubl_credit_note_xml(cn, invoice, supplier, customer)
+    except Exception as e:
+        current_app.logger.error("Credit note UBL failed for cn=%s: %s", cn_id, e, exc_info=True)
+        return error_response("Failed to generate credit note UBL", status_code=500)
+    filename = f"credit-note-{cn.credit_number}-ubl.xml"
+    return Response(
+        xml_str,
+        mimetype="application/xml",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ==================== Reports ====================

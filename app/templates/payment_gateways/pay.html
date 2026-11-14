@@ -22,13 +22,12 @@
         </div>
     </div>
 
-    {% if gateway.provider == 'stripe' %}
     <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <form method="POST" action="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" novalidate>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
-                {{ _('You will be redirected to a secure payment page to complete your payment.') }}
+                {{ _('You will be redirected to a secure %(provider)s payment page to complete your payment.', provider=gateway.provider|title) }}
             </p>
 
             <div class="flex justify-end gap-4">
@@ -39,13 +38,5 @@
             </div>
         </form>
     </div>
-    {% else %}
-    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-        <p class="text-sm text-yellow-800 dark:text-yellow-200">
-            <i class="fas fa-exclamation-triangle mr-2"></i>
-            {{ _('Payment gateway not yet supported. Please contact support.') }}
-        </p>
-    </div>
-    {% endif %}
 </div>
 {% endblock %}

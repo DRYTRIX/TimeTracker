@@ -180,15 +180,13 @@ class PaymentGatewayService:
             if error_code:
                 transaction.error_code = error_code
 
-            # Update invoice if payment completed or failed
+            # Invoice amount_paid is owned by Payment ledger rows (CheckoutService /
+            # PaymentService). Do not bump amount_paid here — that double-counted
+            # with the Payment row created after the webhook.
             if status == "completed" and old_status != "completed":
                 invoice = Invoice.query.get(transaction.invoice_id)
-                if invoice:
-                    invoice.amount_paid = (invoice.amount_paid or Decimal("0")) + transaction.amount
-                    if invoice.amount_paid >= invoice.total_amount:
-                        invoice.payment_status = "fully_paid"
-                        invoice.status = "paid"
-                        invoice.payment_date = now_in_app_timezone().date()
+                if invoice and not invoice.payment_date:
+                    invoice.payment_date = now_in_app_timezone().date()
 
             if not safe_commit("update_transaction_status", {"transaction_id": transaction_id}):
                 return {"success": False, "message": "Could not update transaction due to a database error."}
@@ -203,9 +201,15 @@ class PaymentGatewayService:
                     },
                 )
                 invoice = Invoice.query.get(transaction.invoice_id)
-                if invoice and invoice.payment_status == "fully_paid":
+                if invoice and invoice.payment_status in ("fully_paid", "overpaid"):
+                    from app.utils.invoice_events import emit_invoice_event
                     from app.utils.workflow_bridge import fire_invoice_paid_workflow
 
+                    emit_invoice_event(
+                        WebhookEvent.INVOICE_PAID.value,
+                        invoice,
+                        transaction_id=transaction.id,
+                    )
                     fire_invoice_paid_workflow(invoice, invoice.created_by or 0)
             elif status == "failed":
                 emit_event(

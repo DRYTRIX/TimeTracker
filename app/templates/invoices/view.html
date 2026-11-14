@@ -4,7 +4,11 @@
 {% block content %}
 {% set actions %}
 <div class="flex flex-wrap gap-2 items-center">
+{% if invoice.status == 'draft' %}
 <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-primary">Edit</a>
+{% else %}
+<a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary" title="{{ _('Only notes, terms and due date can be changed. Use a credit note for amount corrections.') }}">{{ _('Notes / Due date') }}</a>
+{% endif %}
 <div class="flex flex-wrap gap-2 items-center">
     <select id="pdf-size-selector" class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
         <option value="A4">A4</option>
@@ -50,6 +54,11 @@
 <a href="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" class="btn bg-blue-500 text-white hover:bg-blue-600">
     <i class="fas fa-credit-card mr-1"></i>{{ _('Pay Online') }}
 </a>
+{% endif %}
+{% if invoice.status != 'draft' %}
+<button type="button" onclick="document.getElementById('creditNoteModal').classList.remove('hidden')" class="btn bg-amber-600 text-white hover:bg-amber-700">
+    <i class="fas fa-undo mr-1"></i>{{ _('Create credit note') }}
+</button>
 {% endif %}
 <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="btn bg-green-500 text-white hover:bg-green-600">{{ _('Record Payment') }}</a>
 <button type="button" onclick="showDeleteModal('{{ invoice.id }}', '{{ invoice.invoice_number }}')" class="btn btn-danger">
@@ -553,6 +562,145 @@
             </tbody>
         </table>
     </div>
+</div>
+{% endif %}
+
+<!-- Credit notes (Phase 3) -->
+{% set credit_notes = invoice.credits.all() if invoice.credits else [] %}
+{% if credit_notes %}
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+  <h2 class="text-lg font-semibold mb-4 flex items-center">
+    <i class="fas fa-undo mr-2 text-amber-500"></i>{{ _('Credit Notes') }}
+  </h2>
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-sm">
+      <thead>
+        <tr class="border-b border-border-light dark:border-border-dark">
+          <th class="p-2">{{ _('Number') }}</th>
+          <th class="p-2">{{ _('Amount') }}</th>
+          <th class="p-2">{{ _('Status') }}</th>
+          <th class="p-2">{{ _('Actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cn in credit_notes %}
+        <tr class="border-b border-border-light dark:border-border-dark">
+          <td class="p-2"><a class="text-primary hover:underline" href="{{ url_for('credit_notes.view_credit_note', cn_id=cn.id) }}">{{ cn.credit_number }}</a></td>
+          <td class="p-2">{{ '%.2f'|format(cn.total_amount or cn.amount or 0) }}</td>
+          <td class="p-2">{{ cn.status }}</td>
+          <td class="p-2"><a href="{{ url_for('credit_notes.download_pdf', cn_id=cn.id) }}" class="text-primary hover:underline">{{ _('PDF') }}</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Credit note create modal -->
+{% if invoice.status != 'draft' %}
+<div id="creditNoteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+  <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-xl max-w-md w-full p-6 border border-border-light dark:border-border-dark">
+    <h3 class="text-lg font-semibold mb-4">{{ _('Create credit note') }}</h3>
+    <form method="POST" action="{{ url_for('credit_notes.create_from_invoice', invoice_id=invoice.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="form-label">{{ _('Type') }}</label>
+      <select name="mode" class="form-input mb-3" id="cnMode">
+        <option value="full">{{ _('Full credit (cancel invoice)') }}</option>
+        <option value="amount">{{ _('Fixed amount') }}</option>
+      </select>
+      <div id="cnAmountWrap" class="hidden mb-3">
+        <label class="form-label">{{ _('Amount') }}</label>
+        <input type="number" step="0.01" min="0.01" name="amount" class="form-input" value="{{ invoice.outstanding_amount }}">
+      </div>
+      <label class="form-label">{{ _('Reason') }}</label>
+      <textarea name="reason" rows="2" class="form-input mb-4" placeholder="{{ _('Optional reason') }}"></textarea>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('creditNoteModal').classList.add('hidden')">{{ _('Cancel') }}</button>
+        <button type="submit" class="btn btn-primary">{{ _('Create') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script nonce="{{ csp_nonce() }}">
+  (function () {
+    var mode = document.getElementById('cnMode');
+    var wrap = document.getElementById('cnAmountWrap');
+    if (mode && wrap) {
+      mode.addEventListener('change', function () {
+        wrap.classList.toggle('hidden', mode.value !== 'amount');
+      });
+    }
+  })();
+</script>
+{% endif %}
+
+<!-- Reminder History Panel (Phase 4) -->
+{% set reminder_schedules = invoice.reminder_schedules.all() %}
+{% set reminder_emails = invoice.email_records | selectattr('status', 'ne', 'failed') | list %}
+{% if reminder_schedules or reminder_emails %}
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+  <h2 class="text-lg font-semibold mb-4 flex items-center">
+    <i class="fas fa-bell mr-2 text-blue-500"></i>{{ _('Reminder History') }}
+  </h2>
+  {% if reminder_schedules %}
+  <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{{ _('Scheduled Reminders') }}</h3>
+  <div class="overflow-x-auto mb-4">
+    <table class="table w-full text-sm">
+      <thead>
+        <tr>
+          <th>{{ _('Days Offset') }}</th>
+          <th>{{ _('Template') }}</th>
+          <th>{{ _('Last Sent') }}</th>
+          <th>{{ _('Status') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rs in reminder_schedules | sort(attribute='days_offset') %}
+        <tr>
+          <td>{{ rs.days_offset }}</td>
+          <td>{{ rs.template_name or '—' }}</td>
+          <td>{{ rs.last_sent_at.strftime('%Y-%m-%d %H:%M') if rs.last_sent_at else '—' }}</td>
+          <td>
+            {% if rs.last_sent_at %}
+              <span class="badge badge-success">{{ _('Sent') }}</span>
+            {% elif rs.active %}
+              <span class="badge badge-info">{{ _('Pending') }}</span>
+            {% else %}
+              <span class="badge badge-secondary">{{ _('Inactive') }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% if reminder_emails %}
+  <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{{ _('Reminder Emails Sent') }}</h3>
+  <div class="overflow-x-auto">
+    <table class="table w-full text-sm">
+      <thead>
+        <tr>
+          <th>{{ _('Recipient') }}</th>
+          <th>{{ _('Subject') }}</th>
+          <th>{{ _('Sent At') }}</th>
+          <th>{{ _('Status') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for em in reminder_emails | sort(attribute='sent_at', reverse=True) %}
+        <tr>
+          <td>{{ em.recipient_email }}</td>
+          <td class="text-xs">{{ em.subject }}</td>
+          <td>{{ em.sent_at.strftime('%Y-%m-%d %H:%M') if em.sent_at else '—' }}</td>
+          <td><span class="badge badge-{{ 'success' if em.status == 'sent' else 'warning' }}">{{ em.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 

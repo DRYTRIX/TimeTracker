@@ -172,3 +172,5 @@ Canonical workstream for finishing Phase 5 stubs and product polish. Stale plann
 | Architecture | Done | Payroll export extracted; `make check-route-sizes` CI guard |
 
 **Migrations:** `201` time_entries.custom_fields → `202` client.leitweg_id → `203` oauth_access_tokens → `204` user external identity → `205` scim_external_id → `206` bank_transactions.
+
+**Invoicing gaps closure:** Phases 1–6 shipped (credit notes service/routes, payment gateways, line tax, API send-email + e-invoice XML downloads, webhook events for invoice/credit-note/payment lifecycle).

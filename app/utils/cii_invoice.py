@@ -267,9 +267,12 @@ def build_cii_invoice_xml(
     buyer: CIIParty,
     guideline_id: str = FACTURX_GUIDELINE_EN16931,
     settings: Any = None,
+    type_code: str = "380",
 ) -> Tuple[str, str]:
     """
     Build a CII CrossIndustryInvoice XML for Factur-X / ZUGFeRD.
+
+    ``type_code`` is EN 16931 BT-3 (380 = invoice, 381 = credit note).
 
     Returns:
         (xml_string_utf8, sha256_hex)
@@ -296,7 +299,7 @@ def build_cii_invoice_xml(
         ram + "ID",
         getattr(invoice, "invoice_number", None) or str(getattr(invoice, "id", "")),
     )
-    _text_el(doc, ram + "TypeCode", "380")
+    _text_el(doc, ram + "TypeCode", type_code or "380")
 
     issue_date = getattr(invoice, "issue_date", None) or date.today()
     issue_dt = _sub(doc, ram + "IssueDateTime")
@@ -322,7 +325,15 @@ def build_cii_invoice_xml(
     line_id = 1
     line_items_holder: list = []  # collect then insert — we'll build lines into a temp list of elements
 
-    def _add_line(description: str, quantity: Any, unit_price: Any, line_total: Any, item: Any = None) -> None:
+    def _add_line(
+        description: str,
+        quantity: Any,
+        unit_price: Any,
+        line_total: Any,
+        item: Any = None,
+        line_tax_rate: Any = None,
+        line_vat_category: Optional[str] = None,
+    ) -> None:
         nonlocal line_id
         li = ET.Element(ram + "IncludedSupplyChainTradeLineItem")
 
@@ -344,8 +355,10 @@ def build_cii_invoice_xml(
         line_settle = _sub(li, ram + "SpecifiedLineTradeSettlement")
         line_tax = _sub(line_settle, ram + "ApplicableTradeTax")
         _text_el(line_tax, ram + "TypeCode", "VAT")
-        _text_el(line_tax, ram + "CategoryCode", tax_category)
-        _text_el(line_tax, ram + "RateApplicablePercent", _money(tax_rate))
+        eff_rate = line_tax_rate if line_tax_rate is not None else tax_rate
+        eff_cat = line_vat_category or tax_category
+        _text_el(line_tax, ram + "CategoryCode", eff_cat)
+        _text_el(line_tax, ram + "RateApplicablePercent", _money(eff_rate))
         # Line-level tax must NOT carry exemption reasons
 
         line_totals = _sub(line_settle, ram + "SpecifiedTradeSettlementLineMonetarySummation")
@@ -357,12 +370,21 @@ def build_cii_invoice_xml(
     # Invoice items
     try:
         for it in list(getattr(invoice, "items", []) or []):
+            _it_tax = None
+            if getattr(it, "tax_rate", None) is not None:
+                _it_tax = Decimal(str(it.tax_rate))
+            _it_cat = getattr(it, "vat_category", None) or None
+            _line_total = getattr(it, "line_net", None)
+            if _line_total is None:
+                _line_total = getattr(it, "total_amount", 0)
             _add_line(
                 description=getattr(it, "description", "Item"),
                 quantity=getattr(it, "quantity", 1),
                 unit_price=getattr(it, "unit_price", 0),
-                line_total=getattr(it, "total_amount", 0),
+                line_total=_line_total,
                 item=it,
+                line_tax_rate=_it_tax,
+                line_vat_category=_it_cat,
             )
     except Exception:
         pass
@@ -446,19 +468,39 @@ def build_cii_invoice_xml(
             inst = _sub(pm, ram + "PayeeSpecifiedCreditorFinancialInstitution")
             _text_el(inst, ram + "BICID", bic.replace(" ", ""))
 
-    # Tax summary — element order:
-    # CalculatedAmount, TypeCode, ExemptionReason, BasisAmount, CategoryCode,
-    # ExemptionReasonCode, RateApplicablePercent
-    tax_el = _sub(settlement, ram + "ApplicableTradeTax")
-    _money_el(tax_el, ram + "CalculatedAmount", getattr(invoice, "tax_amount", 0))
-    _text_el(tax_el, ram + "TypeCode", "VAT")
-    if exemption_reason:
-        _text_el(tax_el, ram + "ExemptionReason", exemption_reason)
-    _money_el(tax_el, ram + "BasisAmount", getattr(invoice, "subtotal", 0))
-    _text_el(tax_el, ram + "CategoryCode", tax_category)
-    if exemption_code:
-        _text_el(tax_el, ram + "ExemptionReasonCode", exemption_code)
-    _text_el(tax_el, ram + "RateApplicablePercent", _money(tax_rate))
+    # Tax summary — use tax_breakdown() for multi-rate; fall back to single group
+    try:
+        breakdown = invoice.tax_breakdown() if hasattr(invoice, "tax_breakdown") else []
+    except Exception:
+        breakdown = []
+
+    if breakdown:
+        for grp in breakdown:
+            tax_el = _sub(settlement, ram + "ApplicableTradeTax")
+            _money_el(tax_el, ram + "CalculatedAmount", grp["tax"])
+            _text_el(tax_el, ram + "TypeCode", "VAT")
+            grp_cat = grp.get("category") or tax_category
+            grp_rate = Decimal(str(grp.get("rate", 0)))
+            # Only emit exemption info if it matches the invoice-level exemption category
+            if grp_cat in _EXEMPTION_CATEGORIES and exemption_reason:
+                _text_el(tax_el, ram + "ExemptionReason", exemption_reason)
+            _money_el(tax_el, ram + "BasisAmount", grp["taxable"])
+            _text_el(tax_el, ram + "CategoryCode", grp_cat)
+            if grp_cat in _EXEMPTION_CATEGORIES and exemption_code:
+                _text_el(tax_el, ram + "ExemptionReasonCode", exemption_code)
+            _text_el(tax_el, ram + "RateApplicablePercent", _money(grp_rate))
+    else:
+        # Fallback: single tax block
+        tax_el = _sub(settlement, ram + "ApplicableTradeTax")
+        _money_el(tax_el, ram + "CalculatedAmount", getattr(invoice, "tax_amount", 0))
+        _text_el(tax_el, ram + "TypeCode", "VAT")
+        if exemption_reason:
+            _text_el(tax_el, ram + "ExemptionReason", exemption_reason)
+        _money_el(tax_el, ram + "BasisAmount", getattr(invoice, "subtotal", 0))
+        _text_el(tax_el, ram + "CategoryCode", tax_category)
+        if exemption_code:
+            _text_el(tax_el, ram + "ExemptionReasonCode", exemption_code)
+        _text_el(tax_el, ram + "RateApplicablePercent", _money(tax_rate))
 
     # Payment terms (due date)
     due_date = getattr(invoice, "due_date", None)
@@ -486,3 +528,38 @@ def build_cii_invoice_xml(
     xml_bytes = ET.tostring(root, encoding="utf-8", xml_declaration=True)
     sha256_hex = hashlib.sha256(xml_bytes).hexdigest()
     return xml_bytes.decode("utf-8"), sha256_hex
+
+
+def build_cii_credit_note_xml(
+    credit_note, invoice, seller: CIIParty, buyer: CIIParty, settings=None
+) -> Tuple[str, str]:
+    """Build CII XML for a credit note (TypeCode 381) referencing the original invoice."""
+
+    class _Shim:
+        def __init__(self, cn, inv):
+            self.invoice_number = cn.credit_number
+            self.issue_date = cn.issue_date or getattr(inv, "issue_date", None)
+            self.due_date = None
+            self.currency_code = cn.currency_code or getattr(inv, "currency_code", "EUR")
+            self.tax_rate = cn.tax_rate if cn.tax_rate is not None else getattr(inv, "tax_rate", 0)
+            self.tax_amount = cn.tax_amount or 0
+            self.subtotal = cn.subtotal if cn.subtotal is not None else cn.amount
+            self.total_amount = cn.total_amount if cn.total_amount is not None else cn.amount
+            self.amount_paid = 0
+            self.notes = cn.reason or cn.notes
+            self.buyer_reference = getattr(inv, "buyer_reference", None)
+            self.vat_category = cn.vat_category or getattr(inv, "vat_category", None)
+            self.items = list(cn.items.all() if hasattr(cn.items, "all") else list(cn.items or []))
+            self.extra_goods = []
+            self.expenses = []
+
+        def tax_breakdown(self):
+            from decimal import Decimal
+
+            rate = Decimal(str(self.tax_rate or 0))
+            taxable = Decimal(str(self.subtotal or 0))
+            tax = Decimal(str(self.tax_amount or 0))
+            cat = self.vat_category or ("S" if rate > 0 else "Z")
+            return [{"category": cat, "rate": rate, "taxable": taxable, "tax": tax}]
+
+    return build_cii_invoice_xml(_Shim(credit_note, invoice), seller, buyer, settings=settings, type_code="381")

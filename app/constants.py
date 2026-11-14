@@ -34,20 +34,18 @@ class ProjectStatus(Enum):
 
 
 class InvoiceStatus(Enum):
-    """Invoice status values"""
+    """Invoice lifecycle status values (not payment settlement)."""
 
     DRAFT = "draft"
+    ISSUED = "issued"
     SENT = "sent"
     PAID = "paid"
     OVERDUE = "overdue"
     CANCELLED = "cancelled"
-    PARTIALLY_PAID = "partially_paid"
-    FULLY_PAID = "fully_paid"
-    OVERPAID = "overpaid"
 
 
 class PaymentStatus(Enum):
-    """Payment status values"""
+    """Invoice payment settlement status values"""
 
     UNPAID = "unpaid"
     PARTIALLY_PAID = "partially_paid"
@@ -161,8 +159,13 @@ class WebhookEvent(Enum):
     PROJECT_UPDATED = "project.updated"
     PROJECT_DELETED = "project.deleted"
     INVOICE_CREATED = "invoice.created"
+    INVOICE_UPDATED = "invoice.updated"
+    INVOICE_DELETED = "invoice.deleted"
     INVOICE_SENT = "invoice.sent"
     INVOICE_PAID = "invoice.paid"
+    INVOICE_OVERDUE = "invoice.overdue"
+    CREDIT_NOTE_CREATED = "credit_note.created"
+    PAYMENT_REFUNDED = "payment.refunded"
     TASK_CREATED = "task.created"
     TASK_UPDATED = "task.updated"
     TASK_DELETED = "task.deleted"
