@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.integrations.sdi_transport import GenericSdiTransport, SdiTransportError, bridge_base_url
-from app.models.invoice_sdi import InvoiceSdiTransmission, SDI_FINAL_STATUSES
+from app.models.invoice_sdi import SDI_FINAL_STATUSES, InvoiceSdiTransmission
 
 
 def test_bridge_base_url_strips_send():

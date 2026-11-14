@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import logging
 from typing import Any, Dict, Optional
+
 import requests
 
 logger = logging.getLogger(__name__)

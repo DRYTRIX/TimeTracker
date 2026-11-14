@@ -16,11 +16,11 @@ from .invoice_service import InvoiceService
 from .notification_service import NotificationService
 from .payment_service import PaymentService
 from .peppol_service import PeppolService
-from .sdi_service import SdiService
 from .permission_service import PermissionService
 from .project_service import ProjectService
 from .quote_service import QuoteService
 from .reporting_service import ReportingService
+from .sdi_service import SdiService
 from .task_service import TaskService
 from .time_tracking_service import TimeTrackingService
 from .user_service import UserService
