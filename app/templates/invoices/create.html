@@ -77,6 +77,14 @@
                         <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
                         <input type="number" name="tax_rate" id="tax_rate" value="{{ settings.tax_rate or 0 }}" step="0.01" inputmode="decimal" class="form-input text-base min-h-[44px]">
                     </div>
+                    <div class="min-w-0">
+                        <label for="discount_percent" class="form-label">{{ _('Invoice Discount (%)') }}</label>
+                        <input type="number" name="discount_percent" id="discount_percent" value="{{ request.form.get('discount_percent','') }}" step="0.01" min="0" max="100" inputmode="decimal" class="form-input text-base min-h-[44px]" placeholder="0">
+                    </div>
+                    <div class="min-w-0">
+                        <label for="discount_amount" class="form-label">{{ _('Invoice Discount (amount)') }}</label>
+                        <input type="number" name="discount_amount" id="discount_amount" value="{{ request.form.get('discount_amount','') }}" step="0.01" min="0" inputmode="decimal" class="form-input text-base min-h-[44px]" placeholder="0.00">
+                    </div>
                     <div class="md:col-span-2 min-w-0">
                         <label for="notes" class="form-label">{{ _('Notes') }}</label>
                         <textarea name="notes" id="notes" rows="3" class="form-input text-base">{{ request.form.get('notes','') }}</textarea>

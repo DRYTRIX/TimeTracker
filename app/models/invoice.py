@@ -58,9 +58,18 @@ class Invoice(db.Model):
     vat_exemption_reason = db.Column(db.Text, nullable=True)
     vat_exemption_code = db.Column(db.String(50), nullable=True)
 
+    # Invoice-level discounts (applied after line discounts, before tax)
+    discount_percent = db.Column(db.Numeric(5, 2), nullable=True, default=0)
+    discount_amount = db.Column(db.Numeric(10, 2), nullable=True, default=0)
+
     # Italian public-administration procurement codes (FatturaPA DatiOrdineAcquisto)
     cig = db.Column(db.String(15), nullable=True)
     cup = db.Column(db.String(15), nullable=True)
+
+    # Reminder policy (optional per-invoice override; falls back to client then default)
+    reminder_policy_id = db.Column(db.Integer, db.ForeignKey("reminder_policies.id"), nullable=True)
+    # Accumulated late fees added by the reminder service
+    late_fee_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
 
     # Metadata
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -114,6 +123,10 @@ class Invoice(db.Model):
         self.vat_exemption_code = kwargs.get("vat_exemption_code")
         self.cig = kwargs.get("cig")
         self.cup = kwargs.get("cup")
+        if "discount_percent" in kwargs and kwargs.get("discount_percent") is not None:
+            self.discount_percent = Decimal(str(kwargs["discount_percent"]))
+        if "discount_amount" in kwargs and kwargs.get("discount_amount") is not None:
+            self.discount_amount = Decimal(str(kwargs["discount_amount"]))
         if "subtotal" in kwargs and kwargs.get("subtotal") is not None:
             self.subtotal = Decimal(str(kwargs["subtotal"]))
         if "tax_amount" in kwargs and kwargs.get("tax_amount") is not None:
@@ -127,7 +140,7 @@ class Invoice(db.Model):
     @property
     def is_overdue(self):
         """Check if invoice is overdue"""
-        return self.status in ["sent", "overdue"] and datetime.utcnow().date() > self.due_date
+        return self.status in ["sent", "issued", "overdue"] and datetime.utcnow().date() > self.due_date
 
     @property
     def days_overdue(self):
@@ -148,9 +161,10 @@ class Invoice(db.Model):
 
     @property
     def outstanding_amount(self):
-        """Calculate outstanding amount"""
+        """Calculate outstanding amount including any accrued late fees."""
         credits_total = sum((c.amount for c in self.credits), Decimal("0")) if self.credits else Decimal("0")
-        return self.total_amount - (self.amount_paid or 0) - credits_total
+        late_fee = Decimal(str(self.late_fee_amount or 0))
+        return self.total_amount + late_fee - (self.amount_paid or 0) - credits_total
 
     @property
     def payment_percentage(self):
@@ -251,20 +265,142 @@ class Invoice(db.Model):
             db.session.delete(consumption)
 
     def calculate_totals(self):
-        """Calculate invoice totals from items, extra goods, and expenses"""
+        """Calculate invoice totals from items, extra goods, and expenses.
+
+        Supports per-line tax rates (item.tax_rate), per-line discounts
+        (item.discount_percent / item.discount_amount), and invoice-level
+        discounts (self.discount_percent / self.discount_amount).
+
+        Groups taxable amounts by (vat_category, rate) so multi-rate invoices
+        produce a correct tax_breakdown() for e-invoice exporters.
+        """
         # Optionally apply tax rules before totals (failures logged inside helper)
         self._apply_tax_rules_if_any()
-        items_total = sum(item.total_amount for item in self.items)
-        goods_total = sum(good.total_amount for good in self.extra_goods)
-        expenses_total = sum(expense.total_amount for expense in self.expenses)
-        subtotal = items_total + goods_total + expenses_total
+
+        # --- Per-item line nets ---
+        items_net = Decimal("0")
+        # Build tax groups keyed by (vat_category, rate)
+        tax_groups: dict = {}
+        inv_tax_rate = Decimal(str(self.tax_rate or 0))
+        inv_vat_cat = (self.vat_category or "S").upper()
+
+        try:
+            for item in self.items:
+                lnet = item.line_net
+                items_net += lnet
+                rate = item.effective_tax_rate(self)
+                cat = (item.vat_category or inv_vat_cat).upper()
+                key = (cat, rate)
+                tax_groups[key] = tax_groups.get(key, Decimal("0")) + lnet
+        except Exception:
+            # Fallback: use stored total_amount for each item without grouping
+            items_net = sum(item.total_amount for item in self.items)
+            tax_groups = {(inv_vat_cat, inv_tax_rate): items_net}
+
+        # --- Goods & expenses use invoice-level tax ---
+        goods_total = Decimal("0")
+        expenses_total = Decimal("0")
+        try:
+            goods_total = sum(good.total_amount for good in self.extra_goods)
+        except Exception:
+            pass
+        try:
+            expenses_total = sum(expense.total_amount for expense in self.expenses)
+        except Exception:
+            pass
+
+        inv_other = goods_total + expenses_total
+        if inv_other:
+            key = (inv_vat_cat, inv_tax_rate)
+            tax_groups[key] = tax_groups.get(key, Decimal("0")) + inv_other
+
+        combined_net = items_net + goods_total + expenses_total
+
+        # --- Invoice-level discount ---
+        inv_disc = Decimal(str(self.discount_amount or 0))
+        if not inv_disc:
+            inv_disc_pct = Decimal(str(self.discount_percent or 0))
+            if inv_disc_pct and combined_net:
+                inv_disc = combined_net * (inv_disc_pct / 100)
+
+        subtotal = combined_net - inv_disc
         self.subtotal = subtotal
-        self.tax_amount = subtotal * (self.tax_rate / 100)
+
+        # Distribute invoice discount proportionally across tax groups
+        if inv_disc and combined_net:
+            disc_ratio = inv_disc / combined_net
+            tax_groups = {k: v * (1 - disc_ratio) for k, v in tax_groups.items()}
+
+        # --- Compute tax ---
+        tax_amount = Decimal("0")
+        for (cat, rate), taxable in tax_groups.items():
+            tax_amount += taxable * (rate / 100)
+
+        self.tax_amount = tax_amount.quantize(Decimal("0.01"))
         self.total_amount = subtotal + self.tax_amount
 
         # Update status if overdue
         if self.status == "sent" and self.is_overdue:
             self.status = "overdue"
+
+    def tax_breakdown(self):
+        """Return per-rate tax grouping suitable for e-invoice exporters.
+
+        Returns a list of dicts sorted by (category, rate):
+            [{"category": "S", "rate": 20.0, "taxable": 100.00, "tax": 20.00}, ...]
+        """
+        inv_tax_rate = Decimal(str(self.tax_rate or 0))
+        inv_vat_cat = (self.vat_category or "S").upper()
+        groups: dict = {}
+
+        try:
+            for item in self.items:
+                lnet = item.line_net
+                rate = item.effective_tax_rate(self)
+                cat = (item.vat_category or inv_vat_cat).upper()
+                key = (cat, rate)
+                groups[key] = groups.get(key, Decimal("0")) + lnet
+        except Exception:
+            groups = {(inv_vat_cat, inv_tax_rate): sum(item.total_amount for item in self.items)}
+
+        try:
+            goods_total = sum(good.total_amount for good in self.extra_goods)
+        except Exception:
+            goods_total = Decimal("0")
+        try:
+            expenses_total = sum(expense.total_amount for expense in self.expenses)
+        except Exception:
+            expenses_total = Decimal("0")
+
+        inv_other = goods_total + expenses_total
+        if inv_other:
+            key = (inv_vat_cat, inv_tax_rate)
+            groups[key] = groups.get(key, Decimal("0")) + inv_other
+
+        # Apply invoice discount proportionally
+        combined = sum(groups.values())
+        inv_disc = Decimal(str(self.discount_amount or 0))
+        if not inv_disc:
+            inv_disc_pct = Decimal(str(self.discount_percent or 0))
+            if inv_disc_pct and combined:
+                inv_disc = combined * (inv_disc_pct / 100)
+        if inv_disc and combined:
+            disc_ratio = inv_disc / combined
+            groups = {k: v * (1 - disc_ratio) for k, v in groups.items()}
+
+        result = []
+        for (cat, rate), taxable in sorted(groups.items(), key=lambda x: (x[0][0], float(x[0][1]))):
+            taxable_q = taxable.quantize(Decimal("0.01"))
+            tax_q = (taxable * (rate / 100)).quantize(Decimal("0.01"))
+            result.append(
+                {
+                    "category": cat,
+                    "rate": float(rate),
+                    "taxable": float(taxable_q),
+                    "tax": float(tax_q),
+                }
+            )
+        return result
 
     def _apply_tax_rules_if_any(self):
         """Apply matching tax rule to set `tax_rate` if applicable.
@@ -328,6 +464,8 @@ class Invoice(db.Model):
             "tax_rate": float(self.tax_rate),
             "tax_amount": float(self.tax_amount),
             "total_amount": float(self.total_amount),
+            "discount_percent": float(self.discount_percent) if self.discount_percent else 0,
+            "discount_amount": float(self.discount_amount) if self.discount_amount else 0,
             "vat_category": getattr(self, "vat_category", None),
             "vat_exemption_reason": getattr(self, "vat_exemption_reason", None),
             "vat_exemption_code": getattr(self, "vat_exemption_code", None),
@@ -371,6 +509,17 @@ class InvoiceItem(db.Model):
     unit_price = db.Column(db.Numeric(10, 2), nullable=False)  # Hourly rate
     total_amount = db.Column(db.Numeric(10, 2), nullable=False)
 
+    # Per-line tax (nullable → falls back to invoice.tax_rate)
+    tax_rate = db.Column(db.Numeric(5, 2), nullable=True)
+    vat_category = db.Column(db.String(5), nullable=True)
+
+    # Per-line discounts (discount_amount takes priority over discount_percent)
+    discount_percent = db.Column(db.Numeric(5, 2), nullable=True, default=0)
+    discount_amount = db.Column(db.Numeric(10, 2), nullable=True, default=0)
+
+    # Ordering (lower = first)
+    position = db.Column(db.Integer, nullable=True, default=0)
+
     # Time entry reference (optional)
     time_entry_ids = db.Column(db.Text, nullable=True)  # Comma-separated IDs
 
@@ -387,13 +536,31 @@ class InvoiceItem(db.Model):
     warehouse = db.relationship("Warehouse", foreign_keys=[warehouse_id], lazy="joined")
 
     def __init__(
-        self, invoice_id, description, quantity, unit_price, time_entry_ids=None, stock_item_id=None, warehouse_id=None
+        self,
+        invoice_id,
+        description,
+        quantity,
+        unit_price,
+        time_entry_ids=None,
+        stock_item_id=None,
+        warehouse_id=None,
+        tax_rate=None,
+        vat_category=None,
+        discount_percent=None,
+        discount_amount=None,
+        position=0,
     ):
         self.invoice_id = invoice_id
         self.description = description
         self.quantity = Decimal(str(quantity))
         self.unit_price = Decimal(str(unit_price))
-        self.total_amount = self.quantity * self.unit_price
+        self.tax_rate = Decimal(str(tax_rate)) if tax_rate is not None else None
+        self.vat_category = vat_category
+        self.discount_percent = Decimal(str(discount_percent)) if discount_percent is not None else Decimal("0")
+        self.discount_amount = Decimal(str(discount_amount)) if discount_amount is not None else Decimal("0")
+        self.position = int(position) if position is not None else 0
+        # total_amount = line net after discount
+        self.total_amount = self.line_net
         self.time_entry_ids = time_entry_ids
         self.stock_item_id = stock_item_id
         self.warehouse_id = warehouse_id
@@ -401,6 +568,30 @@ class InvoiceItem(db.Model):
 
     def __repr__(self):
         return f"<InvoiceItem {self.description} ({self.quantity}h @ {self.unit_price})>"
+
+    @property
+    def line_discount_total(self) -> Decimal:
+        """The absolute discount amount applied to this line."""
+        disc_amt = Decimal(str(self.discount_amount or 0))
+        if disc_amt:
+            return disc_amt
+        disc_pct = Decimal(str(self.discount_percent or 0))
+        if disc_pct:
+            gross = Decimal(str(self.quantity or 0)) * Decimal(str(self.unit_price or 0))
+            return gross * (disc_pct / 100)
+        return Decimal("0")
+
+    @property
+    def line_net(self) -> Decimal:
+        """Net line amount after discount (qty × unit_price − line_discount_total)."""
+        gross = Decimal(str(self.quantity or 0)) * Decimal(str(self.unit_price or 0))
+        return gross - self.line_discount_total
+
+    def effective_tax_rate(self, invoice) -> Decimal:
+        """Return this item's tax rate, falling back to the invoice-level rate."""
+        if self.tax_rate is not None:
+            return Decimal(str(self.tax_rate))
+        return Decimal(str(getattr(invoice, "tax_rate", 0) or 0))
 
     @property
     def task_name_from_time_entries(self):
@@ -429,6 +620,11 @@ class InvoiceItem(db.Model):
             "quantity": float(self.quantity),
             "unit_price": float(self.unit_price),
             "total_amount": float(self.total_amount),
+            "tax_rate": float(self.tax_rate) if self.tax_rate is not None else None,
+            "vat_category": self.vat_category,
+            "discount_percent": float(self.discount_percent) if self.discount_percent else 0,
+            "discount_amount": float(self.discount_amount) if self.discount_amount else 0,
+            "position": self.position or 0,
             "time_entry_ids": self.time_entry_ids,
             "stock_item_id": self.stock_item_id,
             "warehouse_id": self.warehouse_id,

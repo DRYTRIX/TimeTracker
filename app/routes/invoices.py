@@ -134,6 +134,16 @@ def create_invoice():
             flash(_("Invalid tax rate format"), "error")
             return render_template("invoices/create.html")
 
+        # Invoice-level discount (optional)
+        try:
+            discount_percent = Decimal(request.form.get("discount_percent", "0") or "0")
+        except Exception:
+            discount_percent = Decimal("0")
+        try:
+            discount_amount = Decimal(request.form.get("discount_amount", "0") or "0")
+        except Exception:
+            discount_amount = Decimal("0")
+
         # Get project
         project = Project.query.get(project_id)
         if not project:
@@ -200,6 +210,8 @@ def create_invoice():
             vat_exemption_code=vat_exemption_code,
             cig=cig,
             cup=cup,
+            discount_percent=discount_percent,
+            discount_amount=discount_amount,
         )
 
         db.session.add(invoice)
@@ -450,7 +462,34 @@ def edit_invoice(invoice_id):
         flash(_("You do not have permission to edit this invoice"), "error")
         return redirect(url_for("invoices.list_invoices"))
 
+    financial_locked = invoice.status != "draft"
+
     if request.method == "POST":
+        # Non-draft invoices are immutable for financial fields (GoBD-style).
+        # Only notes, terms and due date may still be updated; use a credit note
+        # for corrections to amounts or line items.
+        if financial_locked:
+            due_date_str = request.form.get("due_date", "").strip()
+            if due_date_str:
+                try:
+                    invoice.due_date = datetime.strptime(due_date_str, "%Y-%m-%d").date()
+                except ValueError:
+                    flash(_("Invalid due date"), "error")
+                    return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
+            invoice.notes = request.form.get("notes", "").strip()
+            invoice.terms = request.form.get("terms", "").strip()
+            if not safe_commit("edit_invoice_locked", {"invoice_id": invoice.id}):
+                flash(_("Could not update invoice due to a database error. Please check server logs."), "error")
+                return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
+            flash(
+                _(
+                    "Only notes, terms and due date were updated. Sent invoices cannot change "
+                    "amounts or line items — issue a credit note instead."
+                ),
+                "warning",
+            )
+            return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+
         # Update invoice details
         invoice.client_name = request.form.get("client_name", "").strip()
         invoice.client_email = request.form.get("client_email", "").strip()
@@ -470,12 +509,27 @@ def edit_invoice(invoice_id):
         invoice.notes = request.form.get("notes", "").strip()
         invoice.terms = request.form.get("terms", "").strip()
 
+        # Read invoice-level discount (draft only since we're in the full edit path)
+        try:
+            invoice.discount_percent = Decimal(request.form.get("discount_percent", "0") or "0")
+        except Exception:
+            invoice.discount_percent = Decimal("0")
+        try:
+            invoice.discount_amount = Decimal(request.form.get("discount_amount", "0") or "0")
+        except Exception:
+            invoice.discount_amount = Decimal("0")
+
         # Update items
         item_ids = request.form.getlist("item_id[]")
         descriptions = request.form.getlist("description[]")
         quantities = request.form.getlist("quantity[]")
         unit_prices = request.form.getlist("unit_price[]")
         item_time_entry_ids_list = request.form.getlist("item_time_entry_ids[]")
+        item_tax_rates = request.form.getlist("item_tax_rate[]")
+        item_vat_categories = request.form.getlist("item_vat_category[]")
+        item_discount_percents = request.form.getlist("item_discount_percent[]")
+        item_discount_amounts = request.form.getlist("item_discount_amount[]")
+        item_positions = request.form.getlist("item_position[]")
 
         # Remove existing items
         invoice.items.delete()
@@ -521,6 +575,41 @@ def edit_invoice(invoice_id):
                         else None
                     )
 
+                    # Per-line tax / discount / position
+                    _item_tax_rate = None
+                    if i < len(item_tax_rates) and item_tax_rates[i].strip():
+                        try:
+                            _item_tax_rate = Decimal(item_tax_rates[i].strip())
+                        except Exception:
+                            _item_tax_rate = None
+
+                    _item_vat_cat = None
+                    if i < len(item_vat_categories) and item_vat_categories[i].strip():
+                        _item_vat_cat = item_vat_categories[i].strip().upper() or None
+                        if _item_vat_cat and _item_vat_cat not in ("S", "Z", "E", "AE", "K", "G", "O", "L", "M"):
+                            _item_vat_cat = None
+
+                    _disc_pct = Decimal("0")
+                    if i < len(item_discount_percents) and item_discount_percents[i].strip():
+                        try:
+                            _disc_pct = Decimal(item_discount_percents[i].strip())
+                        except Exception:
+                            _disc_pct = Decimal("0")
+
+                    _disc_amt = Decimal("0")
+                    if i < len(item_discount_amounts) and item_discount_amounts[i].strip():
+                        try:
+                            _disc_amt = Decimal(item_discount_amounts[i].strip())
+                        except Exception:
+                            _disc_amt = Decimal("0")
+
+                    _position = i  # default to form order
+                    if i < len(item_positions) and item_positions[i].strip():
+                        try:
+                            _position = int(item_positions[i].strip())
+                        except Exception:
+                            _position = i
+
                     item = InvoiceItem(
                         invoice_id=invoice.id,
                         description=descriptions[i].strip(),
@@ -529,6 +618,11 @@ def edit_invoice(invoice_id):
                         time_entry_ids=time_entry_ids_val,
                         stock_item_id=stock_item_id_val,
                         warehouse_id=warehouse_id_val,
+                        tax_rate=_item_tax_rate,
+                        vat_category=_item_vat_cat,
+                        discount_percent=_disc_pct,
+                        discount_amount=_disc_amt,
+                        position=_position,
                     )
                     db.session.add(item)
                 except ValueError:
@@ -647,6 +741,7 @@ def edit_invoice(invoice_id):
                 "invoices/edit.html",
                 invoice=invoice,
                 projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
+                financial_locked=False,
             )
 
         flash(_("Invoice updated successfully"), "success")
@@ -689,6 +784,7 @@ def edit_invoice(invoice_id):
         warehouses=warehouses,
         stock_items_json=stock_items_json,
         warehouses_json=warehouses_json,
+        financial_locked=financial_locked,
     )
 
 
@@ -860,6 +956,23 @@ def update_invoice_status(invoice_id):
             current_app.logger.debug("Client survey on invoice paid skipped: %s", survey_exc)
 
     try:
+        from app.constants import WebhookEvent
+        from app.utils.invoice_events import emit_invoice_event
+
+        emit_invoice_event(
+            WebhookEvent.INVOICE_UPDATED.value,
+            invoice,
+            previous_status=previous_status,
+            new_status=new_status,
+        )
+        if new_status == "sent" and previous_status != "sent":
+            emit_invoice_event(WebhookEvent.INVOICE_SENT.value, invoice)
+        if new_status == "paid" and previous_status != "paid":
+            emit_invoice_event(WebhookEvent.INVOICE_PAID.value, invoice)
+    except Exception:
+        current_app.logger.debug("Failed to emit invoice status webhook for %s", invoice.id, exc_info=True)
+
+    try:
         log_event(
             "invoice.status_changed",
             user_id=current_user.id,
@@ -889,11 +1002,23 @@ def delete_invoice(invoice_id):
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 
     invoice_number = invoice.invoice_number
+    invoice_id_for_event = invoice.id
     invoice.release_invoiced_costs_and_expenses()
     db.session.delete(invoice)
-    if not safe_commit("delete_invoice", {"invoice_id": invoice.id}):
+    if not safe_commit("delete_invoice", {"invoice_id": invoice_id_for_event}):
         flash(_("Could not delete invoice due to a database error. Please check server logs."), "error")
         return redirect(url_for("invoices.list_invoices"))
+
+    try:
+        from app.constants import WebhookEvent
+        from app.utils.event_bus import emit_event
+
+        emit_event(
+            WebhookEvent.INVOICE_DELETED.value,
+            {"invoice_id": invoice_id_for_event, "invoice_number": invoice_number},
+        )
+    except Exception:
+        current_app.logger.debug("Failed to emit invoice.deleted for %s", invoice_id_for_event, exc_info=True)
 
     flash(f"Invoice {invoice_number} deleted successfully", "success")
     return redirect(url_for("invoices.list_invoices"))

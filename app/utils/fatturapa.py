@@ -31,6 +31,13 @@ _NATURA_RE = re.compile(r"^N\d(\.\d+)?$")
 _BASE36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
+def resolve_natura_for_category(vat_category: str, rate: Decimal) -> str:
+    """Return FatturaPA Natura code for a given EN 16931 VAT category and rate."""
+    if rate and rate > 0:
+        return ""  # taxed line, no Natura needed
+    return _VAT_CATEGORY_TO_NATURA.get((vat_category or "").upper(), "")
+
+
 def fatturapa_export_available() -> bool:
     return True
 
@@ -281,12 +288,18 @@ def _collect_lines(invoice: Any) -> List[Dict[str, Any]]:
     lines: List[Dict[str, Any]] = []
     try:
         for it in list(getattr(invoice, "items", []) or []):
+            line_total = getattr(it, "line_net", None)
+            if line_total is None:
+                line_total = getattr(it, "total_amount", 0) or 0
             lines.append(
                 {
                     "description": _strip(getattr(it, "description", None)) or "Item",
                     "quantity": getattr(it, "quantity", 1) or 1,
                     "unit_price": getattr(it, "unit_price", 0) or 0,
-                    "line_total": getattr(it, "total_amount", 0) or 0,
+                    "line_total": line_total,
+                    "line_tax_rate": getattr(it, "tax_rate", None),
+                    "discount_percent": getattr(it, "discount_percent", None),
+                    "discount_amount": getattr(it, "discount_amount", None),
                 }
             )
     except Exception:
@@ -490,30 +503,63 @@ def build_fatturapa_xml(
         _set_text(det, "PrezzoUnitario", _unit_price(line["unit_price"]))
         line_total = Decimal(str(line["line_total"] or 0))
         taxable_sum += line_total
+        # Per-line discount (ScontoMaggiorazione) if present
+        line_disc_pct = Decimal(str(line.get("discount_percent") or 0))
+        line_disc_amt = Decimal(str(line.get("discount_amount") or 0))
+        if line_disc_pct or line_disc_amt:
+            sc = _sub(det, "ScontoMaggiorazione")
+            _set_text(sc, "Tipo", "SC")  # SC = sconto (discount)
+            if line_disc_pct:
+                _set_text(sc, "Percentuale", _money(line_disc_pct))
+            if line_disc_amt:
+                _set_text(sc, "Importo", _money(line_disc_amt))
         _set_text(det, "PrezzoTotale", _money(line_total))
-        _set_text(det, "AliquotaIVA", _money(tax_rate))
+        line_tax_rate = Decimal(str(line.get("line_tax_rate") or tax_rate))
+        _set_text(det, "AliquotaIVA", _money(line_tax_rate))
+        line_natura = line.get("natura") or natura
+        if line_natura:
+            _set_text(det, "Natura", line_natura)
+
+    # Try per-rate DatiRiepilogo via tax_breakdown()
+    try:
+        breakdown = invoice.tax_breakdown() if hasattr(invoice, "tax_breakdown") else []
+    except Exception:
+        breakdown = []
+
+    if breakdown:
+        for grp in breakdown:
+            grp_rate = Decimal(str(grp.get("rate", 0)))
+            grp_cat = grp.get("category") or ("" if grp_rate > 0 else "O")
+            grp_natura = resolve_natura_for_category(grp_cat, grp_rate) if grp_cat != "S" else ""
+            riep = _sub(beni, "DatiRiepilogo")
+            _set_text(riep, "AliquotaIVA", _money(grp_rate))
+            if grp_natura:
+                _set_text(riep, "Natura", grp_natura)
+            _set_text(riep, "ImponibileImporto", _money(grp["taxable"]))
+            _set_text(riep, "Imposta", _money(grp["tax"]))
+            _set_text(riep, "EsigibilitaIVA", "I")
+            if rif_norm and grp_natura:
+                _set_text(riep, "RiferimentoNormativo", rif_norm[:100])
+    else:
+        # Fallback: single DatiRiepilogo block
+        try:
+            inv_sub = Decimal(str(getattr(invoice, "subtotal", None) or taxable_sum))
+        except Exception:
+            inv_sub = taxable_sum
+        try:
+            inv_tax = Decimal(str(getattr(invoice, "tax_amount", None) or 0))
+        except Exception:
+            inv_tax = (inv_sub * tax_rate / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+        riep = _sub(beni, "DatiRiepilogo")
+        _set_text(riep, "AliquotaIVA", _money(tax_rate))
         if natura:
-            _set_text(det, "Natura", natura)
-
-    # Prefer invoice subtotal when present
-    try:
-        inv_sub = Decimal(str(getattr(invoice, "subtotal", None) or taxable_sum))
-    except Exception:
-        inv_sub = taxable_sum
-    try:
-        inv_tax = Decimal(str(getattr(invoice, "tax_amount", None) or 0))
-    except Exception:
-        inv_tax = (inv_sub * tax_rate / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-    riep = _sub(beni, "DatiRiepilogo")
-    _set_text(riep, "AliquotaIVA", _money(tax_rate))
-    if natura:
-        _set_text(riep, "Natura", natura)
-    _set_text(riep, "ImponibileImporto", _money(inv_sub))
-    _set_text(riep, "Imposta", _money(inv_tax))
-    _set_text(riep, "EsigibilitaIVA", "I")
-    if rif_norm:
-        _set_text(riep, "RiferimentoNormativo", rif_norm[:100])
+            _set_text(riep, "Natura", natura)
+        _set_text(riep, "ImponibileImporto", _money(inv_sub))
+        _set_text(riep, "Imposta", _money(inv_tax))
+        _set_text(riep, "EsigibilitaIVA", "I")
+        if rif_norm:
+            _set_text(riep, "RiferimentoNormativo", rif_norm[:100])
 
     # Payment
     iban = _strip(getattr(settings, "company_iban", None))
@@ -535,3 +581,90 @@ def build_fatturapa_xml(
     filename = build_fatturapa_filename(transmitter, progressivo)
     sha256_hex = hashlib.sha256(xml_str.encode("utf-8")).hexdigest()
     return xml_str, filename, sha256_hex
+
+
+def build_fatturapa_credit_note_xml(credit_note, invoice, settings, client=None) -> Tuple[bytes, str]:
+    """Build a FatturaPA XML credit note (TipoDocumento TD04) with DatiFattureCollegate.
+
+    Returns (xml_bytes, filename).
+    """
+    # Reuse the invoice builder then patch document type + linked invoice reference.
+    # build_fatturapa_xml expects an invoice-like object; we temporarily adapt via a shim.
+    class _CNAsInvoice:
+        def __init__(self, cn, inv):
+            self.id = cn.id
+            self.invoice_number = cn.credit_number
+            self.issue_date = cn.issue_date or getattr(inv, "issue_date", None)
+            self.due_date = None
+            self.currency_code = cn.currency_code or getattr(inv, "currency_code", "EUR")
+            self.tax_rate = cn.tax_rate if cn.tax_rate is not None else getattr(inv, "tax_rate", 0)
+            self.tax_amount = cn.tax_amount or 0
+            self.subtotal = cn.subtotal if cn.subtotal is not None else cn.amount
+            self.total_amount = cn.total_amount if cn.total_amount is not None else cn.amount
+            self.vat_category = cn.vat_category or getattr(inv, "vat_category", None)
+            self.vat_exemption_reason = getattr(inv, "vat_exemption_reason", None)
+            self.vat_exemption_code = getattr(inv, "vat_exemption_code", None)
+            self.client_name = getattr(inv, "client_name", None)
+            self.client_id = getattr(inv, "client_id", None)
+            self.cig = getattr(inv, "cig", None)
+            self.cup = getattr(inv, "cup", None)
+            self.buyer_reference = getattr(inv, "buyer_reference", None)
+            self._items = list(cn.items.all() if hasattr(cn.items, "all") else list(cn.items or []))
+            self._inv = inv
+
+        @property
+        def items(self):
+            return self._items
+
+        @property
+        def extra_goods(self):
+            return []
+
+        @property
+        def expenses(self):
+            return []
+
+        def tax_breakdown(self):
+            rate = Decimal(str(self.tax_rate or 0))
+            taxable = Decimal(str(self.subtotal or 0))
+            tax = Decimal(str(self.tax_amount or 0))
+            cat = self.vat_category or ("S" if rate > 0 else "Z")
+            return [{"category": cat, "rate": rate, "taxable": taxable, "tax": tax}]
+
+    shim = _CNAsInvoice(credit_note, invoice)
+    progressivo = progressivo_from_id(getattr(credit_note, "id", 1) or 1)
+    xml_str, filename, _sha = build_fatturapa_xml(shim, settings, client, progressivo)
+
+    # Patch TipoDocumento TD01 → TD04 and inject DatiFattureCollegate
+    root = ET.fromstring(xml_str.encode("utf-8") if isinstance(xml_str, str) else xml_str)
+    for el in root.iter():
+        if el.tag.endswith("TipoDocumento") and el.text == "TD01":
+            el.text = "TD04"
+            break
+
+    # Insert DatiFattureCollegate under DatiGenerali
+    for el in root.iter():
+        if el.tag.endswith("DatiGenerali"):
+            linked = ET.Element("DatiFattureCollegate")
+            id_doc = ET.SubElement(linked, "IdDocumento")
+            id_doc.text = (_strip(getattr(invoice, "invoice_number", None)) or "1")[:20]
+            inv_issue = getattr(invoice, "issue_date", None)
+            if inv_issue and hasattr(inv_issue, "isoformat"):
+                data_el = ET.SubElement(linked, "Data")
+                data_el.text = inv_issue.isoformat()
+            # Insert after DatiGeneraliDocumento if present
+            inserted = False
+            for i, child in enumerate(list(el)):
+                if child.tag.endswith("DatiGeneraliDocumento"):
+                    el.insert(i + 1, linked)
+                    inserted = True
+                    break
+            if not inserted:
+                el.append(linked)
+            break
+
+    out = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+    # Keep filename but mark as credit note in Progressivo when possible
+    if filename and not filename.upper().endswith(".XML"):
+        filename = filename + ".xml"
+    return out, filename
