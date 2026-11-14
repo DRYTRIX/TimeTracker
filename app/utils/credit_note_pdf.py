@@ -15,7 +15,9 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 def generate_credit_note_pdf(cn) -> bytes:
     """Return PDF bytes for a credit note."""
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=20 * mm, rightMargin=20 * mm, topMargin=20 * mm, bottomMargin=20 * mm)
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4, leftMargin=20 * mm, rightMargin=20 * mm, topMargin=20 * mm, bottomMargin=20 * mm
+    )
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle("CNTitle", parent=styles["Heading1"], fontSize=18, spaceAfter=12)
     normal = styles["Normal"]

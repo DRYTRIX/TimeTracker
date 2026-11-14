@@ -29,9 +29,11 @@ def _has_column(inspector, table_name: str, column_name: str) -> bool:
         return False
 
 
-def _add_column_if_missing(inspector, table_name: str, column: sa.Column) -> None:
-    if not _has_column(inspector, table_name, column.name):
-        op.add_column(table_name, column)
+def _has_index(inspector, table_name: str, index_name: str) -> bool:
+    try:
+        return any(idx["name"] == index_name for idx in inspector.get_indexes(table_name))
+    except Exception:
+        return False
 
 
 def upgrade():
@@ -52,6 +54,7 @@ def upgrade():
         )
 
     # ── reminder_policy_levels ───────────────────────────────────────────────
+    inspector = inspect(bind)
     if not _has_table(inspector, "reminder_policy_levels"):
         op.create_table(
             "reminder_policy_levels",
@@ -72,27 +75,50 @@ def upgrade():
             sa.ForeignKeyConstraint(["policy_id"], ["reminder_policies.id"], ondelete="CASCADE"),
             sa.PrimaryKeyConstraint("id"),
         )
+        op.create_index(
+            "ix_reminder_policy_levels_policy_id",
+            "reminder_policy_levels",
+            ["policy_id"],
+            unique=False,
+        )
+    else:
+        if not _has_index(inspector, "reminder_policy_levels", "ix_reminder_policy_levels_policy_id"):
+            op.create_index(
+                "ix_reminder_policy_levels_policy_id",
+                "reminder_policy_levels",
+                ["policy_id"],
+                unique=False,
+            )
 
-    # ── clients.reminder_policy_id (nullable FK) ─────────────────────────────
-    _add_column_if_missing(
-        inspector,
-        "clients",
-        sa.Column("reminder_policy_id", sa.Integer(), sa.ForeignKey("reminder_policies.id"), nullable=True),
-    )
+    # SQLite cannot ALTER to add FK constraints; use batch copy-and-move.
+    inspector = inspect(bind)
+    if not _has_column(inspector, "clients", "reminder_policy_id"):
+        with op.batch_alter_table("clients", schema=None) as batch_op:
+            batch_op.add_column(sa.Column("reminder_policy_id", sa.Integer(), nullable=True))
+            batch_op.create_foreign_key(
+                "clients_reminder_policy_id_fkey",
+                "reminder_policies",
+                ["reminder_policy_id"],
+                ["id"],
+            )
 
-    # ── invoices.reminder_policy_id (nullable FK) ────────────────────────────
-    _add_column_if_missing(
-        inspector,
-        "invoices",
-        sa.Column("reminder_policy_id", sa.Integer(), sa.ForeignKey("reminder_policies.id"), nullable=True),
-    )
+    inspector = inspect(bind)
+    if not _has_column(inspector, "invoices", "reminder_policy_id"):
+        with op.batch_alter_table("invoices", schema=None) as batch_op:
+            batch_op.add_column(sa.Column("reminder_policy_id", sa.Integer(), nullable=True))
+            batch_op.create_foreign_key(
+                "invoices_reminder_policy_id_fkey",
+                "reminder_policies",
+                ["reminder_policy_id"],
+                ["id"],
+            )
 
-    # ── invoices.late_fee_amount ──────────────────────────────────────────────
-    _add_column_if_missing(
-        inspector,
-        "invoices",
-        sa.Column("late_fee_amount", sa.Numeric(10, 2), nullable=False, server_default="0"),
-    )
+    inspector = inspect(bind)
+    if not _has_column(inspector, "invoices", "late_fee_amount"):
+        op.add_column(
+            "invoices",
+            sa.Column("late_fee_amount", sa.Numeric(10, 2), nullable=False, server_default="0"),
+        )
 
 
 def downgrade():
@@ -102,14 +128,24 @@ def downgrade():
     if _has_column(inspector, "invoices", "late_fee_amount"):
         op.drop_column("invoices", "late_fee_amount")
 
+    inspector = inspect(bind)
     if _has_column(inspector, "invoices", "reminder_policy_id"):
-        op.drop_column("invoices", "reminder_policy_id")
+        with op.batch_alter_table("invoices", schema=None) as batch_op:
+            batch_op.drop_constraint("invoices_reminder_policy_id_fkey", type_="foreignkey")
+            batch_op.drop_column("reminder_policy_id")
 
+    inspector = inspect(bind)
     if _has_column(inspector, "clients", "reminder_policy_id"):
-        op.drop_column("clients", "reminder_policy_id")
+        with op.batch_alter_table("clients", schema=None) as batch_op:
+            batch_op.drop_constraint("clients_reminder_policy_id_fkey", type_="foreignkey")
+            batch_op.drop_column("reminder_policy_id")
 
+    inspector = inspect(bind)
     if _has_table(inspector, "reminder_policy_levels"):
+        if _has_index(inspector, "reminder_policy_levels", "ix_reminder_policy_levels_policy_id"):
+            op.drop_index("ix_reminder_policy_levels_policy_id", table_name="reminder_policy_levels")
         op.drop_table("reminder_policy_levels")
 
+    inspector = inspect(bind)
     if _has_table(inspector, "reminder_policies"):
         op.drop_table("reminder_policies")

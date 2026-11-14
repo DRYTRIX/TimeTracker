@@ -588,6 +588,7 @@ def build_fatturapa_credit_note_xml(credit_note, invoice, settings, client=None)
 
     Returns (xml_bytes, filename).
     """
+
     # Reuse the invoice builder then patch document type + linked invoice reference.
     # build_fatturapa_xml expects an invoice-like object; we temporarily adapt via a shim.
     class _CNAsInvoice:

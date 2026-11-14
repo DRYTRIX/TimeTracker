@@ -13,15 +13,15 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
+from factories import ClientFactory, ProjectFactory, UserFactory
 
 from app import db
 from app.models import Client, Invoice, InvoiceItem, Project, Settings, User
-from factories import ClientFactory, ProjectFactory, UserFactory
-
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def base_user(app):
@@ -80,6 +80,7 @@ def add_item(invoice, description, quantity, unit_price, **kwargs) -> InvoiceIte
 # 1. No discounts → same totals as before
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.invoices
 def test_no_discounts_same_as_before(app, base_user, base_project, base_client):
     """Without any discounts the totals should equal qty×price + tax as before."""
@@ -111,6 +112,7 @@ def test_no_discounts_zero_tax(app, base_user, base_project, base_client):
 # 2. Per-line discount
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.invoices
 def test_line_discount_percent(app, base_user, base_project, base_client):
     """Per-line 10% discount reduces line net correctly."""
@@ -136,8 +138,12 @@ def test_line_discount_amount(app, base_user, base_project, base_client):
     """Per-line fixed discount_amount takes priority over discount_percent."""
     inv = make_invoice(base_user, base_project, base_client, tax_rate=Decimal("10"))
     add_item(
-        inv, "Item", Decimal("5"), Decimal("200"),
-        discount_amount=Decimal("50"), discount_percent=Decimal("99"),  # amount wins
+        inv,
+        "Item",
+        Decimal("5"),
+        Decimal("200"),
+        discount_amount=Decimal("50"),
+        discount_percent=Decimal("99"),  # amount wins
     )
     # gross = 1000, disc_amount = 50, net = 950
     db.session.commit()
@@ -166,11 +172,14 @@ def test_line_no_discount(app, base_user, base_project, base_client):
 # 3. Invoice-level discount
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.invoices
 def test_invoice_discount_percent(app, base_user, base_project, base_client):
     """Invoice-level 5% discount applied after line totals, before tax."""
     inv = make_invoice(
-        base_user, base_project, base_client,
+        base_user,
+        base_project,
+        base_client,
         tax_rate=Decimal("20"),
         discount_percent=Decimal("5"),
     )
@@ -188,7 +197,9 @@ def test_invoice_discount_percent(app, base_user, base_project, base_client):
 def test_invoice_discount_amount(app, base_user, base_project, base_client):
     """Invoice-level fixed discount_amount applied before tax."""
     inv = make_invoice(
-        base_user, base_project, base_client,
+        base_user,
+        base_project,
+        base_client,
         tax_rate=Decimal("10"),
         discount_amount=Decimal("100"),
     )
@@ -205,7 +216,9 @@ def test_invoice_discount_amount(app, base_user, base_project, base_client):
 def test_invoice_discount_amount_wins_over_percent(app, base_user, base_project, base_client):
     """When both discount_amount and discount_percent set, amount wins."""
     inv = make_invoice(
-        base_user, base_project, base_client,
+        base_user,
+        base_project,
+        base_client,
         tax_rate=Decimal("0"),
         discount_amount=Decimal("50"),
         discount_percent=Decimal("99"),  # should be ignored
@@ -220,7 +233,9 @@ def test_invoice_discount_amount_wins_over_percent(app, base_user, base_project,
 def test_combined_line_and_invoice_discount(app, base_user, base_project, base_client):
     """Line discount applied first, then invoice discount on the combined net."""
     inv = make_invoice(
-        base_user, base_project, base_client,
+        base_user,
+        base_project,
+        base_client,
         tax_rate=Decimal("20"),
         discount_percent=Decimal("10"),
     )
@@ -238,6 +253,7 @@ def test_combined_line_and_invoice_discount(app, base_user, base_project, base_c
 # ---------------------------------------------------------------------------
 # 4. Mixed tax rates → tax_breakdown() and totals
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.invoices
 def test_mixed_tax_rates_breakdown(app, base_user, base_project, base_client):
@@ -273,7 +289,9 @@ def test_mixed_tax_rates_breakdown(app, base_user, base_project, base_client):
 def test_mixed_tax_rates_with_invoice_discount(app, base_user, base_project, base_client):
     """Invoice discount is distributed proportionally across rate groups."""
     inv = make_invoice(
-        base_user, base_project, base_client,
+        base_user,
+        base_project,
+        base_client,
         tax_rate=Decimal("20"),
         discount_percent=Decimal("10"),
     )
@@ -301,6 +319,7 @@ def test_mixed_tax_rates_with_invoice_discount(app, base_user, base_project, bas
 # 5. effective_tax_rate fallback
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.invoices
 def test_effective_tax_rate_fallback(app, base_user, base_project, base_client):
     """Item without tax_rate falls back to invoice.tax_rate."""
@@ -325,6 +344,7 @@ def test_effective_tax_rate_per_line_overrides(app, base_user, base_project, bas
 # ---------------------------------------------------------------------------
 # 6. Position ordering
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.invoices
 def test_item_position_stored(app, base_user, base_project, base_client):
@@ -352,11 +372,14 @@ def test_item_position_default_zero(app, base_user, base_project, base_client):
 # 7. to_dict includes new fields
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.invoices
 def test_invoice_to_dict_new_fields(app, base_user, base_project, base_client):
     """Invoice.to_dict() includes discount_percent and discount_amount."""
     inv = make_invoice(
-        base_user, base_project, base_client,
+        base_user,
+        base_project,
+        base_client,
         tax_rate=Decimal("20"),
         discount_percent=Decimal("5"),
         discount_amount=Decimal("0"),
@@ -373,7 +396,10 @@ def test_item_to_dict_new_fields(app, base_user, base_project, base_client):
     """InvoiceItem.to_dict() includes tax_rate, discount_percent, discount_amount, position."""
     inv = make_invoice(base_user, base_project, base_client, tax_rate=Decimal("20"))
     item = add_item(
-        inv, "X", Decimal("2"), Decimal("50"),
+        inv,
+        "X",
+        Decimal("2"),
+        Decimal("50"),
         tax_rate=Decimal("7"),
         discount_percent=Decimal("10"),
         position=3,
@@ -389,17 +415,14 @@ def test_item_to_dict_new_fields(app, base_user, base_project, base_client):
 # 8. Backward compatibility: existing items with null discounts unchanged
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.invoices
 def test_backward_compat_null_discounts(app, base_user, base_project, base_client):
     """Items without discount fields behave exactly as before (no change to totals)."""
     inv = make_invoice(base_user, base_project, base_client, tax_rate=Decimal("20"))
     # Create items without any new fields (old-style)
-    item1 = InvoiceItem(
-        invoice_id=inv.id, description="A", quantity=Decimal("10"), unit_price=Decimal("75")
-    )
-    item2 = InvoiceItem(
-        invoice_id=inv.id, description="B", quantity=Decimal("5"), unit_price=Decimal("100")
-    )
+    item1 = InvoiceItem(invoice_id=inv.id, description="A", quantity=Decimal("10"), unit_price=Decimal("75"))
+    item2 = InvoiceItem(invoice_id=inv.id, description="B", quantity=Decimal("5"), unit_price=Decimal("100"))
     db.session.add(item1)
     db.session.add(item2)
     db.session.commit()
@@ -414,6 +437,7 @@ def test_backward_compat_null_discounts(app, base_user, base_project, base_clien
 # ---------------------------------------------------------------------------
 # 9. tax_breakdown() with single rate returns one entry
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.invoices
 def test_tax_breakdown_single_rate(app, base_user, base_project, base_client):

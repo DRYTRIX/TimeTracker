@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -96,6 +96,7 @@ def process_due_reminders(today: Optional[date] = None) -> int:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _process_invoice(invoice, today, db, InvoiceReminderSchedule, InvoiceEmail) -> int:
     """Process reminder levels for a single invoice. Returns # sent."""

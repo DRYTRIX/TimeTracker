@@ -530,7 +530,9 @@ def build_cii_invoice_xml(
     return xml_bytes.decode("utf-8"), sha256_hex
 
 
-def build_cii_credit_note_xml(credit_note, invoice, seller: CIIParty, buyer: CIIParty, settings=None) -> Tuple[str, str]:
+def build_cii_credit_note_xml(
+    credit_note, invoice, seller: CIIParty, buyer: CIIParty, settings=None
+) -> Tuple[str, str]:
     """Build CII XML for a credit note (TypeCode 381) referencing the original invoice."""
 
     class _Shim:

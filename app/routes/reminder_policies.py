@@ -93,6 +93,7 @@ def delete_policy(policy_id):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _save_levels(policy: ReminderPolicy, form) -> None:
     """Parse multi-level form data and add ReminderPolicyLevel rows."""
     # Levels are submitted as:

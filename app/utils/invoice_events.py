@@ -30,9 +30,7 @@ def emit_invoice_event(event_name: str, invoice: Any, **extra: Any) -> None:
         try:
             from flask import current_app
 
-            current_app.logger.debug(
-                "emit_invoice_event failed for %s", event_name, exc_info=True
-            )
+            current_app.logger.debug("emit_invoice_event failed for %s", event_name, exc_info=True)
         except Exception:
             pass
 
@@ -54,9 +52,7 @@ def emit_credit_note_event(event_name: str, credit_note: Any, **extra: Any) -> N
         try:
             from flask import current_app
 
-            current_app.logger.debug(
-                "emit_credit_note_event failed for %s", event_name, exc_info=True
-            )
+            current_app.logger.debug("emit_credit_note_event failed for %s", event_name, exc_info=True)
         except Exception:
             pass
 
@@ -77,8 +73,6 @@ def emit_payment_event(event_name: str, payment: Any, **extra: Any) -> None:
         try:
             from flask import current_app
 
-            current_app.logger.debug(
-                "emit_payment_event failed for %s", event_name, exc_info=True
-            )
+            current_app.logger.debug("emit_payment_event failed for %s", event_name, exc_info=True)
         except Exception:
             pass

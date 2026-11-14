@@ -1,4 +1,5 @@
-from datetime import datetime, date as _date
+from datetime import date as _date
+from datetime import datetime
 from decimal import Decimal
 
 from app import db
@@ -90,9 +91,7 @@ class CreditNote(db.Model):
     notes = db.Column(db.Text, nullable=True)
 
     # Relationships
-    items = db.relationship(
-        "CreditNoteItem", backref="credit_note", lazy="dynamic", cascade="all, delete-orphan"
-    )
+    items = db.relationship("CreditNoteItem", backref="credit_note", lazy="dynamic", cascade="all, delete-orphan")
     creator = db.relationship("User", backref="created_credit_notes", foreign_keys=[created_by])
 
     def __repr__(self):
@@ -177,7 +176,7 @@ class CreditNoteItem(db.Model):
     vat_category = db.Column(db.String(5), nullable=True)
     discount_percent = db.Column(db.Numeric(5, 2), nullable=True, default=0)
     discount_amount = db.Column(db.Numeric(10, 2), nullable=True, default=0)
-    position = db.Column(db.Integer, nullable=False, default=0)
+    position = db.Column(db.Integer, nullable=True, default=0, server_default="0")
     invoice_item_id = db.Column(db.Integer, db.ForeignKey("invoice_items.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 

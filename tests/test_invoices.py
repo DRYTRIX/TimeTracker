@@ -2450,9 +2450,7 @@ def test_edit_sent_invoice_locks_financial_fields(app, client, user, project):
     # Invoice.__init__ ignores status kwargs from the factory
     inv.status = "sent"
     db.session.commit()
-    InvoiceItemFactory(
-        invoice_id=inv.id, description="Line A", quantity=Decimal("2.00"), unit_price=Decimal("50.00")
-    )
+    InvoiceItemFactory(invoice_id=inv.id, description="Line A", quantity=Decimal("2.00"), unit_price=Decimal("50.00"))
     db.session.commit()
     inv.calculate_totals()
     db.session.commit()

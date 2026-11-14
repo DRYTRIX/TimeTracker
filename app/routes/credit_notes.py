@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _check_access(invoice):
     """Raise 403 if the current user doesn't own or admin the invoice."""
     if not current_user.is_admin and invoice.created_by != current_user.id:
@@ -47,6 +48,7 @@ def _get_cn_or_404(cn_id):
 # ---------------------------------------------------------------------------
 # List (optional simple view)
 # ---------------------------------------------------------------------------
+
 
 @credit_notes_bp.route("/")
 @login_required
@@ -68,6 +70,7 @@ def list_credit_notes():
 # ---------------------------------------------------------------------------
 # Create from invoice (POST)
 # ---------------------------------------------------------------------------
+
 
 @credit_notes_bp.route("/create-from-invoice/<int:invoice_id>", methods=["POST"])
 @login_required
@@ -92,6 +95,7 @@ def create_from_invoice(invoice_id):
             raw_amount = request.form.get("amount", "0")
             try:
                 from decimal import Decimal
+
                 amount = Decimal(str(raw_amount))
             except Exception:
                 flash(_("Invalid amount."), "error")
@@ -114,6 +118,7 @@ def create_from_invoice(invoice_id):
 # View
 # ---------------------------------------------------------------------------
 
+
 @credit_notes_bp.route("/<int:cn_id>")
 @login_required
 @module_enabled("invoices")
@@ -129,6 +134,7 @@ def view_credit_note(cn_id):
 # ---------------------------------------------------------------------------
 # Issue (POST)
 # ---------------------------------------------------------------------------
+
 
 @credit_notes_bp.route("/<int:cn_id>/issue", methods=["POST"])
 @login_required
@@ -154,6 +160,7 @@ def issue_credit_note(cn_id):
 # PDF download
 # ---------------------------------------------------------------------------
 
+
 @credit_notes_bp.route("/<int:cn_id>/pdf")
 @login_required
 @module_enabled("invoices")
@@ -164,6 +171,7 @@ def download_pdf(cn_id):
 
     try:
         from app.utils.credit_note_pdf import generate_credit_note_pdf
+
         pdf_bytes = generate_credit_note_pdf(cn)
     except Exception as exc:
         logger.exception("Credit note PDF generation failed for cn=%s", cn_id)
@@ -182,6 +190,7 @@ def download_pdf(cn_id):
 # E-invoicing XML download routes
 # ---------------------------------------------------------------------------
 
+
 @credit_notes_bp.route("/<int:cn_id>/ubl")
 @login_required
 @module_enabled("invoices")
@@ -192,7 +201,7 @@ def download_ubl(cn_id):
     _check_access(invoice)
 
     try:
-        from app.integrations.peppol import build_peppol_ubl_credit_note_xml, PeppolParty
+        from app.integrations.peppol import PeppolParty, build_peppol_ubl_credit_note_xml
         from app.models import Settings
 
         settings = Settings.get_settings()
@@ -230,8 +239,8 @@ def download_fatturapa(cn_id):
     _check_access(invoice)
 
     try:
+        from app.models import Client, Settings
         from app.utils.fatturapa import build_fatturapa_credit_note_xml
-        from app.models import Settings, Client
 
         settings = Settings.get_settings()
         client = Client.query.get(invoice.client_id) if invoice.client_id else None

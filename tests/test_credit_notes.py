@@ -100,9 +100,7 @@ def test_fatturapa_credit_note_td04(app, user, sent_invoice):
     from app.services.credit_note_service import CreditNoteService
     from app.utils.fatturapa import build_fatturapa_credit_note_xml
 
-    cn = CreditNoteService.create_amount_credit(
-        sent_invoice, user.id, Decimal("10.00"), reason="TD04", auto_issue=True
-    )
+    cn = CreditNoteService.create_amount_credit(sent_invoice, user.id, Decimal("10.00"), reason="TD04", auto_issue=True)
     settings = Settings.get_settings()
     xml_bytes, filename = build_fatturapa_credit_note_xml(cn, sent_invoice, settings, client=None)
     xml = xml_bytes.decode("utf-8") if isinstance(xml_bytes, (bytes, bytearray)) else xml_bytes

@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # 1. Registry / Mollie
 # ---------------------------------------------------------------------------
@@ -250,9 +249,7 @@ def test_mollie_refund_calls_mollie_api():
 def test_paypal_refund_calls_paypal_api():
     from app.payments.paypal_provider import PayPalProvider
 
-    provider = PayPalProvider(
-        {"client_id": "cid", "client_secret": "cs", "sandbox": True}, is_test_mode=True
-    )
+    provider = PayPalProvider({"client_id": "cid", "client_secret": "cs", "sandbox": True}, is_test_mode=True)
     token_resp = MagicMock()
     token_resp.ok = True
     token_resp.json.return_value = {"access_token": "tok"}
@@ -277,8 +274,9 @@ def test_refund_route_local_only(app, invoice):
     from app.models import Payment
 
     with app.app_context():
-        from app import db
         from datetime import date
+
+        from app import db
 
         # Create a completed payment with no gateway id
         payment = Payment(
@@ -349,8 +347,8 @@ def test_pay_html_uses_provider_title(app):
 
 def test_receipt_email_sent_on_completed_payment(app, invoice):
     """PaymentService.create_payment sends receipt email when client_email present."""
-    from decimal import Decimal
     from datetime import date
+    from decimal import Decimal
 
     with app.app_context():
         from app.models import Invoice
@@ -378,8 +376,8 @@ def test_receipt_email_sent_on_completed_payment(app, invoice):
 
 def test_receipt_email_not_sent_for_pending(app, invoice):
     """No receipt email for pending payments."""
-    from decimal import Decimal
     from datetime import date
+    from decimal import Decimal
 
     with app.app_context():
         from app.services.payment_service import PaymentService
@@ -411,8 +409,8 @@ def test_portal_pdf_requires_auth(app):
 def test_portal_pdf_rejects_wrong_client(app, invoice):
     """PDF route returns 404/403 when invoice belongs to different client."""
     with app.app_context():
-        from app.models import Client
         from app import db
+        from app.models import Client
 
         # Create a different client
         other_client = Client(name="Other Client", email="other@example.com")

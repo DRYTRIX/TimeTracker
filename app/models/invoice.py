@@ -69,7 +69,7 @@ class Invoice(db.Model):
     # Reminder policy (optional per-invoice override; falls back to client then default)
     reminder_policy_id = db.Column(db.Integer, db.ForeignKey("reminder_policies.id"), nullable=True)
     # Accumulated late fees added by the reminder service
-    late_fee_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    late_fee_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0, server_default="0")
 
     # Metadata
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
@@ -518,7 +518,7 @@ class InvoiceItem(db.Model):
     discount_amount = db.Column(db.Numeric(10, 2), nullable=True, default=0)
 
     # Ordering (lower = first)
-    position = db.Column(db.Integer, nullable=True, default=0)
+    position = db.Column(db.Integer, nullable=True, default=0, server_default="0")
 
     # Time entry reference (optional)
     time_entry_ids = db.Column(db.Text, nullable=True)  # Comma-separated IDs

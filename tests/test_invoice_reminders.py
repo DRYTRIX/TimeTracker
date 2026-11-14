@@ -11,14 +11,15 @@ Covers:
 
 from __future__ import annotations
 
-import pytest
 from datetime import date, datetime
 from decimal import Decimal
 
+import pytest
 
 # ---------------------------------------------------------------------------
 # Helpers to create minimal DB rows
 # ---------------------------------------------------------------------------
+
 
 def _create_project(db, user, client):
     from app.models import Project
@@ -154,6 +155,7 @@ class TestProcessDueReminders:
             # The draft invoice must not be in the result (other invoices may exist)
             # We verify by checking no schedule row was created for this draft invoice
             from app.models.payments import InvoiceReminderSchedule
+
             rows = InvoiceReminderSchedule.query.filter_by(invoice_id=inv.id).all()
             assert rows == [], "No reminder schedule rows should be created for a draft invoice"
 
@@ -173,13 +175,13 @@ class TestProcessDueReminders:
             db.session.commit()
 
             inv = _create_invoice(
-                db, user, project, client,
-                due_date=due, status="overdue", payment_status="fully_paid"
+                db, user, project, client, due_date=due, status="overdue", payment_status="fully_paid"
             )
             inv.amount_paid = inv.total_amount
             db.session.commit()
 
             from app.models.payments import InvoiceReminderSchedule
+
             # Clear any rows that may have been added by other tests
             InvoiceReminderSchedule.query.filter_by(invoice_id=inv.id).delete()
             db.session.commit()
@@ -192,8 +194,8 @@ class TestProcessDueReminders:
         """Fixed late fee is added exactly once to invoice.late_fee_amount."""
         with app.app_context():
             from app import db
-            from app.services.invoice_reminder_service import process_due_reminders
             from app.models import Invoice
+            from app.services.invoice_reminder_service import process_due_reminders
 
             today = date(2024, 6, 10)
             due = date(2024, 6, 5)
@@ -213,24 +215,20 @@ class TestProcessDueReminders:
             process_due_reminders(today=today)
             db.session.expire_all()
             inv = Invoice.query.get(inv_id)
-            assert inv.late_fee_amount == Decimal("50.00"), (
-                f"Expected late_fee_amount=50, got {inv.late_fee_amount}"
-            )
+            assert inv.late_fee_amount == Decimal("50.00"), f"Expected late_fee_amount=50, got {inv.late_fee_amount}"
 
             # Second run: late fee must NOT be added again
             process_due_reminders(today=today)
             db.session.expire_all()
             inv = Invoice.query.get(inv_id)
-            assert inv.late_fee_amount == Decimal("50.00"), (
-                "Late fee must only be applied once per level"
-            )
+            assert inv.late_fee_amount == Decimal("50.00"), "Late fee must only be applied once per level"
 
     def test_late_fee_percent_annual_applied(self, app, user):
         """Percent-annual late fee is computed and added."""
         with app.app_context():
             from app import db
-            from app.services.invoice_reminder_service import process_due_reminders
             from app.models import Invoice
+            from app.services.invoice_reminder_service import process_due_reminders
 
             today = date(2024, 6, 10)
             due = date(2024, 6, 5)  # 5 days overdue
@@ -252,9 +250,7 @@ class TestProcessDueReminders:
 
             # 36.5% annual / 365 = 0.1% per day; 5 days * 0.001 * 1000 = 5.00
             assert inv.late_fee_amount > Decimal("0"), "Late fee should be positive"
-            assert inv.late_fee_amount == Decimal("5.00"), (
-                f"Expected 5.00, got {inv.late_fee_amount}"
-            )
+            assert inv.late_fee_amount == Decimal("5.00"), f"Expected 5.00, got {inv.late_fee_amount}"
 
 
 class TestResolvePolicy:

@@ -109,8 +109,8 @@ class CreditNoteService:
           - ``invoice_item_id`` (int): source line item id
           - ``quantity`` (Decimal|float|str): quantity to credit (defaults to full line qty)
         """
-        from app.models.payments import CreditNoteItem
         from app.models.invoice import InvoiceItem
+        from app.models.payments import CreditNoteItem
 
         cn = cls._make_credit_note(invoice, user_id, reason)
         db.session.add(cn)
@@ -221,8 +221,4 @@ class CreditNoteService:
     def get_credits_for_invoice(invoice_id: int) -> List[Any]:
         from app.models.payments import CreditNote
 
-        return (
-            CreditNote.query.filter_by(invoice_id=invoice_id)
-            .order_by(CreditNote.created_at.desc())
-            .all()
-        )
+        return CreditNote.query.filter_by(invoice_id=invoice_id).order_by(CreditNote.created_at.desc()).all()

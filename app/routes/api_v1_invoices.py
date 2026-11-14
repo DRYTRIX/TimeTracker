@@ -512,9 +512,7 @@ def send_invoice_email_api(invoice_id):
         return err
 
     data = request.get_json(silent=True) or {}
-    recipient_email = (
-        data.get("recipient_email") or data.get("recipient") or invoice.client_email or ""
-    ).strip()
+    recipient_email = (data.get("recipient_email") or data.get("recipient") or invoice.client_email or "").strip()
     if not recipient_email:
         return validation_error_response(
             errors={"recipient_email": ["Recipient email is required"]},
@@ -566,9 +564,7 @@ def export_invoice_ubl_api(invoice_id):
         svc = PeppolService()
         sender = svc._get_sender_party()
         recipient_party, _ign, _ign2 = svc._get_recipient_party(invoice)
-        ubl_xml, _ign3 = build_peppol_ubl_invoice_xml(
-            invoice=invoice, supplier=sender, customer=recipient_party
-        )
+        ubl_xml, _ign3 = build_peppol_ubl_invoice_xml(invoice=invoice, supplier=sender, customer=recipient_party)
         fn = f"{invoice.invoice_number}.xml"
         return Response(
             ubl_xml,
@@ -606,9 +602,7 @@ def export_invoice_xrechnung_api(invoice_id):
             headers={"Content-Disposition": f"attachment; filename={fn}"},
         )
     except Exception as e:
-        current_app.logger.error(
-            "API XRechnung export failed for invoice %s: %s", invoice_id, e, exc_info=True
-        )
+        current_app.logger.error("API XRechnung export failed for invoice %s: %s", invoice_id, e, exc_info=True)
         return error_response("XRechnung export failed", status_code=500)
 
 
@@ -636,7 +630,5 @@ def export_invoice_fatturapa_api(invoice_id):
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except Exception as e:
-        current_app.logger.error(
-            "API FatturaPA export failed for invoice %s: %s", invoice_id, e, exc_info=True
-        )
+        current_app.logger.error("API FatturaPA export failed for invoice %s: %s", invoice_id, e, exc_info=True)
         return error_response("FatturaPA export failed", status_code=500)

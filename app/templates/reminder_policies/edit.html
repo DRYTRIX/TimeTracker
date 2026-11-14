@@ -86,7 +86,7 @@
   </form>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
 document.getElementById('add-level').addEventListener('click', function() {
   const html = `<div class="card p-4 mb-3 level-row">
     <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
