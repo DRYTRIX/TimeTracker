@@ -103,6 +103,15 @@ class Settings(db.Model):
     company_country = db.Column(db.String(2), default="", nullable=True)  # ISO 3166-1 alpha-2
     company_iban = db.Column(db.String(34), default="", nullable=True)
     company_bic = db.Column(db.String(11), default="", nullable=True)
+    # Italian FatturaPA / SDI company fields
+    company_codice_fiscale = db.Column(db.String(16), default="", nullable=True)
+    company_regime_fiscale = db.Column(db.String(4), default="RF01", nullable=True)
+    company_provincia = db.Column(db.String(2), default="", nullable=True)
+    sdi_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    sdi_transport_url = db.Column(db.String(500), default="", nullable=True)
+    sdi_transport_token = db.Column(db.String(255), default="", nullable=True)
+    sdi_transmitter_id = db.Column(db.String(16), default="", nullable=True)
+    sdi_timeout = db.Column(db.Integer, default=30, nullable=True)
 
     # PDF template customization
     invoice_pdf_template_html = db.Column(db.Text, default="", nullable=True)
@@ -323,6 +332,14 @@ class Settings(db.Model):
         self.company_country = kwargs.get("company_country", "")
         self.company_iban = kwargs.get("company_iban", "")
         self.company_bic = kwargs.get("company_bic", "")
+        self.company_codice_fiscale = kwargs.get("company_codice_fiscale", "")
+        self.company_regime_fiscale = kwargs.get("company_regime_fiscale", "RF01")
+        self.company_provincia = kwargs.get("company_provincia", "")
+        self.sdi_enabled = kwargs.get("sdi_enabled", False)
+        self.sdi_transport_url = kwargs.get("sdi_transport_url", "")
+        self.sdi_transport_token = kwargs.get("sdi_transport_token", "")
+        self.sdi_transmitter_id = kwargs.get("sdi_transmitter_id", "")
+        self.sdi_timeout = kwargs.get("sdi_timeout", 30)
 
         # PDF template customization
         self.invoice_pdf_template_html = kwargs.get("invoice_pdf_template_html", "")
@@ -673,6 +690,14 @@ class Settings(db.Model):
             "company_country": getattr(self, "company_country", "") or "",
             "company_iban": getattr(self, "company_iban", "") or "",
             "company_bic": getattr(self, "company_bic", "") or "",
+            "company_codice_fiscale": getattr(self, "company_codice_fiscale", "") or "",
+            "company_regime_fiscale": getattr(self, "company_regime_fiscale", "") or "RF01",
+            "company_provincia": getattr(self, "company_provincia", "") or "",
+            "sdi_enabled": bool(getattr(self, "sdi_enabled", False)),
+            "sdi_transport_url": getattr(self, "sdi_transport_url", "") or "",
+            "sdi_transport_token_set": bool(getattr(self, "sdi_transport_token", "")),
+            "sdi_transmitter_id": getattr(self, "sdi_transmitter_id", "") or "",
+            "sdi_timeout": getattr(self, "sdi_timeout", None),
             "invoice_prefix": self.invoice_prefix,
             "invoice_number_pattern": self.invoice_number_pattern,
             "invoice_start_number": self.invoice_start_number,
@@ -763,6 +788,7 @@ class Settings(db.Model):
     _SECRET_FIELDS = (
         "mail_password",
         "peppol_access_point_token",
+        "sdi_transport_token",
         "ai_api_key",
         "jira_client_secret",
         "slack_client_secret",

@@ -91,6 +91,23 @@
                         <label for="leitweg_id" class="form-label">{{ _('Leitweg-ID (XRechnung BT-10)') }}</label>
                         <input type="text" id="leitweg_id" name="leitweg_id" value="{{ request.form.get('leitweg_id', client.leitweg_id or '') }}" class="form-input" placeholder="993-1234567890-00">
                     </div>
+                    <div>
+                        <label for="sdi_codice_destinatario" class="form-label">{{ _('SDI Codice Destinatario (FatturaPA)') }}</label>
+                        <input type="text" id="sdi_codice_destinatario" name="sdi_codice_destinatario" value="{{ request.form.get('sdi_codice_destinatario', client.sdi_codice_destinatario or '') }}" class="form-input" maxlength="7" placeholder="0000000">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('6 characters = public administration (FPA12); 7 characters = B2B (FPR12). Use 0000000 with PEC.') }}</p>
+                    </div>
+                    <div>
+                        <label for="pec_email" class="form-label">{{ _('PEC email (FatturaPA)') }}</label>
+                        <input type="email" id="pec_email" name="pec_email" value="{{ request.form.get('pec_email', client.pec_email or '') }}" class="form-input" placeholder="cliente@pec.example.it">
+                    </div>
+                    <div>
+                        <label for="codice_fiscale" class="form-label">{{ _('Codice Fiscale') }}</label>
+                        <input type="text" id="codice_fiscale" name="codice_fiscale" value="{{ request.form.get('codice_fiscale', client.codice_fiscale or '') }}" class="form-input" maxlength="16">
+                    </div>
+                    <div>
+                        <label for="provincia" class="form-label">{{ _('Provincia (IT)') }}</label>
+                        <input type="text" id="provincia" name="provincia" value="{{ request.form.get('provincia', client.provincia or '') }}" class="form-input" maxlength="2" placeholder="MI">
+                    </div>
                 </div>
 
                 {% if custom_field_definitions %}

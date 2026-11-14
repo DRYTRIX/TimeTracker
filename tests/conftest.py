@@ -237,6 +237,7 @@ def app(app_config):
             InvoicePDFTemplate,
             InvoicePeppolTransmission,
             InvoiceReminderSchedule,
+            InvoiceSdiTransmission,
             InvoiceTemplate,
             KanbanColumn,
             Mileage,

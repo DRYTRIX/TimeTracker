@@ -35,6 +35,17 @@
 <a href="{{ url_for('invoices.export_invoice_xrechnung', invoice_id=invoice.id) }}" class="btn bg-amber-700 text-white hover:bg-amber-800">
     <i class="fas fa-file-export mr-1"></i>{{ _('Download XRechnung') }}
 </a>
+<a href="{{ url_for('invoices.export_invoice_fatturapa', invoice_id=invoice.id) }}" class="btn bg-green-700 text-white hover:bg-green-800">
+    <i class="fas fa-file-code mr-1"></i>{{ _('Download FatturaPA') }}
+</a>
+{% if sdi_enabled %}
+<button type="button"
+        onclick="sendInvoiceSdi()"
+        class="btn bg-emerald-600 text-white hover:bg-emerald-700 {% if not sdi_recipient_ready %}opacity-50 cursor-not-allowed{% endif %}"
+        {% if not sdi_recipient_ready %}disabled title="{{ _('Client is missing SDI Codice Destinatario or PEC') }}"{% endif %}>
+    <i class="fas fa-paper-plane mr-1"></i>{{ _('Send via SDI') }}
+</button>
+{% endif %}
 {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
 <a href="{{ url_for('payment_gateways.pay_invoice', invoice_id=invoice.id) }}" class="btn bg-blue-500 text-white hover:bg-blue-600">
     <i class="fas fa-credit-card mr-1"></i>{{ _('Pay Online') }}
@@ -456,6 +467,55 @@
 </div>
 {% endif %}
 
+<!-- SDI / FatturaPA History Section -->
+{% if sdi_history is defined and sdi_history|length > 0 %}
+<div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <h2 class="text-lg font-semibold mb-4 flex items-center">
+        <i class="fas fa-file-invoice mr-2"></i>{{ _('SDI History') }}
+    </h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="border-b border-border-light dark:border-border-dark">
+                    <th class="p-2 text-sm font-medium">{{ _('Created') }}</th>
+                    <th class="p-2 text-sm font-medium">{{ _('Status') }}</th>
+                    <th class="p-2 text-sm font-medium">{{ _('Format') }}</th>
+                    <th class="p-2 text-sm font-medium">{{ _('Filename') }}</th>
+                    <th class="p-2 text-sm font-medium">{{ _('Message ID') }}</th>
+                    <th class="p-2 text-sm font-medium">{{ _('Error') }}</th>
+                    <th class="p-2 text-sm font-medium"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in sdi_history %}
+                <tr class="border-b border-border-light dark:border-border-dark">
+                    <td class="p-2 text-sm">{{ tx.created_at|user_datetime if tx.created_at else 'N/A' }}</td>
+                    <td class="p-2 text-sm">
+                        <span class="px-2 py-1 rounded text-xs font-medium
+                            {% if tx.status in ('sent', 'delivered', 'accepted') %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                            {% elif tx.status in ('failed', 'rejected', 'refused', 'expired') %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                            {% elif tx.status == 'not_delivered' %}bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200
+                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                            {{ tx.status|title }}
+                        </span>
+                    </td>
+                    <td class="p-2 text-sm">{{ tx.formato or '—' }}</td>
+                    <td class="p-2 text-sm">{{ tx.filename or '—' }}</td>
+                    <td class="p-2 text-sm">{{ tx.message_id or '—' }}</td>
+                    <td class="p-2 text-sm text-red-600 dark:text-red-400">{{ tx.error_message or '—' }}</td>
+                    <td class="p-2 text-sm">
+                        {% if tx.message_id and tx.status not in ('delivered', 'not_delivered', 'rejected', 'accepted', 'refused', 'expired', 'failed') %}
+                        <button type="button" class="text-indigo-600 hover:underline text-xs" onclick="refreshSdiTx({{ tx.id }})">{{ _('Refresh') }}</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <!-- Peppol History Section -->
 {% if peppol_history is defined and peppol_history|length > 0 %}
 <div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
@@ -766,6 +826,79 @@ async function sendInvoicePeppol() {
       window.toastManager.error(msg);
     } else {
       ttAlert('Error: ' + msg);
+    }
+  });
+}
+
+async function sendInvoiceSdi() {
+  {% if not sdi_recipient_ready %}
+  return;
+  {% endif %}
+
+  if (!(await ttConfirm({{ _('Send this invoice via SDI?')|tojson }}, { confirmText: {{ _('Send')|tojson }} }))) {
+    return;
+  }
+
+  const body = new FormData();
+  body.append('csrf_token', "{{ csrf_token() }}");
+
+  fetch("{{ url_for('invoices.send_invoice_sdi_route', invoice_id=invoice.id) }}", {
+    method: 'POST',
+    body
+  })
+  .then(async response => {
+    const contentType = response.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+    const data = isJson ? await response.json() : { error: await response.text() };
+    if (!response.ok) {
+      throw new Error(data.error || data.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+    return data;
+  })
+  .then(data => {
+    if (data.success) {
+      if (window.toastManager) {
+        window.toastManager.success(data.message || {{ _('Sent via SDI')|tojson }});
+      } else {
+        ttAlert(data.message || {{ _('Sent via SDI')|tojson }});
+      }
+      setTimeout(() => window.location.reload(), 800);
+    } else {
+      const errorMsg = data.error || {{ _('Failed to send via SDI')|tojson }};
+      if (window.toastManager) {
+        window.toastManager.error(errorMsg);
+      } else {
+        ttAlert('Error: ' + errorMsg);
+      }
+    }
+  })
+  .catch(err => {
+    const msg = err && err.message ? err.message : {{ _('Failed to send via SDI')|tojson }};
+    if (window.toastManager) {
+      window.toastManager.error(msg);
+    } else {
+      ttAlert('Error: ' + msg);
+    }
+  });
+}
+
+async function refreshSdiTx(txId) {
+  const body = new FormData();
+  body.append('csrf_token', "{{ csrf_token() }}");
+  fetch(`/invoices/sdi/${txId}/refresh`, { method: 'POST', body })
+  .then(async response => {
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Refresh failed');
+    }
+    return data;
+  })
+  .then(() => window.location.reload())
+  .catch(err => {
+    if (window.toastManager) {
+      window.toastManager.error(err.message || 'Refresh failed');
+    } else {
+      ttAlert('Error: ' + (err.message || 'Refresh failed'));
     }
   });
 }

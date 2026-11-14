@@ -55,6 +55,7 @@ from .invoice_email import InvoiceEmail
 from .invoice_image import InvoiceImage
 from .invoice_pdf_template import InvoicePDFTemplate
 from .invoice_peppol import InvoicePeppolTransmission, PeppolInboundDocument
+from .invoice_sdi import InvoiceSdiTransmission
 from .invoice_template import InvoiceTemplate
 from .issue import Issue
 from .kanban_board_template import KanbanBoardTemplate
@@ -201,6 +202,7 @@ __all__ = [
     "InvoiceEmail",
     "InvoicePeppolTransmission",
     "PeppolInboundDocument",
+    "InvoiceSdiTransmission",
     "Webhook",
     "WebhookDelivery",
     "Quote",

@@ -41,6 +41,9 @@ responses==0.26.3  # Mock HTTP responses
 # Optional Factur-X XSD validation (Akretion factur-x)
 factur-x>=7.9
 
+# FatturaPA XSD validation in tests
+lxml>=5.0
+
 # Database testing
 sqlalchemy-utils==0.43.0  # Database utilities for testing
 

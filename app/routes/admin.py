@@ -1791,6 +1791,11 @@ def settings():
             settings_obj.company_country = country
             settings_obj.company_iban = (request.form.get("company_iban", "") or "").strip().replace(" ", "")
             settings_obj.company_bic = (request.form.get("company_bic", "") or "").strip().replace(" ", "")
+            settings_obj.company_codice_fiscale = (request.form.get("company_codice_fiscale", "") or "").strip().upper()
+            settings_obj.company_regime_fiscale = (
+                request.form.get("company_regime_fiscale", "") or "RF01"
+            ).strip().upper() or "RF01"
+            settings_obj.company_provincia = (request.form.get("company_provincia", "") or "").strip().upper()[:2]
         except AttributeError:
             current_app.logger.debug("Company structured address columns not available", exc_info=True)
 
@@ -1916,6 +1921,21 @@ def settings():
             ).strip()
         except AttributeError:
             current_app.logger.debug("Peppol settings columns not available (migration not run)", exc_info=True)
+
+        # Update SDI / FatturaPA settings (if columns exist)
+        try:
+            settings_obj.sdi_enabled = request.form.get("sdi_enabled") == "on"
+            settings_obj.sdi_transport_url = (request.form.get("sdi_transport_url", "") or "").strip()
+            sdi_token = (request.form.get("sdi_transport_token", "") or "").strip()
+            if sdi_token:
+                settings_obj.set_secret("sdi_transport_token", sdi_token)
+            try:
+                settings_obj.sdi_timeout = int(request.form.get("sdi_timeout", 30))
+            except Exception:
+                settings_obj.sdi_timeout = 30
+            settings_obj.sdi_transmitter_id = (request.form.get("sdi_transmitter_id", "") or "").strip()
+        except AttributeError:
+            current_app.logger.debug("SDI settings columns not available (migration not run)", exc_info=True)
 
         # Update kiosk mode settings (if columns exist)
         try:

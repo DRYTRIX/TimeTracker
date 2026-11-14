@@ -36,6 +36,7 @@
         <a href="#section-invoices" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Invoices</a>
         <a href="#section-quotes" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Quotes</a>
         <a href="#section-peppol" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Peppol</a>
+        <a href="#section-sdi" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">SDI / FatturaPA</a>
         <a href="#section-backup" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Backup</a>
         <a href="#section-ldap" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">LDAP</a>
         <a href="#section-kiosk" class="px-3 py-1.5 text-xs font-medium rounded-full bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark whitespace-nowrap">Kiosk</a>
@@ -395,6 +396,27 @@
                     <div>
                         <label for="company_tax_id" class="form-label">Tax ID (optional)</label>
                         <input type="text" name="company_tax_id" id="company_tax_id" value="{{ settings.company_tax_id }}" class="form-input">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Italian sellers: Partita IVA, e.g. IT01234567890.') }}</p>
+                    </div>
+                    <div>
+                        <label for="company_codice_fiscale" class="form-label">{{ _('Codice Fiscale (IT)') }}</label>
+                        <input type="text" name="company_codice_fiscale" id="company_codice_fiscale" value="{{ getattr(settings, 'company_codice_fiscale', '') or '' }}" class="form-input" maxlength="16">
+                    </div>
+                    <div>
+                        <label for="company_regime_fiscale" class="form-label">{{ _('Regime Fiscale (FatturaPA)') }}</label>
+                        <select name="company_regime_fiscale" id="company_regime_fiscale" class="form-input">
+                            {% set rf = getattr(settings, 'company_regime_fiscale', 'RF01') or 'RF01' %}
+                            <option value="RF01" {% if rf == 'RF01' %}selected{% endif %}>RF01 — Ordinario</option>
+                            <option value="RF02" {% if rf == 'RF02' %}selected{% endif %}>RF02 — Contribuenti minimi</option>
+                            <option value="RF04" {% if rf == 'RF04' %}selected{% endif %}>RF04 — Agricoltura</option>
+                            <option value="RF05" {% if rf == 'RF05' %}selected{% endif %}>RF05 — Pesca</option>
+                            <option value="RF15" {% if rf == 'RF15' %}selected{% endif %}>RF15 — Regime forfettario</option>
+                            <option value="RF19" {% if rf == 'RF19' %}selected{% endif %}>RF19 — Forfettario (L. 190/2014)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="company_provincia" class="form-label">{{ _('Provincia (IT)') }}</label>
+                        <input type="text" name="company_provincia" id="company_provincia" value="{{ getattr(settings, 'company_provincia', '') or '' }}" class="form-input" maxlength="2" placeholder="MI">
                     </div>
                     <div>
                         <label for="company_iban" class="form-label">{{ _('IBAN') }}</label>
@@ -622,6 +644,44 @@
                         <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                             For security, the token is not shown. Leave blank to keep the current token.
                         </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SDI / FatturaPA -->
+            <div id="section-sdi" class="border-b border-border-light dark:border-border-dark pb-6">
+                <h2 class="text-lg font-semibold mb-4">{{ _('SDI / FatturaPA (Italy)') }}</h2>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
+                    {{ _('Generate FatturaPA XML and send invoices to the Italian Sistema di Interscambio through your accredited intermediary. See docs/admin/configuration/FATTURAPA_SDI.md for the HTTP adapter contract.') }}
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2 flex items-start">
+                        <input type="checkbox" name="sdi_enabled" id="sdi_enabled" {% if getattr(settings, 'sdi_enabled', false) %}checked{% endif %} class="h-4 w-4 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 mt-1">
+                        <div class="ml-2">
+                            <label for="sdi_enabled" class="form-label">{{ _('Enable SDI sending') }}</label>
+                            <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                                {{ _('When enabled, invoices can be sent via SDI using your configured intermediary URL.') }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="sdi_transport_url" class="form-label">{{ _('SDI intermediary URL') }}</label>
+                        <input type="text" name="sdi_transport_url" id="sdi_transport_url" value="{{ getattr(settings, 'sdi_transport_url', '') or '' }}" class="form-input" placeholder="https://your-sdi-adapter.example.com/send">
+                    </div>
+                    <div>
+                        <label for="sdi_transport_token" class="form-label">{{ _('SDI intermediary token (optional)') }}</label>
+                        <input type="password" name="sdi_transport_token" id="sdi_transport_token" value="" class="form-input" placeholder="{% if getattr(settings, 'sdi_transport_token', '') %}{{ _('Token is set (enter to replace)') }}{% else %}{{ _('Enter token (optional)') }}{% endif %}">
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('For security, the token is not shown. Leave blank to keep the current token.') }}
+                        </p>
+                    </div>
+                    <div>
+                        <label for="sdi_timeout" class="form-label">{{ _('SDI timeout (seconds)') }}</label>
+                        <input type="number" name="sdi_timeout" id="sdi_timeout" value="{{ getattr(settings, 'sdi_timeout', 30) or 30 }}" class="form-input" min="1" max="300">
+                    </div>
+                    <div>
+                        <label for="sdi_transmitter_id" class="form-label">{{ _('IdTrasmittente (optional)') }}</label>
+                        <input type="text" name="sdi_transmitter_id" id="sdi_transmitter_id" value="{{ getattr(settings, 'sdi_transmitter_id', '') or '' }}" class="form-input" maxlength="16" placeholder="{{ _('Defaults to company Codice Fiscale / VAT') }}">
                     </div>
                 </div>
             </div>
