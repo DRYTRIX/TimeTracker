@@ -67,7 +67,7 @@ from .mileage import Mileage
 from .milestone import Milestone
 from .oauth_app import OAuthAccessToken, OAuthApplication, OAuthAuthorizationCode
 from .payment_gateway import PaymentGateway, PaymentTransaction
-from .payments import CreditNote, InvoiceReminderSchedule, Payment
+from .payments import CreditNote, CreditNoteItem, InvoiceReminderSchedule, Payment
 from .payroll_export_template import PayrollExportTemplate
 from .payroll_sync_log import PayrollSyncLog
 from .per_diem import PerDiem, PerDiemRate
@@ -86,6 +86,7 @@ from .quote_template import QuoteTemplate
 from .quote_version import QuoteVersion
 from .rate_override import RateOverride
 from .recurring_block import RecurringBlock
+from .reminder_policy import ReminderPolicy, ReminderPolicyLevel
 from .recurring_invoice import RecurringInvoice
 from .recurring_project_cost import RecurringProjectCost
 from .recurring_task import RecurringTask
@@ -146,6 +147,8 @@ __all__ = [
     "Geofence",
     "GeofencePolicy",
     "RecurringBlock",
+    "ReminderPolicy",
+    "ReminderPolicyLevel",
     "RateOverride",
     "SavedFilter",
     "ProjectCost",
@@ -157,6 +160,7 @@ __all__ = [
     "PayrollExportTemplate",
     "PayrollSyncLog",
     "CreditNote",
+    "CreditNoteItem",
     "InvoiceReminderSchedule",
     "SavedReportView",
     "SharedReportLink",
