@@ -1,18 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
-	xmlns:ds="http://www.w3.org/2000/09/xmldsig#" 
-	xmlns="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" 
-	targetNamespace="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" 
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+	xmlns="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"
+	targetNamespace="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2"
 	version="1.2.1">
-  
+
   <xs:import namespace="http://www.w3.org/2000/09/xmldsig#" schemaLocation="http://www.w3.org/TR/2002/REC-xmldsig-core-20020212/xmldsig-core-schema.xsd" />
-    
+
   <xs:element name="FatturaElettronica" type="FatturaElettronicaType">
     <xs:annotation>
       <xs:documentation>XML schema fatture destinate a PA e privati in forma ordinaria 1.2.1</xs:documentation>
     </xs:annotation>
   </xs:element>
-  
+
   <xs:complexType name="FatturaElettronicaType">
     <xs:sequence>
       <xs:element name="FatturaElettronicaHeader" type="FatturaElettronicaHeaderType"                       />
@@ -52,8 +52,8 @@
       <xs:element name="CodiceDestinatario"   type="CodiceDestinatarioType"                 />
       <xs:element name="ContattiTrasmittente" type="ContattiTrasmittenteType" minOccurs="0" />
       <xs:element name="PECDestinatario"      type="EmailType"                minOccurs="0" />
-	</xs:sequence>	
-  </xs:complexType>  
+	</xs:sequence>
+  </xs:complexType>
   <xs:simpleType name="CodiceDestinatarioType">
     <xs:restriction base="xs:string">
       <xs:pattern value="[A-Z0-9]{6,7}" />
@@ -73,7 +73,7 @@
   </xs:simpleType>
   <xs:simpleType name="FormatoTrasmissioneType">
     <xs:restriction base="xs:string">
-      <xs:length value="5" />      
+      <xs:length value="5" />
 	  <xs:enumeration value="FPA12">
 	    <xs:annotation>
 	      <xs:documentation>Fattura verso PA</xs:documentation>
@@ -89,7 +89,7 @@
   <xs:complexType name="ContattiTrasmittenteType">
     <xs:sequence>
       <xs:element name="Telefono" type="TelFaxType" minOccurs="0" />
-      <xs:element name="Email"    type="EmailContattiType"  minOccurs="0" />      
+      <xs:element name="Email"    type="EmailContattiType"  minOccurs="0" />
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="DatiGeneraliType">
@@ -741,9 +741,9 @@
           <xs:element name="Nome"          type="String60LatinType" />
           <xs:element name="Cognome"       type="String60LatinType" />
         </xs:sequence>
-      </xs:choice>   
+      </xs:choice>
     </xs:sequence>
-  </xs:complexType> 
+  </xs:complexType>
   <xs:complexType name="DatiAnagraficiCessionarioType">
     <xs:sequence>
       <xs:element name="IdFiscaleIVA"  type="IdFiscaleType"     minOccurs="0" />
