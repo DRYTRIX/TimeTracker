@@ -245,6 +245,11 @@ curl -X POST https://your-domain.com/api/v1/clients \
 **Endpoints** (non-exhaustive; see OpenAPI at `/api/docs` when enabled):
 - `GET /api/v1/invoices` — List invoices
 - `GET /api/v1/invoices/{id}` — Get invoice by id
+- `GET /api/v1/invoices/{id}/pdf` — PDF download
+- `GET /api/v1/invoices/{id}/ubl` — PEPPOL UBL XML
+- `GET /api/v1/invoices/{id}/xrechnung` — XRechnung XML
+- `GET /api/v1/invoices/{id}/fatturapa` — FatturaPA XML
+- `GET /api/v1/credit-notes` / `{id}` / `{id}/pdf` / `{id}/ubl` — Credit notes and downloads
 
 **Use Cases**:
 - Billing dashboards and exports
@@ -256,6 +261,9 @@ curl -X POST https://your-domain.com/api/v1/clients \
 - `POST /api/v1/invoices` — Create invoice (JSON body)
 - `PUT` / `PATCH /api/v1/invoices/{id}` — Update invoice
 - `DELETE /api/v1/invoices/{id}` — Cancel invoice
+- `POST /api/v1/invoices/{id}/send-email` — Email invoice (optional `recipient_email`, `subject`)
+- `POST /api/v1/invoices/{id}/send-peppol` / `send-sdi` — E-invoicing send
+- `POST` / `PATCH` / `DELETE /api/v1/credit-notes` — Credit note mutations
 - `POST /api/v1/clients/{client_id}/invoice-unbilled` — Create a **draft** invoice from all **unbilled** billable time for that client (line items grouped by project). Requires `write:invoices` when using an API token; the browser UI uses a logged-in session with **Create invoices** permission instead. Successful response JSON: `invoice_id`, `invoice_number`, `total`, `item_count`. Returns **400** when there is no unbilled time, or when any unbilled entry has no `project_id` (assign entries to a project first).
 
 **Use Cases**:
