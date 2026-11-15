@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import '../providers/attendance_provider.dart';
+import '../screens/belgium_report_screen.dart';
 
 /// Workday clock-in/out controls shared between Home and Timer screens.
 class WorkdayCard extends ConsumerWidget {
@@ -241,6 +242,14 @@ class WorkdayCard extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text('Workday', style: theme.textTheme.titleMedium),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const BelgiumReportScreen()),
+                    );
+                  },
+                  child: const Text('Belgium'),
                 ),
                 TextButton(
                   onPressed: () => _showHistory(context, ref),

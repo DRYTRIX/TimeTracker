@@ -45,6 +45,9 @@ export function WorkdayCard({ attendance, loading, onAction }) {
         </div>
       </div>
       {!attendance && !loading && <EmptyState title="Attendance unavailable" text="Workday module may be disabled on this server." />}
+      <p className="hint" style={{ marginTop: '0.75rem' }}>
+        History, corrections, and Belgium reports are under Workforce.
+      </p>
     </Panel>
   );
 }

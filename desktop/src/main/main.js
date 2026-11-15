@@ -199,12 +199,12 @@ app.whenReady().then(() => {
   });
   idleMonitor.start();
 
-  // Privacy-first activity tracker: disabled by default; no window capture yet.
+  // Privacy-first activity tracker: disabled by default (opt-in).
   // See docs/design/DESKTOP_ACTIVITY_AUTOTRACKER.md
   try {
-    activityTracker.start({ store });
+    activityTracker.start({ store, userDataPath: app.getPath('userData') });
   } catch (e) {
-    console.warn('TimeTracker: activity tracker stub failed to start:', e.message);
+    console.warn('TimeTracker: activity tracker failed to start:', e.message);
   }
 
   try {
@@ -298,6 +298,53 @@ ipcMain.handle('store:set', (event, key, value) => {
   if (!isAllowedStoreKey(key)) return;
   if (!store) return;
   store.set(key, value);
+  if (ACTIVITY_TRACKER_STORE_KEYS.has(key)) {
+    try {
+      activityTracker.restart({ store, userDataPath: app.getPath('userData') });
+    } catch (e) {
+      console.warn('TimeTracker: activity tracker restart failed:', e.message);
+    }
+  }
+});
+
+ipcMain.handle('activity-tracker:status', () => {
+  try {
+    return activityTracker.getStatus();
+  } catch (e) {
+    return { enabled: false, error: e.message };
+  }
+});
+
+ipcMain.handle('activity-tracker:purge', () => {
+  try {
+    return activityTracker.purgeLocal();
+  } catch (e) {
+    return { purged: false, error: e.message };
+  }
+});
+
+ipcMain.handle('activity-tracker:samples', (event, limit) => {
+  try {
+    return activityTracker.listSamples(limit);
+  } catch (e) {
+    return [];
+  }
+});
+
+ipcMain.handle('activity-tracker:sync', async () => {
+  try {
+    return await activityTracker.syncNow();
+  } catch (e) {
+    return { pushed: 0, error: e.message, message: e.message };
+  }
+});
+
+ipcMain.handle('activity-tracker:restart', () => {
+  try {
+    return activityTracker.restart({ store, userDataPath: app.getPath('userData') });
+  } catch (e) {
+    return { started: false, reason: e.message };
+  }
 });
 
 ipcMain.handle('store:delete', (event, key) => {
@@ -374,12 +421,29 @@ const ALLOWED_STORE_KEYS = new Set([
   'api_token_server_url',
   'username',
   'theme_mode',
+  'locale',
   'auto_sync',
   'sync_interval',
   'minimize_to_tray',
   'global_shortcuts',
   'activity_tracker_enabled',
+  'activity_tracker_interval_sec',
+  'activity_tracker_exclusions',
+  'activity_tracker_retention_days',
+  'activity_tracker_aw_sync',
+  'activity_tracker_aw_host',
+  'activity_tracker_aw_port',
   '__migrated_from_plaintext',
+]);
+
+const ACTIVITY_TRACKER_STORE_KEYS = new Set([
+  'activity_tracker_enabled',
+  'activity_tracker_interval_sec',
+  'activity_tracker_exclusions',
+  'activity_tracker_retention_days',
+  'activity_tracker_aw_sync',
+  'activity_tracker_aw_host',
+  'activity_tracker_aw_port',
 ]);
 
 function isAllowedStoreKey(key) {

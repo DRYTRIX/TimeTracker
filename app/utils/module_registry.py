@@ -831,8 +831,9 @@ class ModuleRegistry:
     # First-run presets
     # ------------------------------------------------------------------
 
-    #: Modules that make up the "Solo freelancer" preset: track time, organise it by
-    #: project/client, bill it, and see where it went. Nothing else.
+    #: Modules that make up the "Solo / Focus" preset: timer-first workflow with
+    #: projects, clients, quick log templates, weekly goals, billing, and reports.
+    #: CRM, inventory, and team surfaces stay off until the user expands the preset.
     _SOLO_MODULES = {
         "auth",
         "main",
@@ -846,6 +847,8 @@ class ModuleRegistry:
         "expenses",
         "saved_filters",
         "import_export",
+        "weekly_goals",
+        "time_entry_templates",
     }
 
     #: Adds collaboration, scheduling and light process on top of SOLO.
@@ -854,12 +857,10 @@ class ModuleRegistry:
         "kanban",
         "gantt",
         "issues",
-        "weekly_goals",
         "activity_feed",
         "team_chat",
         "time_approvals",
         "project_templates",
-        "time_entry_templates",
         "recurring_tasks",
         "recurring_invoices",
         "quotes",

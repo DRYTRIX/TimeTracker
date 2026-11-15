@@ -19,6 +19,9 @@ test('React API client exposes pause/resume timer methods', () => {
 test('React API client exposes attendance/workday methods', () => {
   assert.match(apiSource, /getAttendanceStatus/);
   assert.match(apiSource, /\/api\/v1\/attendance\/status/);
+  assert.match(apiSource, /getAttendanceHistory/);
+  assert.match(apiSource, /requestAttendanceCorrection/);
+  assert.match(apiSource, /getBelgiumAttendanceReport/);
   assert.match(apiSource, /startWorkday/);
   assert.match(apiSource, /\/api\/v1\/workday\/start/);
   assert.match(apiSource, /endWorkday/);

@@ -296,6 +296,31 @@ export class ApiClient {
   getTimeOffRequests(params = {}) { return this.unwrap(this.client.get('/api/v1/time-off/requests', { params })); }
 
   getAttendanceStatus() { return this.unwrap(this.client.get('/api/v1/attendance/status')); }
+  getAttendanceHistory(params = {}) {
+    return this.unwrap(this.client.get('/api/v1/attendance/history', { params }));
+  }
+  requestAttendanceCorrection(data = {}) {
+    return this.unwrap(
+      this.client.post('/api/v1/attendance/corrections', {
+        attendance_day_id: data.attendanceDayId,
+        entity_type: data.entityType || 'AddWorkPeriod',
+        entity_id: data.entityId ?? 0,
+        corrected_values: data.correctedValues || {},
+        reason: data.reason || '',
+      })
+    );
+  }
+  getBelgiumAttendanceReport(params = {}) {
+    return this.unwrap(
+      this.client.get('/api/v1/reports/compliance/belgium-attendance', {
+        params: {
+          start_date: params.startDate,
+          end_date: params.endDate,
+          ...(params.userId ? { user_id: params.userId } : {}),
+        },
+      })
+    );
+  }
   startWorkday(data = {}) {
     return this.unwrap(this.client.post('/api/v1/workday/start', { notes: data.notes || '', source: data.source || 'desktop' }));
   }
