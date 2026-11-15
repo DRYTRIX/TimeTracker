@@ -172,7 +172,9 @@ def test_email_match_crm_via_deal_contact(app, user):
     )
     db.session.add(contact)
     db.session.flush()
-    deal = Deal(name="Match Deal", created_by=user.id, client_id=client_obj.id, contact_id=contact.id, value=Decimal("100"))
+    deal = Deal(
+        name="Match Deal", created_by=user.id, client_id=client_obj.id, contact_id=contact.id, value=Decimal("100")
+    )
     db.session.add(deal)
     db.session.commit()
 

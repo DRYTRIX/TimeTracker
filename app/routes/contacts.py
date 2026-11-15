@@ -211,11 +211,7 @@ def list_communication_templates():
     """List CRM communication templates."""
     from app.models import CrmCommunicationTemplate
 
-    templates = (
-        CrmCommunicationTemplate.query.filter_by(is_active=True)
-        .order_by(CrmCommunicationTemplate.name)
-        .all()
-    )
+    templates = CrmCommunicationTemplate.query.filter_by(is_active=True).order_by(CrmCommunicationTemplate.name).all()
     return render_template("contacts/templates_list.html", templates=templates)
 
 
@@ -281,9 +277,5 @@ def api_list_communication_templates():
     """JSON list of active communication templates for the communication form."""
     from app.models import CrmCommunicationTemplate
 
-    templates = (
-        CrmCommunicationTemplate.query.filter_by(is_active=True)
-        .order_by(CrmCommunicationTemplate.name)
-        .all()
-    )
+    templates = CrmCommunicationTemplate.query.filter_by(is_active=True).order_by(CrmCommunicationTemplate.name).all()
     return jsonify({"templates": [t.to_dict() for t in templates]})

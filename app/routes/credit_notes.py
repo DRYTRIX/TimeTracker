@@ -110,9 +110,7 @@ def create_from_invoice(invoice_id):
         return redirect(url_for("credit_notes.view_credit_note", cn_id=cn.id))
     except Exception:
         db.session.rollback()
-        logger.exception(
-            "Failed to create credit note for invoice %s", sanitize_log_value(invoice_id)
-        )
+        logger.exception("Failed to create credit note for invoice %s", sanitize_log_value(invoice_id))
         flash(_("Could not create credit note."), "error")
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
 
@@ -177,9 +175,7 @@ def download_pdf(cn_id):
 
         pdf_bytes = generate_credit_note_pdf(cn)
     except Exception:
-        logger.exception(
-            "Credit note PDF generation failed for cn=%s", sanitize_log_value(cn_id)
-        )
+        logger.exception("Credit note PDF generation failed for cn=%s", sanitize_log_value(cn_id))
         abort(500, description=DEFAULT_CLIENT_ERROR)
 
     filename = f"credit-note-{cn.credit_number}.pdf"
@@ -223,9 +219,7 @@ def download_ubl(cn_id):
         )
         xml_str, _ = build_peppol_ubl_credit_note_xml(cn, invoice, supplier, customer)
     except Exception:
-        logger.exception(
-            "UBL credit note XML build failed for cn=%s", sanitize_log_value(cn_id)
-        )
+        logger.exception("UBL credit note XML build failed for cn=%s", sanitize_log_value(cn_id))
         abort(500, description=DEFAULT_CLIENT_ERROR)
 
     filename = f"credit-note-{cn.credit_number}-ubl.xml"
@@ -253,9 +247,7 @@ def download_fatturapa(cn_id):
         client = Client.query.get(invoice.client_id) if invoice.client_id else None
         xml_bytes, filename = build_fatturapa_credit_note_xml(cn, invoice, settings, client)
     except Exception:
-        logger.exception(
-            "FatturaPA credit note XML build failed for cn=%s", sanitize_log_value(cn_id)
-        )
+        logger.exception("FatturaPA credit note XML build failed for cn=%s", sanitize_log_value(cn_id))
         abort(500, description=DEFAULT_CLIENT_ERROR)
 
     return Response(
