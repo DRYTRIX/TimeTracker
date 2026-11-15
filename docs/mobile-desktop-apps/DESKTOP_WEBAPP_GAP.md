@@ -30,7 +30,7 @@ Living checklist for bringing the Electron desktop client up to speed with the F
 | Timer pause/resume | Yes | Yes | Done |
 | Reports summary UI | Yes | Partial | Done |
 | Workday clock in/out + breaks | Yes | Yes | Done |
-| Belgium compliance / corrections UI | Yes | Partial | Deferred |
+| Belgium compliance / corrections UI | Yes | Yes (history/corrections + report) | Done (Workforce panel) |
 | Kanban board | Yes | Yes | Done |
 | CRM (leads/deals/contacts/notes) | Yes | Yes (hub) | Done |
 | Payments, mileage, quotes, recurring, credit notes | Yes | Partial | Done |
@@ -50,4 +50,4 @@ Living checklist for bringing the Electron desktop client up to speed with the F
 
 ## Explicitly out of scope
 
-OIDC/LDAP in-app auth, auto-update, Peppol/PDF designer, AI helper, client portal, kiosk, Slack slash commands, inventory, team chat, live mileage GPS tracking, Belgium compliance report / correction UIs.
+OIDC/LDAP in-app auth, auto-update, Peppol/PDF designer, AI helper, client portal, kiosk, Slack slash commands, inventory, team chat, live mileage GPS tracking. Belgium compliance report / correction UIs are available on web, mobile, and desktop.

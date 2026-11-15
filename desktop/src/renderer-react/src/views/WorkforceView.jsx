@@ -1,6 +1,7 @@
 import React from 'react';
 import { classifyAxiosError } from '../services/api.js';
 import { Panel, SkeletonGrid, StatCard, ViewHeader } from '../components/ui.jsx';
+import { CompliancePanel } from './ComplianceView.jsx';
 
 export function WorkforceView({
   workforce,
@@ -31,13 +32,14 @@ export function WorkforceView({
     <div className="view-stack">
       <ViewHeader
         title="Workforce"
-        subtitle="Timesheets, approvals, and leave."
+        subtitle="Timesheets, approvals, leave, and Belgium attendance compliance."
         action={
           <button className="btn small" onClick={onRefresh}>
             Refresh
           </button>
         }
       />
+      <CompliancePanel apiClient={apiClient} showToast={showToast} />
       {loading ? (
         <SkeletonGrid />
       ) : (
