@@ -262,7 +262,7 @@ class WebhookDelivery(db.Model):
         """Mark delivery as retrying and schedule next attempt"""
         self.status = "retrying"
         self.next_retry_at = next_retry_at
-        self.retry_count += 1
+        self.retry_count = (self.retry_count or 0) + 1
 
     def to_dict(self):
         """Convert to dictionary for API responses"""
