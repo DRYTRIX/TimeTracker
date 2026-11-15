@@ -57,7 +57,7 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block scripts_extra %}
 <script nonce="{{ csp_nonce() }}">
 (function () {
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content
