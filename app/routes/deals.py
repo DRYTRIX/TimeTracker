@@ -67,6 +67,7 @@ def list_deals():
 
 @deals_bp.route("/deals/pipeline")
 @login_required
+@module_enabled("deals")
 def pipeline_view():
     """Visual pipeline view of deals"""
     owner_id = request.args.get("owner", "")
@@ -91,8 +92,86 @@ def pipeline_view():
     )
 
 
+@deals_bp.route("/deals/<int:deal_id>/stage", methods=["POST"])
+@login_required
+@module_enabled("deals")
+def update_deal_stage(deal_id):
+    """Update deal stage (used by pipeline drag-and-drop)."""
+    deal = Deal.query.get_or_404(deal_id)
+    data = request.get_json(silent=True) or {}
+    new_stage = (data.get("stage") or request.form.get("stage") or "").strip()
+    if new_stage not in PIPELINE_STAGES:
+        return jsonify({"ok": False, "error": "Invalid stage"}), 400
+    old_stage = deal.stage
+    if old_stage == new_stage:
+        return jsonify({"ok": True, "deal": deal.to_dict()})
+    deal.stage = new_stage
+    if new_stage == "closed_won":
+        deal.close_won()
+    elif new_stage == "closed_lost":
+        deal.close_lost()
+    elif deal.status in ("won", "lost") and new_stage not in ("closed_won", "closed_lost"):
+        deal.status = "open"
+        deal.closed_at = None
+        deal.actual_close_date = None
+    stage_snapshot = deal.stage
+    status_snapshot = deal.status
+    closed_at_snapshot = deal.closed_at
+    actual_close_snapshot = deal.actual_close_date
+    db.session.add(
+        DealActivity(
+            deal_id=deal.id,
+            type="stage_change",
+            created_by=current_user.id,
+            subject=f"Stage changed from {old_stage} to {new_stage}",
+            description=f"{old_stage} → {new_stage}",
+            status="completed",
+        )
+    )
+    deal.stage = stage_snapshot
+    deal.status = status_snapshot
+    deal.closed_at = closed_at_snapshot
+    deal.actual_close_date = actual_close_snapshot
+    if not safe_commit():
+        db.session.rollback()
+        return jsonify({"ok": False, "error": "Could not save"}), 500
+    return jsonify({"ok": True, "deal": deal.to_dict()})
+
+
+@deals_bp.route("/deals/forecast")
+@login_required
+@module_enabled("deals")
+def deals_forecast():
+    """Deal pipeline forecasting report."""
+    query = Deal.query.filter_by(status="open")
+    if not current_user.is_admin:
+        query = query.filter_by(owner_id=current_user.id)
+    deals = query.all()
+    by_stage = {}
+    total_value = 0.0
+    total_weighted = 0.0
+    for stage_name in PIPELINE_STAGES:
+        if stage_name.startswith("closed_"):
+            continue
+        stage_deals = [d for d in deals if d.stage == stage_name]
+        value = sum(float(d.value or 0) for d in stage_deals)
+        weighted = sum(float(d.weighted_value) for d in stage_deals)
+        by_stage[stage_name] = {"deals": stage_deals, "count": len(stage_deals), "value": value, "weighted": weighted}
+        total_value += value
+        total_weighted += weighted
+    return render_template(
+        "deals/forecast.html",
+        by_stage=by_stage,
+        pipeline_stages=[s for s in PIPELINE_STAGES if not s.startswith("closed_")],
+        total_value=total_value,
+        total_weighted=total_weighted,
+        open_count=len(deals),
+    )
+
+
 @deals_bp.route("/deals/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("deals")
 def create_deal():
     """Create a new deal"""
     if request.method == "POST":
@@ -159,6 +238,7 @@ def create_deal():
 
 @deals_bp.route("/deals/<int:deal_id>")
 @login_required
+@module_enabled("deals")
 def view_deal(deal_id):
     """View a deal"""
     deal = Deal.query.get_or_404(deal_id)
@@ -185,6 +265,7 @@ def view_deal(deal_id):
 
 @deals_bp.route("/deals/<int:deal_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("deals")
 def edit_deal(deal_id):
     """Edit a deal"""
     deal = Deal.query.get_or_404(deal_id)
@@ -248,6 +329,7 @@ def edit_deal(deal_id):
 
 @deals_bp.route("/deals/<int:deal_id>/close-won", methods=["POST"])
 @login_required
+@module_enabled("deals")
 def close_won(deal_id):
     """Close deal as won"""
     deal = Deal.query.get_or_404(deal_id)
@@ -274,6 +356,7 @@ def close_won(deal_id):
 
 @deals_bp.route("/deals/<int:deal_id>/close-lost", methods=["POST"])
 @login_required
+@module_enabled("deals")
 def close_lost(deal_id):
     """Close deal as lost"""
     deal = Deal.query.get_or_404(deal_id)
@@ -302,6 +385,7 @@ def close_lost(deal_id):
 
 @deals_bp.route("/deals/<int:deal_id>/activities/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("deals")
 def create_activity(deal_id):
     """Create an activity for a deal"""
     deal = Deal.query.get_or_404(deal_id)
@@ -318,18 +402,30 @@ def create_activity(deal_id):
             due_date_str = request.form.get("due_date", "")
             due_date = parse_local_datetime_from_string(due_date_str) if due_date_str else None
 
+            subject = request.form.get("subject", "").strip() or None
+            description = request.form.get("description", "").strip() or None
             activity = DealActivity(
                 deal_id=deal_id,
                 type=request.form.get("type", "note").strip(),
                 created_by=current_user.id,
-                subject=request.form.get("subject", "").strip() or None,
-                description=request.form.get("description", "").strip() or None,
+                subject=subject,
+                description=description,
                 activity_date=activity_date,
                 due_date=due_date,
                 status=request.form.get("status", "completed").strip() or "completed",
             )
 
             db.session.add(activity)
+            if due_date:
+                from app.utils.crm_calendar import sync_activity_to_calendar
+
+                sync_activity_to_calendar(
+                    user_id=current_user.id,
+                    title=subject or f"Deal activity: {deal.name}",
+                    due_date=due_date,
+                    description=description,
+                    client_id=deal.client_id,
+                )
 
             if safe_commit():
                 flash(_("Activity recorded successfully"), "success")
@@ -343,6 +439,7 @@ def create_activity(deal_id):
 
 @deals_bp.route("/api/deals/<int:deal_id>/contacts")
 @login_required
+@module_enabled("deals")
 def get_deal_contacts(deal_id):
     """API endpoint to get contacts for a deal's client"""
     deal = Deal.query.get_or_404(deal_id)

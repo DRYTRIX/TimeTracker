@@ -176,13 +176,18 @@ def get_app_timezone():
         # Check if we have a database connection
         try:
             if db.session.is_active and not getattr(db.session, "_flushing", False):
-                try:
-                    settings = Settings.get_settings()
-                    if settings and settings.timezone:
-                        return settings.timezone
-                except Exception as e:
-                    # Log the error but continue with fallback
-                    print(f"Warning: Could not get timezone from database: {e}")
+                # Settings.get_settings() may commit/rollback. Never call it while
+                # the session has pending work (e.g. Lead.convert_* via local_now()).
+                has_pending = bool(db.session.new or db.session.dirty or db.session.deleted)
+                if not has_pending:
+                    try:
+                        with db.session.no_autoflush:
+                            settings = Settings.get_settings()
+                        if settings and getattr(settings, "timezone", None):
+                            return settings.timezone
+                    except Exception as e:
+                        # Log the error but continue with fallback
+                        print(f"Warning: Could not get timezone from database: {e}")
         except RuntimeError as e:
             # RuntimeError typically means "Working outside of application context"
             # Fall back to environment variable

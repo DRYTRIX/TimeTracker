@@ -1121,7 +1121,8 @@ class ApiClient {
 
   Future<Map<String, dynamic>> createContact(
     int clientId, {
-    required String name,
+    required String firstName,
+    required String lastName,
     String? email,
     String? phone,
     String? role,
@@ -1129,7 +1130,8 @@ class ApiClient {
     final res = await _dio.post<Map<String, dynamic>>(
       '/api/v1/clients/$clientId/contacts',
       data: <String, dynamic>{
-        'name': name,
+        'first_name': firstName,
+        'last_name': lastName,
         if (email != null) 'email': email,
         if (phone != null) 'phone': phone,
         if (role != null) 'role': role,

@@ -371,10 +371,11 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 #### 43. **Visual Pipeline View**
 - Kanban-style pipeline visualization
 - Deal cards by stage
-- Drag-and-drop deal movement (future enhancement)
+- Drag-and-drop deal movement between stages
 - Pipeline filtering by owner
 - Deal count per stage
 - Quick deal details
+- Weighted deal forecast report
 
 #### 44. **Deal Activities**
 - Track activities on deals
@@ -422,7 +423,8 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - Score-based filtering
 - Score-based sorting
 - Visual score indicators
-- Score history tracking
+- Score history tracking (auto `score_change` activities on edit)
+- Lead source analytics report
 
 ---
 

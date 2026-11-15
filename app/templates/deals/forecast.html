@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Deal Forecast') }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Deals'), 'url': url_for('deals.list_deals')},
+    {'text': _('Forecast')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-chart-line',
+    title_text=_('Deal Forecast'),
+    subtitle_text=_('Weighted pipeline value by stage'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("deals.pipeline_view") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-columns mr-2"></i>' + _('Pipeline') + '</a>'
+) }}
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg border border-border-light dark:border-border-dark">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Open deals') }}</p>
+        <p class="text-2xl font-semibold">{{ open_count }}</p>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg border border-border-light dark:border-border-dark">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Open pipeline value') }}</p>
+        <p class="text-2xl font-semibold">{{ '%.2f'|format(total_value) }}</p>
+    </div>
+    <div class="bg-card-light dark:bg-card-dark p-4 rounded-lg border border-border-light dark:border-border-dark">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Weighted forecast') }}</p>
+        <p class="text-2xl font-semibold text-primary">{{ '%.2f'|format(total_weighted) }}</p>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark overflow-x-auto">
+    <table class="min-w-full text-sm">
+        <thead>
+            <tr class="border-b border-border-light dark:border-border-dark text-left">
+                <th class="px-4 py-3">{{ _('Stage') }}</th>
+                <th class="px-4 py-3">{{ _('Deals') }}</th>
+                <th class="px-4 py-3">{{ _('Value') }}</th>
+                <th class="px-4 py-3">{{ _('Weighted') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stage in pipeline_stages %}
+            <tr class="border-b border-border-light dark:border-border-dark">
+                <td class="px-4 py-3">{{ stage|replace('_', ' ')|title }}</td>
+                <td class="px-4 py-3">{{ by_stage[stage].count }}</td>
+                <td class="px-4 py-3">{{ '%.2f'|format(by_stage[stage].value) }}</td>
+                <td class="px-4 py-3">{{ '%.2f'|format(by_stage[stage].weighted) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

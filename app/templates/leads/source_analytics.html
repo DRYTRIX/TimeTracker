@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Lead Source Analytics') }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Leads'), 'url': url_for('leads.list_leads')},
+    {'text': _('Source Analytics')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-chart-pie',
+    title_text=_('Lead Source Analytics'),
+    subtitle_text=_('Counts, estimated value, and average score by source'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="mb-4 text-sm text-text-muted-light dark:text-text-muted-dark">
+    {{ _('Total leads') }}: <strong>{{ total_leads }}</strong>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark overflow-x-auto">
+    <table class="min-w-full text-sm">
+        <thead>
+            <tr class="border-b border-border-light dark:border-border-dark text-left">
+                <th class="px-4 py-3">{{ _('Source') }}</th>
+                <th class="px-4 py-3">{{ _('Leads') }}</th>
+                <th class="px-4 py-3">{{ _('Estimated value') }}</th>
+                <th class="px-4 py-3">{{ _('Avg score') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if sources %}
+            {% for row in sources %}
+            <tr class="border-b border-border-light dark:border-border-dark">
+                <td class="px-4 py-3">{{ row.source }}</td>
+                <td class="px-4 py-3">{{ row.count }}</td>
+                <td class="px-4 py-3">{{ '%.2f'|format(row.estimated_value_total) }}</td>
+                <td class="px-4 py-3">{{ '%.1f'|format(row.average_score) }}</td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="4" class="px-4 py-6 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No leads yet') }}</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

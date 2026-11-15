@@ -50,7 +50,8 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
   }
 
   Future<void> _addContact() async {
-    final nameCtrl = TextEditingController();
+    final firstCtrl = TextEditingController();
+    final lastCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final roleCtrl = TextEditingController();
@@ -64,9 +65,13 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Name *'),
+                  controller: firstCtrl,
+                  decoration: const InputDecoration(labelText: 'First name *'),
                   autofocus: true,
+                ),
+                TextField(
+                  controller: lastCtrl,
+                  decoration: const InputDecoration(labelText: 'Last name *'),
                 ),
                 TextField(
                   controller: emailCtrl,
@@ -87,7 +92,7 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
             FilledButton(
               onPressed: () {
-                if (nameCtrl.text.trim().isEmpty) return;
+                if (firstCtrl.text.trim().isEmpty || lastCtrl.text.trim().isEmpty) return;
                 Navigator.pop(ctx, true);
               },
               child: const Text('Add'),
@@ -100,7 +105,8 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
       if (api == null) return;
       await api.createContact(
         widget.clientId,
-        name: nameCtrl.text.trim(),
+        firstName: firstCtrl.text.trim(),
+        lastName: lastCtrl.text.trim(),
         email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
         phone: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
         role: roleCtrl.text.trim().isEmpty ? null : roleCtrl.text.trim(),
@@ -112,7 +118,8 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
     } finally {
-      nameCtrl.dispose();
+      firstCtrl.dispose();
+      lastCtrl.dispose();
       emailCtrl.dispose();
       phoneCtrl.dispose();
       roleCtrl.dispose();
@@ -184,7 +191,16 @@ class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
                   )
                 else
                   ...data.contacts.map((contact) {
-                    final cName = (contact['name'] ?? 'Contact').toString();
+                    final full = (contact['full_name'] ?? '').toString().trim();
+                    final parts = [
+                      contact['first_name'],
+                      contact['last_name'],
+                    ].where((v) => v != null && v.toString().trim().isNotEmpty);
+                    final cName = full.isNotEmpty
+                        ? full
+                        : (parts.map((v) => v.toString()).join(' ').trim().isNotEmpty
+                            ? parts.map((v) => v.toString()).join(' ').trim()
+                            : 'Contact');
                     final cEmail = (contact['email'] ?? '').toString();
                     final cRole = (contact['role'] ?? '').toString();
                     return Card(

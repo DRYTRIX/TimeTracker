@@ -125,6 +125,7 @@ def update_deal(deal_id):
     if not g.api_user.is_admin and deal.owner_id != g.api_user.id:
         return forbidden_response("Access denied")
     data = request.get_json() or {}
+    old_stage = deal.stage
     for field in ("name", "description", "stage", "status", "loss_reason", "notes", "currency_code"):
         if field in data and data[field] is not None:
             setattr(deal, field, str(data[field]).strip() if isinstance(data[field], str) else data[field])
@@ -148,6 +149,21 @@ def update_deal(deal_id):
         deal.expected_close_date = _parse_date(data["expected_close_date"])
     if "actual_close_date" in data:
         deal.actual_close_date = _parse_date(data["actual_close_date"])
+    if "stage" in data and deal.stage != old_stage:
+        from app.models import DealActivity
+
+        stage_snapshot = deal.stage
+        db.session.add(
+            DealActivity(
+                deal_id=deal.id,
+                type="stage_change",
+                created_by=g.api_user.id,
+                subject=f"Stage changed from {old_stage} to {stage_snapshot}",
+                description=f"{old_stage} → {stage_snapshot}",
+                status="completed",
+            )
+        )
+        deal.stage = stage_snapshot
     db.session.commit()
     return jsonify({"message": "Deal updated successfully", "deal": deal.to_dict()})
 
@@ -165,3 +181,176 @@ def delete_deal(deal_id):
     db.session.delete(deal)
     db.session.commit()
     return jsonify({"message": "Deal deleted successfully"})
+
+
+PIPELINE_STAGES = ["prospecting", "qualification", "proposal", "negotiation", "closed_won", "closed_lost"]
+
+
+@api_v1_deals_bp.route("/deals/<int:deal_id>/activities", methods=["GET"])
+@require_api_token("read:deals")
+def list_deal_activities(deal_id):
+    """List activities for a deal."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    from app.models import DealActivity
+
+    deal = Deal.query.filter_by(id=deal_id).first_or_404()
+    if not g.api_user.is_admin and deal.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    activities = (
+        DealActivity.query.filter_by(deal_id=deal_id).order_by(DealActivity.activity_date.desc()).limit(100).all()
+    )
+    return jsonify({"activities": [a.to_dict() for a in activities]})
+
+
+@api_v1_deals_bp.route("/deals/<int:deal_id>/activities", methods=["POST"])
+@require_api_token("write:deals")
+def create_deal_activity(deal_id):
+    """Create an activity for a deal."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    from app.models import DealActivity
+    from app.routes.api_v1_common import parse_datetime
+
+    deal = Deal.query.filter_by(id=deal_id).first_or_404()
+    if not g.api_user.is_admin and deal.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    data = request.get_json() or {}
+    subject = (data.get("subject") or "").strip() or None
+    description = (data.get("description") or "").strip() or None
+    due_date = parse_datetime(data.get("due_date"))
+    activity = DealActivity(
+        deal_id=deal_id,
+        type=(data.get("type") or "note").strip(),
+        created_by=g.api_user.id,
+        subject=subject,
+        description=description,
+        activity_date=parse_datetime(data.get("activity_date")) or None,
+        due_date=due_date,
+        status=(data.get("status") or "completed").strip() or "completed",
+    )
+    db.session.add(activity)
+    if due_date:
+        from app.utils.crm_calendar import sync_activity_to_calendar
+
+        sync_activity_to_calendar(
+            user_id=g.api_user.id,
+            title=subject or f"Deal activity: {deal.name}",
+            due_date=due_date,
+            description=description,
+            client_id=deal.client_id,
+        )
+    db.session.commit()
+    return jsonify({"message": "Activity created", "activity": activity.to_dict()}), 201
+
+
+@api_v1_deals_bp.route("/deals/<int:deal_id>/stage", methods=["PUT", "PATCH"])
+@require_api_token("write:deals")
+def update_deal_stage(deal_id):
+    """Move a deal to a pipeline stage (supports drag-and-drop clients)."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    from app.models import DealActivity
+
+    deal = Deal.query.filter_by(id=deal_id).first_or_404()
+    if not g.api_user.is_admin and deal.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    data = request.get_json() or {}
+    new_stage = (data.get("stage") or "").strip()
+    if new_stage not in PIPELINE_STAGES:
+        return validation_error_response(
+            errors={"stage": [f"stage must be one of: {', '.join(PIPELINE_STAGES)}"]},
+            message="Invalid stage",
+        )
+    old_stage = deal.stage
+    if old_stage != new_stage:
+        deal.stage = new_stage
+        if new_stage == "closed_won":
+            deal.close_won()
+        elif new_stage == "closed_lost":
+            deal.close_lost(reason=data.get("loss_reason"))
+        elif deal.status in ("won", "lost") and new_stage not in ("closed_won", "closed_lost"):
+            deal.status = "open"
+            deal.closed_at = None
+            deal.actual_close_date = None
+        # Snapshot after stage/status mutations; DealActivity sync can clobber parent attrs
+        stage_snapshot = deal.stage
+        status_snapshot = deal.status
+        closed_at_snapshot = deal.closed_at
+        actual_close_snapshot = deal.actual_close_date
+        loss_reason_snapshot = deal.loss_reason
+        db.session.add(
+            DealActivity(
+                deal_id=deal.id,
+                type="stage_change",
+                created_by=g.api_user.id,
+                subject=f"Stage changed from {old_stage} to {new_stage}",
+                description=f"{old_stage} → {new_stage}",
+                status="completed",
+            )
+        )
+        deal.stage = stage_snapshot
+        deal.status = status_snapshot
+        deal.closed_at = closed_at_snapshot
+        deal.actual_close_date = actual_close_snapshot
+        deal.loss_reason = loss_reason_snapshot
+        db.session.commit()
+    return jsonify({"message": "Deal stage updated", "deal": deal.to_dict()})
+
+
+@api_v1_deals_bp.route("/deals/forecast", methods=["GET"])
+@require_api_token("read:deals")
+def deals_forecast():
+    """Weighted pipeline forecast by stage for open deals."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    query = Deal.query.filter_by(status="open")
+    if not g.api_user.is_admin:
+        query = query.filter_by(owner_id=g.api_user.id)
+    deals = query.all()
+    by_stage = {}
+    total_value = 0.0
+    total_weighted = 0.0
+    for stage in PIPELINE_STAGES:
+        if stage.startswith("closed_"):
+            continue
+        stage_deals = [d for d in deals if d.stage == stage]
+        value = sum(float(d.value or 0) for d in stage_deals)
+        weighted = sum(float(d.weighted_value) for d in stage_deals)
+        by_stage[stage] = {
+            "count": len(stage_deals),
+            "value": value,
+            "weighted_value": weighted,
+        }
+        total_value += value
+        total_weighted += weighted
+    return jsonify(
+        {
+            "forecast": {
+                "by_stage": by_stage,
+                "total_open_value": total_value,
+                "total_weighted_value": total_weighted,
+                "open_deal_count": len(deals),
+            }
+        }
+    )
+
+
+@api_v1_deals_bp.route("/deals/<int:deal_id>/email-threads", methods=["GET"])
+@require_api_token("read:deals")
+def list_deal_email_threads(deal_id):
+    """List synced email threads linked to a deal."""
+    blocked = _require_module_enabled_for_api("deals")
+    if blocked:
+        return blocked
+    deal = Deal.query.filter_by(id=deal_id).first_or_404()
+    if not g.api_user.is_admin and deal.owner_id != g.api_user.id:
+        return forbidden_response("Access denied")
+    from app.services.email_sync_service import EmailSyncService
+
+    threads = EmailSyncService().threads_for_deal(deal_id)
+    return jsonify({"email_threads": [t.to_dict() for t in threads]})

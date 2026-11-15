@@ -30,6 +30,7 @@ from .comment import Comment
 from .comment_attachment import CommentAttachment
 from .contact import Contact
 from .contact_communication import ContactCommunication
+from .crm_communication_template import CrmCommunicationTemplate
 from .currency import Currency, ExchangeRate
 from .custom_field_definition import CustomFieldDefinition
 from .custom_report import CustomReportConfig
@@ -234,6 +235,7 @@ __all__ = [
     "PurchaseOrderItem",
     "Contact",
     "ContactCommunication",
+    "CrmCommunicationTemplate",
     "Deal",
     "DealActivity",
     "DeletedUsername",

@@ -86,6 +86,12 @@ API tokens use scopes to control access to resources. When creating a token, sel
 | `write:tasks` | Create and update tasks |
 | `read:clients` | View clients |
 | `write:clients` | Create and update clients |
+| `read:deals` | View deals, activities, forecast, email threads |
+| `write:deals` | Create/update deals, activities, pipeline stage |
+| `read:leads` | View leads, activities, source analytics |
+| `write:leads` | Create/update leads, activities, convert to client/deal |
+| `read:contacts` | View contacts and communications |
+| `write:contacts` | Create/update contacts and communications |
 | `read:quotes` | View quotes |
 | `write:quotes` | Create and update quotes |
 | `read:reports` | View reports and analytics |
@@ -864,6 +870,39 @@ POST /api/v1/clients
   "phone": "+1-555-0123"
 }
 ```
+
+### CRM — Deals, Leads, Contacts
+
+#### Deals
+```
+GET/POST /api/v1/deals
+GET/PUT/PATCH/DELETE /api/v1/deals/{id}
+GET/POST /api/v1/deals/{id}/activities
+PUT/PATCH /api/v1/deals/{id}/stage
+GET /api/v1/deals/forecast
+GET /api/v1/deals/{id}/email-threads
+```
+Scopes: `read:deals` / `write:deals`. Stage body: `{ "stage": "proposal" }`.
+
+#### Leads
+```
+GET/POST /api/v1/leads
+GET/PUT/PATCH/DELETE /api/v1/leads/{id}
+GET/POST /api/v1/leads/{id}/activities
+POST /api/v1/leads/{id}/convert-to-client
+POST /api/v1/leads/{id}/convert-to-deal
+GET /api/v1/leads/analytics/sources
+GET /api/v1/leads/{id}/email-threads
+```
+Scopes: `read:leads` / `write:leads`. Create requires `first_name` and `last_name`.
+
+#### Contacts
+```
+GET/POST /api/v1/clients/{client_id}/contacts
+GET/PUT/PATCH/DELETE /api/v1/contacts/{id}
+GET/POST /api/v1/contacts/{id}/communications
+```
+Scopes: `read:contacts` / `write:contacts`. Create requires `first_name` and `last_name`.
 
 ### Quotes
 
