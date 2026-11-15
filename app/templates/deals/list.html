@@ -13,7 +13,7 @@
     title_text=_('Deals'),
     subtitle_text=_('Manage your sales pipeline'),
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('New Deal') + '</a> <a href="' + url_for("deals.pipeline_view") + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-columns mr-2"></i>' + _('Pipeline View') + '</a>'
+    actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('New Deal') + '</a> <a href="' + url_for("deals.pipeline_view") + '" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"><i class="fas fa-columns mr-2"></i>' + _('Pipeline View') + '</a> <a href="' + url_for("deals.deals_forecast") + '" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark px-4 py-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors"><i class="fas fa-chart-line mr-2"></i>' + _('Forecast') + '</a>'
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">

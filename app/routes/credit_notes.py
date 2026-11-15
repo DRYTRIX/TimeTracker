@@ -24,6 +24,7 @@ from flask_login import current_user, login_required
 from app import db
 from app.models import Invoice
 from app.models.payments import CreditNote
+from app.utils.error_handling import DEFAULT_CLIENT_ERROR, sanitize_log_value
 from app.utils.module_helpers import module_enabled
 
 credit_notes_bp = Blueprint("credit_notes", __name__, url_prefix="/credit-notes")
@@ -107,10 +108,10 @@ def create_from_invoice(invoice_id):
 
         flash(_("Credit note %(cn)s created.", cn=cn.credit_number), "success")
         return redirect(url_for("credit_notes.view_credit_note", cn_id=cn.id))
-    except Exception as exc:
+    except Exception:
         db.session.rollback()
-        logger.exception("Failed to create credit note for invoice %s", invoice_id)
-        flash(_("Could not create credit note: %(err)s", err=str(exc)), "error")
+        logger.exception("Failed to create credit note for invoice %s", sanitize_log_value(invoice_id))
+        flash(_("Could not create credit note."), "error")
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
 
 
@@ -173,9 +174,9 @@ def download_pdf(cn_id):
         from app.utils.credit_note_pdf import generate_credit_note_pdf
 
         pdf_bytes = generate_credit_note_pdf(cn)
-    except Exception as exc:
-        logger.exception("Credit note PDF generation failed for cn=%s", cn_id)
-        abort(500, description=str(exc))
+    except Exception:
+        logger.exception("Credit note PDF generation failed for cn=%s", sanitize_log_value(cn_id))
+        abort(500, description=DEFAULT_CLIENT_ERROR)
 
     filename = f"credit-note-{cn.credit_number}.pdf"
     return send_file(
@@ -217,9 +218,9 @@ def download_ubl(cn_id):
             name=invoice.client_name or "Customer",
         )
         xml_str, _ = build_peppol_ubl_credit_note_xml(cn, invoice, supplier, customer)
-    except Exception as exc:
-        logger.exception("UBL credit note XML build failed for cn=%s", cn_id)
-        abort(500, description=str(exc))
+    except Exception:
+        logger.exception("UBL credit note XML build failed for cn=%s", sanitize_log_value(cn_id))
+        abort(500, description=DEFAULT_CLIENT_ERROR)
 
     filename = f"credit-note-{cn.credit_number}-ubl.xml"
     return Response(
@@ -245,9 +246,9 @@ def download_fatturapa(cn_id):
         settings = Settings.get_settings()
         client = Client.query.get(invoice.client_id) if invoice.client_id else None
         xml_bytes, filename = build_fatturapa_credit_note_xml(cn, invoice, settings, client)
-    except Exception as exc:
-        logger.exception("FatturaPA credit note XML build failed for cn=%s", cn_id)
-        abort(500, description=str(exc))
+    except Exception:
+        logger.exception("FatturaPA credit note XML build failed for cn=%s", sanitize_log_value(cn_id))
+        abort(500, description=DEFAULT_CLIENT_ERROR)
 
     return Response(
         xml_bytes,

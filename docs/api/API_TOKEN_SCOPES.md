@@ -211,6 +211,36 @@ curl -X POST https://your-domain.com/api/v1/clients \
 
 ---
 
+### CRM — Deals, Leads, Contacts
+
+#### `read:deals` / `write:deals`
+**Grants**: List, view, create, update, and delete deals; list/create deal activities; move pipeline stage; forecast  
+**Endpoints**:
+- `GET/POST /api/v1/deals`
+- `GET/PUT/PATCH/DELETE /api/v1/deals/{id}`
+- `GET/POST /api/v1/deals/{id}/activities`
+- `PUT/PATCH /api/v1/deals/{id}/stage`
+- `GET /api/v1/deals/forecast`
+- `GET /api/v1/deals/{id}/email-threads`
+
+#### `read:leads` / `write:leads`
+**Grants**: List, view, create, update, and delete leads; activities; convert to client/deal; source analytics  
+**Endpoints**:
+- `GET/POST /api/v1/leads`
+- `GET/PUT/PATCH/DELETE /api/v1/leads/{id}`
+- `GET/POST /api/v1/leads/{id}/activities`
+- `POST /api/v1/leads/{id}/convert-to-client`
+- `POST /api/v1/leads/{id}/convert-to-deal`
+- `GET /api/v1/leads/analytics/sources`
+- `GET /api/v1/leads/{id}/email-threads`
+
+#### `read:contacts` / `write:contacts`
+**Grants**: List, view, create, update, and soft-delete contacts; communication history  
+**Endpoints**:
+- `GET/POST /api/v1/clients/{client_id}/contacts`
+- `GET/PUT/PATCH/DELETE /api/v1/contacts/{id}`
+- `GET/POST /api/v1/contacts/{id}/communications`
+
 ### Quotes
 
 #### `read:quotes`

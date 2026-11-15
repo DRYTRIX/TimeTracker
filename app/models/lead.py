@@ -58,11 +58,24 @@ class Lead(db.Model):
     converted_to_client = db.relationship(
         "Client", foreign_keys=[converted_to_client_id], backref="converted_from_leads"
     )
-    converted_to_deal = db.relationship("Deal", foreign_keys=[converted_to_deal_id])
     creator = db.relationship("User", foreign_keys=[created_by], backref="created_leads")
     owner = db.relationship("User", foreign_keys=[owner_id], backref="owned_leads")
     converter = db.relationship("User", foreign_keys=[converted_by], backref="converted_leads")
-    activities = db.relationship("LeadActivity", backref="lead", lazy="dynamic", cascade="all, delete-orphan")
+    # viewonly read of converted deal (Lead↔Deal also linked via deals.lead_id)
+    converted_to_deal = db.relationship(
+        "Deal",
+        foreign_keys=[converted_to_deal_id],
+        primaryjoin="Lead.converted_to_deal_id==Deal.id",
+        viewonly=True,
+    )
+    activities = db.relationship(
+        "LeadActivity",
+        backref=db.backref("lead", foreign_keys="LeadActivity.lead_id"),
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+        foreign_keys="LeadActivity.lead_id",
+        primaryjoin="Lead.id==LeadActivity.lead_id",
+    )
 
     def __init__(self, first_name, last_name, created_by, **kwargs):
         self.first_name = first_name.strip()

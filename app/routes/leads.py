@@ -75,6 +75,7 @@ def list_leads():
 
 @leads_bp.route("/leads/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("leads")
 def create_lead():
     """Create a new lead"""
     if request.method == "POST":
@@ -120,6 +121,7 @@ def create_lead():
 
 @leads_bp.route("/leads/<int:lead_id>")
 @login_required
+@module_enabled("leads")
 def view_lead(lead_id):
     """View a lead"""
     lead = Lead.query.get_or_404(lead_id)
@@ -138,6 +140,7 @@ def view_lead(lead_id):
 
 @leads_bp.route("/leads/<int:lead_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("leads")
 def edit_lead(lead_id):
     """Edit a lead"""
     lead = Lead.query.get_or_404(lead_id)
@@ -161,7 +164,24 @@ def edit_lead(lead_id):
             lead.title = request.form.get("title", "").strip() or None
             lead.source = request.form.get("source", "").strip() or None
             lead.status = request.form.get("status", "new").strip()
-            lead.score = int(request.form.get("score", 0))
+            new_score = int(request.form.get("score", 0))
+            if new_score != lead.score:
+                old_score = lead.score
+                lead.score = new_score
+                db.session.add(
+                    LeadActivity(
+                        lead_id=lead.id,
+                        type="score_change",
+                        created_by=current_user.id,
+                        subject=f"Score changed from {old_score} to {new_score}",
+                        description=f"{old_score} → {new_score}",
+                        status="completed",
+                    )
+                )
+                # Relationship sync on LeadActivity can clobber dirty parent attrs
+                lead.score = new_score
+            else:
+                lead.score = new_score
             lead.estimated_value = estimated_value
             lead.currency_code = request.form.get("currency_code", "EUR").strip()
             lead.notes = request.form.get("notes", "").strip() or None
@@ -181,6 +201,7 @@ def edit_lead(lead_id):
 
 @leads_bp.route("/leads/<int:lead_id>/convert-to-client", methods=["GET", "POST"])
 @login_required
+@module_enabled("leads")
 def convert_to_client(lead_id):
     """Convert a lead to a client"""
     lead = Lead.query.get_or_404(lead_id)
@@ -236,6 +257,7 @@ def convert_to_client(lead_id):
 
 @leads_bp.route("/leads/<int:lead_id>/convert-to-deal", methods=["GET", "POST"])
 @login_required
+@module_enabled("leads")
 def convert_to_deal(lead_id):
     """Convert a lead to a deal"""
     lead = Lead.query.get_or_404(lead_id)
@@ -295,6 +317,7 @@ def convert_to_deal(lead_id):
 
 @leads_bp.route("/leads/<int:lead_id>/mark-lost", methods=["POST"])
 @login_required
+@module_enabled("leads")
 def mark_lost(lead_id):
     """Mark a lead as lost"""
     lead = Lead.query.get_or_404(lead_id)
@@ -313,6 +336,7 @@ def mark_lost(lead_id):
 
 @leads_bp.route("/leads/<int:lead_id>/activities/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("leads")
 def create_activity(lead_id):
     """Create an activity for a lead"""
     lead = Lead.query.get_or_404(lead_id)
@@ -329,18 +353,30 @@ def create_activity(lead_id):
             due_date_str = request.form.get("due_date", "")
             due_date = parse_local_datetime_from_string(due_date_str) if due_date_str else None
 
+            subject = request.form.get("subject", "").strip() or None
+            description = request.form.get("description", "").strip() or None
             activity = LeadActivity(
                 lead_id=lead_id,
                 type=request.form.get("type", "note").strip(),
                 created_by=current_user.id,
-                subject=request.form.get("subject", "").strip() or None,
-                description=request.form.get("description", "").strip() or None,
+                subject=subject,
+                description=description,
                 activity_date=activity_date,
                 due_date=due_date,
                 status=request.form.get("status", "completed").strip() or "completed",
             )
 
             db.session.add(activity)
+            if due_date:
+                from app.utils.crm_calendar import sync_activity_to_calendar
+
+                sync_activity_to_calendar(
+                    user_id=current_user.id,
+                    title=subject or f"Lead activity: {lead.display_name}",
+                    due_date=due_date,
+                    description=description,
+                    client_id=lead.converted_to_client_id,
+                )
 
             if safe_commit():
                 flash(_("Activity recorded successfully"), "success")
@@ -350,3 +386,35 @@ def create_activity(lead_id):
             flash(_("Error recording activity: %(error)s", error=str(e)), "error")
 
     return render_template("leads/activity_form.html", lead=lead, activity=None)
+
+
+@leads_bp.route("/leads/analytics/sources")
+@login_required
+@module_enabled("leads")
+def lead_source_analytics():
+    """Lead source analytics report."""
+    from sqlalchemy import func
+
+    query = db.session.query(
+        Lead.source,
+        func.count(Lead.id),
+        func.coalesce(func.sum(Lead.estimated_value), 0),
+        func.avg(Lead.score),
+    )
+    if not current_user.is_admin:
+        query = query.filter(Lead.owner_id == current_user.id)
+    rows = query.group_by(Lead.source).order_by(func.count(Lead.id).desc()).all()
+    sources = [
+        {
+            "source": source or _("Unknown"),
+            "count": int(count),
+            "estimated_value_total": float(total_value or 0),
+            "average_score": float(avg_score or 0),
+        }
+        for source, count, total_value, avg_score in rows
+    ]
+    return render_template(
+        "leads/source_analytics.html",
+        sources=sources,
+        total_leads=sum(s["count"] for s in sources),
+    )

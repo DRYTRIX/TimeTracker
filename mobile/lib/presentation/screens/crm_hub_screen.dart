@@ -314,9 +314,18 @@ class _CrmHubScreenState extends ConsumerState<CrmHubScreen>
                   items: data.leads,
                   error: data.leadsError,
                   emptyTitle: 'No leads',
-                  titleOf: (d) => (d['name'] ?? 'Lead').toString(),
+                  titleOf: (d) {
+                    final full = (d['full_name'] ?? '').toString().trim();
+                    if (full.isNotEmpty) return full;
+                    final parts = [
+                      d['first_name'],
+                      d['last_name'],
+                    ].where((v) => v != null && v.toString().trim().isNotEmpty);
+                    final joined = parts.map((v) => v.toString()).join(' ').trim();
+                    return joined.isNotEmpty ? joined : 'Lead';
+                  },
                   subtitleOf: (d) =>
-                      '${d['company'] ?? ''} · ${d['email'] ?? d['status'] ?? ''}'.trim(),
+                      '${d['company_name'] ?? ''} · ${d['email'] ?? d['status'] ?? ''}'.trim(),
                   onCreate: _createLead,
                 ),
                 _listBody(

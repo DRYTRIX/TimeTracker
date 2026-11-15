@@ -11,7 +11,7 @@ export function CrmView({ clients, apiClient, showToast }) {
   const [contacts, setContacts] = useState([]);
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', company_name: '', name: '', amount: '', content: '' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', company_name: '', name: '', value: '', content: '' });
 
   const loadLeadsDeals = async () => {
     setLoading(true);
@@ -59,10 +59,16 @@ export function CrmView({ clients, apiClient, showToast }) {
   }, [tab, selectedClientId]);
 
   const createLead = async () => {
+    const firstName = form.first_name.trim();
+    const lastName = form.last_name.trim();
+    if (!firstName || !lastName) {
+      showToast('First and last name are required', 'error');
+      return;
+    }
     try {
       await apiClient.createLead({
-        first_name: form.first_name || 'Lead',
-        last_name: form.last_name || '',
+        first_name: firstName,
+        last_name: lastName,
         email: form.email || undefined,
         company_name: form.company_name || undefined,
       });
@@ -75,14 +81,15 @@ export function CrmView({ clients, apiClient, showToast }) {
   };
 
   const createDeal = async () => {
+    const name = form.name.trim() || 'New deal';
     try {
       await apiClient.createDeal({
-        name: form.name || 'New deal',
-        amount: form.amount ? Number(form.amount) : 0,
+        name,
+        value: form.value ? Number(form.value) : undefined,
         client_id: selectedClientId ? Number(selectedClientId) : undefined,
       });
       showToast('Deal created', 'success');
-      setForm((f) => ({ ...f, name: '', amount: '' }));
+      setForm((f) => ({ ...f, name: '', value: '' }));
       await loadLeadsDeals();
     } catch (error) {
       showToast(classifyAxiosError(error).message, 'error');
@@ -91,13 +98,20 @@ export function CrmView({ clients, apiClient, showToast }) {
 
   const createContact = async () => {
     if (!selectedClientId) return;
+    const firstName = form.first_name.trim();
+    const lastName = form.last_name.trim();
+    if (!firstName || !lastName) {
+      showToast('First and last name are required', 'error');
+      return;
+    }
     try {
       await apiClient.createContact(selectedClientId, {
-        first_name: form.first_name || 'Contact',
-        last_name: form.last_name || '',
+        first_name: firstName,
+        last_name: lastName,
         email: form.email || undefined,
       });
       showToast('Contact created', 'success');
+      setForm((f) => ({ ...f, first_name: '', last_name: '', email: '' }));
       await loadClientExtras(selectedClientId);
     } catch (error) {
       showToast(classifyAxiosError(error).message, 'error');
@@ -153,7 +167,7 @@ export function CrmView({ clients, apiClient, showToast }) {
           <Panel title="New deal">
             <div className="form-grid report-filters">
               <input placeholder="Deal name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-              <input placeholder="Amount" type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+              <input placeholder="Value" type="number" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} />
               <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}>
                 <option value="">Client (optional)</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -165,7 +179,7 @@ export function CrmView({ clients, apiClient, showToast }) {
             {deals.length ? deals.map((deal) => (
               <div className="list-row" key={deal.id}>
                 <strong>{deal.name || `Deal ${deal.id}`}</strong>
-                <span>{deal.stage || deal.status} · {deal.amount}</span>
+                <span>{deal.stage || deal.status} · {deal.value != null ? deal.value : '—'}</span>
               </div>
             )) : <EmptyState title="No deals" text="Create a deal to get started." />}
           </div>

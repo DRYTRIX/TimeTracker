@@ -134,3 +134,49 @@ def delete_contact(contact_id):
     contact.is_active = False
     db.session.commit()
     return jsonify({"message": "Contact deleted successfully"})
+
+
+@api_v1_contacts_bp.route("/contacts/<int:contact_id>/communications", methods=["GET"])
+@require_api_token("read:contacts")
+def list_contact_communications(contact_id):
+    """List communications for a contact."""
+    blocked = _require_module_enabled_for_api("contacts")
+    if blocked:
+        return blocked
+    from app.models import ContactCommunication
+
+    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    communications = ContactCommunication.get_recent_communications(contact_id=contact.id, limit=100)
+    return jsonify({"communications": [c.to_dict() for c in communications]})
+
+
+@api_v1_contacts_bp.route("/contacts/<int:contact_id>/communications", methods=["POST"])
+@require_api_token("write:contacts")
+def create_contact_communication(contact_id):
+    """Create a communication log entry for a contact."""
+    blocked = _require_module_enabled_for_api("contacts")
+    if blocked:
+        return blocked
+    from app.models import ContactCommunication
+    from app.routes.api_v1_common import parse_datetime
+
+    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    data = request.get_json() or {}
+    comm_type = (data.get("type") or "note").strip()
+    communication = ContactCommunication(
+        contact_id=contact.id,
+        type=comm_type,
+        created_by=g.api_user.id,
+        subject=(data.get("subject") or "").strip() or None,
+        content=(data.get("content") or "").strip() or None,
+        direction=(data.get("direction") or "outbound").strip(),
+        status=(data.get("status") or "completed").strip() or "completed",
+        communication_date=parse_datetime(data.get("communication_date")) or None,
+        follow_up_date=parse_datetime(data.get("follow_up_date")),
+        related_project_id=data.get("related_project_id"),
+        related_quote_id=data.get("related_quote_id"),
+        related_deal_id=data.get("related_deal_id"),
+    )
+    db.session.add(communication)
+    db.session.commit()
+    return jsonify({"message": "Communication created", "communication": communication.to_dict()}), 201

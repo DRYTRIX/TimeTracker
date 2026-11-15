@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{% if template %}{{ _('Edit Template') }}{% else %}{{ _('New Template') }}{% endif %} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Communication Templates'), 'url': url_for('contacts.list_communication_templates')},
+    {'text': _('Edit') if template else _('New')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-alt',
+    title_text=_('Edit Template') if template else _('New Template'),
+    breadcrumbs=breadcrumbs
+) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm max-w-2xl">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="grid grid-cols-1 gap-4">
+            <div>
+                <label class="block text-sm font-medium mb-2" for="name">{{ _('Name') }} *</label>
+                <input class="form-input" id="name" name="name" required value="{{ template.name if template else '' }}">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2" for="type">{{ _('Type') }}</label>
+                <select class="form-input" id="type" name="type">
+                    {% for t in ['email', 'call', 'meeting', 'note', 'message'] %}
+                    <option value="{{ t }}" {% if template and template.type == t %}selected{% endif %}>{{ t|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2" for="direction">{{ _('Direction') }}</label>
+                <select class="form-input" id="direction" name="direction">
+                    <option value="outbound" {% if not template or template.direction == 'outbound' %}selected{% endif %}>{{ _('Outbound') }}</option>
+                    <option value="inbound" {% if template and template.direction == 'inbound' %}selected{% endif %}>{{ _('Inbound') }}</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2" for="subject">{{ _('Subject') }}</label>
+                <input class="form-input" id="subject" name="subject" value="{{ template.subject if template and template.subject else '' }}">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2" for="content">{{ _('Content') }}</label>
+                <textarea class="form-input" id="content" name="content" rows="6">{{ template.content if template and template.content else '' }}</textarea>
+            </div>
+        </div>
+        <div class="mt-6 flex gap-2">
+            <button type="submit" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">{{ _('Save') }}</button>
+            <a href="{{ url_for('contacts.list_communication_templates') }}" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

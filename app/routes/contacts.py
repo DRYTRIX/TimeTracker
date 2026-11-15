@@ -27,6 +27,7 @@ def list_contacts(client_id):
 
 @contacts_bp.route("/clients/<int:client_id>/contacts/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("contacts")
 def create_contact(client_id):
     """Create a new contact for a client"""
     client = Client.query.get_or_404(client_id)
@@ -70,6 +71,7 @@ def create_contact(client_id):
 
 @contacts_bp.route("/contacts/<int:contact_id>")
 @login_required
+@module_enabled("contacts")
 def view_contact(contact_id):
     """View a contact"""
     contact = Contact.query.get_or_404(contact_id)
@@ -79,6 +81,7 @@ def view_contact(contact_id):
 
 @contacts_bp.route("/contacts/<int:contact_id>/edit", methods=["GET", "POST"])
 @login_required
+@module_enabled("contacts")
 def edit_contact(contact_id):
     """Edit a contact"""
     contact = Contact.query.get_or_404(contact_id)
@@ -117,6 +120,7 @@ def edit_contact(contact_id):
 
 @contacts_bp.route("/contacts/<int:contact_id>/delete", methods=["POST"])
 @login_required
+@module_enabled("contacts")
 def delete_contact(contact_id):
     """Delete a contact (soft delete by setting is_active=False)"""
     contact = Contact.query.get_or_404(contact_id)
@@ -136,6 +140,7 @@ def delete_contact(contact_id):
 
 @contacts_bp.route("/contacts/<int:contact_id>/set-primary", methods=["POST"])
 @login_required
+@module_enabled("contacts")
 def set_primary_contact(contact_id):
     """Set a contact as primary"""
     contact = Contact.query.get_or_404(contact_id)
@@ -153,6 +158,7 @@ def set_primary_contact(contact_id):
 
 @contacts_bp.route("/contacts/<int:contact_id>/communications/create", methods=["GET", "POST"])
 @login_required
+@module_enabled("contacts")
 def create_communication(contact_id):
     """Create a communication record for a contact"""
     contact = Contact.query.get_or_404(contact_id)
@@ -196,3 +202,80 @@ def create_communication(contact_id):
             flash(_("Error recording communication: %(error)s", error=str(e)), "error")
 
     return render_template("contacts/communication_form.html", contact=contact, communication=None)
+
+
+@contacts_bp.route("/crm/communication-templates")
+@login_required
+@module_enabled("contacts")
+def list_communication_templates():
+    """List CRM communication templates."""
+    from app.models import CrmCommunicationTemplate
+
+    templates = CrmCommunicationTemplate.query.filter_by(is_active=True).order_by(CrmCommunicationTemplate.name).all()
+    return render_template("contacts/templates_list.html", templates=templates)
+
+
+@contacts_bp.route("/crm/communication-templates/create", methods=["GET", "POST"])
+@login_required
+@module_enabled("contacts")
+def create_communication_template():
+    """Create a CRM communication template."""
+    from app.models import CrmCommunicationTemplate
+
+    if request.method == "POST":
+        try:
+            template = CrmCommunicationTemplate(
+                name=request.form.get("name", "").strip(),
+                created_by=current_user.id,
+                type=request.form.get("type", "email").strip(),
+                subject=request.form.get("subject", "").strip() or None,
+                content=request.form.get("content", "").strip() or None,
+                direction=request.form.get("direction", "outbound").strip(),
+            )
+            if not template.name:
+                flash(_("Name is required"), "error")
+            else:
+                db.session.add(template)
+                if safe_commit():
+                    flash(_("Template created"), "success")
+                    return redirect(url_for("contacts.list_communication_templates"))
+        except Exception as e:
+            db.session.rollback()
+            flash(_("Error creating template: %(error)s", error=str(e)), "error")
+    return render_template("contacts/template_form.html", template=None)
+
+
+@contacts_bp.route("/crm/communication-templates/<int:template_id>/edit", methods=["GET", "POST"])
+@login_required
+@module_enabled("contacts")
+def edit_communication_template(template_id):
+    """Edit a CRM communication template."""
+    from app.models import CrmCommunicationTemplate
+
+    template = CrmCommunicationTemplate.query.get_or_404(template_id)
+    if request.method == "POST":
+        try:
+            template.name = request.form.get("name", "").strip()
+            template.type = request.form.get("type", "email").strip()
+            template.subject = request.form.get("subject", "").strip() or None
+            template.content = request.form.get("content", "").strip() or None
+            template.direction = request.form.get("direction", "outbound").strip()
+            template.updated_at = datetime.utcnow()
+            if safe_commit():
+                flash(_("Template updated"), "success")
+                return redirect(url_for("contacts.list_communication_templates"))
+        except Exception as e:
+            db.session.rollback()
+            flash(_("Error updating template: %(error)s", error=str(e)), "error")
+    return render_template("contacts/template_form.html", template=template)
+
+
+@contacts_bp.route("/api/crm/communication-templates")
+@login_required
+@module_enabled("contacts")
+def api_list_communication_templates():
+    """JSON list of active communication templates for the communication form."""
+    from app.models import CrmCommunicationTemplate
+
+    templates = CrmCommunicationTemplate.query.filter_by(is_active=True).order_by(CrmCommunicationTemplate.name).all()
+    return jsonify({"templates": [t.to_dict() for t in templates]})

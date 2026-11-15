@@ -13,7 +13,7 @@
     title_text='Leads',
     subtitle_text='Manage potential clients',
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("leads.create_lead") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Lead</a>'
+    actions_html='<a href="' + url_for("leads.create_lead") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>New Lead</a> <a href="' + url_for("leads.lead_source_analytics") + '" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark px-4 py-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors"><i class="fas fa-chart-pie mr-2"></i>Source Analytics</a>'
 ) }}
 
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">

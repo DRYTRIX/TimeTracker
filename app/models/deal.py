@@ -58,12 +58,24 @@ class Deal(db.Model):
     # Relationships
     client = db.relationship("Client", backref="deals")
     contact = db.relationship("Contact", backref="deals")
-    lead = db.relationship("Lead", foreign_keys=[lead_id], backref="deals")
+    lead = db.relationship(
+        "Lead",
+        foreign_keys=[lead_id],
+        primaryjoin="Deal.lead_id==Lead.id",
+        backref=db.backref("originated_deals", lazy="dynamic"),
+    )
     creator = db.relationship("User", foreign_keys=[created_by], backref="created_deals")
     owner = db.relationship("User", foreign_keys=[owner_id], backref="owned_deals")
     related_quote = db.relationship("Quote", foreign_keys=[related_quote_id])
     related_project = db.relationship("Project", foreign_keys=[related_project_id])
-    activities = db.relationship("DealActivity", backref="deal", lazy="dynamic", cascade="all, delete-orphan")
+    activities = db.relationship(
+        "DealActivity",
+        backref=db.backref("deal", foreign_keys="DealActivity.deal_id"),
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+        foreign_keys="DealActivity.deal_id",
+        primaryjoin="Deal.id==DealActivity.deal_id",
+    )
 
     def __init__(self, name, created_by, **kwargs):
         self.name = name.strip()

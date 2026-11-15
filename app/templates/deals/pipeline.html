@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/ui.html" import page_header, breadcrumb_nav %}
+{% from "components/ui.html" import page_header %}
 
 {% block title %}{{ _('Sales Pipeline') }} - {{ config.APP_NAME }}{% endblock %}
 
@@ -12,26 +12,28 @@
 {{ page_header(
     icon_class='fas fa-columns',
     title_text=_('Sales Pipeline'),
-    subtitle_text=_('Visual pipeline view of all deals'),
+    subtitle_text=_('Drag deals between stages to update the pipeline'),
     breadcrumbs=breadcrumbs,
-    actions_html='<a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('New Deal') + '</a>'
+    actions_html='<a href="' + url_for("deals.deals_forecast") + '" class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark px-4 py-2 rounded-lg mr-2 hover:bg-background-light dark:hover:bg-background-dark transition-colors"><i class="fas fa-chart-line mr-2"></i>' + _('Forecast') + '</a><a href="' + url_for("deals.create_deal") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('New Deal') + '</a>'
 ) }}
 
 <div class="overflow-x-auto">
-    <div class="flex gap-4 min-w-max pb-4">
+    <div class="flex gap-4 min-w-max pb-4" id="pipelineBoard">
         {% for stage in pipeline_stages %}
         <div class="flex-shrink-0 w-80">
             <div class="bg-card-light dark:bg-card-dark rounded-lg shadow p-4">
                 <h3 class="font-semibold mb-3 text-sm uppercase text-text-muted-light dark:text-text-muted-dark">
                     {{ stage|replace('_', ' ')|title }}
-                    <span class="ml-2 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">
+                    <span class="ml-2 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs stage-count" data-stage="{{ stage }}">
                         {{ deals_by_stage[stage]|length }}
                     </span>
                 </h3>
-                <div class="space-y-3">
+                <div class="space-y-3 min-h-[120px] pipeline-column" data-stage="{{ stage }}">
                     {% for deal in deals_by_stage[stage] %}
-                    <div class="bg-card-light dark:bg-card-dark p-3 rounded border border-border-light dark:border-border-dark hover:shadow-md transition cursor-pointer"
-                         onclick="window.location.href='{{ url_for('deals.view_deal', deal_id=deal.id) }}'">
+                    <div class="deal-card bg-card-light dark:bg-card-dark p-3 rounded border border-border-light dark:border-border-dark hover:shadow-md transition cursor-grab"
+                         draggable="true"
+                         data-deal-id="{{ deal.id }}"
+                         data-view-url="{{ url_for('deals.view_deal', deal_id=deal.id) }}">
                         <h4 class="font-medium text-sm mb-1">{{ deal.name }}</h4>
                         {% if deal.client %}
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-2">{{ deal.client.name }}</p>
@@ -53,4 +55,88 @@
         {% endfor %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content
+    || document.querySelector('input[name="csrf_token"]')?.value
+    || '';
+  let dragged = null;
+  let suppressClick = false;
+
+  document.querySelectorAll('.deal-card').forEach((card) => {
+    card.addEventListener('dragstart', (e) => {
+      dragged = card;
+      card.classList.add('opacity-50');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.dealId);
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('opacity-50');
+      dragged = null;
+    });
+    card.addEventListener('click', (e) => {
+      if (suppressClick) {
+        e.preventDefault();
+        suppressClick = false;
+        return;
+      }
+      window.location.href = card.dataset.viewUrl;
+    });
+  });
+
+  document.querySelectorAll('.pipeline-column').forEach((col) => {
+    col.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      col.classList.add('ring-2', 'ring-primary/40');
+    });
+    col.addEventListener('dragleave', () => {
+      col.classList.remove('ring-2', 'ring-primary/40');
+    });
+    col.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      col.classList.remove('ring-2', 'ring-primary/40');
+      if (!dragged) return;
+      const dealId = dragged.dataset.dealId;
+      const newStage = col.dataset.stage;
+      const oldCol = dragged.parentElement;
+      if (oldCol === col) return;
+      col.appendChild(dragged);
+      suppressClick = true;
+      updateCounts();
+      try {
+        const res = await fetch(`/deals/${dealId}/stage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrf,
+          },
+          body: JSON.stringify({ stage: newStage }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          oldCol.appendChild(dragged);
+          updateCounts();
+          alert(data.error || 'Failed to update stage');
+        }
+      } catch (err) {
+        oldCol.appendChild(dragged);
+        updateCounts();
+        alert('Failed to update stage');
+      }
+    });
+  });
+
+  function updateCounts() {
+    document.querySelectorAll('.pipeline-column').forEach((col) => {
+      const stage = col.dataset.stage;
+      const count = col.querySelectorAll('.deal-card').length;
+      const badge = document.querySelector(`.stage-count[data-stage="${stage}"]`);
+      if (badge) badge.textContent = String(count);
+    });
+  }
+})();
+</script>
 {% endblock %}
