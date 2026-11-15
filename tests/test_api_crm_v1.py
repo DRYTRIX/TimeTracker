@@ -9,7 +9,7 @@ from decimal import Decimal
 import pytest
 
 from app import create_app, db
-from app.models import ApiToken, CalendarEvent, Client, Contact, Deal, Lead, LeadActivity, User
+from app.models import ApiToken, CalendarEvent, Client, Contact, Deal, LeadActivity, User
 from app.services.email_sync_service import EmailSyncService
 
 pytestmark = [pytest.mark.api, pytest.mark.integration]
