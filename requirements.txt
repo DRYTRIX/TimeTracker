@@ -50,7 +50,7 @@ WeasyPrint==70.0
 pydyf==0.13.0
 Pillow==13.0.0
 reportlab==5.1.0
-pikepdf>=10.17.0
+pikepdf>=10.18.1
 
 # Background tasks
 APScheduler==3.11.3
@@ -59,7 +59,7 @@ APScheduler==3.11.3
 pywebpush==2.5.0
 
 # Optional: Firebase Cloud Messaging for mobile idle wake-up (Issue #722)
-firebase-admin==7.7.0
+firebase-admin==7.8.0
 
 # Internationalization
 Flask-Babel==4.0.0
@@ -74,7 +74,7 @@ pyotp==2.10.0
 
 # Analytics and Monitoring
 python-json-logger==4.2.0
-sentry-sdk==2.74.0
+sentry-sdk==2.75.0
 prometheus-client==0.26.0
 
 # OpenTelemetry (OTLP traces + metrics; aligns instrumentation 0.66b1 with SDK 1.45)
@@ -95,10 +95,10 @@ marshmallow==4.4.0
 pytesseract==0.3.13
 
 # Payment Gateway Integration
-stripe==16.1.0
+stripe==17.0.0
 
 # Calendar Integration
-google-api-python-client==2.201.0
+google-api-python-client==2.202.0
 google-auth-httplib2==0.4.4
 google-auth-oauthlib==1.5.0
 icalendar==7.3.0
