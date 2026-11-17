@@ -21,6 +21,14 @@ def is_database_restore_in_progress(app) -> bool:
     return bool(getattr(app, "_database_restore_in_progress", False))
 
 
+def _upload_folder(app) -> str:
+    """Return UPLOAD_FOLDER, where receipts and avatars are saved (defaults to /data/uploads)."""
+    upload_root = (app.config.get("UPLOAD_FOLDER") if getattr(app, "config", None) else None) or os.getenv(
+        "UPLOAD_FOLDER", "/data/uploads"
+    )
+    return str(upload_root)
+
+
 def get_backup_root_dir(app) -> str:
     """Return the directory where backup archives should be stored.
 
@@ -39,10 +47,7 @@ def get_backup_root_dir(app) -> str:
     if configured:
         backups_dir = os.path.abspath(str(configured))
     else:
-        upload_root = (app.config.get("UPLOAD_FOLDER") if getattr(app, "config", None) else None) or os.getenv(
-            "UPLOAD_FOLDER", "/data/uploads"
-        )
-        backups_dir = os.path.abspath(os.path.join(str(upload_root), "backups"))
+        backups_dir = os.path.abspath(os.path.join(_upload_folder(app), "backups"))
 
     # Ensure the directory exists and is writable
     try:
@@ -108,14 +113,29 @@ def _write_manifest(zf, manifest: dict):
     zf.writestr("manifest.json", data)
 
 
-def _add_directory_to_zip(zf, source_dir: str, arc_prefix: str):
+def _add_directory_to_zip(zf, source_dir: str, arc_prefix: str, skip_dir: str | None = None):
     if not source_dir or not os.path.isdir(source_dir):
         return
-    for root, _, files in os.walk(source_dir):
+    skip = os.path.realpath(skip_dir) if skip_dir else None
+    for root, dirs, files in os.walk(source_dir):
+        if skip:
+            dirs[:] = [d for d in dirs if os.path.realpath(os.path.join(root, d)) != skip]
         for file_name in files:
             abs_path = os.path.join(root, file_name)
             rel_path = os.path.relpath(abs_path, start=source_dir)
             zf.write(abs_path, os.path.join(arc_prefix, rel_path))
+
+
+def _merge_copy(source_dir: str, target_dir: str):
+    """Copy every file under SOURCE_DIR into TARGET_DIR, keeping files already there."""
+    if not os.path.isdir(source_dir):
+        return
+    for root, _, files in os.walk(source_dir):
+        rel = os.path.relpath(root, source_dir)
+        dest = os.path.join(target_dir, rel) if rel != "." else target_dir
+        os.makedirs(dest, exist_ok=True)
+        for fn in files:
+            shutil.copy2(os.path.join(root, fn), os.path.join(dest, fn))
 
 
 def create_backup(app) -> str:
@@ -126,6 +146,7 @@ def create_backup(app) -> str:
     - db.sqlite (if sqlite) OR db.dump (if postgresql, custom format)
     - settings.json (serialized Settings row for quick inspection)
     - uploads/ (logos and other uploaded assets if present)
+    - data_uploads/ (UPLOAD_FOLDER: receipts, avatars; without the backups kept there)
     """
     # Late imports to avoid circular dependencies
     from app import db
@@ -212,6 +233,9 @@ def create_backup(app) -> str:
             # Include uploads (e.g., logos)
             uploads_root = os.path.join(app.root_path, "static", "uploads")
             _add_directory_to_zip(zf, uploads_root, "uploads")
+
+            # Include receipts and avatars, which are saved under UPLOAD_FOLDER
+            _add_directory_to_zip(zf, _upload_folder(app), "data_uploads", skip_dir=backups_dir)
 
         return archive_path
     finally:
@@ -408,17 +432,8 @@ def restore_backup(app, archive_path: str, progress_callback=None) -> tuple[bool
             return False, "Unsupported or unknown database type for restore"
 
         # Restore uploads
-        extracted_uploads = os.path.join(tmp_dir, "uploads")
-        if os.path.isdir(extracted_uploads):
-            target_uploads = os.path.join(app.root_path, "static", "uploads")
-            os.makedirs(target_uploads, exist_ok=True)
-            # Merge copy
-            for root, _, files in os.walk(extracted_uploads):
-                rel = os.path.relpath(root, extracted_uploads)
-                target_dir = os.path.join(target_uploads, rel) if rel != "." else target_uploads
-                os.makedirs(target_dir, exist_ok=True)
-                for fn in files:
-                    shutil.copy2(os.path.join(root, fn), os.path.join(target_dir, fn))
+        _merge_copy(os.path.join(tmp_dir, "uploads"), os.path.join(app.root_path, "static", "uploads"))
+        _merge_copy(os.path.join(tmp_dir, "data_uploads"), _upload_folder(app))
         _progress("Uploads restored", 80)
 
         # Run migrations to ensure compatibility with current code
