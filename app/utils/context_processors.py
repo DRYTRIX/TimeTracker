@@ -165,23 +165,27 @@ def register_context_processors(app):
         rtl_languages = current_app.config.get("RTL_LANGUAGES", set())
         is_rtl = short_locale in rtl_languages
 
-        support_purchase_url = current_app.config.get(
-            "SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html"
-        )
+        system_instance_id = None
+        try:
+            system_instance_id = Settings.get_system_instance_id()
+        except Exception:
+            system_instance_id = None
 
-        # User stats and support banner suppression for smart prompts (authenticated users only)
+        from app.config.support_ui import build_support_purchase_url
+
+        support_purchase_url = build_support_purchase_url(current_app.config, system_instance_id)
+
+        # User stats; soft prompts suppressed only mid key-checkout (not after BMC/tips)
         user_stats = None
         support_banner_suppressed = False
-        support_ab_variant = "control"
+        # Rolled out: key-first for everyone (interpretable conversion metrics)
+        support_ab_variant = "key_first"
         if getattr(current_user, "is_authenticated", False):
             try:
                 from app.models import DonationInteraction
 
                 user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
-                support_banner_suppressed = DonationInteraction.has_recent_donation_click(current_user.id, days=30)
-                # Stable A/B variant per user for support CTA experiments
-                # (control | key_first | cta_alt | never_see)
-                support_ab_variant = ("control", "key_first", "cta_alt", "never_see")[current_user.id % 4]
+                support_banner_suppressed = DonationInteraction.has_recent_key_checkout_click(current_user.id, days=7)
             except Exception:
                 user_stats = {}
                 support_banner_suppressed = False
@@ -217,7 +221,7 @@ def register_context_processors(app):
 
                 usage_stats = UsageStatsService.get_for_user(current_user.id)
                 support_usage_stats_modal = usage_stats
-                checkout_urls = build_support_checkout_urls(current_app.config)
+                checkout_urls = build_support_checkout_urls(current_app.config, system_instance_id)
                 social_line = get_social_proof_text(current_app.config)
                 long_session_minutes = get_long_session_minutes()
 
@@ -225,20 +229,25 @@ def register_context_processors(app):
                     session["support_session_started_at"] = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
                 lp_message = ""
-                lp_action = _("Support")
+                lp_action = _("Become a Supporter")
                 if layout_support_prompt:
                     v = layout_support_prompt.get("variant")
                     if v == SupportPromptService.VARIANT_AFTER_REPORT:
-                        lp_message = _("Report exported — if TimeTracker saves you time, a coffee goes a long way.")
+                        lp_message = _(
+                            "Report exported — if TimeTracker saves you time, become a Supporter "
+                            "to fund development and get client-ready PDFs without the TimeTracker footer."
+                        )
                     elif v == SupportPromptService.VARIANT_FIRST_INVOICE:
                         lp_message = _(
-                            "You just sent your first invoice with TimeTracker — if the app is helping your "
-                            "business, consider supporting its development."
+                            "You just sent your first invoice with TimeTracker — become a Supporter "
+                            "to fund development, show your badge, and use clean client PDFs."
                         )
 
                 support_ui_json = json.dumps(
                     {
                         "urls": checkout_urls,
+                        "systemInstanceId": system_instance_id or "",
+                        "purchaseUrl": support_purchase_url,
                         "stats": usage_stats,
                         "socialProofLine": social_line,
                         "longSessionMinutes": long_session_minutes,
@@ -262,8 +271,8 @@ def register_context_processors(app):
                             "shareFail": _("Could not copy link"),
                             "supportAction": _("Support"),
                             "longSessionToast": _(
-                                "You've been tracking for a while today. TimeTracker is free because of "
-                                "supporters like you."
+                                "You've been tracking for a while today. Become a Supporter to fund "
+                                "independent development — badge, clean PDFs, quieter prompts as a side benefit."
                             ),
                         },
                     },
@@ -288,6 +297,7 @@ def register_context_processors(app):
             "available_languages": available_languages,
             "config": current_app.config,
             "support_purchase_url": support_purchase_url,
+            "system_instance_id": system_instance_id,
             "user_stats": user_stats,
             "support_banner_suppressed": support_banner_suppressed,
             "support_ab_variant": support_ab_variant,

@@ -94,7 +94,7 @@ See [features/](features/) for additional feature documentation.
 - **[Email Configuration](admin/configuration/EMAIL_CONFIGURATION.md)** — Email setup
 - **[OIDC Setup](admin/configuration/OIDC_SETUP.md)** — OIDC/SSO authentication setup
 - **[LDAP Setup](admin/configuration/LDAP_SETUP.md)** — LDAP directory authentication (`AUTH_METHOD=ldap` or `all`)
-- **[Support visibility](admin/configuration/SUPPORT_VISIBILITY.md)** — Hide donate/support UI with a purchased key; [purchase key](https://timetracker.drytrix.com/support.html)
+- **[Support visibility](admin/configuration/SUPPORT_VISIBILITY.md)** — Hide donate/support UI with a purchased key; [purchase key](https://timetracker.drytrix.com/support)
 
 ### Deployment
 - **[Distribution & Download](admin/deployment/DISTRIBUTION.md)** — All install paths and marketplaces

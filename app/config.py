@@ -241,7 +241,7 @@ class Config:
     DONATE_HIDE_UNLOCK_SECRET = _donate_secret
 
     # Support & Purchase Key page URL (for links to purchase a key to hide donate UI)
-    SUPPORT_PURCHASE_URL = os.getenv("SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html").strip()
+    SUPPORT_PURCHASE_URL = os.getenv("SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support").strip()
     SUPPORT_PORTAL_BASE = os.getenv("SUPPORT_PORTAL_BASE", "https://timetracker.drytrix.com").strip()
     # Optional one-line social proof for support modal (empty = omit block)
     SUPPORT_SOCIAL_PROOF_TEXT = os.getenv("SUPPORT_SOCIAL_PROOF_TEXT", "").strip()

@@ -1,16 +1,29 @@
 # Support / Donate visibility
 
-This guide describes how to configure the optional **Support visibility** feature. When enabled, an **admin** can hide donate and support prompts (sidebar link, header button, support banner, and donate widgets) **for all users** by entering a **code** that is issued per installation.
+This guide describes how to configure the optional **Supporter key** (Support visibility) feature. When activated, an **admin** minimizes donate and support prompts for **all users** by entering a **code** issued per installation. Supporters also get a badge and client PDFs without the “Generated with TimeTracker” footer. Features are never locked.
 
 ## What admins see
 
 - In **Admin → Settings**, the **Support visibility** section shows the **System ID** (a stable UUID for your installation) and a field to enter a code.
-- After a valid code is entered and **Verify and hide for everyone** is clicked, donate and support UI is hidden **system-wide** for all users.
+- After a valid code is entered and **Verify and hide for everyone** is clicked, donate and support prompts are minimized **system-wide** for all users.
 - The System ID does not change between restarts; it identifies your instance so you can request the correct code.
 
 ### How to get a code
 
-To purchase a key and receive your code, go to **[Support & Purchase Key](https://timetracker.drytrix.com/support.html)**. You will need your **System ID**, shown in Admin → Settings → Support visibility. One key per instance; the code is sent by email after payment.
+To purchase a Supporter key and receive your code, go to **[Support & Purchase Key](https://timetracker.drytrix.com/support)**. In-app “Become a Supporter” / “Open checkout” links append your System ID automatically.
+
+### Checkout query parameters (marketing site)
+
+In-app purchase URLs are built as:
+
+`https://timetracker.drytrix.com/support?system_id=<uuid>`
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `system_id` | Recommended | Instance UUID from Admin → Settings → Support visibility (or Settings → Become a Supporter). The marketing site autofills the System ID field when present. |
+| `utm_*` | Optional | Standard campaign tags if you add them to `SUPPORT_PURCHASE_URL`. |
+
+One key per instance; the code is sent by email after payment. You can also paste the key under **Settings → Become a Supporter**.
 
 ## Server configuration
 
@@ -74,7 +87,7 @@ If neither is set, the feature is disabled: no code will be accepted and the Sup
 
 Codes are **per installation**: each instance has its own System ID, and a valid code for one instance is not valid for another.
 
-The public-facing way for admins to obtain a code is via the [Support & Purchase Key](https://timetracker.drytrix.com/support.html) page (see **How to get a code** above). For maintainers: an admin copies the **System ID** from Admin → Settings → Support visibility (or you provide it from your deployment); you generate the code for that System ID using the procedure and tools described in **internal documentation**. The code-generation script, key-generation steps, and private key handling are not in the public repository; maintainers use a separate, non-committed guide and script. You send the code to the admin; they enter it in Admin → Settings and click **Verify and hide for everyone**.
+The public-facing way for admins to obtain a code is via the [Support & Purchase Key](https://timetracker.drytrix.com/support) page (see **How to get a code** above). For maintainers: an admin copies the **System ID** from Admin → Settings → Support visibility (or you provide it from your deployment); you generate the code for that System ID using the procedure and tools described in **internal documentation**. The code-generation script, key-generation steps, and private key handling are not in the public repository; maintainers use a separate, non-committed guide and script. You send the code to the admin; they enter it in Admin → Settings and click **Verify and hide for everyone**.
 
 ## User experience
 
