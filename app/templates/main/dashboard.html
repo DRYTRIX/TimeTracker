@@ -918,8 +918,8 @@
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('If this saves you time, consider supporting development — everything stays free and open.') }}</p>
         {% endif %}
         <div class="flex flex-wrap gap-2">
-            <button type="button" class="btn btn-primary js-open-support-modal"><i class="fas fa-heart mr-1.5" aria-hidden="true"></i>{{ _('Help keep it free') }}</button>
-            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="typeof trackDonationClick === 'function' && trackDonationClick('dashboard_widget_key')" class="btn btn-secondary">{{ _('Get a key — remove prompts (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i></a>
+            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-license-checkout onclick="typeof trackDonationClick === 'function' && trackDonationClick('dashboard_widget_key')" class="btn btn-primary"><i class="fas fa-star mr-1.5" aria-hidden="true"></i>{{ _('Become a Supporter (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i></a>
+            <button type="button" class="btn btn-secondary js-open-support-modal">{{ _('Or tip / share') }}</button>
         </div>
         {% endif %}
     </div>

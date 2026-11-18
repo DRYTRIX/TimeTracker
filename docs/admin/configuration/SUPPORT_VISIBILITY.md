@@ -1,16 +1,29 @@
 # Support / Donate visibility
 
-This guide describes how to configure the optional **Support visibility** feature. When enabled, an **admin** can hide donate and support prompts (sidebar link, header button, support banner, and donate widgets) **for all users** by entering a **code** that is issued per installation.
+This guide describes how to configure the optional **Supporter key** (Support visibility) feature. When activated, an **admin** minimizes donate and support prompts for **all users** by entering a **code** issued per installation. Supporters also get a badge and client PDFs without the “Generated with TimeTracker” footer. Features are never locked.
 
 ## What admins see
 
 - In **Admin → Settings**, the **Support visibility** section shows the **System ID** (a stable UUID for your installation) and a field to enter a code.
-- After a valid code is entered and **Verify and hide for everyone** is clicked, donate and support UI is hidden **system-wide** for all users.
+- After a valid code is entered and **Verify and hide for everyone** is clicked, donate and support prompts are minimized **system-wide** for all users.
 - The System ID does not change between restarts; it identifies your instance so you can request the correct code.
 
 ### How to get a code
 
-To purchase a key and receive your code, go to **[Support & Purchase Key](https://timetracker.drytrix.com/support.html)**. You will need your **System ID**, shown in Admin → Settings → Support visibility. One key per instance; the code is sent by email after payment.
+To purchase a Supporter key and receive your code, go to **[Support & Purchase Key](https://timetracker.drytrix.com/support.html)**. In-app “Become a Supporter” / “Open checkout” links append your System ID automatically.
+
+### Checkout query parameters (marketing site)
+
+In-app purchase URLs are built as:
+
+`https://timetracker.drytrix.com/support.html?system_id=<uuid>`
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `system_id` | Recommended | Instance UUID from Admin → Settings → Support visibility (or Settings → Become a Supporter). The marketing site autofills the System ID field when present. |
+| `utm_*` | Optional | Standard campaign tags if you add them to `SUPPORT_PURCHASE_URL`. |
+
+One key per instance; the code is sent by email after payment. You can also paste the key under **Settings → Become a Supporter**.
 
 ## Server configuration
 

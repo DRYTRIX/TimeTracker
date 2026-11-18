@@ -307,16 +307,16 @@
             <div class="border-b border-border-light dark:border-border-dark pb-6" id="donateVisibilitySection">
                 <h2 class="text-lg font-semibold mb-4"><i class="fas fa-eye-slash mr-2"></i>{{ _('Support visibility') }}</h2>
                 <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">
-                    {{ _('Remove donate and support prompts for all users with a one-time key (€25, one key per instance).') }}
+                    {{ _('Become a Supporter with a one-time €25 key (one per instance): fund development, show the badge, use client PDFs without the TimeTracker footer, and minimize prompts for everyone.') }}
                 </p>
                 <ol class="list-decimal list-inside space-y-2 mb-4 text-sm text-text-light dark:text-text-dark">
-                    <li>{{ _('Copy your System ID below and use it when buying the key.') }}</li>
-                    <li><a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline">{{ _('Buy key') }} <i class="fas fa-external-link-alt text-xs"></i></a> {{ _('— key sent by email.') }}</li>
+                    <li>{{ _('Copy your System ID below (checkout prefills it automatically).') }}</li>
+                    <li><a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-license-checkout onclick="typeof trackDonationClick === 'function' && trackDonationClick('admin_settings_key')" class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline">{{ _('Buy Supporter key') }} <i class="fas fa-external-link-alt text-xs"></i></a> {{ _('— key sent by email.') }}</li>
                     <li>{{ _('Paste the code below and click Verify.') }}</li>
                 </ol>
                 <p class="mb-4">
-                    <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition">
-                        <i class="fas fa-key mr-1"></i>{{ _('Get key') }}
+                    <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-license-checkout onclick="typeof trackDonationClick === 'function' && trackDonationClick('admin_settings_key')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition">
+                        <i class="fas fa-star mr-1"></i>{{ _('Open checkout with this ID (€25)') }}
                         <i class="fas fa-external-link-alt text-xs"></i>
                     </a>
                 </p>

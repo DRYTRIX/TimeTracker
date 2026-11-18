@@ -21,16 +21,16 @@
             <i class="fas fa-chevron-down text-gray-400 dark:text-gray-500 transition-transform group-open:rotate-180 md:hidden" aria-hidden="true"></i>
         </summary>
         <div class="px-6 pb-6 space-y-4 text-sm text-text-light dark:text-text-dark">
-            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('TimeTracker is free and open source. Funding comes from optional donations and supporter licenses — never from locking features.') }}</p>
+            <p class="text-text-muted-light dark:text-text-muted-dark">{{ _('TimeTracker is free and open source. Funding comes from optional donations and Supporter keys — never from locking features.') }}</p>
             {% if is_license_activated %}
-            <p>{{ _('Thank you for being a TimeTracker Supporter. Your badge shows across the app — you can still donate or share anytime.') }}</p>
+            <p>{{ _('Thank you for being a TimeTracker Supporter. Your badge shows across the app — you can still tip or share anytime.') }}</p>
             {% else %}
-            <p>{{ _('If the app saves you time, become a Supporter with a one-time €25 contribution. You keep full access either way — supporters get a visible badge and fewer prompts.') }}</p>
+            <p>{{ _('If the app saves you time, become a Supporter with a one-time €25 contribution. You keep full access either way — supporters fund development and get a badge, clean client PDFs, and quieter prompts.') }}</p>
             {% endif %}
             <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn btn-primary js-open-support-modal">{{ _('Support TimeTracker') }}</button>
-                <a href="{{ url_for('user.license') }}" class="btn btn-secondary inline-flex items-center gap-2"><i class="fas fa-star" aria-hidden="true"></i>{{ _('Become a Supporter') }}</a>
-                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">{{ _('Checkout on timetracker.drytrix.com') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i></a>
+                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-license-checkout onclick="typeof trackDonationClick === 'function' && trackDonationClick('user_settings_key')" class="btn btn-primary inline-flex items-center gap-2"><i class="fas fa-star" aria-hidden="true"></i>{{ _('Become a Supporter (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i></a>
+                <a href="{{ url_for('user.license') }}" class="btn btn-secondary inline-flex items-center gap-2">{{ _('Enter key') }}</a>
+                <button type="button" class="btn btn-secondary js-open-support-modal">{{ _('Or tip / share') }}</button>
             </div>
         </div>
     </details>

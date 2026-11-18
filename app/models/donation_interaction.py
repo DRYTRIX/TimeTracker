@@ -77,18 +77,41 @@ class DonationInteraction(db.Model):
         return interaction
 
     @staticmethod
+    def is_key_purchase_source(source: str | None) -> bool:
+        """True when *source* is a Supporter-key CTA (not a tip/BMC/PayPal click)."""
+        if not source:
+            return False
+        s = source.strip().lower()
+        return s.endswith("_key") or "license" in s
+
+    @staticmethod
     def has_recent_donation_click(user_id: int, days: int = 30) -> bool:
-        """Check if user clicked a donation/support outbound link in last N days."""
+        """True if user clicked a tip/donate outbound link in the last N days (excludes key CTAs)."""
         cutoff = datetime.utcnow() - timedelta(days=days)
         interaction_types = ("link_clicked", "banner_clicked")
-        return (
-            DonationInteraction.query.filter(
-                DonationInteraction.user_id == user_id,
-                DonationInteraction.interaction_type.in_(interaction_types),
-                DonationInteraction.created_at >= cutoff,
-            ).first()
-            is not None
-        )
+        rows = DonationInteraction.query.filter(
+            DonationInteraction.user_id == user_id,
+            DonationInteraction.interaction_type.in_(interaction_types),
+            DonationInteraction.created_at >= cutoff,
+        ).all()
+        return any(not DonationInteraction.is_key_purchase_source(r.source) for r in rows)
+
+    @staticmethod
+    def has_recent_key_checkout_click(user_id: int, days: int = 7) -> bool:
+        """True if user recently opened Supporter-key checkout (suppress soft re-prompts mid-funnel)."""
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        interaction_types = ("link_clicked", "banner_clicked", "support_license_clicked")
+        rows = DonationInteraction.query.filter(
+            DonationInteraction.user_id == user_id,
+            DonationInteraction.interaction_type.in_(interaction_types),
+            DonationInteraction.created_at >= cutoff,
+        ).all()
+        for row in rows:
+            if row.interaction_type == "support_license_clicked":
+                return True
+            if DonationInteraction.is_key_purchase_source(row.source):
+                return True
+        return False
 
     @staticmethod
     def get_user_engagement_metrics(user_id: int) -> dict:

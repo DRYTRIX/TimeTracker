@@ -5,7 +5,7 @@
 <div class="container mx-auto px-4 py-8 max-w-2xl">
     <div class="mb-6">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ _('Become a Supporter') }}</h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-2">{{ _('Support TimeTracker development and show your Supporter badge across the app.') }}</p>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">{{ _('Fund independent development and show your Supporter badge across the app.') }}</p>
     </div>
 
     <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-md p-6 mb-6">
@@ -27,17 +27,29 @@
             <i class="fas fa-check-circle" aria-hidden="true"></i>
             {{ _('Supporter license active') }}
         </p>
-        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('No features are locked — this is a thank-you badge, not a paywall.') }}</p>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('Features stay unlocked — this is optional support, not a paywall.') }}</p>
         {% else %}
         <p class="flex items-center gap-2 text-text-muted-light dark:text-text-muted-dark">
             <i class="fas fa-circle-info" aria-hidden="true"></i>
             {{ _('Not yet a Supporter') }}
         </p>
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-2">
-            {{ _('Become a Supporter with a one-time €25 contribution. You keep full access either way — supporters get a visible badge, fewer prompts, and no "Generated with TimeTracker" line on exported PDFs.') }}
+            {{ _('Become a Supporter with a one-time €25 contribution. You keep full access either way — supporters fund development and get a visible badge, client-ready PDFs without the TimeTracker footer, and quieter prompts for this instance.') }}
         </p>
-        <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-md text-sm font-medium transition">
-            <i class="fas fa-star" aria-hidden="true"></i>{{ _('Support TimeTracker (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i>
+        {% if system_instance_id %}
+        <div class="mt-4 mb-2">
+            <label class="form-label">{{ _('Your System ID') }}</label>
+            <div class="flex items-center gap-2">
+                <input type="text" id="licenseSystemInstanceId" value="{{ system_instance_id }}" readonly class="flex-1 form-input font-mono text-sm bg-gray-100 dark:bg-gray-700">
+                <button type="button" onclick="(function(btn){var el=document.getElementById('licenseSystemInstanceId');if(!el)return;navigator.clipboard.writeText(el.value).then(function(){var t=btn.innerHTML;btn.innerHTML='<i class=&quot;fas fa-check mr-1&quot;></i>{{ _('Copied') }}';setTimeout(function(){btn.innerHTML=t;},1500);});})(this)" class="px-3 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-md text-sm font-medium transition">
+                    <i class="fas fa-copy mr-1"></i>{{ _('Copy') }}
+                </button>
+            </div>
+            <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Checkout opens with this ID prefilled when you use the button below.') }}</p>
+        </div>
+        {% endif %}
+        <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-license-checkout class="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-md text-sm font-medium transition" onclick="typeof trackDonationClick === 'function' && trackDonationClick('license_page_key')">
+            <i class="fas fa-star" aria-hidden="true"></i>{{ _('Open checkout with this ID (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i>
         </a>
         {% endif %}
     </div>
@@ -45,7 +57,7 @@
     {% if not is_license_activated %}
     <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-md p-6">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">{{ _('Enter supporter key') }}</h2>
-        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Already purchased? Paste the key you received by email. As a side effect, support prompts are minimized for this instance.') }}</p>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Already purchased? Paste the key you received by email.') }}</p>
         <form method="POST" action="{{ url_for('user.license') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="mb-4">
@@ -60,7 +72,7 @@
         </form>
         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-4">
             {{ _('Need a key?') }}
-            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">{{ _('Become a Supporter') }}</a>
+            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-license-checkout class="text-primary hover:underline" onclick="typeof trackDonationClick === 'function' && trackDonationClick('license_page_key')">{{ _('Become a Supporter') }}</a>
         </p>
     </div>
     {% endif %}
