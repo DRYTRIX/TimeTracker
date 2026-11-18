@@ -129,6 +129,17 @@
         }
     }
 
+    function isDangerousHrefScheme(href) {
+        var lower = String(href || '')
+            .trim()
+            .toLowerCase();
+        return (
+            lower.indexOf('javascript:') === 0 ||
+            lower.indexOf('data:') === 0 ||
+            lower.indexOf('vbscript:') === 0
+        );
+    }
+
     function wireTierLinks(cfg) {
         if (!cfg || !cfg.urls) return;
         document.querySelectorAll('a.support-tier-btn[data-support-tier]').forEach(function (a) {
@@ -138,23 +149,17 @@
                 raw = resolveLicensePurchaseUrl(cfg);
             }
             var safeHref = raw ? safeHttpsHref(raw) : null;
-            // Progressive enhancement: set real href so middle-click / no-JS still works
-            if (safeHref && (a.getAttribute('href') === '#' || !a.getAttribute('href'))) {
-                a.setAttribute('href', safeHref);
-                a.setAttribute('target', '_blank');
-                a.setAttribute('rel', 'noopener noreferrer');
-            }
+            // Templates already ship real hrefs; only open via allowlisted URL (never assign to DOM href).
             a.addEventListener('click', function (ev) {
                 postTrack(cfg, key === 'license' ? 'license_clicked' : 'donation_clicked', {
                     variant: key,
                     source: 'support_modal'
                 });
-                // Never follow href="#" (lands on /current-page#)
                 var currentHref = a.getAttribute('href') || '';
                 if (safeHref) {
                     ev.preventDefault();
                     window.open(safeHref, '_blank', 'noopener,noreferrer');
-                } else if (!currentHref || currentHref === '#') {
+                } else if (!currentHref || currentHref === '#' || isDangerousHrefScheme(currentHref)) {
                     ev.preventDefault();
                 }
                 if (typeof window.trackDonationClick === 'function') {
@@ -170,11 +175,9 @@
                 postTrack(cfg, 'license_clicked', { source: 'support_modal' });
                 var href = resolveLicensePurchaseUrl(cfg);
                 var safe = safeHttpsHref(href);
+                ev.preventDefault();
                 if (safe) {
-                    ev.preventDefault();
                     window.open(safe, '_blank', 'noopener,noreferrer');
-                } else {
-                    ev.preventDefault();
                 }
                 if (typeof window.trackDonationClick === 'function') {
                     window.trackDonationClick('support_modal_key');
@@ -191,44 +194,51 @@
                 var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
                 if (!a) return;
                 var href = a.getAttribute('href') || '';
-                if (!href || href === '#' || href.indexOf('javascript:') === 0) return;
-                var isLicenseCta =
-                    a.getAttribute('data-support-tier') === 'license' ||
-                    a.hasAttribute('data-license-checkout') ||
-                    /trackDonationClick\([^)]*_key/.test(a.getAttribute('onclick') || '') ||
-                    (typeof a.onclick === 'string' && a.onclick.indexOf('_key') !== -1);
-                // Also catch hrefs to the support checkout page
-                var looksLikeCheckout =
-                    /timetracker\.drytrix\.com\/support(\.html)?([?#]|$)/i.test(href) ||
-                    /\/support(\.html)?([?#]|$)/i.test(href);
-                if (!isLicenseCta && !looksLikeCheckout) return;
-                // Tip tiers / BMC must not get rewritten
-                if (a.getAttribute('data-support-tier') && a.getAttribute('data-support-tier') !== 'license') {
+                if (!href || href === '#' || isDangerousHrefScheme(href)) return;
+
+                var tier = a.getAttribute('data-support-tier');
+                // Tip tiers must not be rewritten
+                if (tier && tier !== 'license') return;
+
+                var parsed;
+                try {
+                    parsed = new URL(href, window.location.origin);
+                } catch (e) {
                     return;
                 }
-                if (/buymeacoffee\.com|paypal\.com\/donate/i.test(href)) return;
+                var host = (parsed.hostname || '').toLowerCase();
+                var path = parsed.pathname || '';
+                var protocol = (parsed.protocol || '').toLowerCase();
+                if (protocol !== 'https:' && protocol !== 'http:') return;
+
+                // Tip hosts (hostname equality — avoid unanchored URL regex)
+                if (
+                    host === 'buymeacoffee.com' ||
+                    host === 'www.buymeacoffee.com' ||
+                    host === 'paypal.com' ||
+                    host === 'www.paypal.com' ||
+                    host === 'paypal.me'
+                ) {
+                    return;
+                }
+
+                var isCheckoutHost =
+                    host === 'timetracker.drytrix.com' || host === 'www.timetracker.drytrix.com';
+                var isCheckoutPath = /^\/support(\.html)?\/?$/i.test(path);
+                if (!isCheckoutHost || !isCheckoutPath) return;
 
                 var sid =
                     (cfg && cfg.systemInstanceId) ||
                     window.__TT_SYSTEM_INSTANCE_ID ||
                     '';
                 if (!sid) return;
-                try {
-                    var u = new URL(href, window.location.origin);
-                    if (u.searchParams.get('system_id')) return;
-                    // Only rewrite known checkout hosts/paths
-                    var host = (u.hostname || '').toLowerCase();
-                    var path = u.pathname || '';
-                    var isCheckout =
-                        host === 'timetracker.drytrix.com' ||
-                        host === 'www.timetracker.drytrix.com' ||
-                        /\/support(\.html)?\/?$/i.test(path);
-                    if (!isCheckout) return;
-                    u.searchParams.set('system_id', sid);
-                    a.setAttribute('href', u.toString());
-                } catch (e) {
-                    /* leave original href */
-                }
+                if (parsed.searchParams.get('system_id')) return;
+
+                parsed.searchParams.set('system_id', sid);
+                var safe = safeHttpsHref(parsed.toString());
+                if (!safe) return;
+                ev.preventDefault();
+                window.open(safe, '_blank', 'noopener,noreferrer');
             },
             true
         );

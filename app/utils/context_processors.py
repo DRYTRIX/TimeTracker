@@ -185,9 +185,7 @@ def register_context_processors(app):
                 from app.models import DonationInteraction
 
                 user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
-                support_banner_suppressed = DonationInteraction.has_recent_key_checkout_click(
-                    current_user.id, days=7
-                )
+                support_banner_suppressed = DonationInteraction.has_recent_key_checkout_click(current_user.id, days=7)
             except Exception:
                 user_stats = {}
                 support_banner_suppressed = False

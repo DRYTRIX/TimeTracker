@@ -52,9 +52,7 @@ _DEFAULT_TIP_URLS = {
 }
 
 
-def build_support_checkout_urls(
-    config: Dict[str, Any] | Any, system_id: Optional[str] = None
-) -> Dict[str, str]:
+def build_support_checkout_urls(config: Dict[str, Any] | Any, system_id: Optional[str] = None) -> Dict[str, str]:
     """
     Per-tier outbound URLs.
 

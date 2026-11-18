@@ -422,9 +422,7 @@ def dashboard():
 
         user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
         # Tip/BMC clicks must not suppress Supporter-key soft prompts
-        support_banner_suppressed_dashboard = DonationInteraction.has_recent_key_checkout_click(
-            current_user.id, days=7
-        )
+        support_banner_suppressed_dashboard = DonationInteraction.has_recent_key_checkout_click(current_user.id, days=7)
     except Exception:
         # Fallback if table doesn't exist yet. Log it: any *other* database fault lands
         # here too, and silently degrading made a real error look like a slow dashboard.
