@@ -1,6 +1,6 @@
 {
   "name": "timetracker-desktop",
-  "version": "5.20.0",
+  "version": "5.21.0",
   "description": "TimeTracker desktop app for Windows, Linux, and macOS",
   "main": "src/main/main.js",
   "scripts": {
