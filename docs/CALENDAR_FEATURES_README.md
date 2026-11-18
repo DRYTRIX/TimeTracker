@@ -22,10 +22,11 @@ The Calendar feature provides a comprehensive visual interface for viewing, crea
 - **Today highlighting** in all views
 
 ### 3. **Drag-and-Drop Editing**
-- **Move events** by dragging to different times/days
-- **Resize events** by dragging edges to adjust duration
-- **Auto-save** when events are moved or resized
-- **Smooth animations** for all interactions
+- **Move time entries** by dragging to different times/days
+- **Resize time entries** by dragging edges to adjust duration
+- **Snap to rounding interval**: drag-create / move / resize snap to your effective time-rounding setting (5/10/15/30/60 minutes) via `snapDuration`. Visible slot lines use at least **15 minutes** so 5/10-minute rounding stays usable. If rounding is disabled or set to 1 minute, snap defaults to **15 minutes**
+- **Auto-save** when time entries are moved or resized
+- Planning calendar events, tasks, holidays, and time off are display-only on this view (not draggable)
 
 ### 4. **Advanced Filtering**
 - Filter by **Project**
@@ -91,24 +92,19 @@ The Calendar feature provides a comprehensive visual interface for viewing, crea
 ### Accessing the Calendar
 
 Navigate to the calendar via:
-1. **Main Navigation**: Work → Calendar
-2. **Direct URL**: `/timer/calendar`
+1. **Sidebar** (recommended): **Calendar → Calendar View** (`/calendar`) — day/week drag-select creates time entries; move/resize time entries and planning events; snaps to your rounding interval
+2. **Timer calendar** (legacy FullCalendar UI): `/timer/calendar`
 
 ### Creating Time Entries
 
-#### Method 1: Click and Drag
-1. Select a project from the "Assign to project" dropdown
-2. Click and drag on the calendar to select a time range
-3. Form opens with pre-filled times
-4. Fill in optional details (task, notes, tags)
-5. Click "Create"
+#### Method 1: Click and Drag (on `/calendar` day or week view)
+1. Drag across an empty time range
+2. Choose a project in the create modal (times are pre-filled and snapped to your rounding interval)
+3. Optionally add notes, then click **Create**
 
 #### Method 2: New Event Button
-1. Select a project from the "Assign to project" dropdown
-2. Click the "New Event" button
-3. Set start and end times manually
-4. Fill in all details
-5. Click "Create"
+1. Click **New Event** to create a planning calendar event (not a time entry)
+2. Or use `/timer/calendar` **New Event** / drag-select for time entries with the FullCalendar UI
 
 ### Editing Time Entries
 
@@ -322,7 +318,8 @@ GET /api/recurring-blocks
   editable: true,
   nowIndicator: true,
   firstDay: 1,  // Monday
-  slotDuration: '00:30:00',
+  slotDuration: '<from user rounding>',  // e.g. 00:15:00
+  snapDuration: '<from user rounding>',  // same as slotDuration
   slotMinTime: '06:00:00',
   slotMaxTime: '22:00:00',
   eventResizableFromStart: true
@@ -332,8 +329,9 @@ GET /api/recurring-blocks
 #### Event Handlers
 - `select`: Handle time range selection
 - `eventClick`: Show event details
-- `eventDrop`: Handle drag move
-- `eventResize`: Handle resize
+- `eventDrop`: Handle drag move (time entries only; reverts on failure)
+- `eventResize`: Handle resize (time entries only; reverts on failure)
+- `eventAllow`: Restrict move/resize to `item_type: time_entry`
 
 ### CSS Classes
 
