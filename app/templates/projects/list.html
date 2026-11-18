@@ -746,11 +746,10 @@ function toggleFavorite(projectId, button) {
                 }
                 button.title = 'Add to favorites';
             }
-            if (window.showAlert) {
-                window.showAlert(data.message || 'Failed to update favorite status');
-            } else {
-                alert(data.message || 'Failed to update favorite status');
-            }
+            const _favMsg = data.message || 'Failed to update favorite status';
+            if (window.ttAlert) window.ttAlert(_favMsg, {variant:'danger'});
+            else if (window.showAlert) window.showAlert(_favMsg);
+            else window.alert(_favMsg);
         }
     })
     .catch(error => {
@@ -771,11 +770,10 @@ function toggleFavorite(projectId, button) {
             }
             button.title = 'Add to favorites';
         }
-        if (window.showAlert) {
-            window.showAlert('Failed to update favorite status');
-        } else {
-            alert('Failed to update favorite status');
-        }
+        const _favErr = 'Failed to update favorite status';
+        if (window.ttAlert) window.ttAlert(_favErr, {variant:'danger'});
+        else if (window.showAlert) window.showAlert(_favErr);
+        else window.alert(_favErr);
     })
     .finally(() => {
         // Re-enable button

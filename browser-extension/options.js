@@ -20,7 +20,17 @@ const els = {
   totpBtn: document.getElementById('totp-btn'),
   totpCancelBtn: document.getElementById('totp-cancel-btn'),
   suggestFromTab: document.getElementById('suggest-from-tab'),
+  themePref: document.getElementById('theme-pref'),
 };
+
+function applyTheme(pref) {
+  const root = document.documentElement;
+  if (!pref || pref === 'system') {
+    root.removeAttribute('data-theme');
+  } else {
+    root.setAttribute('data-theme', pref);
+  }
+}
 
 /** @type {{ serverUrl: string, tempToken: string }|null} */
 let pending2fa = null;
@@ -93,14 +103,18 @@ async function finishWithToken(serverUrl, token) {
 }
 
 async function updateStatus() {
-  const { server_url, api_token, logged_out, suggest_from_tab } = await chrome.storage.local.get([
+  const { server_url, api_token, logged_out, suggest_from_tab, theme_pref } = await chrome.storage.local.get([
     'server_url',
     'api_token',
     'logged_out',
     'suggest_from_tab',
+    'theme_pref',
   ]);
   if (server_url) els.serverUrl.value = server_url;
   els.suggestFromTab.checked = Boolean(suggest_from_tab);
+  const theme = theme_pref || 'system';
+  if (els.themePref) els.themePref.value = theme;
+  applyTheme(theme);
   if (!server_url || !api_token || logged_out) {
     els.statusLine.textContent = 'Not connected.';
     return;
@@ -273,5 +287,13 @@ els.suggestFromTab.addEventListener('change', async () => {
   }
   await chrome.storage.local.set({ suggest_from_tab: els.suggestFromTab.checked });
 });
+
+if (els.themePref) {
+  els.themePref.addEventListener('change', async () => {
+    const theme = els.themePref.value || 'system';
+    applyTheme(theme);
+    await chrome.storage.local.set({ theme_pref: theme });
+  });
+}
 
 updateStatus();

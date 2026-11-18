@@ -49,13 +49,19 @@ class CustomFieldDefinition(db.Model):
         }
 
     @classmethod
-    def get_active_definitions(cls):
-        """Get all active custom field definitions ordered by order and label.
+    def get_active_definitions(cls, entity_type=None):
+        """Get active custom field definitions ordered by order and label.
+
+        When ``entity_type`` is set (e.g. ``"client"``, ``"project"``, ``"task"``,
+        ``"time_entry"``), only definitions for that entity are returned.
 
         Returns empty list if table doesn't exist (migration not run yet).
         """
         try:
-            return cls.query.filter_by(is_active=True).order_by(cls.order, cls.label).all()
+            query = cls.query.filter_by(is_active=True)
+            if entity_type:
+                query = query.filter_by(entity_type=(entity_type or "").strip().lower())
+            return query.order_by(cls.order, cls.label).all()
         except ProgrammingError as e:
             # Handle case where custom_field_definitions table doesn't exist (migration not run)
             if "does not exist" in str(e.orig) or "relation" in str(e.orig).lower():

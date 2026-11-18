@@ -137,7 +137,7 @@ This document scores each missing or underpowered capability from the Competitiv
 | 1 | Focus mode packaging for solo users | 7.00 | Phase 1 (quick) | Done — Solo default + Focus copy; weekly goals/templates in Solo; desktop nav respects enabled_modules |
 | 2 | Mileage GPS UI/routes (backend done) | 5.00 | Phase 1 (quick) | **Done** — web + API GPS mileage |
 | 3 | Payroll-ready exports and payroll connectors | 4.50 | Phase 1 | **Done** — templates, CSV/XLSX, Gusto/ADP; API template-aware export in Phase 6 |
-| 4 | Mobile/desktop parity (invoicing, expenses, reporting) | 3.00 | Phase 1 | Partial — desktop strong; mobile hubs expanding (Phase 6 polish) |
+| 4 | Mobile/desktop parity (invoicing, expenses, reporting) | 3.00 | Phase 1 | Stronger — finance hubs + CRM detail/edit/convert on mobile/desktop; pipeline board still web-only |
 | 5 | Formal timesheet periods and locking | 2.67 | Phase 2 | **Done** |
 | 6 | Recurring cost engine | 2.50 | Phase 1 or 2 | **Done** |
 | 7 | PTO/leave and time-off workflow | 2.33 | Phase 2 | **Done** — accrual, holidays, approvals |

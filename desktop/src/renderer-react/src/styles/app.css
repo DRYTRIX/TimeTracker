@@ -666,8 +666,19 @@ label {
   cursor: pointer;
 }
 
-.list-row.buttonish.active {
+.list-row.buttonish.active,
+.list-row.selected {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+button.list-row {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
 }
 
 .nav-group {

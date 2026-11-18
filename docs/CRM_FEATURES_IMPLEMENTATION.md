@@ -186,7 +186,9 @@ flask db upgrade
 
 **Completed since original write-up:** templates, sidebar CRM nav, REST API (CRUD + activities + conversion + stage + forecast + communications), pipeline drag-and-drop, deal forecast, lead source analytics, communication templates, activity→calendar reminders, automated lead score history, module guards on CRM routes, and `tests/test_api_crm_v1.py`.
 
-**Optional follow-ups:** dedicated end-user CRM guide; fuller OpenAPI coverage for deals/leads; desktop/mobile detail/edit/pipeline parity; bidirectional external CRM sync.
+**Optional follow-ups:** dedicated end-user CRM guide; fuller OpenAPI coverage for deals/leads; bidirectional external CRM sync; mobile/desktop **pipeline board** UI.
+
+**Client parity (2026-11):** Mobile and desktop now support lead/deal **detail, edit, stage/status**, lead **convert** (to client/deal), and client notes. Pipeline drag-and-drop remains web-only.
 
 ---
 

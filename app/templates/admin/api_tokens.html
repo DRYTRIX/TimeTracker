@@ -406,7 +406,10 @@ function copyToken() {
     const input = document.getElementById('newTokenValue');
     input.select();
     document.execCommand('copy');
-    alert('Token copied to clipboard!');
+    const msg = {{ _('Token copied to clipboard!')|tojson }};
+    if (window.ttAlert) window.ttAlert(msg, { title: {{ _('Copied')|tojson }}, variant: 'info' });
+    else if (window.showAlert) window.showAlert(msg);
+    else window.alert(msg);
 }
 
 document.getElementById('createTokenForm').addEventListener('submit', async (e) => {
@@ -444,10 +447,16 @@ document.getElementById('createTokenForm').addEventListener('submit', async (e) 
             hideCreateTokenModal();
             document.getElementById('tokenDisplayModal').classList.remove('hidden');
         } else {
-            alert('Error: ' + (result.error || 'Failed to create token'));
+            const msg = 'Error: ' + (result.error || 'Failed to create token');
+            if (window.ttAlert) window.ttAlert(msg, { variant: 'danger' });
+            else if (window.showAlert) window.showAlert(msg);
+            else window.alert(msg);
         }
     } catch (error) {
-        alert('Error creating token: ' + error.message);
+        const msg = 'Error creating token: ' + error.message;
+        if (window.ttAlert) window.ttAlert(msg, { variant: 'danger' });
+        else if (window.showAlert) window.showAlert(msg);
+        else window.alert(msg);
     }
 });
 
@@ -477,10 +486,16 @@ async function toggleToken(tokenId, isActive) {
         if (response.ok) {
             location.reload();
         } else {
-            alert('Failed to toggle token');
+            const msg = {{ _('Failed to toggle token')|tojson }};
+            if (window.ttAlert) window.ttAlert(msg, { variant: 'danger' });
+            else if (window.showAlert) window.showAlert(msg);
+            else window.alert(msg);
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        const msg = 'Error: ' + error.message;
+        if (window.ttAlert) window.ttAlert(msg, { variant: 'danger' });
+        else if (window.showAlert) window.showAlert(msg);
+        else window.alert(msg);
     }
 }
 
@@ -510,10 +525,16 @@ async function deleteToken(tokenId) {
         if (response.ok) {
             location.reload();
         } else {
-            alert('Failed to delete token');
+            const msg = {{ _('Failed to delete token')|tojson }};
+            if (window.ttAlert) window.ttAlert(msg, { variant: 'danger' });
+            else if (window.showAlert) window.showAlert(msg);
+            else window.alert(msg);
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        const msg = 'Error: ' + error.message;
+        if (window.ttAlert) window.ttAlert(msg, { variant: 'danger' });
+        else if (window.showAlert) window.showAlert(msg);
+        else window.alert(msg);
     }
 }
 </script>

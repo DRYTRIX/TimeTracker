@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **FatturaPA / SDI (Italy)** — Export FatturaPA 1.2 XML (`FPR12` B2B and `FPA12` public administration), send via a configurable SDI intermediary HTTP adapter, track transmissions and SDI notifications (`RC`/`NS`/`MC`/`NE`/`DT`), and poll status every 15 minutes. See `docs/admin/configuration/FATTURAPA_SDI.md`.
+- **GDPR erase UI** — Admin users list **Erase (GDPR)** action and Import/Export self-service account erasure.
+- **Client parity** — Mobile CRM deal/lead detail/edit/convert and client notes; report by-project breakdown; desktop CRM edit/convert + German locale catalog; extension manual theme preference.
+- **Teams bot** — Per-conversation sliding-window rate limit on bot commands.
+
+### Changed
+
+- Client custom field forms load definitions filtered by `entity_type=client`.
+- Migrated additional native `alert()`/`confirm()` call sites (API tokens, report builder, invoices/expenses/projects lists, import/export) to `ttAlert`/`ttConfirm`.
+- README roadmap marks push notifications, workflows, and base forecasting as shipped.
 
 ## [5.20.0] - 2026-11-10
 ### Added
