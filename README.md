@@ -730,7 +730,7 @@ This means you can:
 
 If TimeTracker saves you money, **[a star on GitHub](https://github.com/drytrix/TimeTracker) helps others find it.**
 
-- **Support the project / hide donate prompts:** [Support & Purchase Key](https://timetracker.drytrix.com/support.html) — donate or buy a one-time key to remove donate prompts in your instance
+- **Support the project / hide donate prompts:** [Support & Purchase Key](https://timetracker.drytrix.com/support) — donate or buy a one-time key to remove donate prompts in your instance
 - **Documentation:** [`docs/`](docs/)
 - **Bug reports:** [Open an issue](https://github.com/drytrix/TimeTracker/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/drytrix/TimeTracker/discussions)

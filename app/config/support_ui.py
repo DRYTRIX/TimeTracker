@@ -40,15 +40,25 @@ def build_support_purchase_url(config: Dict[str, Any] | Any, system_id: Optional
     else:
         purchase = ""
     if not purchase:
-        purchase = os.getenv("SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html").strip()
+        purchase = os.getenv("SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support").strip()
     return append_query_params(purchase, {"system_id": (system_id or "").strip()})
+
+
+_DEFAULT_BMC = "https://buymeacoffee.com/DryTrix"
+_DEFAULT_TIP_URLS = {
+    "eur5": f"{_DEFAULT_BMC}?utm_source=timetracker&utm_medium=support_modal&utm_campaign=tip_eur5",
+    "eur10": f"{_DEFAULT_BMC}?utm_source=timetracker&utm_medium=support_modal&utm_campaign=tip_eur10",
+    "eur25": f"{_DEFAULT_BMC}?utm_source=timetracker&utm_medium=support_modal&utm_campaign=tip_eur25",
+}
 
 
 def build_support_checkout_urls(
     config: Dict[str, Any] | Any, system_id: Optional[str] = None
 ) -> Dict[str, str]:
     """
-    Per-tier outbound URLs. Unset env vars fall back to SUPPORT_PURCHASE_URL so checkout stays one hop.
+    Per-tier outbound URLs.
+
+    Tip tiers (eur5/10/25) default to Buy Me a Coffee — never to the license checkout page.
     The license/key URL includes system_id when provided so the marketing site can autofill.
     """
     if hasattr(config, "get"):
@@ -56,18 +66,19 @@ def build_support_checkout_urls(
     else:
         purchase = ""
     if not purchase:
-        purchase = os.getenv("SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support.html").strip()
+        purchase = os.getenv("SUPPORT_PURCHASE_URL", "https://timetracker.drytrix.com/support").strip()
 
-    def _tier(env_name: str) -> str:
+    def _tip(env_name: str, fallback: str) -> str:
         v = os.getenv(env_name, "").strip()
-        return v or purchase
+        return v or fallback
 
     license_url = append_query_params(purchase, {"system_id": (system_id or "").strip()})
 
     return {
-        "eur5": _tier("SUPPORT_DONATE_EUR5_URL"),
-        "eur10": _tier("SUPPORT_DONATE_EUR10_URL"),
-        "eur25": _tier("SUPPORT_DONATE_EUR25_URL"),
+        "eur5": _tip("SUPPORT_DONATE_EUR5_URL", _DEFAULT_TIP_URLS["eur5"]),
+        "eur10": _tip("SUPPORT_DONATE_EUR10_URL", _DEFAULT_TIP_URLS["eur10"]),
+        "eur25": _tip("SUPPORT_DONATE_EUR25_URL", _DEFAULT_TIP_URLS["eur25"]),
+        "bmc": f"{_DEFAULT_BMC}?utm_source=timetracker&utm_medium=support_modal&utm_campaign=support",
         "license": license_url,
     }
 

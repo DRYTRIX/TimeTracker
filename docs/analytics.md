@@ -37,11 +37,11 @@ SENTRY_DSN=
 SENTRY_TRACES_RATE=0.1
 
 # Support / checkout links (optional; defaults in app/config.py)
-SUPPORT_PURCHASE_URL=https://timetracker.drytrix.com/support.html
+SUPPORT_PURCHASE_URL=https://timetracker.drytrix.com/support
 SUPPORT_PORTAL_BASE=https://timetracker.drytrix.com
 # Optional one line shown in the support modal when set
 SUPPORT_SOCIAL_PROOF_TEXT=
-# Optional per-tier donate URLs (default to SUPPORT_PURCHASE_URL when unset)
+# Optional per-tier tip URLs (default to Buy Me a Coffee when unset — not the license page)
 SUPPORT_DONATE_EUR5_URL=
 SUPPORT_DONATE_EUR10_URL=
 SUPPORT_DONATE_EUR25_URL=

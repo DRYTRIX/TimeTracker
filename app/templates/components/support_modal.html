@@ -56,9 +56,9 @@
                     <i class="fas fa-mug-saucer" aria-hidden="true"></i>{{ _('Buy Me a Coffee') }}
                 </a>
                 <div class="flex flex-col sm:flex-row gap-2">
-                    <a href="#" rel="noopener noreferrer" data-support-tier="eur5" class="support-tier-btn btn btn-secondary text-center flex-1">{{ _('Tip') }} (€5)</a>
-                    <a href="#" rel="noopener noreferrer" data-support-tier="eur10" class="support-tier-btn btn btn-secondary text-center flex-1">{{ _('Tip') }} (€10)</a>
-                    <a href="#" rel="noopener noreferrer" data-support-tier="eur25" class="support-tier-btn btn btn-secondary text-center flex-1">{{ _('Tip') }} (€25)</a>
+                    <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=support_modal&utm_campaign=tip_eur5" target="_blank" rel="noopener noreferrer" data-support-tier="eur5" class="support-tier-btn btn btn-secondary text-center flex-1" onclick="typeof trackDonationClick === 'function' && trackDonationClick('support_modal_eur5')">{{ _('Tip') }} (€5)</a>
+                    <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=support_modal&utm_campaign=tip_eur10" target="_blank" rel="noopener noreferrer" data-support-tier="eur10" class="support-tier-btn btn btn-secondary text-center flex-1" onclick="typeof trackDonationClick === 'function' && trackDonationClick('support_modal_eur10')">{{ _('Tip') }} (€10)</a>
+                    <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=support_modal&utm_campaign=tip_eur25" target="_blank" rel="noopener noreferrer" data-support-tier="eur25" class="support-tier-btn btn btn-secondary text-center flex-1" onclick="typeof trackDonationClick === 'function' && trackDonationClick('support_modal_eur25')">{{ _('Tip') }} (€25)</a>
                 </div>
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
                     {{ _('Features stay unlocked either way — this is optional support, not a paywall.') }}

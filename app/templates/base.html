@@ -206,7 +206,7 @@
     <script src="{{ static_url('js/confirm-dialog.js') }}"></script>
     <script src="{{ static_url('js/unsaved-changes.js') }}"></script>
     {% if current_user.is_authenticated and support_ui_json %}
-    <script src="{{ asset_url('core-support') }}"></script>
+    <script src="{{ asset_url('core-support', fallback='support-ui.js') }}"></script>
     {% endif %}
     <script src="{{ asset_url('core-a2') }}"></script>
     <!-- Floating timer bar, idle tracking: authenticated users only -->

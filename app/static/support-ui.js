@@ -110,7 +110,7 @@
             (cfg && cfg.purchaseUrl) ||
             (cfg && cfg.urls && cfg.urls.license) ||
             window.__TT_SUPPORT_PURCHASE_URL ||
-            'https://timetracker.drytrix.com/support.html';
+            'https://timetracker.drytrix.com/support';
         return withSystemId(base, sid);
     }
 
@@ -138,12 +138,29 @@
                 raw = resolveLicensePurchaseUrl(cfg);
             }
             var safeHref = raw ? safeHttpsHref(raw) : null;
-            // Do not assign cfg URLs to href (DOM XSS); navigate only after host allowlist check
+            // Progressive enhancement: set real href so middle-click / no-JS still works
+            if (safeHref && (a.getAttribute('href') === '#' || !a.getAttribute('href'))) {
+                a.setAttribute('href', safeHref);
+                a.setAttribute('target', '_blank');
+                a.setAttribute('rel', 'noopener noreferrer');
+            }
             a.addEventListener('click', function (ev) {
-                postTrack(cfg, 'donation_clicked', { variant: key, source: 'support_modal' });
+                postTrack(cfg, key === 'license' ? 'license_clicked' : 'donation_clicked', {
+                    variant: key,
+                    source: 'support_modal'
+                });
+                // Never follow href="#" (lands on /current-page#)
+                var currentHref = a.getAttribute('href') || '';
                 if (safeHref) {
                     ev.preventDefault();
                     window.open(safeHref, '_blank', 'noopener,noreferrer');
+                } else if (!currentHref || currentHref === '#') {
+                    ev.preventDefault();
+                }
+                if (typeof window.trackDonationClick === 'function') {
+                    window.trackDonationClick(
+                        key === 'license' ? 'support_modal_key' : 'support_modal_' + key
+                    );
                 }
             });
         });
@@ -156,6 +173,8 @@
                 if (safe) {
                     ev.preventDefault();
                     window.open(safe, '_blank', 'noopener,noreferrer');
+                } else {
+                    ev.preventDefault();
                 }
                 if (typeof window.trackDonationClick === 'function') {
                     window.trackDonationClick('support_modal_key');
@@ -180,8 +199,8 @@
                     (typeof a.onclick === 'string' && a.onclick.indexOf('_key') !== -1);
                 // Also catch hrefs to the support checkout page
                 var looksLikeCheckout =
-                    /timetracker\.drytrix\.com\/support/i.test(href) ||
-                    /\/support\.html/i.test(href);
+                    /timetracker\.drytrix\.com\/support(\.html)?([?#]|$)/i.test(href) ||
+                    /\/support(\.html)?([?#]|$)/i.test(href);
                 if (!isLicenseCta && !looksLikeCheckout) return;
                 // Tip tiers / BMC must not get rewritten
                 if (a.getAttribute('data-support-tier') && a.getAttribute('data-support-tier') !== 'license') {
@@ -203,8 +222,7 @@
                     var isCheckout =
                         host === 'timetracker.drytrix.com' ||
                         host === 'www.timetracker.drytrix.com' ||
-                        /support\.html$/i.test(path) ||
-                        /\/support\/?$/i.test(path);
+                        /\/support(\.html)?\/?$/i.test(path);
                     if (!isCheckout) return;
                     u.searchParams.set('system_id', sid);
                     a.setAttribute('href', u.toString());
