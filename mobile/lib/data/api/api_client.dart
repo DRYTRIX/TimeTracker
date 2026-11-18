@@ -1181,6 +1181,28 @@ class ApiClient {
     return Map<String, dynamic>.from(res.data ?? {});
   }
 
+  Future<Map<String, dynamic>> updateDeal(
+    int dealId, {
+    String? name,
+    int? clientId,
+    num? value,
+    String? stage,
+    String? status,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/api/v1/deals/$dealId',
+      data: <String, dynamic>{
+        if (name != null) 'name': name,
+        if (clientId != null) 'client_id': clientId,
+        if (value != null) 'value': value,
+        if (stage != null) 'stage': stage,
+        if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
   Future<Map<String, dynamic>> getLeads({int? page, int? perPage, String? status}) async {
     final res = await _dio.get<Map<String, dynamic>>(
       '/api/v1/leads',
@@ -1216,6 +1238,67 @@ class ApiClient {
         if (companyName != null) 'company_name': companyName,
         if (status != null) 'status': status,
       },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> updateLead(
+    int leadId, {
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? companyName,
+    String? status,
+  }) async {
+    final res = await _dio.patch<Map<String, dynamic>>(
+      '/api/v1/leads/$leadId',
+      data: <String, dynamic>{
+        if (firstName != null) 'first_name': firstName,
+        if (lastName != null) 'last_name': lastName,
+        if (email != null) 'email': email,
+        if (companyName != null) 'company_name': companyName,
+        if (status != null) 'status': status,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> convertLeadToClient(int leadId) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/leads/$leadId/convert-to-client',
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> convertLeadToDeal(int leadId, {String? name}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/leads/$leadId/convert-to-deal',
+      data: <String, dynamic>{
+        if (name != null) 'name': name,
+      },
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> getClientNotes(int clientId) async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/clients/$clientId/notes',
+    );
+    _throwIfError(res);
+    return Map<String, dynamic>.from(res.data ?? {});
+  }
+
+  Future<Map<String, dynamic>> createClientNote(
+    int clientId, {
+    required String content,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/clients/$clientId/notes',
+      data: <String, dynamic>{'content': content},
     );
     _throwIfError(res);
     return Map<String, dynamic>.from(res.data ?? {});

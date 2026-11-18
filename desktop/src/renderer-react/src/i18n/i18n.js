@@ -1,6 +1,7 @@
 import en from './en.json';
+import de from './de.json';
 
-const catalogs = { en };
+const catalogs = { en, de };
 let locale = 'en';
 const listeners = new Set();
 

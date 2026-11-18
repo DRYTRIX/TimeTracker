@@ -99,5 +99,19 @@
     "activityTrackerPurge": "Purge local samples",
     "activityTrackerSyncNow": "Sync to ActivityWatch now",
     "activityTrackerSave": "Save activity settings"
+  },
+  "crm": {
+    "title": "CRM",
+    "subtitle": "Leads, deals, contacts, and client notes.",
+    "leads": "Leads",
+    "deals": "Deals",
+    "clients": "Clients",
+    "editLead": "Edit lead",
+    "editDeal": "Edit deal",
+    "stage": "Stage",
+    "status": "Status",
+    "saveChanges": "Save changes",
+    "convertToClient": "Convert to client",
+    "convertToDeal": "Convert to deal"
   }
 }
