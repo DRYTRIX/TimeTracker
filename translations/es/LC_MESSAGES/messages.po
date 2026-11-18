@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: drytrix-timetracker\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2026-09-23 08:30+0200\n"
-"PO-Revision-Date: 2026-09-23 10:46\n"
+"PO-Revision-Date: 2026-11-18 11:31\n"
 "Last-Translator: \n"
 "Language: es\n"
 "Language-Team: Spanish\n"
@@ -3564,9 +3564,6 @@ msgstr "Su sesión expiró o la página estuvo abierta por mucho tiempo. Por fav
 #~ msgid "Unknown"
 #~ msgstr ""
 
-#~ msgid "Timer started"
-#~ msgstr ""
-
 #~ msgid "Template must have a project to start a timer"
 #~ msgstr ""
 
@@ -4355,9 +4352,6 @@ msgstr "Su sesión expiró o la página estuvo abierta por mucho tiempo. Por fav
 #~ msgid "Open chat"
 #~ msgstr ""
 
-#~ msgid "Start Timer"
-#~ msgstr ""
-
 #~ msgid "Stop"
 #~ msgstr ""
 
@@ -4442,9 +4436,6 @@ msgstr "Su sesión expiró o la página estuvo abierta por mucho tiempo. Por fav
 #~ msgstr ""
 
 #~ msgid "New Task"
-#~ msgstr ""
-
-#~ msgid "New Project"
 #~ msgstr ""
 
 #~ msgid "New Client"
@@ -8285,9 +8276,6 @@ msgstr "Su sesión expiró o la página estuvo abierta por mucho tiempo. Por fav
 #~ msgstr ""
 
 #~ msgid "An error occurred"
-#~ msgstr ""
-
-#~ msgid "Go to Dashboard"
 #~ msgstr ""
 
 #~ msgid "Login to Client Portal"
@@ -13510,15 +13498,6 @@ msgstr "Su sesión expiró o la página estuvo abierta por mucho tiempo. Por fav
 #~ msgid "Quick search"
 #~ msgstr ""
 
-#~ msgid "Go to Projects"
-#~ msgstr ""
-
-#~ msgid "Go to Tasks"
-#~ msgstr ""
-
-#~ msgid "New Time Entry"
-#~ msgstr ""
-
 #~ msgid "Keyboard Shortcuts"
 #~ msgstr ""
 
@@ -15844,9 +15823,6 @@ msgstr "Su sesión expiró o la página estuvo abierta por mucho tiempo. Por fav
 #~ msgid "Delete Filter"
 #~ msgstr ""
 
-#~ msgid "Go to Reports"
-#~ msgstr ""
-
 #~ msgid "No saved filters yet"
 #~ msgstr ""
 
@@ -17813,4 +17789,62 @@ msgstr "Su sesión expiró o la página estuvo abierta por mucho tiempo. Por fav
 #~ " activity, entry stays flagged). 0 "
 #~ "disables the cap."
 #~ msgstr ""
+
+# Command palette (from app/templates/partials/_head.html)
+msgid "Start Timer"
+msgstr ""
+
+msgid "Start Timer → Select a project"
+msgstr ""
+
+msgid "New Time Entry"
+msgstr ""
+
+msgid "New Project"
+msgstr ""
+
+msgid "New Invoice"
+msgstr ""
+
+msgid "Go to Dashboard"
+msgstr ""
+
+msgid "Go to Reports"
+msgstr ""
+
+msgid "Go to Clients"
+msgstr ""
+
+msgid "Go to Projects"
+msgstr ""
+
+msgid "Go to Tasks"
+msgstr ""
+
+msgid "Go to Invoices"
+msgstr ""
+
+msgid "Go to Analytics"
+msgstr ""
+
+msgid "Go to Calendar"
+msgstr ""
+
+msgid "Go to Expenses"
+msgstr ""
+
+msgid "Go to Time Entries"
+msgstr ""
+
+msgid "Go to Settings"
+msgstr ""
+
+msgid "No projects found."
+msgstr ""
+
+msgid "No commands found."
+msgstr ""
+
+msgid "Timer started"
+msgstr ""
 
