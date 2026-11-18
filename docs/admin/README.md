@@ -10,6 +10,10 @@ Complete guides for TimeTracker administrators.
 - **[Docker Startup Troubleshooting](configuration/DOCKER_STARTUP_TROUBLESHOOTING.md)** - Fix startup issues
 - **[Email Configuration](configuration/EMAIL_CONFIGURATION.md)** - Email setup
 - **[OIDC Setup](configuration/OIDC_SETUP.md)** - OIDC/SSO authentication setup
+- **[Peppol / EN 16931 e-invoicing](configuration/PEPPOL_EINVOICING.md)** - UBL, Factur-X/ZUGFeRD, XRechnung
+- **[FatturaPA / SDI (Italy)](configuration/FATTURAPA_SDI.md)** - Italian XML export and SDI intermediary adapter
+- **[Peppol Bridge](configuration/PEPPOL_BRIDGE.md)** - Optional Peppol access-point bridge
+- **[Support visibility](configuration/SUPPORT_VISIBILITY.md)** - Hide donate/support UI with a purchased key
 
 ### Deployment
 - **[Distribution & Download](deployment/DISTRIBUTION.md)** - All install paths and marketplaces

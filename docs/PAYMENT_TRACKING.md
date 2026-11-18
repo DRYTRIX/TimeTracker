@@ -146,8 +146,9 @@ Supported payment methods include:
 - Check
 - Credit Card
 - Debit Card
-- PayPal
-- Stripe
+- PayPal (hosted checkout + refunds)
+- Stripe (hosted checkout + refunds)
+- Mollie (hosted checkout + refunds)
 - Wire Transfer
 - Other
 
@@ -163,7 +164,7 @@ Payment is awaiting confirmation or processing.
 Payment attempt failed or was declined.
 
 ### Refunded
-Payment was refunded to the customer.
+Payment was refunded to the customer. Stripe, Mollie, and PayPal checkout flows support gateway refunds that update payment status and invoice amounts paid; the `payment.refunded` webhook is emitted when a refund completes.
 
 ## API Endpoints
 
@@ -289,7 +290,7 @@ flask db upgrade
 
 1. **Pending payments**: Use for payments awaiting clearance
 2. **Failed payments**: Record failed attempts for tracking
-3. **Refunds**: Use refunded status and create negative payments if needed
+3. **Refunds**: Prefer the gateway refund action (Stripe/Mollie/PayPal) so status and invoice balances stay consistent; for manual refunds, set status to refunded
 4. **Partial payments**: Record each payment separately for clear audit trail
 
 ### Security and Permissions

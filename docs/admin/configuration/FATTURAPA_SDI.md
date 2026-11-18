@@ -19,11 +19,11 @@ Digital signature (`.p7m`) and inbound purchase invoices are out of scope; inter
 
 ## Export
 
-On the invoice page, use **Download FatturaPA**. The file name follows the SDI convention:
+On the invoice page, use **Download FatturaPA**. Credit notes with Italian workflows also expose a FatturaPA download when applicable. The file name follows the SDI convention:
 
 `IT{IdTrasmittente}_{ProgressivoInvio}.xml`
 
-Missing mandatory fields return HTTP 400 with a JSON list of readiness messages (same pattern as XRechnung).
+Missing mandatory fields return HTTP 400 with a JSON list of readiness messages (same pattern as XRechnung). Fix the listed company/client/address fields under Admin → Settings and the client record, then retry.
 
 ## Send via SDI
 
@@ -112,3 +112,5 @@ Notification types map to transmission status:
 
 - [Peppol / Factur-X / ZUGFeRD](PEPPOL_EINVOICING.md) — EN 16931 UBL/CII formats (different schema from FatturaPA)
 - [Peppol Bridge](PEPPOL_BRIDGE.md) — similar adapter pattern for Peppol
+- [Invoice feature README](../../INVOICE_FEATURE_README.md) — credit notes and other invoice exports
+- [REST API](../../api/REST_API.md) — `fatturapa` / `send-sdi` endpoints

@@ -4,11 +4,13 @@ Living checklist for bringing the Electron desktop client up to speed with the F
 
 ## Versions
 
-| Component | Version | Source |
-|-----------|---------|--------|
-| Web / backend | 5.20.0 | `setup.py` / `VERSION` |
-| Desktop | 5.20.0 | `desktop/package.json` |
-| Mobile | 5.20.0+4 | `mobile/pubspec.yaml` |
+Versions are managed by `scripts/bump_version.py` (see `setup.py`, `VERSION`, `desktop/package.json`, `mobile/pubspec.yaml`). Do not hand-edit the table below after a release without running the bump script.
+
+| Component | Source of truth |
+|-----------|-----------------|
+| Web / backend | `setup.py` / `VERSION` |
+| Desktop | `desktop/package.json` |
+| Mobile | `mobile/pubspec.yaml` (`X.Y.Z+build`) |
 
 ## What desktop has
 

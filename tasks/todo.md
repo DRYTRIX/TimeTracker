@@ -7,4 +7,4 @@ Remaining follow-ups after the improvement pass (see `docs/GAP_ROADMAP.md`):
 - [ ] Web: finish residual `alert()`/`confirm()` sites; modal/dialog Tailwind pass
 - [ ] Custom fields on live timer start + project/time-entry templates; API v1 projects custom_fields
 - [ ] Integration tests for remaining connectors (Asana, DATEV, GitHub/GitLab, calendars, Trello)
-- [ ] Release FatturaPA/SDI from Unreleased when intermediary docs are finalized
+- [x] Release FatturaPA/SDI (docs finalized for generic intermediary; shipped in Unreleased → 5.21.0)

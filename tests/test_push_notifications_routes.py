@@ -15,9 +15,7 @@ def test_list_push_subscriptions_requires_login(client):
 def test_subscribe_push_requires_login(client):
     response = client.post(
         "/api/push/subscribe",
-        data=json.dumps(
-            {"endpoint": "https://example.com/push", "keys": {"p256dh": "a", "auth": "b"}}
-        ),
+        data=json.dumps({"endpoint": "https://example.com/push", "keys": {"p256dh": "a", "auth": "b"}}),
         content_type="application/json",
     )
     assert response.status_code in (302, 401, 403)

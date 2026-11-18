@@ -9,16 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **FatturaPA / SDI (Italy)** — Export FatturaPA 1.2 XML (`FPR12` B2B and `FPA12` public administration), send via a configurable SDI intermediary HTTP adapter, track transmissions and SDI notifications (`RC`/`NS`/`MC`/`NE`/`DT`), and poll status every 15 minutes. See `docs/admin/configuration/FATTURAPA_SDI.md`.
-- **GDPR erase UI** — Admin users list **Erase (GDPR)** action and Import/Export self-service account erasure.
-- **Client parity** — Mobile CRM deal/lead detail/edit/convert and client notes; report by-project breakdown; desktop CRM edit/convert + German locale catalog; extension manual theme preference.
-- **Teams bot** — Per-conversation sliding-window rate limit on bot commands.
+- **FatturaPA / SDI (Italy)** — FatturaPA 1.2 XML export (`FPR12` / `FPA12`), configurable SDI intermediary HTTP adapter, transmission history, notification handling (`RC`/`NS`/`MC`/`NE`/`DT`/`AT`), and `poll_sdi_status` every 15 minutes. API: `GET /api/v1/invoices/{id}/fatturapa`, `POST .../send-sdi`. See [FATTURAPA_SDI.md](docs/admin/configuration/FATTURAPA_SDI.md).
+- **Credit notes** — End-to-end credit notes (web UI, PDF, UBL, FatturaPA for Italian workflows) and `/api/v1/credit-notes` CRUD + downloads.
+- **Invoice reminders & dunning** — Configurable reminder policies with multi-step offsets, client email templates, optional late fees (fixed or annual %), and `InvoiceReminderSchedule` tracking. Admin → Reminder policies.
+- **Invoicing lines** — Per-line tax rates, discounts, and explicit line ordering on invoices.
+- **Payment gateways** — Mollie and PayPal checkout flows completed with gateway refunds and receipt handling.
+- **Invoice lifecycle webhooks** — `invoice.sent`, `invoice.paid`, `invoice.overdue`, `credit_note.created`, and payment events (`payment.processed`, `payment.failed`, `payment.refunded`) emitted from invoice, checkout, and scheduled jobs.
+- **CRM** — Remaining CRM gaps: API coverage, pipeline drag-and-drop, deal forecast, lead-source analytics, communication templates, activity calendar reminders, and module guards.
+- **Time tracking** — Autotracker, Focus session, and Belgium compliance/reporting gap closure across web and clients.
+- **GDPR erase UI** — Admin users list **Erase (GDPR)** action; Import/Export self-service account erasure.
+- **Client parity** — Mobile CRM deal/lead detail/edit/convert and client notes; reports by-project breakdown; desktop CRM edit/convert + German locale catalog; browser extension manual theme preference.
+- **Teams bot** — Per-conversation sliding-window rate limit on bot commands (~20/min per conversation).
+- **CI** — Duration-balanced 8-shard pytest split for faster PR feedback.
 
 ### Changed
 
-- Client custom field forms load definitions filtered by `entity_type=client`.
+- Client (and related) custom field forms load definitions filtered by `entity_type`.
 - Migrated additional native `alert()`/`confirm()` call sites (API tokens, report builder, invoices/expenses/projects lists, import/export) to `ttAlert`/`ttConfirm`.
-- README roadmap marks push notifications, workflows, and base forecasting as shipped.
+- Support conversion defaults to **key_first** Supporter CTA; tips route via Buy Me a Coffee and `/support` checkout.
+- README roadmap marks push notifications, workflows, base forecasting, and FatturaPA/SDI as shipped.
+- **Dependencies** — Pip, npm (root + desktop), and Flutter `flutter_local_notifications` bumps (Dependabot #880–#883).
+
+### Fixed
+
+- **Time rounding** — `nearest` rounding now rounds exact halves up (#874).
+- **Import** — Accept CSV files saved with a UTF-8 BOM (#877).
+- **Backups & uploads** — Full backups include receipt/avatar files under `UPLOAD_FOLDER` (#885); project attachments persist in the uploads volume (#884).
+- **Invoicing** — Payment accounting locked; invoice status transitions clarified.
+- **Webhooks** — Delivery statistics work when Settings would otherwise autoflush.
+- **Mobile CI** — Unblock Android AGP and iOS CocoaPods release builds.
+- **Support** — CodeQL/black fixes for support conversion PR CI.
+- **Lint** — Format `tests/test_push_notifications_routes.py` so develop `ci-pass` stays green.
+
+### Security
+
+- Clear CodeQL log-injection findings on credit-note code paths.
+- Ignore APScheduler Safety advisory with no 3.x remediation path.
+
+### Documentation
+
+- New [FATTURAPA_SDI.md](docs/admin/configuration/FATTURAPA_SDI.md); Peppol/e-invoicing matrix updated in [PEPPOL_EINVOICING.md](docs/admin/configuration/PEPPOL_EINVOICING.md).
+- REST API invoice/credit-note/webhook sections; [webhooks.md](docs/features/webhooks.md); [API_TOKEN_SCOPES.md](docs/api/API_TOKEN_SCOPES.md).
+- Refreshed invoice reminder/dunning docs, FEATURES_COMPLETE invoicing notes, payment gateway refund notes, docs indexes, and gap roadmap status.
 
 ## [5.20.0] - 2026-11-10
 ### Added
