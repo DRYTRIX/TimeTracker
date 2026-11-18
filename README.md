@@ -655,13 +655,17 @@ This starts:
 
 ## 🛣️ Roadmap
 
+### Shipped (no longer “planned”)
+- **Push notifications** — Browser/PWA web push + optional FCM device registration (VAPID / Firebase env)
+- **Automation / workflows** — Rule engine, admin UI, and API (`workflows`)
+- **Forecasting** — Budget/project forecasting + CRM deal forecast (optional LLM narrative)
+
 ### Planned Features
-- 📊 **Advanced Analytics** — More charts, insights, and reporting options
-- 🔌 **API Extensions** — Additional RESTful API endpoints for integrations
-- 🔔 **Push Notifications** — Real-time browser notifications
-- 📱 **Mobile & Desktop App Enhancements** — Additional features for the native Flutter mobile and Electron desktop apps
-- 🤖 **Automation Rules** — Automated workflows and task assignments
-- 📈 **Advanced Forecasting** — AI-powered project timeline predictions
+- 📊 **Advanced Analytics** — Deeper charts, insights, and cross-module reporting options
+- 🔌 **API Extensions** — Additional RESTful API endpoints for niche integrations and client parity
+- 📱 **Mobile & Desktop App Enhancements** — CRM pipeline boards, finance extras, and OIDC browser redirect
+- 📈 **Advanced Forecasting** — Richer AI-powered timeline and capacity predictions
+- 🇮🇹 **FatturaPA / SDI** — Italian e-invoicing XML + intermediary adapter (see Unreleased in CHANGELOG)
 
 
 ---

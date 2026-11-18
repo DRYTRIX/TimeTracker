@@ -71,7 +71,12 @@ See implementation commits and CHANGELOG Unreleased section for other Phase 1 it
 
 - Rebuild JS assets (`node scripts/build-js.mjs`) so `core-a1` and `command-palette` hashes pick up new scripts.
 - Broader template pass for remaining icon-only buttons and light-only Tailwind grays.
-- Extract new `commandPalette.*` strings into `messages.po` for translators.
+- Continue migrating residual native `alert()`/`confirm()` outside the high-traffic set already moved to `ttAlert`/`ttConfirm`.
+
+**Shipped since first pass**
+
+- Command palette strings restored as active msgids in `translations/en/LC_MESSAGES/messages.po` (from `_head.html` `_()` calls).
+- Additional `ttAlert`/`ttConfirm` migrations: API tokens, report builder, invoices/expenses/payments/projects lists, import/export, admin users.
 
 ### Phase 3 (Client parity — offline, tests, i18n, versions & auth)
 
@@ -85,7 +90,7 @@ See implementation commits and CHANGELOG Unreleased section for other Phase 1 it
 
 - `POST /api/v1/auth/login` — when `user.two_factor_enabled`, **403** with `{ "requires_2fa": true, "temp_token": "…" }`.
 - `POST /api/v1/auth/2fa/verify` — TOTP completion → `{ "token": "tt_…" }` (`app/utils/api_auth_2fa.py`, 5-minute signed challenge).
-- Desktop/mobile: 2FA sign-in step; API token paste + OIDC notes. Extension: token paste + `requires_2fa` detection in `lib/api.js` (options UI TOTP step still TODO).
+- Desktop/mobile: 2FA sign-in step; API token paste + OIDC notes. Extension: token paste + options UI TOTP step (`options.js` / `verifyTotp`).
 - Tests: `tests/test_api_v1_auth_2fa.py`.
 
 **Offline sync**
@@ -111,10 +116,16 @@ See implementation commits and CHANGELOG Unreleased section for other Phase 1 it
 
 **Follow-ups**
 
-- Desktop: queue failed-item UI, locale switching, broader string catalog.
-- Mobile: widget test for offline timer stop UX; retry/backoff parity with desktop max attempts.
-- Extension: options page dark mode; shared i18n if extension strings grow; options TOTP step after password login.
-- Rebuild desktop renderer (`npm run build:renderer`) before release; OIDC browser redirect deferred.
+- Desktop: broader string catalog beyond shell/settings/CRM; OIDC browser redirect deferred.
+- Mobile: expand Flutter widget tests beyond sync helpers; CRM pipeline board (detail/edit/convert shipped).
+- Extension: shared i18n if extension strings grow.
+- Rebuild desktop renderer (`npm run build:renderer`) before release.
+
+**Shipped since first pass**
+
+- Desktop failed-queue UI + `de` locale catalog; CRM lead/deal edit + convert.
+- Mobile CRM deal/lead detail/edit/convert, client notes, report by-project, offline timer-stop tests (`maxSyncAttempts = 8`).
+- Extension options TOTP + manual theme preference (`system`/`light`/`dark`).
 
 ### Phase 2
 
@@ -153,9 +164,14 @@ Design docs and minimal scaffolding only—no full OAuth server, SAML IdP, or SC
 
 **Follow-ups**
 
-- Full XRechnung CIUS-DE field mapping and invoice download wiring.
-- Admin UI button for GDPR erase on user row; import/export page link for account erasure.
-- Custom field rendering on project/task/time entry forms (definitions only extended).
+- Live timer start custom fields; project/time-entry template defaults for custom fields.
+- API v1 projects `custom_fields` parity with web forms.
+
+**Shipped since first pass**
+
+- XRechnung CIUS-DE builder + export (Phase 6).
+- Admin users row **Erase (GDPR)** + Import/Export self-service erase UI.
+- Client forms filter custom fields by `entity_type=client`.
 
 ### Phase 6 (Close remaining product gaps)
 

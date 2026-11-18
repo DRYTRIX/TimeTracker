@@ -56,7 +56,7 @@ Teams client → Azure Bot Service → POST /api/integrations/teams/bot/messages
 
 - Validate Bot Framework **JWT** on each activity (`Authorization: Bearer`).
 - Do not trust `from.id` without mapping to a TimeTracker user.
-- Rate-limit per `conversation.id` (follow-up).
+- Rate-limit per `conversation.id` (in-process sliding window in `MicrosoftTeamsConnector.handle_bot_command`; ~20 messages / 60s).
 
 ## Follow-ups
 
