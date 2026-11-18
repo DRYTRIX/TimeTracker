@@ -359,6 +359,7 @@ def license():
     return render_template(
         "user/license.html",
         is_license_activated=is_license_activated(settings_obj),
+        system_instance_id=Settings.get_system_instance_id(),
     )
 
 

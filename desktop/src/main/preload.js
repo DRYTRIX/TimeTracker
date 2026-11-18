@@ -78,4 +78,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Splash screen
   splashReady: () => ipcRenderer.send('splash:ready'),
+
+  // Activity autotracker (opt-in; local samples + optional localhost ActivityWatch)
+  activityTrackerStatus: () => ipcRenderer.invoke('activity-tracker:status'),
+  activityTrackerPurge: () => ipcRenderer.invoke('activity-tracker:purge'),
+  activityTrackerSamples: (limit) => ipcRenderer.invoke('activity-tracker:samples', limit),
+  activityTrackerSync: () => ipcRenderer.invoke('activity-tracker:sync'),
+  activityTrackerRestart: () => ipcRenderer.invoke('activity-tracker:restart'),
 });

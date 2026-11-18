@@ -28,6 +28,7 @@
                     <option value="">{{ _('Select provider...') }}</option>
                     <option value="stripe">Stripe</option>
                     <option value="paypal">PayPal</option>
+                    <option value="mollie">Mollie</option>
                 </select>
             </div>
         </div>
@@ -64,6 +65,22 @@
                     <label for="client_secret" class="form-label">{{ _('Client Secret') }} *</label>
                     <input type="password" id="client_secret" name="client_secret" class="form-input">
                 </div>
+                <div class="md:col-span-2">
+                    <label for="webhook_id" class="form-label">{{ _('Webhook ID') }}</label>
+                    <input type="text" id="webhook_id" name="webhook_id" class="form-input">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('PayPal webhook ID for signature verification (from PayPal Developer Dashboard)') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="mollieFields" class="hidden border-t border-border-light dark:border-border-dark pt-4 mb-6">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Mollie Configuration') }}</h3>
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label for="mollie_api_key" class="form-label">{{ _('API Key') }} *</label>
+                    <input type="password" id="mollie_api_key" name="api_key" class="form-input" placeholder="live_... or test_...">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Your Mollie API key (live_ for production, test_ for test mode)') }}</p>
+                </div>
             </div>
         </div>
 
@@ -88,10 +105,13 @@ function updateProviderFields() {
     document.getElementById('stripeFields').classList.add('hidden');
     document.getElementById('paypalFields').classList.add('hidden');
 
+    document.getElementById('mollieFields').classList.add('hidden');
     if (provider === 'stripe') {
         document.getElementById('stripeFields').classList.remove('hidden');
     } else if (provider === 'paypal') {
         document.getElementById('paypalFields').classList.remove('hidden');
+    } else if (provider === 'mollie') {
+        document.getElementById('mollieFields').classList.remove('hidden');
     }
 }
 </script>

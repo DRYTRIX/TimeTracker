@@ -32,23 +32,29 @@ class EmailSyncService:
         if not normalized:
             return None, None, None
 
-        # Contacts → client
+        # Prefer open deals linked to a matching contact (more specific than client-only)
+        deals = Deal.query.filter(Deal.status == "open").all()
+        for deal in deals:
+            contact = deal.contact
+            if contact and contact.email and contact.email.lower() in normalized:
+                return deal.client_id, None, deal.id
+
+        # Contacts → client (and attach open deal on that client when unique)
         for contact in Contact.query.filter(Contact.email.isnot(None)).all():
             if contact.email and contact.email.lower() in normalized:
-                return contact.client_id, None, None
+                client_deals = [d for d in deals if d.client_id == contact.client_id]
+                deal_id = client_deals[0].id if len(client_deals) == 1 else None
+                return contact.client_id, None, deal_id
 
         for client in Client.query.filter(Client.email.isnot(None)).all():
             if client.email and client.email.lower() in normalized:
-                return client.id, None, None
+                client_deals = [d for d in deals if d.client_id == client.id]
+                deal_id = client_deals[0].id if len(client_deals) == 1 else None
+                return client.id, None, deal_id
 
         for lead in Lead.query.filter(Lead.email.isnot(None)).all():
             if lead.email and lead.email.lower() in normalized:
                 return getattr(lead, "client_id", None), lead.id, None
-
-        for deal in Deal.query.all():
-            # Deals may link via contact email on related client
-            if getattr(deal, "contact_email", None) and deal.contact_email.lower() in normalized:
-                return getattr(deal, "client_id", None), None, deal.id
 
         return None, None, None
 

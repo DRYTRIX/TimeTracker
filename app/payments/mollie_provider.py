@@ -1,11 +1,14 @@
 """Mollie payment provider (skeleton + live checkout when API key is configured)."""
 
+import logging
 from decimal import Decimal
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import requests
 
 from app.payments.base import CheckoutResult, PaymentProvider, WebhookResult
+
+logger = logging.getLogger(__name__)
 
 
 class MollieProvider(PaymentProvider):
@@ -109,3 +112,39 @@ class MollieProvider(PaymentProvider):
             currency=(amount_obj.get("currency") or "EUR").upper(),
             raw=data,
         )
+
+    def refund(
+        self,
+        *,
+        gateway_transaction_id: str,
+        amount: Decimal,
+        currency: str,
+        reason: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Issue a refund for a Mollie payment."""
+        headers = self._headers()
+        if not headers:
+            return {"success": False, "message": "Mollie API key not configured"}
+        payload: Dict[str, Any] = {
+            "amount": {"value": f"{amount:.2f}", "currency": currency.upper()},
+        }
+        if reason:
+            payload["description"] = reason[:255]
+        try:
+            resp = requests.post(
+                f"{self._api_base()}/payments/{gateway_transaction_id}/refunds",
+                headers=headers,
+                json=payload,
+                timeout=30,
+            )
+            if resp.status_code not in (200, 201):
+                logger.error("Mollie refund failed (%s): %s", resp.status_code, resp.text)
+                return {
+                    "success": False,
+                    "message": f"Mollie refund failed ({resp.status_code}): {resp.text[:200]}",
+                }
+            data = resp.json()
+            return {"success": True, "refund_id": data.get("id"), "raw": data}
+        except requests.RequestException as exc:
+            logger.error("Mollie refund request error: %s", exc)
+            return {"success": False, "message": str(exc)}

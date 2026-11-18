@@ -155,6 +155,18 @@
 
                 <hr class="my-6 border-gray-200 dark:border-gray-700">
 
+                <!-- GDPR Erasure -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Erase Account (GDPR)') }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{{ _('Anonymize your personal data. Historical time entries are retained under an anonymized identity. You will be signed out. This cannot be undone.') }}</p>
+                    <button type="button" onclick="eraseAccountGdpr()" class="bg-rose-600 text-white px-4 py-2 rounded hover:bg-rose-700 transition">
+                        <i class="fas fa-user-slash mr-2"></i>{{ _('Erase my account') }}
+                    </button>
+                    <div id="gdpr-erase-status" class="mt-2 text-sm"></div>
+                </div>
+
+                <hr class="my-6 border-gray-200 dark:border-gray-700">
+
                 <!-- Filtered Export -->
                 <div class="mb-6">
                     <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ _('Filtered Export') }}</h3>
@@ -672,7 +684,53 @@ function getStatusClass(status) {
 }
 
 function showFilteredExportForm() {
-    alert('Filtered export form - to be implemented with custom date/project filters');
+    const msg = {{ _('Filtered export with custom date and project filters is not available yet. Use Full Data Export (GDPR) or Export with the report tools.')|tojson }};
+    if (window.ttAlert) {
+        window.ttAlert(msg, { title: {{ _('Filtered Export')|tojson }}, variant: 'info' });
+    } else if (window.showAlert) {
+        window.showAlert(msg);
+    } else {
+        window.alert(msg);
+    }
+}
+
+async function eraseAccountGdpr() {
+    const statusEl = document.getElementById('gdpr-erase-status');
+    const confirmMsg = {{ _('Permanently anonymize your account? You will be signed out immediately. This cannot be undone.')|tojson }};
+    const ask = window.ttConfirm || window.showConfirm;
+    let ok = false;
+    if (ask) {
+        ok = await ask(confirmMsg, {
+            title: {{ _('Erase Account (GDPR)')|tojson }},
+            confirmText: {{ _('Erase my account')|tojson }},
+            cancelText: {{ _('Cancel')|tojson }},
+            variant: 'danger'
+        });
+    } else {
+        ok = window.confirm(confirmMsg);
+    }
+    if (!ok) return;
+
+    statusEl.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin mr-1"></i>{{ _("Erasing…") }}</span>';
+    try {
+        const response = await fetch('/api/erase-account', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': {{ csrf_token()|tojson }}
+            },
+            body: JSON.stringify({ confirm: true, reason: 'self_service_import_export' })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.ok) {
+            statusEl.innerHTML = '<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>{{ _("Account anonymized. Redirecting…") }}</span>';
+            window.location.href = {{ url_for('auth.login')|tojson }};
+        } else {
+            statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${data.error || data.message || response.status}</span>`;
+        }
+    } catch (err) {
+        statusEl.innerHTML = `<span class="text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>Error: ${err}</span>`;
+    }
 }
 
 // Load histories on page load

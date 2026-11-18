@@ -34,7 +34,7 @@ docker compose -f docker-compose.nas.yml up -d
 # open http://localhost:8080 — first login creates the admin
 ```
 
-**Latest release: v5.20.0** — see [CHANGELOG.md](CHANGELOG.md).
+**Latest release: v5.21.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 ### First 5 minutes
 
@@ -655,13 +655,18 @@ This starts:
 
 ## 🛣️ Roadmap
 
+### Shipped (no longer “planned”)
+- **Push notifications** — Browser/PWA web push + optional FCM device registration (VAPID / Firebase env)
+- **Automation / workflows** — Rule engine, admin UI, and API (`workflows`)
+- **Forecasting** — Budget/project forecasting + CRM deal forecast (optional LLM narrative)
+- **FatturaPA / SDI** — Italian e-invoicing XML + intermediary adapter ([docs](docs/admin/configuration/FATTURAPA_SDI.md))
+- **Credit notes, dunning & line tax** — Credit notes, reminder policies/late fees, per-line tax/discounts
+
 ### Planned Features
-- 📊 **Advanced Analytics** — More charts, insights, and reporting options
-- 🔌 **API Extensions** — Additional RESTful API endpoints for integrations
-- 🔔 **Push Notifications** — Real-time browser notifications
-- 📱 **Mobile & Desktop App Enhancements** — Additional features for the native Flutter mobile and Electron desktop apps
-- 🤖 **Automation Rules** — Automated workflows and task assignments
-- 📈 **Advanced Forecasting** — AI-powered project timeline predictions
+- 📊 **Advanced Analytics** — Deeper charts, insights, and cross-module reporting options
+- 🔌 **API Extensions** — Additional RESTful API endpoints for niche integrations and client parity
+- 📱 **Mobile & Desktop App Enhancements** — CRM pipeline boards, finance extras, and OIDC browser redirect
+- 📈 **Advanced Forecasting** — Richer AI-powered timeline and capacity predictions
 
 
 ---
@@ -730,7 +735,7 @@ This means you can:
 
 If TimeTracker saves you money, **[a star on GitHub](https://github.com/drytrix/TimeTracker) helps others find it.**
 
-- **Support the project / hide donate prompts:** [Support & Purchase Key](https://timetracker.drytrix.com/support.html) — donate or buy a one-time key to remove donate prompts in your instance
+- **Support the project / hide donate prompts:** [Support & Purchase Key](https://timetracker.drytrix.com/support) — donate or buy a one-time key to remove donate prompts in your instance
 - **Documentation:** [`docs/`](docs/)
 - **Bug reports:** [Open an issue](https://github.com/drytrix/TimeTracker/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/drytrix/TimeTracker/discussions)

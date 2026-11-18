@@ -308,6 +308,22 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(custom_reports_bp)
     app.register_blueprint(salesman_reports_bp)
 
+    # Phase 4 – invoice reminder policies
+    try:
+        from app.routes.reminder_policies import reminder_policies_bp
+
+        app.register_blueprint(reminder_policies_bp)
+    except Exception:
+        _log.exception("Could not register reminder_policies blueprint")
+
+    # Phase 3 – credit notes
+    try:
+        from app.routes.credit_notes import credit_notes_bp
+
+        app.register_blueprint(credit_notes_bp)
+    except Exception:
+        _log.exception("Could not register credit_notes blueprint")
+
     _register_optional_blueprints(app, _log)
 
 

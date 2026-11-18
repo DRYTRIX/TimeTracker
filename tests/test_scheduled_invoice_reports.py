@@ -44,3 +44,80 @@ def test_generate_report_data_uses_invoice_data_source(app, invoice_report_view)
         data = service._generate_report_data(view, config, user_id=user.id)
         assert data.get("message") != "Invoice reports not yet implemented"
         assert "data" in data
+
+
+def test_check_overdue_skips_draft_and_paid(app, user, project):
+    """Overdue job must not mark draft invoices overdue, and must skip fully paid."""
+    from datetime import date, timedelta
+    from decimal import Decimal
+
+    from factories import ClientFactory, InvoiceFactory
+
+    from app import db
+    from app.models import Invoice
+    from app.utils.scheduled_tasks import check_overdue_invoices
+
+    client = ClientFactory(name="Overdue Job Client")
+    db.session.commit()
+    past = date.today() - timedelta(days=10)
+
+    draft = InvoiceFactory(
+        invoice_number="INV-OD-DRAFT",
+        project_id=project.id,
+        client_id=client.id,
+        client_name=client.name,
+        created_by=user.id,
+        due_date=past,
+        total_amount=Decimal("100.00"),
+    )
+    draft.status = "draft"
+    draft.payment_status = "unpaid"
+
+    sent = InvoiceFactory(
+        invoice_number="INV-OD-SENT",
+        project_id=project.id,
+        client_id=client.id,
+        client_name=client.name,
+        created_by=user.id,
+        due_date=past,
+        total_amount=Decimal("100.00"),
+    )
+    sent.status = "sent"
+    sent.payment_status = "unpaid"
+
+    paid = InvoiceFactory(
+        invoice_number="INV-OD-PAID",
+        project_id=project.id,
+        client_id=client.id,
+        client_name=client.name,
+        created_by=user.id,
+        due_date=past,
+        total_amount=Decimal("100.00"),
+    )
+    paid.status = "sent"
+    paid.payment_status = "fully_paid"
+    paid.amount_paid = Decimal("100.00")
+
+    issued = InvoiceFactory(
+        invoice_number="INV-OD-ISSUED",
+        project_id=project.id,
+        client_id=client.id,
+        client_name=client.name,
+        created_by=user.id,
+        due_date=past,
+        total_amount=Decimal("100.00"),
+    )
+    issued.status = "issued"
+    issued.payment_status = "unpaid"
+    db.session.commit()
+
+    check_overdue_invoices()
+    db.session.refresh(draft)
+    db.session.refresh(sent)
+    db.session.refresh(paid)
+    db.session.refresh(issued)
+
+    assert draft.status == "draft"
+    assert sent.status == "overdue"
+    assert paid.status == "sent"
+    assert issued.status == "overdue"

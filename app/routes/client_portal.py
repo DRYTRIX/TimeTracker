@@ -1355,6 +1355,47 @@ def payment_success():
     return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
 
 
+@client_portal_bp.route("/client-portal/invoices/<int:invoice_id>/pdf")
+def invoice_pdf(invoice_id):
+    """Download PDF for an invoice via the client portal."""
+    result = check_client_portal_access()
+    if not isinstance(result, Client):
+        return result
+    client = result
+
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if invoice.client_id != client.id:
+        flash(_("Invoice not found."), "error")
+        abort(404)
+
+    import io
+
+    from flask import current_app, send_file
+
+    from app.models import Settings
+
+    try:
+        from app.utils.pdf_generator import InvoicePDFGenerator
+
+        settings = Settings.get_settings()
+        pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size="A4")
+        pdf_bytes = pdf_generator.generate_pdf()
+    except Exception:
+        try:
+            from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
+
+            settings = Settings.get_settings()
+            pdf_generator = InvoicePDFGeneratorFallback(invoice, settings=settings)
+            pdf_bytes = pdf_generator.generate_pdf()
+        except Exception as exc:
+            current_app.logger.error("Client portal PDF generation failed for invoice %s: %s", invoice_id, exc)
+            flash(_("PDF generation failed. Please try again later."), "error")
+            return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
+
+    filename = f"{invoice.invoice_number or invoice_id}.pdf"
+    return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
+
+
 # ==================== Project Comments ====================
 
 

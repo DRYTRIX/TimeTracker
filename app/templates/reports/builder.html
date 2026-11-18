@@ -273,6 +273,14 @@
 </div>
 
 <script nonce="{{ csp_nonce() }}">
+
+function ttNotify(msg, variant) {
+    variant = variant || 'info';
+    if (window.ttAlert) return window.ttAlert(msg, { variant: variant });
+    if (window.showAlert) return window.showAlert(msg);
+    window.alert(msg);
+}
+
 let reportConfig = {
     data_source: null,
     components: [],
@@ -512,7 +520,7 @@ function removeComponent(componentId) {
 function previewReport() {
     // Check if data source is selected
     if (!reportConfig.data_source) {
-        alert('{{ _("Please select a data source first") }}');
+        if (window.ttAlert) window.ttAlert('{{ _("Please select a data source first") }}', { variant: 'warning' }); else if (window.showAlert) window.showAlert('{{ _("Please select a data source first") }}'); else window.alert('{{ _("Please select a data source first") }}');
         return;
     }
 
@@ -726,7 +734,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
 
     // Validate name
     if (!name) {
-        alert('{{ _("Please enter a report name") }}');
+        if (window.ttAlert) window.ttAlert('{{ _("Please enter a report name") }}', { variant: 'warning' }); else if (window.showAlert) window.showAlert('{{ _("Please enter a report name") }}'); else window.alert('{{ _("Please enter a report name") }}');
         submitButton.disabled = false;
         submitButton.innerHTML = originalButtonText;
         return;
@@ -734,7 +742,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
 
     // Validate data source is selected
     if (!reportConfig.data_source) {
-        alert('{{ _("Please select a data source first") }}');
+        if (window.ttAlert) window.ttAlert('{{ _("Please select a data source first") }}', { variant: 'warning' }); else if (window.showAlert) window.showAlert('{{ _("Please select a data source first") }}'); else window.alert('{{ _("Please select a data source first") }}');
         submitButton.disabled = false;
         submitButton.innerHTML = originalButtonText;
         return;
@@ -821,7 +829,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
             } else if (window.showToast) {
                 window.showToast(message, 'success');
             } else {
-                alert(message);
+                ttNotify(message, 'info');
             }
 
             closeSaveModal();
@@ -841,7 +849,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
             } else if (window.showToast) {
                 window.showToast(errorMsg, 'error');
             } else {
-                alert(errorMsg);
+                ttNotify(errorMsg, 'danger');
             }
             // Re-enable button on error
             submitButton.disabled = false;
@@ -855,7 +863,7 @@ document.getElementById('saveForm').addEventListener('submit', async (e) => {
         } else if (window.showToast) {
             window.showToast(errorMsg, 'error');
         } else {
-            alert(errorMsg);
+            ttNotify(errorMsg, 'danger');
         }
         // Re-enable button on error
         submitButton.disabled = false;
@@ -945,7 +953,7 @@ async function createShareLink() {
             window.toastManager.success('{{ _("Share link created") }}', '{{ _("Success") }}', 3000);
         }
     } catch (error) {
-        alert(error.message);
+        ttNotify(error.message, 'danger');
     }
 }
 
@@ -964,7 +972,8 @@ async function copyShareUrl() {
 }
 
 async function revokeShareLink(token) {
-    if (!confirm('{{ _("Revoke this share link?") }}')) return;
+    const _revokeOk = window.ttConfirm ? await window.ttConfirm('{{ _("Revoke this share link?") }}', { title: '{{ _("Revoke") }}', variant: 'danger' }) : (window.showConfirm ? await window.showConfirm('{{ _("Revoke this share link?") }}', { variant: 'danger' }) : window.confirm('{{ _("Revoke this share link?") }}'));
+    if (!_revokeOk) return;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
     const response = await fetch(`{{ url_for('custom_reports.revoke_shared_report_link', view_id=saved_view.id, token='__TOKEN__') }}`.replace('__TOKEN__', token), {
         method: 'DELETE',

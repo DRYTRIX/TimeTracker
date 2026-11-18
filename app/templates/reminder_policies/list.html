@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Reminder Policies{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold">Reminder Policies</h1>
+    <a href="{{ url_for('reminder_policies.create_policy') }}" class="btn btn-primary">+ New Policy</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} mb-4">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if policies %}
+  <div class="card">
+    <table class="table w-full">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Active</th>
+          <th>Default</th>
+          <th>Levels</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for policy in policies %}
+        <tr>
+          <td>{{ policy.name }}</td>
+          <td>{{ '✓' if policy.active else '✗' }}</td>
+          <td>{{ '✓' if policy.is_default else '' }}</td>
+          <td>{{ policy.levels.count() }}</td>
+          <td>
+            <a href="{{ url_for('reminder_policies.edit_policy', policy_id=policy.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+            <form method="post" action="{{ url_for('reminder_policies.delete_policy', policy_id=policy.id) }}" style="display:inline" onsubmit="return confirm('Delete this policy?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted">No reminder policies defined yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

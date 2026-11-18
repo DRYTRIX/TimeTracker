@@ -16,6 +16,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   int? _projectId;
   List<Map<String, dynamic>> _projects = const [];
   Map<String, dynamic>? _summary;
+  List<Map<String, dynamic>> _byProject = const [];
   bool _loading = false;
   String? _error;
 
@@ -62,9 +63,20 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         endDate: _fmt(_end),
         projectId: _projectId,
       );
-      setState(() => _summary = summary['summary'] is Map
+      final summaryMap = summary['summary'] is Map
           ? Map<String, dynamic>.from(summary['summary'] as Map)
-          : Map<String, dynamic>.from(summary));
+          : Map<String, dynamic>.from(summary);
+      final rawByProject = summaryMap['by_project'];
+      final byProject = rawByProject is List
+          ? rawByProject
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
+          : <Map<String, dynamic>>[];
+      setState(() {
+        _summary = summaryMap;
+        _byProject = byProject;
+      });
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -158,6 +170,28 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 trailing: Text('$revenue'),
               ),
             ),
+            const SizedBox(height: 16),
+            Text('By project', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (_byProject.isEmpty)
+              const Card(
+                child: ListTile(
+                  title: Text('No project breakdown'),
+                  subtitle: Text('Try a wider date range.'),
+                ),
+              )
+            else
+              ..._byProject.map((row) {
+                final name = (row['project_name'] ?? 'Project ${row['project_id'] ?? ''}').toString();
+                final hours = row['hours'] ?? 0;
+                final entries = row['entries'] ?? 0;
+                return Card(
+                  child: ListTile(
+                    title: Text(name),
+                    trailing: Text('${hours}h · $entries entries'),
+                  ),
+                );
+              }),
           ],
         ],
       ),

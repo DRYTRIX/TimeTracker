@@ -102,13 +102,19 @@
         </div>
     </div>
 
-    {% if invoice.payment_status != 'fully_paid' %}
     <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">
         <div class="flex flex-col sm:flex-row gap-4 justify-end">
+            {% if invoice.payment_status != 'fully_paid' %}
             <a href="{{ url_for('client_portal.pay_invoice', invoice_id=invoice.id) }}"
                class="inline-flex items-center justify-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors">
                 <i class="fas fa-credit-card mr-2"></i>
                 {{ _('Pay Invoice') }}
+            </a>
+            {% endif %}
+            <a href="{{ url_for('client_portal.invoice_pdf', invoice_id=invoice.id) }}"
+               class="inline-flex items-center justify-center px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors">
+                <i class="fas fa-file-pdf mr-2"></i>
+                {{ _('Download PDF') }}
             </a>
             <a href="{{ url_for('client_portal.invoices') }}"
                class="inline-flex items-center justify-center px-6 py-3 bg-secondary-200 hover:bg-secondary-300 dark:bg-secondary-700 dark:hover:bg-secondary-600 text-secondary-900 dark:text-secondary-100 font-medium rounded-lg transition-colors">
@@ -116,7 +122,6 @@
             </a>
         </div>
     </div>
-    {% endif %}
 
     {% if invoice.notes %}
     <div class="mt-6 pt-6 border-t border-border-light dark:border-border-dark">

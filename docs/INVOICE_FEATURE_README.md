@@ -222,19 +222,23 @@ The invoice tables are automatically created when the application starts. For ex
 - **Database**: PostgreSQL/SQLite (already supported)
 - **Frontend**: Bootstrap 5, Font Awesome (already included)
 
-## Recurring invoices and overdue reminders
+## Recurring invoices, overdue reminders, and dunning
 
-Automated recurring billing and past-due detection are implemented. See **[Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)** for scheduler times, flows, and limitations (one-shot overdue notify; no fixed subscription line items on recurring templates).
+Automated recurring billing, past-due detection, multi-step reminder policies (with optional late fees), and `invoice.overdue` webhooks are implemented. See **[Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)**.
+
+Also shipped with recent invoicing work:
+
+- Per-line tax rates, discounts, and line ordering
+- Credit notes (web + `/api/v1/credit-notes`, PDF/UBL/FatturaPA)
+- E-invoicing exports: Peppol/UBL, Factur-X/ZUGFeRD, XRechnung, FatturaPA/SDI — see [PEPPOL_EINVOICING.md](admin/configuration/PEPPOL_EINVOICING.md) and [FATTURAPA_SDI.md](admin/configuration/FATTURAPA_SDI.md)
 
 ## Future Enhancements
 
 ### Planned Features
-- Configurable multi-step payment / dunning reminders (`InvoiceReminderSchedule` schema exists but is unused)
 - Fixed line items on recurring invoice templates (today: unbilled time only)
-- Deeper payment gateway and installment workflows (see [Payment tracking](PAYMENT_TRACKING.md))
+- Deeper installment / payment-plan workflows (see [Payment tracking](PAYMENT_TRACKING.md))
 
 ### API Extensions
-- **Webhook Support**: Emit `invoice.overdue` when the overdue job runs (documented in places; not emitted today)
 - **Bulk Operations**: Mass invoice operations
 - **Reporting API**: Invoice analytics and reporting
 

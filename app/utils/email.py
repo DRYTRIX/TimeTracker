@@ -919,7 +919,9 @@ def send_invoice_template_test_email(template_id, recipient_email, invoice_id=No
         return False, "Failed to send test email"
 
 
-def send_invoice_email(invoice, recipient_email, sender_user=None, custom_message=None, email_template_id=None):
+def send_invoice_email(
+    invoice, recipient_email, sender_user=None, custom_message=None, email_template_id=None, subject=None
+):
     """Send an invoice via email with PDF attachment
 
     Args:
@@ -928,6 +930,7 @@ def send_invoice_email(invoice, recipient_email, sender_user=None, custom_messag
         sender_user: User object who is sending (for tracking)
         custom_message: Optional custom message to include in email
         email_template_id: Optional email template ID to use
+        subject: Optional subject override (defaults to built template subject)
 
     Returns:
         tuple: (success: bool, invoice_email: InvoiceEmail or None, message: str)
@@ -938,9 +941,10 @@ def send_invoice_email(invoice, recipient_email, sender_user=None, custom_messag
         current_app.logger.info(f"[INVOICE EMAIL] Sending invoice {invoice.invoice_number} to {recipient_email}")
 
         try:
-            pdf_bytes, html_body, text_body, subject = _build_invoice_email_payload(
+            pdf_bytes, html_body, text_body, built_subject = _build_invoice_email_payload(
                 invoice, email_template_id=email_template_id, custom_message=custom_message
             )
+            subject = (subject or "").strip() or built_subject
         except ValueError:
             return False, None, "Failed to build invoice email"
 
@@ -1018,6 +1022,17 @@ def send_invoice_email(invoice, recipient_email, sender_user=None, custom_messag
                 from app.utils.support_invoice_sent import queue_first_invoice_support_prompt
 
                 queue_first_invoice_support_prompt(sender_id, first_send=sent_count == 1)
+            except Exception:
+                pass
+            try:
+                from app.constants import WebhookEvent
+                from app.utils.invoice_events import emit_invoice_event
+
+                emit_invoice_event(
+                    WebhookEvent.INVOICE_SENT.value,
+                    invoice_row or invoice,
+                    recipient_email=recipient_email,
+                )
             except Exception:
                 pass
 

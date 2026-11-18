@@ -38,7 +38,7 @@ export function AuthFlow(props) {
           <div>
             <p className="eyebrow">Desktop workspace</p>
             <h1>Connect to TimeTracker</h1>
-            <p>Use your server URL and normal TimeTracker account.</p>
+            <p>Timer-first desktop client. Navigation follows your server Focus/Solo module preset.</p>
           </div>
         </div>
         <div className="stepper" aria-label="Setup progress">
@@ -148,6 +148,26 @@ export function AuthFlow(props) {
   );
 }
 
+/** Map desktop views to server module ids (any match keeps the item visible). */
+export const VIEW_MODULE_REQUIREMENTS = {
+  dashboard: ['main'],
+  projects: ['projects'],
+  entries: ['timer'],
+  kanban: ['kanban'],
+  reports: ['reports'],
+  crm: ['deals', 'contacts', 'leads'],
+  invoices: ['invoices'],
+  expenses: ['expenses'],
+  payments: ['payments'],
+  mileage: ['mileage'],
+  quotes: ['quotes'],
+  recurring: ['recurring_invoices'],
+  credit: ['invoices'],
+  // Workday / Belgium attendance is not a separate module; always offer Workforce.
+  workforce: null,
+  settings: null,
+};
+
 export const NAV_GROUPS = [
   {
     labelKey: 'nav.groups.work',
@@ -185,7 +205,23 @@ export const NAV_GROUPS = [
   },
 ];
 
-export function Sidebar({ activeView, onChange }) {
+export function isViewEnabled(viewId, enabledModules) {
+  const req = VIEW_MODULE_REQUIREMENTS[viewId];
+  if (req == null) return true;
+  if (!Array.isArray(enabledModules) || enabledModules.length === 0) return true;
+  const set = new Set(enabledModules);
+  return req.some((m) => set.has(m));
+}
+
+export function filterNavGroups(enabledModules) {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => isViewEnabled(item.id, enabledModules)),
+  })).filter((group) => group.items.length > 0);
+}
+
+export function Sidebar({ activeView, onChange, enabledModules }) {
+  const groups = filterNavGroups(enabledModules);
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -196,7 +232,7 @@ export function Sidebar({ activeView, onChange }) {
         </div>
       </div>
       <nav>
-        {NAV_GROUPS.map((group) => (
+        {groups.map((group) => (
           <div className="nav-group" key={group.labelKey}>
             <p className="nav-group-label">{t(group.labelKey)}</p>
             {group.items.map((view) => (

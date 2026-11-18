@@ -389,8 +389,9 @@ def dashboard():
     if is_module_enabled("invoices") and (current_user.is_admin or current_user.has_permission("create_invoices")):
         overdue_rows = (
             Invoice.query.filter(
-                Invoice.status.in_(["sent", "overdue", "partially_paid"]),
+                Invoice.status.in_(["sent", "issued", "overdue"]),
                 Invoice.due_date < today_date,
+                Invoice.payment_status.in_(["unpaid", "partially_paid"]),
             )
             .order_by(Invoice.due_date.asc())
             .all()
@@ -420,7 +421,8 @@ def dashboard():
         from app.models import DonationInteraction
 
         user_stats = DonationInteraction.get_user_engagement_metrics(current_user.id)
-        support_banner_suppressed_dashboard = DonationInteraction.has_recent_donation_click(current_user.id, days=30)
+        # Tip/BMC clicks must not suppress Supporter-key soft prompts
+        support_banner_suppressed_dashboard = DonationInteraction.has_recent_key_checkout_click(current_user.id, days=7)
     except Exception:
         # Fallback if table doesn't exist yet. Log it: any *other* database fault lands
         # here too, and silently degrading made a real error look like a slow dashboard.
@@ -474,7 +476,7 @@ def dashboard():
                 **support_dashboard_prompt,
                 "message": _(
                     "You've been using TimeTracker for a month — thank you for being part of the community. "
-                    "If the app helps your work, consider supporting its development."
+                    "Become a Supporter to fund development: badge, clean client PDFs, quieter prompts."
                 ),
             }
         elif v == SupportPromptService.VARIANT_HOURS_MILESTONE:
@@ -483,20 +485,22 @@ def dashboard():
                 **support_dashboard_prompt,
                 "message": _(
                     "TimeTracker has kept you on track for %(hours)s hours. "
-                    "Consider buying a key to remove prompts and support future development.",
+                    "Become a Supporter to fund development — badge, client-ready PDFs without "
+                    "the TimeTracker footer, and quieter prompts for your instance.",
                     hours=milestone,
                 ),
                 "celebration": True,
                 "title": _("%(hours)s hours tracked!", hours=milestone),
-                "keyLabel": _("Get key (€25)"),
-                "bmcLabel": _("Buy a coffee"),
+                "keyLabel": _("Become a Supporter (€25)"),
+                "bmcLabel": _("Or tip any amount"),
                 "dismissLabel": _("Maybe later"),
             }
         elif v == SupportPromptService.VARIANT_ACTIVE_TODAY:
             support_dashboard_prompt = {
                 **support_dashboard_prompt,
                 "message": _(
-                    "You've been tracking for a while today. TimeTracker is free because of supporters like you."
+                    "You've been tracking for a while today. Become a Supporter to fund "
+                    "independent development — badge, clean PDFs, quieter prompts as a side benefit."
                 ),
             }
 
@@ -763,7 +767,7 @@ def request_soft_support_prompt():
     is_supporter = is_license_activated(settings_obj)
     ui_show = getattr(current_user, "ui_show_donate", True)
     try:
-        suppressed = DonationInteraction.has_recent_donation_click(current_user.id, days=30)
+        suppressed = DonationInteraction.has_recent_key_checkout_click(current_user.id, days=7)
     except Exception:
         suppressed = False
 

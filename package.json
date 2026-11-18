@@ -37,7 +37,7 @@
     "cmdk": "^1.1.1",
     "flatpickr": "4.6.13",
     "frappe-gantt": "1.2.2",
-    "fullcalendar": "7.1.4",
+    "fullcalendar": "7.1.5",
     "konva": "10.9.1",
     "socket.io-client": "4.8.4",
     "sortablejs": "1.15.7",

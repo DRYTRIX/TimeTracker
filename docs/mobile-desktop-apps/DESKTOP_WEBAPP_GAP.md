@@ -4,11 +4,13 @@ Living checklist for bringing the Electron desktop client up to speed with the F
 
 ## Versions
 
-| Component | Version | Source |
-|-----------|---------|--------|
-| Web / backend | 5.19.1 | `setup.py` / `VERSION` |
-| Desktop | 5.19.1 | `desktop/package.json` |
-| Mobile | 5.19.1 | `mobile/pubspec.yaml` |
+Versions are managed by `scripts/bump_version.py` (see `setup.py`, `VERSION`, `desktop/package.json`, `mobile/pubspec.yaml`). Do not hand-edit the table below after a release without running the bump script.
+
+| Component | Source of truth |
+|-----------|-----------------|
+| Web / backend | `setup.py` / `VERSION` |
+| Desktop | `desktop/package.json` |
+| Mobile | `mobile/pubspec.yaml` (`X.Y.Z+build`) |
 
 ## What desktop has
 
@@ -28,15 +30,17 @@ Living checklist for bringing the Electron desktop client up to speed with the F
 | Area | Web | Mobile | Desktop |
 |------|-----|--------|---------|
 | Timer pause/resume | Yes | Yes | Done |
-| Reports summary UI | Yes | Partial | Done |
+| Reports summary UI | Yes | Done (incl. by-project) | Done |
 | Workday clock in/out + breaks | Yes | Yes | Done |
-| Belgium compliance / corrections UI | Yes | Partial | Deferred |
+| Belgium compliance / corrections UI | Yes | Yes (history/corrections + report) | Done (Workforce panel) |
 | Kanban board | Yes | Yes | Done |
-| CRM (leads/deals/contacts/notes) | Yes | Yes (hub) | Done |
+| CRM (leads/deals/contacts/notes) | Yes | Detail/edit/convert + notes | Detail/edit/convert + notes |
+| CRM pipeline board | Yes | Not yet | Not yet |
 | Payments, mileage, quotes, recurring, credit notes | Yes | Partial | Done |
 | Offline sync (idempotent queue) | PWA | Yes | Done |
 | API login + 2FA | Yes | Yes | Done |
-| Failed offline-queue UI | N/A | Phase 6 | Phase 6 |
+| Failed offline-queue UI | N/A | Done | Done |
+| Desktop locales | N/A | N/A | `en` + `de` catalogs |
 | Peppol, PDF designer, AI, portal, kiosk | Yes | Out of scope | Out of scope |
 | Inventory | Yes | Out of scope | Out of scope |
 
@@ -50,4 +54,4 @@ Living checklist for bringing the Electron desktop client up to speed with the F
 
 ## Explicitly out of scope
 
-OIDC/LDAP in-app auth, auto-update, Peppol/PDF designer, AI helper, client portal, kiosk, Slack slash commands, inventory, team chat, live mileage GPS tracking, Belgium compliance report / correction UIs.
+OIDC/LDAP in-app auth, auto-update, Peppol/PDF designer, AI helper, client portal, kiosk, Slack slash commands, inventory, team chat, live mileage GPS tracking. Belgium compliance report / correction UIs are available on web, mobile, and desktop.

@@ -51,6 +51,13 @@ Webhooks allow you to:
 - `invoice.paid` - An invoice is paid
 - `invoice.overdue` - An invoice becomes overdue
 
+### Credit Note & Payment Events
+- `credit_note.created` - A credit note is created
+- `payment.created` - A payment is recorded
+- `payment.processed` - A gateway payment completes
+- `payment.failed` - A gateway payment fails
+- `payment.refunded` - A payment is refunded
+
 ### Client Events
 - `client.created` - A client is created
 - `client.updated` - A client is updated

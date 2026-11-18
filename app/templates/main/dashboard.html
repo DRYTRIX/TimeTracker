@@ -28,6 +28,23 @@
 {% set dashboard_breadcrumbs = [{'text': _('Dashboard')}] %}
 {{ page_header('fas fa-tachometer-alt', _('Dashboard'), _("Here's a quick overview of your work."), breadcrumbs=dashboard_breadcrumbs) }}
 
+{% if not is_module_enabled('deals') and not is_module_enabled('inventory') %}
+<div class="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-4" role="status">
+    <p class="font-semibold text-text-light dark:text-text-dark mb-1">
+        <i class="fas fa-bullseye mr-2 text-primary" aria-hidden="true"></i>{{ _('Focus mode') }}
+    </p>
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-2">
+        {{ _('Your workspace is lean: timer, projects, and billing. CRM and inventory stay hidden until you enable them in Admin → Modules.') }}
+    </p>
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('timer.focus_mode') }}" class="btn btn-primary btn-sm">{{ _('Start Focus session') }}</a>
+        {% if is_module_enabled('weekly_goals') %}
+        <a href="{{ url_for('weekly_goals.index') }}" class="btn btn-secondary btn-sm">{{ _('Weekly goals') }}</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 {% if pending_violations %}
 <div class="mb-6 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4" role="alert">
     <p class="font-semibold text-amber-900 dark:text-amber-100 mb-1">
@@ -412,7 +429,10 @@
                 <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
                     {{ focus_today_minutes|default(0) }} {{ _('min') }} · {{ focus_today_sessions|default(0) }} {{ _('sessions') }}
                 </p>
-                <a href="{{ url_for('timer.timer_page') }}" class="text-xs text-primary hover:underline mt-2 inline-block">{{ _('Open timer') }}</a>
+                <div class="mt-2 flex flex-wrap gap-3">
+                    <a href="{{ url_for('timer.focus_mode') }}" class="text-xs text-primary hover:underline">{{ _('Start Focus session') }}</a>
+                    <a href="{{ url_for('timer.timer_page') }}" class="text-xs text-primary hover:underline">{{ _('Open timer') }}</a>
+                </div>
             </div>
             <div class="bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark p-4 rounded-tt dashboard-widget">
                 <p class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Badges') }}</p>
@@ -898,8 +918,8 @@
         <p class="text-sm text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('If this saves you time, consider supporting development — everything stays free and open.') }}</p>
         {% endif %}
         <div class="flex flex-wrap gap-2">
-            <button type="button" class="btn btn-primary js-open-support-modal"><i class="fas fa-heart mr-1.5" aria-hidden="true"></i>{{ _('Help keep it free') }}</button>
-            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="typeof trackDonationClick === 'function' && trackDonationClick('dashboard_widget_key')" class="btn btn-secondary">{{ _('Get a key — remove prompts (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i></a>
+            <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-license-checkout onclick="typeof trackDonationClick === 'function' && trackDonationClick('dashboard_widget_key')" class="btn btn-primary"><i class="fas fa-star mr-1.5" aria-hidden="true"></i>{{ _('Become a Supporter (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i></a>
+            <button type="button" class="btn btn-secondary js-open-support-modal">{{ _('Or tip / share') }}</button>
         </div>
         {% endif %}
     </div>

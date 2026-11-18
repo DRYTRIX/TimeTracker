@@ -30,6 +30,11 @@ class Client(db.Model):
     country = db.Column(db.String(2), nullable=True)  # ISO 3166-1 alpha-2
     vat_id = db.Column(db.String(50), nullable=True)
     leitweg_id = db.Column(db.String(100), nullable=True)  # XRechnung BT-10 / German Leitweg-ID
+    # Italian FatturaPA / SDI recipient fields
+    sdi_codice_destinatario = db.Column(db.String(7), nullable=True)  # 6=PA (FPA12), 7=B2B (FPR12)
+    pec_email = db.Column(db.String(200), nullable=True)
+    codice_fiscale = db.Column(db.String(16), nullable=True)
+    provincia = db.Column(db.String(2), nullable=True)
     default_hourly_rate = db.Column(db.Numeric(9, 2), nullable=True)
     status = db.Column(db.String(20), default="active", nullable=False)  # 'active' or 'inactive'
     prepaid_hours_monthly = db.Column(db.Numeric(7, 2), nullable=True)
@@ -52,6 +57,9 @@ class Client(db.Model):
     # Custom fields for flexible data storage (e.g., debtor_number, ERP IDs, etc.)
     custom_fields = db.Column(db.JSON, nullable=True)
 
+    # Optional reminder policy override (falls back to system default)
+    reminder_policy_id = db.Column(db.Integer, db.ForeignKey("reminder_policies.id"), nullable=True)
+
     # Relationships
     projects = db.relationship("Project", backref="client_obj", lazy="dynamic", cascade="all, delete-orphan")
     time_entries = db.relationship("TimeEntry", backref="client", lazy="dynamic", cascade="all, delete-orphan")
@@ -70,6 +78,10 @@ class Client(db.Model):
         country=None,
         vat_id=None,
         leitweg_id=None,
+        sdi_codice_destinatario=None,
+        pec_email=None,
+        codice_fiscale=None,
+        provincia=None,
         default_hourly_rate=None,
         company=None,
         prepaid_hours_monthly=None,
@@ -94,6 +106,10 @@ class Client(db.Model):
         self.country = country.strip().upper()[:2] if country else None
         self.vat_id = vat_id.strip() if vat_id else None
         self.leitweg_id = leitweg_id.strip() if leitweg_id else None
+        self.sdi_codice_destinatario = sdi_codice_destinatario.strip().upper() if sdi_codice_destinatario else None
+        self.pec_email = pec_email.strip() if pec_email else None
+        self.codice_fiscale = codice_fiscale.strip().upper() if codice_fiscale else None
+        self.provincia = provincia.strip().upper()[:2] if provincia else None
         self.default_hourly_rate = Decimal(str(default_hourly_rate)) if default_hourly_rate else None
         self.prepaid_hours_monthly = (
             Decimal(str(prepaid_hours_monthly)) if prepaid_hours_monthly not in (None, "") else None
@@ -298,6 +314,10 @@ class Client(db.Model):
             "country": getattr(self, "country", None),
             "vat_id": getattr(self, "vat_id", None),
             "leitweg_id": getattr(self, "leitweg_id", None),
+            "sdi_codice_destinatario": getattr(self, "sdi_codice_destinatario", None),
+            "pec_email": getattr(self, "pec_email", None),
+            "codice_fiscale": getattr(self, "codice_fiscale", None),
+            "provincia": getattr(self, "provincia", None),
             "default_hourly_rate": str(self.default_hourly_rate) if self.default_hourly_rate else None,
             "status": self.status,
             "is_active": self.is_active,

@@ -118,9 +118,11 @@
                                 <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-eye mr-2"></i>View
                                 </a>
+                                {% if invoice.status == 'draft' %}
                                 <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-edit mr-2"></i>Edit
                                 </a>
+                                {% endif %}
                                 <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <i class="fas fa-download mr-2"></i>Download PDF
                                 </a>

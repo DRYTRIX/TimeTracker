@@ -134,35 +134,14 @@ This will create all the new CRM tables.
 
 ---
 
-## 📋 Remaining Work (Optional Enhancements)
+## Status (updated 2026-11)
 
-### Templates Still Needed
-1. `deals/view.html` - Detailed deal view with activities
-2. `leads/view.html` - Detailed lead view with activities
-3. `leads/convert_to_client.html` - Lead conversion form
-4. `leads/convert_to_deal.html` - Lead to deal conversion form
-5. `deals/activity_form.html` - Add deal activity form
-6. `leads/activity_form.html` - Add lead activity form
+Core CRM (templates, navigation, REST CRUD, activities, conversion, pipeline DnD, forecast, lead source analytics, communication templates, calendar reminders for activity due dates, Gmail/Outlook thread sync) is implemented.
 
-### Navigation Updates
-- Add "Deals" and "Leads" to main navigation menu
-- Add quick links in dashboard
-
-### API Endpoints
-- Add REST API endpoints for contacts, deals, leads
-- Add to `app/routes/api_v1.py`
-
-### Testing
-- Unit tests for models
-- Route tests
-- Integration tests
-
-### Additional Features
-- Email integration for communications
-- Calendar sync for activities
-- Deal forecasting reports
-- Lead source analytics
-- Communication templates
+### Optional follow-ups
+- Bidirectional sync with external CRM products
+- Richer OpenAPI schemas for every CRM sub-resource
+- Deeper desktop/mobile parity (detail/edit/pipeline)
 
 ---
 

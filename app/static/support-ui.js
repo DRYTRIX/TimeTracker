@@ -79,8 +79,40 @@
         'www.paypal.com': true,
         'paypal.me': true,
         'opencollective.com': true,
-        'www.opencollective.com': true
+        'www.opencollective.com': true,
+        'timetracker.drytrix.com': true,
+        'www.timetracker.drytrix.com': true,
+        'drytrix.com': true,
+        'www.drytrix.com': true
     };
+
+    function withSystemId(url, systemId) {
+        if (!url) return url;
+        var sid = (systemId || '').trim();
+        if (!sid) return url;
+        try {
+            var u = new URL(String(url), window.location.origin);
+            if (!u.searchParams.get('system_id')) {
+                u.searchParams.set('system_id', sid);
+            }
+            return u.toString();
+        } catch (e) {
+            return url;
+        }
+    }
+
+    function resolveLicensePurchaseUrl(cfg) {
+        var sid =
+            (cfg && cfg.systemInstanceId) ||
+            window.__TT_SYSTEM_INSTANCE_ID ||
+            '';
+        var base =
+            (cfg && cfg.purchaseUrl) ||
+            (cfg && cfg.urls && cfg.urls.license) ||
+            window.__TT_SUPPORT_PURCHASE_URL ||
+            'https://timetracker.drytrix.com/support';
+        return withSystemId(base, sid);
+    }
 
     function safeHttpsHref(url) {
         try {
@@ -97,26 +129,119 @@
         }
     }
 
+    function isDangerousHrefScheme(href) {
+        var lower = String(href || '')
+            .trim()
+            .toLowerCase();
+        return (
+            lower.indexOf('javascript:') === 0 ||
+            lower.indexOf('data:') === 0 ||
+            lower.indexOf('vbscript:') === 0
+        );
+    }
+
     function wireTierLinks(cfg) {
         if (!cfg || !cfg.urls) return;
         document.querySelectorAll('a.support-tier-btn[data-support-tier]').forEach(function (a) {
             var key = a.getAttribute('data-support-tier');
-            var safeHref = key && cfg.urls[key] ? safeHttpsHref(cfg.urls[key]) : null;
-            // Do not assign cfg URLs to href (DOM XSS); navigate only after host allowlist check
+            var raw = key && cfg.urls[key] ? cfg.urls[key] : null;
+            if (key === 'license') {
+                raw = resolveLicensePurchaseUrl(cfg);
+            }
+            var safeHref = raw ? safeHttpsHref(raw) : null;
+            // Templates already ship real hrefs; only open via allowlisted URL (never assign to DOM href).
             a.addEventListener('click', function (ev) {
-                postTrack(cfg, 'donation_clicked', { variant: key, source: 'support_modal' });
+                postTrack(cfg, key === 'license' ? 'license_clicked' : 'donation_clicked', {
+                    variant: key,
+                    source: 'support_modal'
+                });
+                var currentHref = a.getAttribute('href') || '';
                 if (safeHref) {
                     ev.preventDefault();
                     window.open(safeHref, '_blank', 'noopener,noreferrer');
+                } else if (!currentHref || currentHref === '#' || isDangerousHrefScheme(currentHref)) {
+                    ev.preventDefault();
+                }
+                if (typeof window.trackDonationClick === 'function') {
+                    window.trackDonationClick(
+                        key === 'license' ? 'support_modal_key' : 'support_modal_' + key
+                    );
                 }
             });
         });
         var lic = document.querySelector('a[data-support-tier="license"]');
         if (lic) {
-            lic.addEventListener('click', function () {
+            lic.addEventListener('click', function (ev) {
                 postTrack(cfg, 'license_clicked', { source: 'support_modal' });
+                var href = resolveLicensePurchaseUrl(cfg);
+                var safe = safeHttpsHref(href);
+                ev.preventDefault();
+                if (safe) {
+                    window.open(safe, '_blank', 'noopener,noreferrer');
+                }
+                if (typeof window.trackDonationClick === 'function') {
+                    window.trackDonationClick('support_modal_key');
+                }
             });
         }
+    }
+
+    /** Ensure every license/checkout link opens with system_id attached. */
+    function wireLicensePurchaseLinks(cfg) {
+        document.addEventListener(
+            'click',
+            function (ev) {
+                var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+                if (!a) return;
+                var href = a.getAttribute('href') || '';
+                if (!href || href === '#' || isDangerousHrefScheme(href)) return;
+
+                var tier = a.getAttribute('data-support-tier');
+                // Tip tiers must not be rewritten
+                if (tier && tier !== 'license') return;
+
+                var parsed;
+                try {
+                    parsed = new URL(href, window.location.origin);
+                } catch (e) {
+                    return;
+                }
+                var host = (parsed.hostname || '').toLowerCase();
+                var path = parsed.pathname || '';
+                var protocol = (parsed.protocol || '').toLowerCase();
+                if (protocol !== 'https:' && protocol !== 'http:') return;
+
+                // Tip hosts (hostname equality — avoid unanchored URL regex)
+                if (
+                    host === 'buymeacoffee.com' ||
+                    host === 'www.buymeacoffee.com' ||
+                    host === 'paypal.com' ||
+                    host === 'www.paypal.com' ||
+                    host === 'paypal.me'
+                ) {
+                    return;
+                }
+
+                var isCheckoutHost =
+                    host === 'timetracker.drytrix.com' || host === 'www.timetracker.drytrix.com';
+                var isCheckoutPath = /^\/support(\.html)?\/?$/i.test(path);
+                if (!isCheckoutHost || !isCheckoutPath) return;
+
+                var sid =
+                    (cfg && cfg.systemInstanceId) ||
+                    window.__TT_SYSTEM_INSTANCE_ID ||
+                    '';
+                if (!sid) return;
+                if (parsed.searchParams.get('system_id')) return;
+
+                parsed.searchParams.set('system_id', sid);
+                var safe = safeHttpsHref(parsed.toString());
+                if (!safe) return;
+                ev.preventDefault();
+                window.open(safe, '_blank', 'noopener,noreferrer');
+            },
+            true
+        );
     }
 
     function syncStatsFromConfig(cfg) {
@@ -222,17 +347,15 @@
     function showMilestoneCelebration(cfg, raw) {
         if (document.getElementById('supportMilestoneCelebration')) return;
 
-        var purchaseUrl =
-            (cfg && cfg.urls && cfg.urls.license) ||
-            'https://timetracker.drytrix.com/support.html';
+        var purchaseUrl = resolveLicensePurchaseUrl(cfg);
         var bmcUrl =
             'https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=milestone_toast&utm_campaign=support';
         var title = raw.title || raw.message || 'Milestone reached!';
         var message =
             raw.message ||
-            'Consider buying a key to remove prompts and support future development.';
-        var keyLabel = raw.keyLabel || 'Get key (€25)';
-        var bmcLabel = raw.bmcLabel || 'Buy a coffee';
+            'Become a Supporter to fund development — badge, clean client PDFs, quieter prompts as a side benefit.';
+        var keyLabel = raw.keyLabel || 'Become a Supporter (€25)';
+        var bmcLabel = raw.bmcLabel || 'Or tip any amount';
         var dismissLabel = raw.dismissLabel || 'Maybe later';
 
         var overlay = document.createElement('div');
@@ -252,7 +375,7 @@
             '<div class="flex flex-col gap-2">' +
             '<a href="' +
             purchaseUrl +
-            '" target="_blank" rel="noopener noreferrer" data-milestone-key class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm"></a>' +
+            '" target="_blank" rel="noopener noreferrer" data-milestone-key data-license-checkout class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm"></a>' +
             '<a href="' +
             bmcUrl +
             '" target="_blank" rel="noopener noreferrer" data-milestone-bmc class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border-2 border-amber-600 text-amber-700 dark:text-amber-300 font-semibold text-sm hover:bg-amber-50 dark:hover:bg-amber-900/20"></a>' +
@@ -390,8 +513,15 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        var cfg = parseSupportConfig();
-        if (!cfg) return;
+        var cfg = parseSupportConfig() || {};
+        if (window.__TT_SYSTEM_INSTANCE_ID && !cfg.systemInstanceId) {
+            cfg.systemInstanceId = window.__TT_SYSTEM_INSTANCE_ID;
+        }
+        if (window.__TT_SUPPORT_PURCHASE_URL && !cfg.purchaseUrl) {
+            cfg.purchaseUrl = window.__TT_SUPPORT_PURCHASE_URL;
+        }
+        wireLicensePurchaseLinks(cfg);
+        if (!parseSupportConfig()) return;
         cfg.i18n = cfg.i18n || {};
         cfg.i18n.supportAction = cfg.i18n.supportAction || 'Support';
         wireTierLinks(cfg);

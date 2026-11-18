@@ -5,7 +5,7 @@ name: CI
 # Strategy:
 # - Path filtering skips irrelevant jobs (docs-only PRs finish in ~1 min)
 # - Lint, tests, frontend, docker, desktop/mobile run in parallel (no smoke gate)
-# - Tests run once, sharded 4 ways against Postgres; coverage is combined
+# - Tests run once, sharded 8 ways (duration-balanced) against Postgres; coverage is combined
 # - Docker image is built once (GHA cache) and reused for health check + e2e
 # - Migrations validation is a reusable workflow, only when models/migrations change
 # - Dependency CVE scans block only when requirements change (plus nightly workflow)
@@ -248,18 +248,18 @@ jobs:
           if-no-files-found: warn
 
   # --------------------------------------------------------------------------
-  # Tests (sharded once against Postgres)
+  # Tests (sharded once against Postgres; duration-balanced across 8 jobs)
   # --------------------------------------------------------------------------
   tests:
-    name: Tests (${{ matrix.shard }}/4)
+    name: Tests (${{ matrix.shard }}/8)
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.python == 'true'
-    timeout-minutes: 25
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     services:
       postgres:
         image: postgres:16-alpine
@@ -277,6 +277,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-env
+      - name: Restore test durations cache
+        uses: actions/cache/restore@v6
+        with:
+          path: .test_durations
+          key: test-durations-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            test-durations-${{ runner.os }}-
+      - name: Ensure durations file exists
+        run: |
+          if [ ! -f .test_durations ]; then
+            echo '{}' > .test_durations
+            echo "No cached durations; pytest-split will fall back to even splits."
+          else
+            echo "Restored .test_durations ($(wc -c < .test_durations) bytes)"
+          fi
       - name: Run test shard
         env:
           DATABASE_URL: postgresql+psycopg2://test_user:test_password@localhost:5432/test_db
@@ -286,10 +301,12 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
           INSTALLATION_CONFIG_DIR: ${{ github.workspace }}/.test_installation_config
         run: |
-          pytest -v -n auto --durations=20 \
-            --splits 4 --group ${{ matrix.shard }} \
+          # Clear pytest.ini addopts (-v) so CI stays quiet; keep coverage data for the gate.
+          pytest -o addopts= -q -n auto --durations=20 \
+            --splits 8 --group ${{ matrix.shard }} \
+            --splitting-algorithm=least_duration \
+            --store-durations --durations-path=.test_durations \
             --cov=app --cov-report=xml:coverage-${{ matrix.shard }}.xml \
-            --cov-report=term-missing \
             --junitxml=junit-${{ matrix.shard }}.xml \
             --maxfail=10
       - name: Prepare coverage data artifact
@@ -309,6 +326,77 @@ jobs:
             coverage-${{ matrix.shard }}.xml
             coverage-${{ matrix.shard }}.dat
             junit-${{ matrix.shard }}.xml
+          if-no-files-found: warn
+      - name: Upload shard durations
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-durations-shard-${{ matrix.shard }}
+          path: .test_durations
+          if-no-files-found: warn
+
+  # Merge per-shard duration files and cache for the next CI run's least_duration split.
+  test-durations:
+    name: Cache test durations
+    runs-on: ubuntu-latest
+    needs: [changes, tests]
+    if: always() && needs.changes.outputs.python == 'true'
+    timeout-minutes: 5
+    steps:
+      - name: Download shard durations
+        uses: actions/download-artifact@v8
+        with:
+          pattern: test-durations-shard-*
+          merge-multiple: false
+          path: duration-shards
+        continue-on-error: true
+      - name: Merge durations and save cache
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          import pathlib
+
+          # Cap absurd timings (e.g. freezegun poisoning absolute timestamps).
+          MAX_DURATION_S = 300.0
+          root = pathlib.Path("duration-shards")
+          merged: dict[str, float] = {}
+          if root.exists():
+              for path in sorted(root.rglob(".test_durations")):
+                  try:
+                      data = json.loads(path.read_text())
+                  except Exception as exc:
+                      print(f"skip {path}: {exc}")
+                      continue
+                  if not isinstance(data, dict):
+                      continue
+                  for nodeid, duration in data.items():
+                      try:
+                          value = float(duration)
+                      except (TypeError, ValueError):
+                          continue
+                      if value < 0 or value > MAX_DURATION_S:
+                          continue
+                      # Keep the max observed legitimate duration per node.
+                      prev = merged.get(nodeid)
+                      if prev is None or value > prev:
+                          merged[nodeid] = value
+          out = pathlib.Path(".test_durations")
+          out.write_text(json.dumps(merged, sort_keys=True, indent=4) + "\n")
+          print(f"Merged {len(merged)} test durations into {out}")
+          PY
+      - name: Save test durations cache
+        if: hashFiles('.test_durations') != ''
+        uses: actions/cache/save@v6
+        with:
+          path: .test_durations
+          key: test-durations-${{ runner.os }}-${{ github.run_id }}
+      - name: Upload combined durations artifact
+        if: hashFiles('.test_durations') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-durations
+          path: .test_durations
           if-no-files-found: warn
 
   coverage:

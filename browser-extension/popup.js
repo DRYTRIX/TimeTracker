@@ -529,12 +529,19 @@ async function bootstrap() {
   connectKeepAlive();
   initPickers();
 
-  const { server_url, api_token, logged_out, last_timer_status } = await chrome.storage.local.get([
-    'server_url',
-    'api_token',
-    'logged_out',
-    'last_timer_status',
-  ]);
+  const { server_url, api_token, logged_out, last_timer_status, theme_pref } =
+    await chrome.storage.local.get([
+      'server_url',
+      'api_token',
+      'logged_out',
+      'last_timer_status',
+      'theme_pref',
+    ]);
+  if (!theme_pref || theme_pref === 'system') {
+    document.documentElement.removeAttribute('data-theme');
+  } else {
+    document.documentElement.setAttribute('data-theme', theme_pref);
+  }
 
   if (!server_url || !api_token || logged_out) {
     client = null;

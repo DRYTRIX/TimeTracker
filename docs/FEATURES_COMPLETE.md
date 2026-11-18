@@ -1,7 +1,7 @@
 # TimeTracker - Complete Features Documentation
 
 **Version:** See `setup.py` for current version (single source of truth).  
-**Last Updated:** 2025-02-20
+**Last Updated:** 2026-11-18
 
 **Navigation:** Many features are optional (see Admin → Module Management). Reports are available from the top-level **Reports** sidebar link (or **Finance & Expenses → Reports** for Report Builder, Saved Views, Scheduled Reports). Time entries export is under **Time entries** (overview page).
 
@@ -371,10 +371,11 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 #### 43. **Visual Pipeline View**
 - Kanban-style pipeline visualization
 - Deal cards by stage
-- Drag-and-drop deal movement (future enhancement)
+- Drag-and-drop deal movement between stages
 - Pipeline filtering by owner
 - Deal count per stage
 - Quick deal details
+- Weighted deal forecast report
 
 #### 44. **Deal Activities**
 - Track activities on deals
@@ -422,7 +423,8 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - Score-based filtering
 - Score-based sorting
 - Visual score indicators
-- Score history tracking
+- Score history tracking (auto `score_change` activities on edit)
+- Lead source analytics report
 
 ---
 
@@ -451,7 +453,7 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - Custom line items
 - Item descriptions and quantities
 - Unit prices and totals
-- Tax calculation per item
+- Per-line tax rates, discounts, and explicit line ordering
 
 #### 43. **Invoice Generation from Time**
 - Select time entries for invoicing
@@ -476,9 +478,10 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - PDF download
 
 #### 46. **Invoice Status Management**
-- Status workflow (Draft → Sent → Paid)
+- Status workflow (Draft → Sent → Paid / Overdue)
 - Status change tracking
-- Overdue invoice detection (APScheduler daily 09:00 → status `overdue`, staff + client notify)
+- Overdue invoice detection (APScheduler daily 09:00 → status `overdue`, staff + client notify, `invoice.overdue` webhook)
+- Configurable reminder policies with multi-step offsets and optional late fees (Admin → Reminder policies)
 - Bulk status updates
 - Status-based filtering
 - See [Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)
@@ -523,6 +526,8 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - CSV export of invoices
 - Excel export
 - PDF export
+- E-invoicing: Peppol/UBL, Factur-X/ZUGFeRD, XRechnung, FatturaPA/SDI ([FATTURAPA_SDI.md](admin/configuration/FATTURAPA_SDI.md))
+- Credit notes (web + `/api/v1/credit-notes`, PDF/UBL/FatturaPA)
 - Bulk export
 - Filtered export
 

@@ -101,3 +101,36 @@ def test_credit_notes_crud(client, api_token, setup_invoice):
     # delete
     r = client.delete(f"/api/v1/credit-notes/{cn_id}", headers=_auth(api_token))
     assert r.status_code == 200
+
+
+def test_credit_note_pdf_api(client, api_token, setup_invoice):
+    from unittest.mock import patch
+
+    payload = {"invoice_id": setup_invoice.id, "amount": 5.0, "reason": "PDF test"}
+    r = client.post("/api/v1/credit-notes", headers=_auth(api_token), json=payload)
+    assert r.status_code == 201
+    cn_id = r.get_json()["credit_note"]["id"]
+
+    with patch("app.utils.credit_note_pdf.generate_credit_note_pdf", return_value=b"%PDF-1.4"):
+        r = client.get(f"/api/v1/credit-notes/{cn_id}/pdf", headers=_auth(api_token))
+    assert r.status_code == 200
+    assert r.content_type.startswith("application/pdf")
+    assert r.data.startswith(b"%PDF")
+
+
+def test_credit_note_ubl_api(client, api_token, setup_invoice):
+    from unittest.mock import patch
+
+    payload = {"invoice_id": setup_invoice.id, "amount": 5.0, "reason": "UBL test"}
+    r = client.post("/api/v1/credit-notes", headers=_auth(api_token), json=payload)
+    assert r.status_code == 201
+    cn_id = r.get_json()["credit_note"]["id"]
+
+    with patch(
+        "app.integrations.peppol.build_peppol_ubl_credit_note_xml",
+        return_value=("<CreditNote/>", "doc-id"),
+    ):
+        r = client.get(f"/api/v1/credit-notes/{cn_id}/ubl", headers=_auth(api_token))
+    assert r.status_code == 200
+    assert "xml" in (r.content_type or "")
+    assert b"<CreditNote" in r.data

@@ -1,10 +1,11 @@
 """PayPal Orders v2 payment provider."""
 
 import base64
+import hashlib
 import json
 import logging
 from decimal import Decimal
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 
 import requests
@@ -122,6 +123,54 @@ class PayPalProvider(PaymentProvider):
         except (json.JSONDecodeError, UnicodeDecodeError):
             return WebhookResult(valid=False, message="Invalid PayPal webhook payload")
 
+        # --- PayPal webhook signature verification ---
+        webhook_id = self.config.get("webhook_id")
+        client_id = self.config.get("client_id")
+        client_secret = self.config.get("client_secret")
+        if not (webhook_id and client_id and client_secret):
+            # Credentials not configured — accept but log a warning so operators know
+            logger.warning(
+                "PayPal webhook_id/credentials not configured; accepting webhook without signature verification"
+            )
+        else:
+            token = self._get_access_token()
+            if not token:
+                return WebhookResult(valid=False, message="PayPal credentials invalid; cannot verify webhook")
+
+            # Build the verify-webhook-signature request
+            # PayPal requires specific header names (case-insensitive lookup):
+            def _h(name: str) -> str:
+                return headers.get(name) or headers.get(name.lower()) or ""
+
+            verify_payload = {
+                "auth_algo": _h("PAYPAL-AUTH-ALGO"),
+                "cert_url": _h("PAYPAL-CERT-URL"),
+                "transmission_id": _h("PAYPAL-TRANSMISSION-ID"),
+                "transmission_sig": _h("PAYPAL-TRANSMISSION-SIG"),
+                "transmission_time": _h("PAYPAL-TRANSMISSION-TIME"),
+                "webhook_id": webhook_id,
+                "webhook_event": event,
+            }
+            try:
+                resp = requests.post(
+                    f"{self._api_base()}/v1/notifications/verify-webhook-signature",
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Content-Type": "application/json",
+                    },
+                    json=verify_payload,
+                    timeout=30,
+                )
+                if not resp.ok:
+                    logger.error("PayPal webhook verify call failed: %s", resp.text)
+                    return WebhookResult(valid=False, message=f"PayPal verify call failed ({resp.status_code})")
+                verification_status = resp.json().get("verification_status", "FAILURE")
+                if verification_status != "SUCCESS":
+                    return WebhookResult(valid=False, message=f"PayPal signature invalid: {verification_status}")
+            except requests.RequestException as exc:
+                logger.error("PayPal webhook verify request error: %s", exc)
+                return WebhookResult(valid=False, message=f"PayPal verify request error: {exc}")
+
         event_type = event.get("event_type")
         resource = event.get("resource") or {}
 
@@ -159,3 +208,39 @@ class PayPalProvider(PaymentProvider):
             currency=currency,
             raw=event,
         )
+
+    def refund(
+        self,
+        *,
+        gateway_transaction_id: str,
+        amount: Decimal,
+        currency: str,
+        reason: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Refund a PayPal capture via the Captures/Refund API."""
+        token = self._get_access_token()
+        if not token:
+            return {"success": False, "message": "PayPal credentials not configured"}
+        payload: Dict[str, Any] = {
+            "amount": {"value": f"{amount:.2f}", "currency_code": currency.upper()},
+        }
+        if reason:
+            payload["note_to_payer"] = reason[:255]
+        try:
+            resp = requests.post(
+                f"{self._api_base()}/v2/payments/captures/{gateway_transaction_id}/refund",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=30,
+            )
+            if not resp.ok:
+                logger.error("PayPal refund failed: %s", resp.text)
+                return {"success": False, "message": f"PayPal refund failed ({resp.status_code}): {resp.text[:200]}"}
+            data = resp.json()
+            return {"success": True, "refund_id": data.get("id"), "raw": data}
+        except requests.RequestException as exc:
+            logger.error("PayPal refund request error: %s", exc)
+            return {"success": False, "message": str(exc)}

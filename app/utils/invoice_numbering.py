@@ -285,6 +285,45 @@ def generate_next_invoice_number_with_retry(
     raise RuntimeError("Invoice number allocation failed with no attempts")
 
 
+def allocate_next_credit_note_number(credit_note_model=None, credit_note_query=None, settings=None, now=None):
+    """Allocate the next unique credit note number.
+
+    Uses the same Settings-based locking mechanism as invoice numbering.
+    Format: CN-YYYY-##### (prefix configurable via Settings.credit_note_prefix if present,
+    otherwise defaults to 'CN').
+
+    Returns a string like ``CN-2026-00001``.
+    """
+    if credit_note_model is None:
+        from app.models.payments import CreditNote
+
+        credit_note_model = CreditNote
+
+    locked_settings = _lock_settings_for_numbering()
+    if settings is None:
+        settings = locked_settings
+
+    now = now or datetime.utcnow()
+
+    # Allow settings override for prefix; fall back to 'CN'
+    raw_prefix = getattr(settings, "credit_note_prefix", None) or "CN"
+    prefix = sanitize_invoice_prefix(raw_prefix)
+
+    # Fixed pattern CN-YYYY-#####
+    pattern = "{PREFIX}-{YYYY}-{SEQ}"
+
+    return generate_next_document_number(
+        credit_note_model,
+        credit_note_model.credit_number,
+        prefix,
+        pattern,
+        1,
+        document_query=credit_note_query,
+        now=now,
+        lock_settings=False,  # already locked above
+    )
+
+
 def generate_next_quote_number(quote_model, quote_query=None, settings=None, now=None):
     """Generate next quote number for the current pattern and settings.
 

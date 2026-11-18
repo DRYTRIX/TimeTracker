@@ -5,6 +5,8 @@ import 'package:timetracker_mobile/core/theme/app_tokens.dart';
 import '../providers/api_provider.dart';
 import '../utils/api_list.dart';
 import '../widgets/empty_state.dart';
+import 'deal_detail_screen.dart';
+import 'lead_detail_screen.dart';
 
 class CrmHubScreen extends ConsumerStatefulWidget {
   const CrmHubScreen({super.key});
@@ -212,6 +214,7 @@ class _CrmHubScreenState extends ConsumerState<CrmHubScreen>
     required String Function(Map<String, dynamic>) titleOf,
     required String Function(Map<String, dynamic>) subtitleOf,
     VoidCallback? onCreate,
+    void Function(Map<String, dynamic> item)? onOpen,
   }) {
     if (error != null) {
       return ListView(
@@ -247,6 +250,8 @@ class _CrmHubScreenState extends ConsumerState<CrmHubScreen>
           child: ListTile(
             title: Text(titleOf(item)),
             subtitle: Text(subtitleOf(item)),
+            trailing: onOpen == null ? null : const Icon(Icons.chevron_right),
+            onTap: onOpen == null ? null : () => onOpen(item),
           ),
         );
       },
@@ -309,15 +314,61 @@ class _CrmHubScreenState extends ConsumerState<CrmHubScreen>
                   subtitleOf: (d) =>
                       '${d['stage'] ?? d['status'] ?? ''} · ${d['value'] ?? ''}'.trim(),
                   onCreate: _createDeal,
+                  onOpen: (d) {
+                    final id = (d['id'] as num?)?.toInt();
+                    if (id == null) return;
+                    Navigator.of(context)
+                        .push(
+                      MaterialPageRoute(
+                        builder: (_) => DealDetailScreen(
+                          dealId: id,
+                          initialName: (d['name'] ?? 'Deal').toString(),
+                        ),
+                      ),
+                    )
+                        .then((_) => _refresh());
+                  },
                 ),
                 _listBody(
                   items: data.leads,
                   error: data.leadsError,
                   emptyTitle: 'No leads',
-                  titleOf: (d) => (d['name'] ?? 'Lead').toString(),
+                  titleOf: (d) {
+                    final full = (d['full_name'] ?? '').toString().trim();
+                    if (full.isNotEmpty) return full;
+                    final parts = [
+                      d['first_name'],
+                      d['last_name'],
+                    ].where((v) => v != null && v.toString().trim().isNotEmpty);
+                    final joined = parts.map((v) => v.toString()).join(' ').trim();
+                    return joined.isNotEmpty ? joined : 'Lead';
+                  },
                   subtitleOf: (d) =>
-                      '${d['company'] ?? ''} · ${d['email'] ?? d['status'] ?? ''}'.trim(),
+                      '${d['company_name'] ?? ''} · ${d['email'] ?? d['status'] ?? ''}'.trim(),
                   onCreate: _createLead,
+                  onOpen: (d) {
+                    final id = (d['id'] as num?)?.toInt();
+                    if (id == null) return;
+                    final full = (d['full_name'] ?? '').toString().trim();
+                    final parts = [
+                      d['first_name'],
+                      d['last_name'],
+                    ].where((v) => v != null && v.toString().trim().isNotEmpty);
+                    final joined = parts.map((v) => v.toString()).join(' ').trim();
+                    final name = full.isNotEmpty
+                        ? full
+                        : (joined.isNotEmpty ? joined : 'Lead');
+                    Navigator.of(context)
+                        .push(
+                      MaterialPageRoute(
+                        builder: (_) => LeadDetailScreen(
+                          leadId: id,
+                          initialName: name,
+                        ),
+                      ),
+                    )
+                        .then((_) => _refresh());
+                  },
                 ),
                 _listBody(
                   items: data.quotes,

@@ -211,6 +211,36 @@ curl -X POST https://your-domain.com/api/v1/clients \
 
 ---
 
+### CRM — Deals, Leads, Contacts
+
+#### `read:deals` / `write:deals`
+**Grants**: List, view, create, update, and delete deals; list/create deal activities; move pipeline stage; forecast  
+**Endpoints**:
+- `GET/POST /api/v1/deals`
+- `GET/PUT/PATCH/DELETE /api/v1/deals/{id}`
+- `GET/POST /api/v1/deals/{id}/activities`
+- `PUT/PATCH /api/v1/deals/{id}/stage`
+- `GET /api/v1/deals/forecast`
+- `GET /api/v1/deals/{id}/email-threads`
+
+#### `read:leads` / `write:leads`
+**Grants**: List, view, create, update, and delete leads; activities; convert to client/deal; source analytics  
+**Endpoints**:
+- `GET/POST /api/v1/leads`
+- `GET/PUT/PATCH/DELETE /api/v1/leads/{id}`
+- `GET/POST /api/v1/leads/{id}/activities`
+- `POST /api/v1/leads/{id}/convert-to-client`
+- `POST /api/v1/leads/{id}/convert-to-deal`
+- `GET /api/v1/leads/analytics/sources`
+- `GET /api/v1/leads/{id}/email-threads`
+
+#### `read:contacts` / `write:contacts`
+**Grants**: List, view, create, update, and soft-delete contacts; communication history  
+**Endpoints**:
+- `GET/POST /api/v1/clients/{client_id}/contacts`
+- `GET/PUT/PATCH/DELETE /api/v1/contacts/{id}`
+- `GET/POST /api/v1/contacts/{id}/communications`
+
 ### Quotes
 
 #### `read:quotes`
@@ -245,6 +275,11 @@ curl -X POST https://your-domain.com/api/v1/clients \
 **Endpoints** (non-exhaustive; see OpenAPI at `/api/docs` when enabled):
 - `GET /api/v1/invoices` — List invoices
 - `GET /api/v1/invoices/{id}` — Get invoice by id
+- `GET /api/v1/invoices/{id}/pdf` — PDF download
+- `GET /api/v1/invoices/{id}/ubl` — PEPPOL UBL XML
+- `GET /api/v1/invoices/{id}/xrechnung` — XRechnung XML
+- `GET /api/v1/invoices/{id}/fatturapa` — FatturaPA XML
+- `GET /api/v1/credit-notes` / `{id}` / `{id}/pdf` / `{id}/ubl` — Credit notes and downloads
 
 **Use Cases**:
 - Billing dashboards and exports
@@ -256,6 +291,9 @@ curl -X POST https://your-domain.com/api/v1/clients \
 - `POST /api/v1/invoices` — Create invoice (JSON body)
 - `PUT` / `PATCH /api/v1/invoices/{id}` — Update invoice
 - `DELETE /api/v1/invoices/{id}` — Cancel invoice
+- `POST /api/v1/invoices/{id}/send-email` — Email invoice (optional `recipient_email`, `subject`)
+- `POST /api/v1/invoices/{id}/send-peppol` / `send-sdi` — E-invoicing send
+- `POST` / `PATCH` / `DELETE /api/v1/credit-notes` — Credit note mutations
 - `POST /api/v1/clients/{client_id}/invoice-unbilled` — Create a **draft** invoice from all **unbilled** billable time for that client (line items grouped by project). Requires `write:invoices` when using an API token; the browser UI uses a logged-in session with **Create invoices** permission instead. Successful response JSON: `invoice_id`, `invoice_number`, `total`, `item_count`. Returns **400** when there is no unbilled time, or when any unbilled entry has no `project_id` (assign entries to a project first).
 
 **Use Cases**:

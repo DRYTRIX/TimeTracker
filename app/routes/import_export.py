@@ -63,7 +63,7 @@ def import_csv():
 
     try:
         # Read file content
-        csv_content = file.read().decode("utf-8")
+        csv_content = file.read().decode("utf-8-sig")
 
         # Create import record
         import_record = DataImport(
@@ -703,7 +703,7 @@ def import_csv_clients_route():
         # Read file content
         file_bytes = file.read()
         try:
-            csv_content = file_bytes.decode("utf-8")
+            csv_content = file_bytes.decode("utf-8-sig")
         except UnicodeDecodeError:
             # Try with different encodings
             try:

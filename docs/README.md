@@ -66,9 +66,10 @@ docs/
 - **[Task Management](TASK_MANAGEMENT_README.md)** — Complete task tracking system
 - **[Client Management](CLIENT_MANAGEMENT_README.md)** — Manage clients and relationships
 - **[Invoice System](INVOICE_FEATURE_README.md)** — Generate and track invoices
+- **[Invoice reminders & recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)** — Overdue notify, dunning policies/late fees, recurring billing
 - **[Calendar Features](CALENDAR_FEATURES_README.md)** — Calendar view and bulk entry
 - **[Expense Tracking](EXPENSE_TRACKING.md)** — Track business expenses
-- **[Payment Tracking](PAYMENT_TRACKING.md)** — Track invoice payments
+- **[Payment Tracking](PAYMENT_TRACKING.md)** — Track invoice payments (incl. Stripe/Mollie/PayPal refunds)
 - **[Budget Alerts & Forecasting](BUDGET_ALERTS_AND_FORECASTING.md)** — Monitor project budgets
 - **[Command Palette](COMMAND_PALETTE_USAGE.md)** — Keyboard shortcuts and quick actions
 - **[Bulk Time Entry](BULK_TIME_ENTRY_README.md)** — Create multiple time entries at once
@@ -94,7 +95,10 @@ See [features/](features/) for additional feature documentation.
 - **[Email Configuration](admin/configuration/EMAIL_CONFIGURATION.md)** — Email setup
 - **[OIDC Setup](admin/configuration/OIDC_SETUP.md)** — OIDC/SSO authentication setup
 - **[LDAP Setup](admin/configuration/LDAP_SETUP.md)** — LDAP directory authentication (`AUTH_METHOD=ldap` or `all`)
-- **[Support visibility](admin/configuration/SUPPORT_VISIBILITY.md)** — Hide donate/support UI with a purchased key; [purchase key](https://timetracker.drytrix.com/support.html)
+- **[Support visibility](admin/configuration/SUPPORT_VISIBILITY.md)** — Hide donate/support UI with a purchased key; [purchase key](https://timetracker.drytrix.com/support)
+- **[Peppol / EN 16931 e-invoicing](admin/configuration/PEPPOL_EINVOICING.md)** — UBL, Factur-X/ZUGFeRD, XRechnung
+- **[FatturaPA / SDI (Italy)](admin/configuration/FATTURAPA_SDI.md)** — Italian XML export and SDI intermediary adapter
+- **[Peppol Bridge](admin/configuration/PEPPOL_BRIDGE.md)** — Optional Peppol access-point bridge
 
 ### Deployment
 - **[Distribution & Download](admin/deployment/DISTRIBUTION.md)** — All install paths and marketplaces

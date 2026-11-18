@@ -11,7 +11,7 @@
                         {% if is_license_activated %}
                             {{ _('Thank you for being a supporter. Sharing the app helps others discover it too.') }}
                         {% else %}
-                            {{ _('TimeTracker is free and built independently. If it helps you, consider supporting its development.') }}
+                            {{ _('TimeTracker is free and built independently. Become a Supporter to fund development — badge, clean client PDFs, and a quieter UI for your instance.') }}
                         {% endif %}
                     </p>
                 </div>
@@ -37,34 +37,36 @@
                 <p id="supportSocialLine" class="text-xs text-text-muted-light dark:text-text-muted-dark text-center">{{ _('Trusted by teams and freelancers who want simple, reliable time tracking.') }}</p>
                 <p id="supportModalOffline" class="hidden text-sm text-amber-700 dark:text-amber-300"></p>
                 {% if not is_license_activated %}
+                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-support-tier="license" data-license-checkout class="btn btn-primary text-center w-full inline-flex items-center justify-center gap-2">
+                    <i class="fas fa-star" aria-hidden="true"></i>{{ _('Become a Supporter (€25)') }} <i class="fas fa-external-link-alt text-xs" aria-hidden="true"></i>
+                </a>
+                <ul class="text-xs text-text-muted-light dark:text-text-muted-dark space-y-1 list-disc list-inside">
+                    <li>{{ _('Funds independent development') }}</li>
+                    <li>{{ _('Supporter badge across the app') }}</li>
+                    <li>{{ _('Client PDFs without the TimeTracker footer') }}</li>
+                    <li>{{ _('Quieter prompts for everyone on this instance (side benefit)') }}</li>
+                </ul>
+                <p class="text-xs text-center text-text-muted-light dark:text-text-muted-dark">{{ _('Or tip any amount:') }}</p>
                 <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=support_modal&utm_campaign=support"
                    target="_blank"
                    rel="noopener noreferrer"
                    data-support-tier="bmc"
-                   class="support-tier-btn inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors shadow-sm"
+                   class="support-tier-btn inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark font-medium transition-colors"
                    onclick="typeof trackDonationClick === 'function' && trackDonationClick('support_modal_bmc')">
                     <i class="fas fa-mug-saucer" aria-hidden="true"></i>{{ _('Buy Me a Coffee') }}
                 </a>
-                <p class="text-xs text-center text-text-muted-light dark:text-text-muted-dark">{{ _('Or choose an amount:') }}</p>
                 <div class="flex flex-col sm:flex-row gap-2">
-                    <a href="#" rel="noopener noreferrer" data-support-tier="eur5" class="support-tier-btn btn btn-secondary text-center flex-1">{{ _('Donate') }} (€5)</a>
-                    <a href="#" rel="noopener noreferrer" data-support-tier="eur10" class="support-tier-btn btn btn-secondary text-center flex-1">{{ _('Donate') }} (€10)</a>
-                    <a href="#" rel="noopener noreferrer" data-support-tier="eur25" class="support-tier-btn btn btn-secondary text-center flex-1">{{ _('Donate') }} (€25)</a>
+                    <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=support_modal&utm_campaign=tip_eur5" target="_blank" rel="noopener noreferrer" data-support-tier="eur5" class="support-tier-btn btn btn-secondary text-center flex-1" onclick="typeof trackDonationClick === 'function' && trackDonationClick('support_modal_eur5')">{{ _('Tip') }} (€5)</a>
+                    <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=support_modal&utm_campaign=tip_eur10" target="_blank" rel="noopener noreferrer" data-support-tier="eur10" class="support-tier-btn btn btn-secondary text-center flex-1" onclick="typeof trackDonationClick === 'function' && trackDonationClick('support_modal_eur10')">{{ _('Tip') }} (€10)</a>
+                    <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=support_modal&utm_campaign=tip_eur25" target="_blank" rel="noopener noreferrer" data-support-tier="eur25" class="support-tier-btn btn btn-secondary text-center flex-1" onclick="typeof trackDonationClick === 'function' && trackDonationClick('support_modal_eur25')">{{ _('Tip') }} (€25)</a>
                 </div>
-                {% endif %}
-                <div class="flex flex-col sm:flex-row gap-2">
-                    {% if not is_license_activated %}
-                    <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-support-tier="license" class="btn btn-primary text-center flex-1">
-                        {{ _('Become a Supporter (€25 key — removes all prompts)') }} <i class="fas fa-external-link-alt text-xs ml-1" aria-hidden="true"></i>
-                    </a>
-                    {% endif %}
-                    <button type="button" id="supportShareBtn" class="btn btn-secondary text-center flex-1">{{ _('Love TimeTracker? Share it') }}</button>
-                </div>
-                {% if not is_license_activated %}
                 <p class="text-xs text-text-muted-light dark:text-text-muted-dark">
-                    {{ _('Becoming a Supporter is a thank-you badge — it does not lock features. Support prompts are minimized as a side effect.') }}
+                    {{ _('Features stay unlocked either way — this is optional support, not a paywall.') }}
                 </p>
                 {% endif %}
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button type="button" id="supportShareBtn" class="btn btn-secondary text-center flex-1">{{ _('Love TimeTracker? Share it') }}</button>
+                </div>
             </div>
         </div>
     </div>

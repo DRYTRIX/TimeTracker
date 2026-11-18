@@ -227,13 +227,23 @@ def create_payment():
 
         db.session.add(payment)
 
+        # Warn (but allow) when payment exceeds outstanding balance
+        if status == "completed" and amount > invoice.outstanding_amount:
+            flash(
+                _(
+                    "Payment exceeds the outstanding amount of %(outstanding)s. Invoice will be marked overpaid.",
+                    outstanding=invoice.outstanding_amount,
+                ),
+                "warning",
+            )
+
         # Update invoice payment tracking if payment is completed
         if status == "completed":
             invoice.amount_paid = (invoice.amount_paid or Decimal("0")) + amount
             invoice.update_payment_status()
 
-            # Update invoice status if fully paid
-            if invoice.payment_status == "fully_paid":
+            # Update invoice status if fully paid or overpaid
+            if invoice.payment_status in ("fully_paid", "overpaid"):
                 invoice.status = "paid"
 
                 # Reduce stock when invoice is fully paid (if configured)
@@ -737,6 +747,66 @@ def export_payments_excel():
         as_attachment=True,
         download_name=filename,
     )
+
+
+@payments_bp.route("/payments/<int:payment_id>/refund", methods=["POST"])
+@login_required
+@module_enabled("payments")
+def refund_payment(payment_id):
+    """Refund a payment (gateway + local ledger)"""
+    payment = Payment.query.get_or_404(payment_id)
+
+    if not current_user.is_admin and payment.invoice.created_by != current_user.id:
+        flash(_("You do not have permission to refund this payment"), "error")
+        return redirect(url_for("payments.list_payments"))
+
+    if payment.status == "refunded":
+        flash(_("This payment has already been refunded"), "warning")
+        return redirect(url_for("payments.view_payment", payment_id=payment_id))
+
+    if payment.status != "completed":
+        flash(_("Only completed payments can be refunded"), "error")
+        return redirect(url_for("payments.view_payment", payment_id=payment_id))
+
+    reason = request.form.get("reason", "").strip() or None
+
+    # Try gateway refund if we have a transaction id
+    if payment.gateway_transaction_id:
+        from app.payments.registry import get_provider
+        from app.services.payment_gateway_service import PaymentGatewayService
+
+        gateway_service = PaymentGatewayService()
+        gateway = gateway_service.get_active_gateway(provider=payment.method)
+        if gateway:
+            try:
+                provider_impl = get_provider(gateway)
+                result = provider_impl.refund(
+                    gateway_transaction_id=payment.gateway_transaction_id,
+                    amount=payment.amount,
+                    currency=payment.currency or "EUR",
+                    reason=reason,
+                )
+                if not result.get("success"):
+                    flash(
+                        _("Gateway refund failed: %(msg)s", msg=result.get("message", "unknown error")),
+                        "error",
+                    )
+                    return redirect(url_for("payments.view_payment", payment_id=payment_id))
+            except Exception as exc:
+                current_app.logger.error("Gateway refund error for payment %s: %s", payment_id, exc, exc_info=True)
+                flash(_("Gateway refund error: %(msg)s", msg=str(exc)), "error")
+                return redirect(url_for("payments.view_payment", payment_id=payment_id))
+
+    # Mark payment as refunded via PaymentService to keep ledger correct
+    from app.services.payment_service import PaymentService
+
+    update_result = PaymentService().update_payment(payment_id, current_user.id, status="refunded")
+    if not update_result.get("success"):
+        flash(_("Could not update payment status: %(msg)s", msg=update_result.get("message", "")), "error")
+        return redirect(url_for("payments.view_payment", payment_id=payment_id))
+
+    flash(_("Payment refunded successfully"), "success")
+    return redirect(url_for("payments.view_payment", payment_id=payment_id))
 
 
 def get_user_invoices():

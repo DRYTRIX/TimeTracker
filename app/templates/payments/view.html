@@ -221,6 +221,16 @@
                         <i class="fas fa-edit mr-2"></i>Edit Payment
                     </a>
 
+                    {% if payment.status == 'completed' %}
+                    <form id="refundPaymentForm" method="POST" action="{{ url_for('payments.refund_payment', payment_id=payment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="reason" id="refundReason" value="">
+                        <button type="button" onclick="confirmRefundPayment()" class="block w-full text-center bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-undo mr-2"></i>Refund Payment
+                        </button>
+                    </form>
+                    {% endif %}
+
                     <form id="deletePaymentForm" method="POST" action="{{ url_for('payments.delete_payment', payment_id=payment.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="button" onclick="confirmDeletePayment()" class="block w-full text-center bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
@@ -246,6 +256,19 @@ async function confirmDeletePayment() {
     });
     if (confirmed) {
         document.getElementById('deletePaymentForm').submit();
+    }
+}
+
+async function confirmRefundPayment() {
+    const message = 'Are you sure you want to refund this payment? This will attempt to issue a refund via the payment gateway (if applicable) and mark the payment as refunded.';
+    const confirmed = await showConfirm(message, {
+        title: 'Refund Payment',
+        confirmText: 'Refund',
+        cancelText: 'Cancel',
+        variant: 'warning'
+    });
+    if (confirmed) {
+        document.getElementById('refundPaymentForm').submit();
     }
 }
 </script>

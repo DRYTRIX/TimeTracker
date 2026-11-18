@@ -387,7 +387,7 @@ function submitBulkDelete() {
 
     const checkboxes = document.querySelectorAll('.payment-checkbox:checked');
     if (checkboxes.length === 0) {
-        alert('Please select at least one payment to delete.');
+        if (window.ttAlert) window.ttAlert('Please select at least one payment to delete.', {variant:'warning'}); else if (window.showAlert) window.showAlert('Please select at least one payment to delete.'); else window.alert('Please select at least one payment to delete.');
         return;
     }
 
@@ -433,7 +433,7 @@ function submitBulkStatus() {
 
     const status = statusSelect.value;
     if (!status) {
-        alert('Please select a status');
+        if (window.ttAlert) window.ttAlert('Please select a status', {variant:'warning'}); else if (window.showAlert) window.showAlert('Please select a status'); else window.alert('Please select a status');
         return;
     }
 
@@ -449,7 +449,7 @@ function submitBulkStatus() {
 
     const checkboxes = document.querySelectorAll('.payment-checkbox:checked');
     if (checkboxes.length === 0) {
-        alert('Please select at least one payment to update.');
+        if (window.ttAlert) window.ttAlert('Please select at least one payment to update.', {variant:'warning'}); else if (window.showAlert) window.showAlert('Please select at least one payment to update.'); else window.alert('Please select at least one payment to update.');
         return;
     }
 

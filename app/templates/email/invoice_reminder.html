@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 5px; }
+    .content { background-color: #f9fafb; padding: 20px; margin-top: 20px; border-radius: 5px; }
+    .invoice-details { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #2563eb; }
+    .btn { display: inline-block; background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>{% if days_offset >= 0 %}Payment Reminder{% else %}Upcoming Invoice Due{% endif %}</h2>
+  </div>
+  <div class="content">
+    <p>Dear {% if invoice.client %}{{ invoice.client.name }}{% else %}{{ invoice.client_name }}{% endif %},</p>
+
+    {% if days_offset >= 0 %}
+    <p>This is a friendly reminder that invoice <strong>{{ invoice.invoice_number }}</strong> is
+      {% if days_offset == 0 %}due today{% else %}{{ days_offset }} day{{ 's' if days_offset != 1 }} overdue{% endif %}.
+    </p>
+    {% else %}
+    <p>This is a reminder that invoice <strong>{{ invoice.invoice_number }}</strong> is due in
+      {{ days_offset | abs }} day{{ 's' if (days_offset | abs) != 1 }}.
+    </p>
+    {% endif %}
+
+    <div class="invoice-details">
+      <strong>Invoice:</strong> {{ invoice.invoice_number }}<br>
+      <strong>Amount due:</strong> {{ invoice.currency_code }} {{ "%.2f"|format(invoice.outstanding_amount) }}<br>
+      <strong>Due date:</strong> {{ invoice.due_date }}<br>
+      {% if invoice.late_fee_amount and invoice.late_fee_amount > 0 %}
+      <strong>Late fee accrued:</strong> {{ invoice.currency_code }} {{ "%.2f"|format(invoice.late_fee_amount) }}<br>
+      {% endif %}
+    </div>
+
+    {% if invoice_url %}
+    <p><a href="{{ invoice_url }}" class="btn">View Invoice</a></p>
+    {% endif %}
+
+    <p>Please arrange payment at your earliest convenience. If you have already paid, please disregard this reminder.</p>
+    <p>Thank you,<br>The TimeTracker Team</p>
+  </div>
+</body>
+</html>

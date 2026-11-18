@@ -24,6 +24,15 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2">
+                <label for="template_id" class="block text-sm font-medium mb-2">{{ _('Template') }}</label>
+                <select id="template_id" class="form-input">
+                    <option value="">{{ _('None — start blank') }}</option>
+                </select>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                    <a href="{{ url_for('contacts.list_communication_templates') }}" class="text-primary hover:underline">{{ _('Manage templates') }}</a>
+                </p>
+            </div>
             <div>
                 <label for="type" class="block text-sm font-medium mb-2">{{ _('Type') }} *</label>
                 <select name="type" id="type" class="form-input" required>
@@ -89,5 +98,35 @@
 {% block scripts_extra %}
 <script nonce="{{ csp_nonce() }}">
 document.getElementById('communication_date').value = new Date().toISOString().slice(0, 16);
+(async function () {
+  const select = document.getElementById('template_id');
+  if (!select) return;
+  try {
+    const res = await fetch('{{ url_for("contacts.api_list_communication_templates") }}');
+    const data = await res.json();
+    (data.templates || []).forEach((t) => {
+      const opt = document.createElement('option');
+      opt.value = String(t.id);
+      opt.textContent = t.name;
+      opt.dataset.type = t.type || 'email';
+      opt.dataset.direction = t.direction || 'outbound';
+      opt.dataset.subject = t.subject || '';
+      opt.dataset.content = t.content || '';
+      select.appendChild(opt);
+    });
+  } catch (e) { /* ignore */ }
+  select.addEventListener('change', () => {
+    const opt = select.selectedOptions[0];
+    if (!opt || !opt.value) return;
+    const typeEl = document.getElementById('type');
+    const dirEl = document.getElementById('direction');
+    const subEl = document.getElementById('subject');
+    const contentEl = document.getElementById('content');
+    if (typeEl) typeEl.value = opt.dataset.type;
+    if (dirEl) dirEl.value = opt.dataset.direction;
+    if (subEl) subEl.value = opt.dataset.subject;
+    if (contentEl) contentEl.value = opt.dataset.content;
+  });
+})();
 </script>
 {% endblock %}

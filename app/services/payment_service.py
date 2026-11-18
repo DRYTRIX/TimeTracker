@@ -72,6 +72,13 @@ class PaymentService:
         # Calculate net amount
         payment.calculate_net_amount()
 
+        overpayment_warning = None
+        outstanding = invoice.outstanding_amount
+        if status == "completed" and amount > outstanding and outstanding >= 0:
+            overpayment_warning = (
+                f"Payment of {amount} exceeds outstanding amount of {outstanding}; invoice will be marked overpaid."
+            )
+
         # Update invoice payment status if payment is completed
         if status == "completed":
             # Flush so the new payment is counted once by the total below, as
@@ -80,14 +87,9 @@ class PaymentService:
             db.session.flush()
             total_payments = self.payment_repo.get_total_for_invoice(invoice_id)
             invoice.amount_paid = total_payments
-
-            # Update payment status
-            if invoice.amount_paid >= invoice.total_amount:
-                invoice.payment_status = "fully_paid"
-            elif invoice.amount_paid > 0:
-                invoice.payment_status = "partially_paid"
-            else:
-                invoice.payment_status = "unpaid"
+            invoice.update_payment_status()
+            if invoice.payment_status in ("fully_paid", "overpaid"):
+                invoice.status = "paid"
 
         if not safe_commit("create_payment", {"invoice_id": invoice_id, "received_by": received_by}):
             return {
@@ -99,9 +101,11 @@ class PaymentService:
         # Emit domain event
         emit_event("payment.created", {"payment_id": payment.id, "invoice_id": invoice_id, "amount": float(amount)})
 
-        if status == "completed" and invoice.payment_status == "fully_paid":
+        if status == "completed" and invoice.payment_status in ("fully_paid", "overpaid"):
+            from app.utils.invoice_events import emit_invoice_event
             from app.utils.workflow_bridge import fire_invoice_paid_workflow
 
+            emit_invoice_event(WebhookEvent.INVOICE_PAID.value, invoice, payment_id=payment.id)
             fire_invoice_paid_workflow(invoice, received_by)
 
         # Notify client about payment received
@@ -128,7 +132,47 @@ class PaymentService:
                     "Failed to send client survey for payment %s: %s", payment.id, e, exc_info=True
                 )
 
-        return {"success": True, "message": "Payment created successfully", "payment": payment}
+        # Send payment receipt email to client if configured and email is available
+        if status == "completed" and invoice.client_email:
+            try:
+                self._send_receipt_email(invoice, payment)
+            except Exception as exc:
+                import logging as _logging
+
+                _logging.getLogger(__name__).error(
+                    "Failed to send payment receipt email for payment %s: %s", payment.id, exc, exc_info=True
+                )
+
+        result = {"success": True, "message": "Payment created successfully", "payment": payment}
+        if overpayment_warning:
+            result["warning"] = overpayment_warning
+            result["overpayment"] = True
+        return result
+
+    def _send_receipt_email(self, invoice, payment) -> None:
+        """Send a payment receipt email to the invoice client. Errors are silently logged."""
+        from app.models import Settings
+
+        settings = Settings.get_settings()
+        # Respect optional setting flag (default True when attribute missing)
+        send_flag = getattr(settings, "send_payment_receipt_email", True)
+        if not send_flag:
+            return
+
+        from app.utils.email import send_template_email
+
+        send_template_email(
+            to=invoice.client_email,
+            subject=f"Payment Receipt — Invoice {invoice.invoice_number}",
+            template="email/payment_receipt.html",
+            client_name=invoice.client_name or "",
+            invoice_number=invoice.invoice_number or str(invoice.id),
+            amount=payment.amount,
+            currency=payment.currency or invoice.currency_code or "EUR",
+            payment_date=str(payment.payment_date),
+            payment_method=payment.method or "",
+            reference=payment.reference or "",
+        )
 
     def get_invoice_payments(self, invoice_id: int) -> List[Payment]:
         """Get all payments for an invoice"""
@@ -150,6 +194,7 @@ class PaymentService:
             return {"success": False, "message": "Payment not found", "error": "not_found"}
 
         was_completed = payment.status == "completed"
+        previous_status = payment.status
 
         # Update fields
         for field in ("currency", "method", "reference", "notes", "status"):
@@ -163,6 +208,7 @@ class PaymentService:
         # Recalculate net amount
         payment.calculate_net_amount()
 
+        became_fully_paid = False
         # Recompute the invoice whenever the payment counts or used to count:
         # a completed payment moved to refunded, failed or pending must drop
         # out of amount_paid, as it does in delete_payment.
@@ -170,14 +216,12 @@ class PaymentService:
             db.session.flush()
             total_payments = self.payment_repo.get_total_for_invoice(payment.invoice_id)
             payment.invoice.amount_paid = total_payments
-
-            # Update payment status (same order as delete_payment)
-            if payment.invoice.amount_paid <= 0:
-                payment.invoice.payment_status = "unpaid"
-            elif payment.invoice.amount_paid >= payment.invoice.total_amount:
-                payment.invoice.payment_status = "fully_paid"
-            else:
-                payment.invoice.payment_status = "partially_paid"
+            payment.invoice.update_payment_status()
+            if payment.invoice.payment_status in ("fully_paid", "overpaid"):
+                payment.invoice.status = "paid"
+                became_fully_paid = True
+            elif payment.invoice.status == "paid" and payment.invoice.payment_status == "partially_paid":
+                payment.invoice.status = "sent"
 
         if not safe_commit("update_payment", {"payment_id": payment_id, "user_id": user_id}):
             return {
@@ -185,6 +229,16 @@ class PaymentService:
                 "message": "Could not update payment due to a database error",
                 "error": "database_error",
             }
+
+        if payment.status == "refunded" and previous_status != "refunded":
+            from app.utils.invoice_events import emit_payment_event
+
+            emit_payment_event(WebhookEvent.PAYMENT_REFUNDED.value, payment)
+
+        if became_fully_paid and payment.invoice:
+            from app.utils.invoice_events import emit_invoice_event
+
+            emit_invoice_event(WebhookEvent.INVOICE_PAID.value, payment.invoice, payment_id=payment.id)
 
         return {"success": True, "message": "Payment updated successfully", "payment": payment}
 
@@ -213,15 +267,11 @@ class PaymentService:
         if invoice:
             total_payments = self.payment_repo.get_total_for_invoice(invoice_id)
             invoice.amount_paid = total_payments
-
-            # No remaining payment means unpaid regardless of the invoice total
-            # (a 0 total must not read as "fully_paid" when nothing was paid).
-            if invoice.amount_paid <= 0:
-                invoice.payment_status = "unpaid"
-            elif invoice.amount_paid >= invoice.total_amount:
-                invoice.payment_status = "fully_paid"
-            else:
-                invoice.payment_status = "partially_paid"
+            invoice.update_payment_status()
+            if invoice.payment_status in ("fully_paid", "overpaid"):
+                invoice.status = "paid"
+            elif invoice.status == "paid" and invoice.payment_status != "fully_paid":
+                invoice.status = "sent"
 
         if not safe_commit("delete_payment", {"payment_id": payment_id, "user_id": user_id}):
             return {

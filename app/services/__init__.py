@@ -20,6 +20,7 @@ from .permission_service import PermissionService
 from .project_service import ProjectService
 from .quote_service import QuoteService
 from .reporting_service import ReportingService
+from .sdi_service import SdiService
 from .task_service import TaskService
 from .time_tracking_service import TimeTrackingService
 from .user_service import UserService
@@ -44,6 +45,7 @@ __all__ = [
     "ImportService",
     "EmailService",
     "PeppolService",
+    "SdiService",
     "PermissionService",
     "BackupService",
     "HealthService",

@@ -67,15 +67,19 @@ class WebhookService:
         payload_json = json.dumps(payload, default=str)
         payload_hash = WebhookDelivery.hash_payload(payload_json)
 
-        # Create delivery record
+        # Create delivery record. Attach the webhook object (not only webhook_id)
+        # so mark_success/mark_failed can update stats before flush; set Column
+        # defaults explicitly because now_in_app_timezone no longer autoflushes
+        # via Settings when the session has pending work.
         delivery = WebhookDelivery(
-            webhook_id=webhook.id,
+            webhook=webhook,
             event_type=event_type,
             event_id=event_id,
             payload=payload_json,
             payload_hash=payload_hash,
             status="pending",
             attempt_number=1,
+            retry_count=0,
         )
         db.session.add(delivery)
 
@@ -238,12 +242,14 @@ class WebhookService:
             delivery: Failed delivery record
             webhook: Webhook configuration
         """
-        if delivery.retry_count >= webhook.max_retries:
+        retry_count = delivery.retry_count or 0
+        max_retries = webhook.max_retries if webhook.max_retries is not None else 0
+        if retry_count >= max_retries:
             logger.info(f"Webhook {webhook.id} delivery {delivery.id} exceeded max retries")
             return
 
         # Calculate next retry time with exponential backoff
-        delay_seconds = webhook.retry_delay_seconds * (2**delivery.retry_count)
+        delay_seconds = (webhook.retry_delay_seconds or 0) * (2**retry_count)
         next_retry_at = now_in_app_timezone() + timedelta(seconds=delay_seconds)
 
         delivery.mark_retrying(next_retry_at)
@@ -379,6 +385,12 @@ class WebhookService:
             "invoice.sent",
             "invoice.paid",
             "invoice.overdue",
+            # Credit note / payment events
+            "credit_note.created",
+            "payment.created",
+            "payment.processed",
+            "payment.failed",
+            "payment.refunded",
             # Client events
             "client.created",
             "client.updated",

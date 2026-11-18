@@ -51,3 +51,19 @@ class PaymentProvider(ABC):
     @abstractmethod
     def verify_webhook(self, payload: bytes, headers: Dict[str, str]) -> WebhookResult:
         raise NotImplementedError
+
+    def refund(
+        self,
+        *,
+        gateway_transaction_id: str,
+        amount: Decimal,
+        currency: str,
+        reason: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Issue a refund via the gateway.
+
+        Returns a dict with at least ``success`` (bool) and ``message`` (str).
+        Default implementation returns a not-supported error so providers that
+        don't implement refunds fail gracefully.
+        """
+        return {"success": False, "message": f"Refunds are not supported by provider '{self.provider_name}'"}

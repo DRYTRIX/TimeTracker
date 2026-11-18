@@ -18629,3 +18629,102 @@ msgstr ""
 
 #~ msgid "Please log in to access this page"
 #~ msgstr "Effettua il login per accedere a questa pagina"
+
+msgid "Download FatturaPA"
+msgstr "Scarica FatturaPA"
+
+msgid "Send via SDI"
+msgstr "Invia via SDI"
+
+msgid "Client is missing SDI Codice Destinatario or PEC"
+msgstr "Al cliente mancano Codice Destinatario SDI o PEC"
+
+msgid "SDI History"
+msgstr "Cronologia SDI"
+
+msgid "Send this invoice via SDI?"
+msgstr "Inviare questa fattura via SDI?"
+
+msgid "Sent via SDI"
+msgstr "Inviata via SDI"
+
+msgid "Failed to send via SDI"
+msgstr "Invio via SDI non riuscito"
+
+msgid "Invoice sent via SDI"
+msgstr "Fattura inviata via SDI"
+
+msgid "FatturaPA export failed. Please try again."
+msgstr "Esportazione FatturaPA non riuscita. Riprova."
+
+msgid "SDI Codice Destinatario (FatturaPA)"
+msgstr "Codice Destinatario SDI (FatturaPA)"
+
+msgid "6 characters = public administration (FPA12); 7 characters = B2B (FPR12). Use 0000000 with PEC."
+msgstr "6 caratteri = pubblica amministrazione (FPA12); 7 caratteri = B2B (FPR12). Usa 0000000 con PEC."
+
+msgid "PEC email (FatturaPA)"
+msgstr "Email PEC (FatturaPA)"
+
+msgid "Codice Fiscale"
+msgstr "Codice Fiscale"
+
+msgid "Provincia (IT)"
+msgstr "Provincia (IT)"
+
+msgid "CIG (FatturaPA PA)"
+msgstr "CIG (FatturaPA PA)"
+
+msgid "CUP (FatturaPA PA)"
+msgstr "CUP (FatturaPA PA)"
+
+msgid "Optional procurement code"
+msgstr "Codice di gara opzionale"
+
+msgid "Optional project code"
+msgstr "Codice progetto opzionale"
+
+msgid "SDI / FatturaPA (Italy)"
+msgstr "SDI / FatturaPA (Italia)"
+
+msgid "Enable SDI sending"
+msgstr "Abilita invio SDI"
+
+msgid "When enabled, invoices can be sent via SDI using your configured intermediary URL."
+msgstr "Se abilitato, le fatture possono essere inviate via SDI usando l'URL dell'intermediario configurato."
+
+msgid "SDI intermediary URL"
+msgstr "URL intermediario SDI"
+
+msgid "SDI intermediary token (optional)"
+msgstr "Token intermediario SDI (opzionale)"
+
+msgid "SDI timeout (seconds)"
+msgstr "Timeout SDI (secondi)"
+
+msgid "IdTrasmittente (optional)"
+msgstr "IdTrasmittente (opzionale)"
+
+msgid "Defaults to company Codice Fiscale / VAT"
+msgstr "Predefinito: Codice Fiscale / Partita IVA aziendale"
+
+msgid "Codice Fiscale (IT)"
+msgstr "Codice Fiscale (IT)"
+
+msgid "Regime Fiscale (FatturaPA)"
+msgstr "Regime Fiscale (FatturaPA)"
+
+msgid "Italian sellers: Partita IVA, e.g. IT01234567890."
+msgstr "Cedenti italiani: Partita IVA, es. IT01234567890."
+
+msgid "Token is set (enter to replace)"
+msgstr "Token impostato (inserisci per sostituirlo)"
+
+msgid "Enter token (optional)"
+msgstr "Inserisci token (opzionale)"
+
+msgid "For security, the token is not shown. Leave blank to keep the current token."
+msgstr "Per sicurezza il token non viene mostrato. Lascia vuoto per mantenere quello attuale."
+
+msgid "Generate FatturaPA XML and send invoices to the Italian Sistema di Interscambio through your accredited intermediary. See docs/admin/configuration/FATTURAPA_SDI.md for the HTTP adapter contract."
+msgstr "Genera XML FatturaPA e invia le fatture al Sistema di Interscambio italiano tramite il tuo intermediario accreditato. Vedi docs/admin/configuration/FATTURAPA_SDI.md per il contratto HTTP dell'adapter."

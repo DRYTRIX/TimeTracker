@@ -18,6 +18,11 @@ class InvoiceItemSchema(Schema):
     quantity = fields.Decimal(required=True, places=2)
     unit_price = fields.Decimal(required=True, places=2)
     amount = fields.Decimal(required=True, places=2)
+    tax_rate = fields.Decimal(allow_none=True, places=2)
+    vat_category = fields.Str(allow_none=True)
+    discount_percent = fields.Decimal(allow_none=True, places=2, load_default=0)
+    discount_amount = fields.Decimal(allow_none=True, places=2, load_default=0)
+    position = fields.Int(allow_none=True, load_default=0)
 
 
 class InvoiceSchema(Schema):
@@ -38,6 +43,8 @@ class InvoiceSchema(Schema):
     tax_rate = fields.Decimal(required=True, places=2)
     tax_amount = fields.Decimal(required=True, places=2)
     total_amount = fields.Decimal(required=True, places=2)
+    discount_percent = fields.Decimal(allow_none=True, places=2, load_default=0)
+    discount_amount = fields.Decimal(allow_none=True, places=2, load_default=0)
     currency_code = fields.Str(required=True, validate=validate.Length(equal=3))
     notes = fields.Str(allow_none=True)
     terms = fields.Str(allow_none=True)

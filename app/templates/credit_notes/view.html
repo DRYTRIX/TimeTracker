@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
+
+{% block content %}
+{% set actions %}
+<div class="flex flex-wrap gap-2 items-center">
+  <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">{{ _('Back to Invoice') }}</a>
+  <a href="{{ url_for('credit_notes.download_pdf', cn_id=cn.id) }}" class="btn btn-primary"><i class="fas fa-file-pdf mr-1"></i>{{ _('PDF') }}</a>
+  <a href="{{ url_for('credit_notes.download_ubl', cn_id=cn.id) }}" class="btn bg-slate-600 text-white hover:bg-slate-700"><i class="fas fa-file-code mr-1"></i>{{ _('UBL 381') }}</a>
+  <a href="{{ url_for('credit_notes.download_fatturapa', cn_id=cn.id) }}" class="btn bg-green-700 text-white hover:bg-green-800"><i class="fas fa-file-code mr-1"></i>{{ _('FatturaPA TD04') }}</a>
+  {% if cn.status == 'draft' %}
+  <form method="POST" action="{{ url_for('credit_notes.issue_credit_note', cn_id=cn.id) }}" class="inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn bg-emerald-600 text-white hover:bg-emerald-700">{{ _('Issue') }}</button>
+  </form>
+  {% endif %}
+</div>
+{% endset %}
+{{ page_header('fas fa-file-invoice-dollar', _('Credit Note') ~ ' ' ~ cn.credit_number, actions_html=actions, breadcrumbs=[{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': invoice.invoice_number, 'url': url_for('invoices.view_invoice', invoice_id=invoice.id)}, {'text': cn.credit_number}]) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+      <dl class="grid grid-cols-2 gap-4 text-sm">
+        <div><dt class="text-gray-500">{{ _('Status') }}</dt><dd class="font-medium">{{ cn.status }}</dd></div>
+        <div><dt class="text-gray-500">{{ _('Issue date') }}</dt><dd class="font-medium">{{ cn.issue_date or '—' }}</dd></div>
+        <div><dt class="text-gray-500">{{ _('Currency') }}</dt><dd class="font-medium">{{ cn.currency_code or invoice.currency_code }}</dd></div>
+        <div><dt class="text-gray-500">{{ _('Original invoice') }}</dt><dd class="font-medium"><a class="text-primary" href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}">{{ invoice.invoice_number }}</a></dd></div>
+        <div class="col-span-2"><dt class="text-gray-500">{{ _('Reason') }}</dt><dd>{{ cn.reason or '—' }}</dd></div>
+      </dl>
+    </div>
+
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+      <h2 class="text-lg font-semibold mb-4">{{ _('Line items') }}</h2>
+      {% if items %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-border-light dark:border-border-dark">
+              <th class="p-2">{{ _('Description') }}</th>
+              <th class="p-2 text-right">{{ _('Qty') }}</th>
+              <th class="p-2 text-right">{{ _('Unit price') }}</th>
+              <th class="p-2 text-right">{{ _('Total') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr class="border-b border-border-light dark:border-border-dark">
+              <td class="p-2">{{ item.description }}</td>
+              <td class="p-2 text-right">{{ '%.2f'|format(item.quantity) }}</td>
+              <td class="p-2 text-right">{{ '%.2f'|format(item.unit_price) }}</td>
+              <td class="p-2 text-right">{{ '%.2f'|format(item.total_amount) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-gray-500">{{ _('Amount-only credit (no line items).') }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+      <h2 class="text-lg font-semibold mb-4">{{ _('Totals') }}</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between"><dt>{{ _('Subtotal') }}</dt><dd>{{ '%.2f'|format(cn.subtotal or 0) }}</dd></div>
+        <div class="flex justify-between"><dt>{{ _('Tax') }}</dt><dd>{{ '%.2f'|format(cn.tax_amount or 0) }}</dd></div>
+        <div class="flex justify-between font-semibold text-base border-t border-border-light dark:border-border-dark pt-2"><dt>{{ _('Total credit') }}</dt><dd>{{ '%.2f'|format(cn.total_amount or cn.amount or 0) }}</dd></div>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %}

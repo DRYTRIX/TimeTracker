@@ -10,57 +10,28 @@
         <span class="text-text-light dark:text-text-dark">{{ _('Support Development') }}</span>
     </nav>
 
-    <!-- Hero Section (A/B: control | key_first | cta_alt | never_see) -->
+    <!-- Hero Section (key-first rollout) -->
     <div class="bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-5 sm:p-8 rounded-lg shadow-lg text-white mb-6">
         <div class="text-center">
-            <i class="fas fa-mug-saucer text-4xl sm:text-6xl mb-4"></i>
+            <i class="fas fa-star text-4xl sm:text-6xl mb-4"></i>
             <h1 class="text-2xl sm:text-4xl font-bold mb-4">{{ _('Support TimeTracker Development') }}</h1>
             <p class="text-xl opacity-90 mb-6">
-                {% if (support_ab_variant|default('control')) == 'cta_alt' %}
-                {{ _('Donate to support development — or become a Supporter to show your badge') }}
-                {% elif (support_ab_variant|default('control')) == 'never_see' %}
-                {{ _('Never see support prompts again — or donate any amount') }}
-                {% else %}
-                {{ _('Support updates and keep TimeTracker free for everyone') }}
-                {% endif %}
+                {{ _('Become a Supporter to fund independent development — badge, clean client PDFs, quieter prompts as a side benefit.') }}
             </p>
             <div class="flex flex-wrap gap-3 justify-center">
-                {% if (support_ab_variant|default('control')) == 'key_first' %}
-                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_key')"
+                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" data-license-checkout onclick="trackDonationClick('donate_page_key')"
                    class="px-6 py-3 bg-white text-amber-600 rounded-lg font-semibold hover:bg-amber-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                    <i class="fas fa-star mr-2"></i>{{ _('Become a Supporter') }}
+                    <i class="fas fa-star mr-2"></i>{{ _('Become a Supporter (€25)') }}
                     <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                 </a>
                 <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page_hero&utm_campaign=support" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_hero')"
                    class="px-6 py-3 bg-amber-700/90 hover:bg-amber-800 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border border-white/30">
-                    <i class="fas fa-mug-saucer mr-2"></i>{{ _('Donate') }}
+                    <i class="fas fa-mug-saucer mr-2"></i>{{ _('Or tip any amount') }}
                     <i class="fas fa-external-link-alt ml-2 text-xs"></i>
                 </a>
-                {% elif (support_ab_variant|default('control')) == 'never_see' %}
-                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_key')"
-                   class="px-6 py-3 bg-white text-amber-600 rounded-lg font-semibold hover:bg-amber-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                    <i class="fas fa-key mr-2"></i>{{ _('Never see this again — €25 key') }}
-                    <i class="fas fa-external-link-alt ml-2 text-xs"></i>
-                </a>
-                <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page_hero&utm_campaign=support" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_hero')"
-                   class="px-6 py-3 bg-amber-700/90 hover:bg-amber-800 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border border-white/30">
-                    <i class="fas fa-mug-saucer mr-2"></i>{{ _('Or donate any amount') }}
-                    <i class="fas fa-external-link-alt ml-2 text-xs"></i>
-                </a>
-                {% else %}
-                <a href="https://buymeacoffee.com/DryTrix?utm_source=timetracker&utm_medium=donate_page_hero&utm_campaign=support"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   onclick="trackDonationClick('donate_page_hero')"
-                   class="px-6 py-3 bg-white text-amber-600 rounded-lg font-semibold hover:bg-amber-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                    <i class="fas fa-mug-saucer mr-2"></i>{{ _('Donate') }}
-                    <i class="fas fa-external-link-alt ml-2 text-xs"></i>
-                </a>
-                {% endif %}
             </div>
             <p class="mt-4 text-sm opacity-80">
-                {{ _('Supporters get a visible badge and fewer prompts — no features are locked.') }}
-                <a href="{{ support_purchase_url }}" target="_blank" rel="noopener noreferrer" onclick="trackDonationClick('donate_page_key')" class="underline hover:no-underline">{{ _('Become a Supporter') }}</a>
+                {{ _('Features stay unlocked either way — optional support, not a paywall.') }}
             </p>
         </div>
     </div>
@@ -121,7 +92,7 @@
                     <div>
                         <h3 class="font-semibold mb-1">{{ _('€25 — become a Supporter') }}</h3>
                         <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                            {{ _('Covers about a quarter of server and domain costs, plus shows a Supporter badge in the app — no features locked') }}
+                            {{ _('Funds development; badge, clean client PDFs without the TimeTracker footer, quieter prompts — features stay unlocked') }}
                         </p>
                     </div>
                 </div>
@@ -146,25 +117,26 @@
             {{ _('Become a Supporter') }}
         </h2>
         <p class="mb-4 text-text-light dark:text-text-dark">
-            {{ _('One-time €25 contribution per instance. You receive a key by email. Supporters get a visible badge; support prompts are minimized as a side effect. No subscription.') }}
+            {{ _('One-time €25 contribution per instance. You receive a key by email. Supporters fund development and get a badge, clean client PDFs, and quieter prompts. No subscription.') }}
         </p>
         <ol class="list-decimal list-inside space-y-3 mb-6 text-text-light dark:text-text-dark">
             <li class="flex items-start gap-2">
                 <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-semibold">1</span>
-                <span>{{ _('Copy your System ID from Admin → Settings → Support visibility.') }}</span>
+                <span>{{ _('Open checkout — your System ID is prefilled from this instance when available.') }}</span>
             </li>
             <li class="flex items-start gap-2">
                 <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-semibold">2</span>
-                <span>{{ _('Buy a key at the link below; you’ll receive it by email.') }}</span>
+                <span>{{ _('Complete payment; you’ll receive the key by email.') }}</span>
             </li>
             <li class="flex items-start gap-2">
                 <span class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-semibold">3</span>
-                <span>{{ _('Paste the code in Admin → Settings → Support visibility and verify.') }}</span>
+                <span>{{ _('Paste the code in Settings → Become a Supporter or Admin → Settings → Support visibility.') }}</span>
             </li>
         </ol>
         <a href="{{ support_purchase_url }}"
            target="_blank"
            rel="noopener noreferrer"
+           data-license-checkout
            onclick="trackDonationClick('donate_page_key')"
            class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg">
             <i class="fas fa-star mr-2"></i>{{ _('Support TimeTracker (€25)') }}
@@ -313,13 +285,14 @@
             <a href="{{ support_purchase_url }}"
                target="_blank"
                rel="noopener noreferrer"
+               data-license-checkout
                onclick="trackDonationClick('donate_page_key')"
                class="flex items-center gap-3 p-4 bg-background-light dark:bg-background-dark rounded-lg hover:bg-background-hover-light dark:hover:bg-background-hover-dark transition-colors">
                 <i class="fas fa-star text-2xl text-amber-500"></i>
                 <div>
                     <div class="font-semibold">{{ _('Become a Supporter') }}</div>
                     <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
-                        {{ _('One-time €25 — visible badge, fewer prompts, no subscription') }}
+                        {{ _('One-time €25 — fund development, badge, clean PDFs, quieter prompts') }}
                     </div>
                 </div>
             </a>

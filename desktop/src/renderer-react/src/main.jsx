@@ -7,7 +7,7 @@ import { buildDiagnostics } from './services/diagnostics.js';
 import { createSyncEngine } from './sync/syncEngine.js';
 import { LoadingScreen, Toast } from './components/ui.jsx';
 import { formatDuration, isTimerPaused, timerElapsedSeconds } from './utils/format.js';
-import { AuthFlow, Sidebar, TopBar } from './views/Shell.jsx';
+import { AuthFlow, Sidebar, TopBar, isViewEnabled } from './views/Shell.jsx';
 import { DashboardView } from './views/DashboardView.jsx';
 import { ProjectsView } from './views/ProjectsView.jsx';
 import { EntriesView } from './views/EntriesView.jsx';
@@ -42,6 +42,7 @@ const emptyData = {
   workforce: {},
   invoiceApprovals: [],
   timeEntryApprovals: [],
+  enabledModules: [],
 };
 
 function App() {
@@ -198,6 +199,7 @@ function App() {
       setData((current) => ({
         ...current,
         user: user.user || null,
+        enabledModules: Array.isArray(user.enabled_modules) ? user.enabled_modules : current.enabledModules || [],
         timer,
         projects: projects.projects || projects.items || [],
         tasks: tasks.tasks || tasks.items || [],
@@ -603,6 +605,10 @@ function App() {
   );
 
   const changeView = (view) => {
+    if (!isViewEnabled(view, data.enabledModules)) {
+      setActiveView('dashboard');
+      return;
+    }
     setActiveView(view);
     loadView(view);
   };
@@ -781,7 +787,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar activeView={activeView} onChange={changeView} />
+      <Sidebar activeView={activeView} onChange={changeView} enabledModules={data.enabledModules} />
       <main className="workspace">
         <TopBar
           connection={connection}

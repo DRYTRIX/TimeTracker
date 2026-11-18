@@ -87,7 +87,11 @@ def check_overdue_invoices():
 
         # Calendar "today" in app timezone (not UTC / host local)
         today = now_in_app_timezone().date()
-        overdue_invoices = Invoice.query.filter(Invoice.due_date < today, Invoice.status.in_(["draft", "sent"])).all()
+        overdue_invoices = Invoice.query.filter(
+            Invoice.due_date < today,
+            Invoice.status.in_(["sent", "issued"]),
+            Invoice.payment_status != "fully_paid",
+        ).all()
 
         logger.info(f"Found {len(overdue_invoices)} overdue invoices")
 
@@ -97,6 +101,17 @@ def check_overdue_invoices():
             if invoice.status != "overdue":
                 invoice.status = "overdue"
                 db.session.commit()
+                try:
+                    from app.constants import WebhookEvent
+                    from app.utils.invoice_events import emit_invoice_event
+
+                    emit_invoice_event(WebhookEvent.INVOICE_OVERDUE.value, invoice)
+                except Exception as emit_exc:
+                    logger.debug(
+                        "Failed to emit invoice.overdue for %s: %s",
+                        invoice.invoice_number,
+                        emit_exc,
+                    )
 
             # Get users to notify (creator and admins)
             users_to_notify = set()
@@ -138,6 +153,17 @@ def check_overdue_invoices():
                     )
 
         logger.info(f"Sent {notifications_sent} overdue invoice notifications")
+
+        # --- Phase 4: multi-level reminder sends & late fees ---
+        try:
+            from app.services.invoice_reminder_service import process_due_reminders
+
+            reminders_sent = process_due_reminders(today=today)
+            if reminders_sent:
+                logger.info("Invoice reminder service sent %d reminder(s)", reminders_sent)
+        except Exception as reminder_exc:
+            logger.error("Invoice reminder service failed: %s", reminder_exc, exc_info=True)
+
         return notifications_sent
 
     except Exception as e:
@@ -734,6 +760,28 @@ def register_scheduled_tasks(scheduler, app=None):
             replace_existing=True,
         )
         logger.info("Registered Peppol inbox poll task")
+
+        def poll_sdi_status_with_app():
+            app_instance = app
+            if app_instance is None:
+                try:
+                    app_instance = current_app._get_current_object()
+                except RuntimeError:
+                    logger.error("No app instance available for SDI status poll")
+                    return
+            with external_url_context(app_instance):
+                poll_sdi_status()
+
+        _add_job(
+            scheduler,
+            func=poll_sdi_status_with_app,
+            trigger="cron",
+            minute="*/15",
+            id="poll_sdi_status",
+            name="Poll SDI transmission statuses",
+            replace_existing=True,
+        )
+        logger.info("Registered SDI status poll task")
 
         # Check for expiring quotes daily at 9:30 AM
         # Create a closure that captures the app instance
@@ -1862,6 +1910,21 @@ def poll_peppol_inbox():
             logger.warning("Peppol inbox poll failed: %s", result.get("error") or result.get("errors"))
     except Exception as e:
         logger.error(f"Error polling Peppol inbox: {e}")
+
+
+def poll_sdi_status():
+    """Refresh non-final SDI (FatturaPA) transmission statuses via the intermediary.
+
+    Note: This function should be called within an app context.
+    """
+    try:
+        from app.services.sdi_service import SdiService
+
+        count = SdiService().poll_pending(max_age_days=30)
+        if count:
+            logger.info("SDI status poll refreshed %s transmission(s)", count)
+    except Exception as e:
+        logger.error(f"Error polling SDI statuses: {e}")
 
 
 def check_expiring_quotes():

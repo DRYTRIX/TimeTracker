@@ -86,6 +86,12 @@ API tokens use scopes to control access to resources. When creating a token, sel
 | `write:tasks` | Create and update tasks |
 | `read:clients` | View clients |
 | `write:clients` | Create and update clients |
+| `read:deals` | View deals, activities, forecast, email threads |
+| `write:deals` | Create/update deals, activities, pipeline stage |
+| `read:leads` | View leads, activities, source analytics |
+| `write:leads` | Create/update leads, activities, convert to client/deal |
+| `read:contacts` | View contacts and communications |
+| `write:contacts` | Create/update contacts and communications |
 | `read:quotes` | View quotes |
 | `write:quotes` | Create and update quotes |
 | `read:reports` | View reports and analytics |
@@ -865,6 +871,39 @@ POST /api/v1/clients
 }
 ```
 
+### CRM — Deals, Leads, Contacts
+
+#### Deals
+```
+GET/POST /api/v1/deals
+GET/PUT/PATCH/DELETE /api/v1/deals/{id}
+GET/POST /api/v1/deals/{id}/activities
+PUT/PATCH /api/v1/deals/{id}/stage
+GET /api/v1/deals/forecast
+GET /api/v1/deals/{id}/email-threads
+```
+Scopes: `read:deals` / `write:deals`. Stage body: `{ "stage": "proposal" }`.
+
+#### Leads
+```
+GET/POST /api/v1/leads
+GET/PUT/PATCH/DELETE /api/v1/leads/{id}
+GET/POST /api/v1/leads/{id}/activities
+POST /api/v1/leads/{id}/convert-to-client
+POST /api/v1/leads/{id}/convert-to-deal
+GET /api/v1/leads/analytics/sources
+GET /api/v1/leads/{id}/email-threads
+```
+Scopes: `read:leads` / `write:leads`. Create requires `first_name` and `last_name`.
+
+#### Contacts
+```
+GET/POST /api/v1/clients/{client_id}/contacts
+GET/PUT/PATCH/DELETE /api/v1/contacts/{id}
+GET/POST /api/v1/contacts/{id}/communications
+```
+Scopes: `read:contacts` / `write:contacts`. Create requires `first_name` and `last_name`.
+
 ### Quotes
 
 #### List Quotes
@@ -1175,9 +1214,46 @@ The API implements rate limiting to ensure fair usage:
 
 When rate limited, you'll receive a `429 Too Many Requests` response.
 
+## Invoices, credit notes, and payments
+
+Scopes: `read:invoices` / `write:invoices` (see [API_TOKEN_SCOPES.md](API_TOKEN_SCOPES.md)).
+
+### Invoices
+
+| Method | Path | Scope | Notes |
+|--------|------|-------|-------|
+| `GET` | `/invoices` | `read:invoices` | List (paginated; optional `status`) |
+| `GET` | `/invoices/{id}` | `read:invoices` | Detail with line items and payments |
+| `POST` | `/invoices` | `write:invoices` | Create draft |
+| `PUT`/`PATCH` | `/invoices/{id}` | `write:invoices` | Update draft fields |
+| `DELETE` | `/invoices/{id}` | `write:invoices` | Cancel (soft-delete) |
+| `GET` | `/invoices/{id}/pdf` | `read:invoices` | PDF download |
+| `GET` | `/invoices/{id}/ubl` | `read:invoices` | PEPPOL UBL 2.1 XML (`application/xml`) |
+| `GET` | `/invoices/{id}/xrechnung` | `read:invoices` | XRechnung 3.0 XML |
+| `GET` | `/invoices/{id}/fatturapa` | `read:invoices` | FatturaPA XML |
+| `POST` | `/invoices/{id}/send-email` | `write:invoices` | Body: optional `recipient_email` / `recipient`, `subject`, `custom_message` |
+| `POST` | `/invoices/{id}/send-peppol` | `write:invoices` | Send via Peppol access point |
+| `POST` | `/invoices/{id}/send-sdi` | `write:invoices` | Send via SDI (FatturaPA) |
+
+### Credit notes
+
+| Method | Path | Scope | Notes |
+|--------|------|-------|-------|
+| `GET` | `/credit-notes` | `read:invoices` | List (optional `invoice_id`) |
+| `GET` | `/credit-notes/{id}` | `read:invoices` | Detail |
+| `POST` | `/credit-notes` | `write:invoices` | Body: `invoice_id`, `amount`, optional `reason` |
+| `PUT`/`PATCH` | `/credit-notes/{id}` | `write:invoices` | Update amount/reason |
+| `DELETE` | `/credit-notes/{id}` | `write:invoices` | Delete |
+| `GET` | `/credit-notes/{id}/pdf` | `read:invoices` | PDF download |
+| `GET` | `/credit-notes/{id}/ubl` | `read:invoices` | UBL CreditNote XML |
+
+### Payments
+
+Payment CRUD lives under `/api/v1/payments` (`read:invoices` / `write:invoices`). Recording a completed payment that fully settles an invoice emits `invoice.paid`; refunds emit `payment.refunded`. See [Webhooks](../features/webhooks.md).
+
 ## Webhook Support
 
-Webhooks are supported for real-time notifications. You can receive notifications when time entries are created/updated, projects change status, tasks are completed, and timer events occur. See [Webhooks](../features/webhooks.md) for setup and event types.
+Webhooks are supported for real-time notifications. You can receive notifications when time entries are created/updated, projects change status, tasks are completed, timer events occur, and invoice/payment lifecycle events fire (`invoice.sent`, `invoice.paid`, `invoice.overdue`, `credit_note.created`, `payment.refunded`, and related). See [Webhooks](../features/webhooks.md) for setup and event types.
 
 ## Support
 

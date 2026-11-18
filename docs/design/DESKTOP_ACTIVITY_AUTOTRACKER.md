@@ -1,6 +1,6 @@
 # Desktop activity autotracker
 
-Privacy-first local activity sampling for the Electron desktop client. Design only in Phase 6; capture implementation is a follow-up.
+Privacy-first local activity sampling for the Electron desktop client. Phase A stub shipped in Phase 6; Phases B–D (capture, AW bridge, settings UI) are implemented in the desktop client.
 
 ## Goals
 
@@ -54,27 +54,27 @@ The server already maps window/app events through `activitywatch_rule.py` into `
 - Wired from `main.js` behind store flag `activity_tracker_enabled` (default false).
 - **No** OS window capture yet; `start` is a no-op sampler placeholder.
 
-### Phase B — Local capture
+### Phase B — Local capture (done)
 
-- Implement platform-specific active-window readers (e.g. Windows UI Automation / `GetForegroundWindow`, macOS Accessibility, Linux X11/Wayland best-effort).
-- Persist samples locally with interval, app, title, idle flag.
-- Exclusion list + purge APIs via IPC.
+- Platform-specific active-window readers: Windows (`GetForegroundWindow` via PowerShell), macOS (Accessibility via `osascript`), Linux X11 (`xdotool`/`xprop`; Wayland best-effort / no-op when unavailable).
+- Persist samples under Electron `userData` (`activity-samples.json`) with interval, app, title, idle flag.
+- Exclusion list + purge APIs via IPC (`activity-tracker:*`).
 
-### Phase C — ActivityWatch bridge
+### Phase C — ActivityWatch bridge (done)
 
-- Map local samples to AW bucket/event JSON.
-- Optional push into configured ActivityWatch HTTP API **on localhost**, or direct export file the existing connector can import.
+- Map local samples to AW bucket/event JSON (`timestamp`, `duration`, `data.app`/`title`/`url`).
+- Optional push into configured ActivityWatch HTTP API **on localhost** (default `127.0.0.1:5600`).
 - Prefer localhost AW so the server path remains unchanged.
 
-### Phase D — Product polish
+### Phase D — Product polish (done)
 
-- Desktop settings UI for opt-in, interval, exclusions, purge, sync status.
-- Telemetry only for aggregate “enabled/disabled” counts if product telemetry is already consented—never titles/apps.
+- Desktop Settings panel: opt-in, interval, exclusions, retention, AW sync, purge, sync-now, status.
+- Titles/apps are never logged in production; debug only with `TIMETRACKER_DEBUG_ACTIVITY=1`.
 
 ## Feature flag
 
 - Store key: `activity_tracker_enabled` (boolean, default `false`).
-- Additional keys (later): `activity_tracker_interval_sec`, `activity_tracker_exclusions`.
+- Additional keys: `activity_tracker_interval_sec`, `activity_tracker_exclusions`, `activity_tracker_retention_days`, `activity_tracker_aw_sync`, `activity_tracker_aw_host`, `activity_tracker_aw_port`.
 
 ## Security notes
 
@@ -84,6 +84,5 @@ The server already maps window/app events through `activitywatch_rule.py` into `
 
 ## Follow-ups
 
-- Actual window capture bindings per OS.
-- Settings UI strings and privacy help article.
-- Tests for local retention/purge and exclusion matching.
+- Wayland-native capture when APIs stabilize.
+- Optional privacy help article in docs site.

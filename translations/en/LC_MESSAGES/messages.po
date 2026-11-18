@@ -3560,8 +3560,6 @@ msgstr ""
 #~ msgid "Unknown"
 #~ msgstr ""
 
-#~ msgid "Timer started"
-#~ msgstr ""
 
 #~ msgid "Template must have a project to start a timer"
 #~ msgstr ""
@@ -4351,8 +4349,6 @@ msgstr ""
 #~ msgid "Open chat"
 #~ msgstr ""
 
-#~ msgid "Start Timer"
-#~ msgstr ""
 
 #~ msgid "Stop"
 #~ msgstr ""
@@ -4440,8 +4436,6 @@ msgstr ""
 #~ msgid "New Task"
 #~ msgstr ""
 
-#~ msgid "New Project"
-#~ msgstr ""
 
 #~ msgid "New Client"
 #~ msgstr ""
@@ -8283,8 +8277,6 @@ msgstr ""
 #~ msgid "An error occurred"
 #~ msgstr ""
 
-#~ msgid "Go to Dashboard"
-#~ msgstr ""
 
 #~ msgid "Login to Client Portal"
 #~ msgstr ""
@@ -13506,14 +13498,8 @@ msgstr ""
 #~ msgid "Quick search"
 #~ msgstr ""
 
-#~ msgid "Go to Projects"
-#~ msgstr ""
 
-#~ msgid "Go to Tasks"
-#~ msgstr ""
 
-#~ msgid "New Time Entry"
-#~ msgstr ""
 
 #~ msgid "Keyboard Shortcuts"
 #~ msgstr ""
@@ -15840,8 +15826,6 @@ msgstr ""
 #~ msgid "Delete Filter"
 #~ msgstr ""
 
-#~ msgid "Go to Reports"
-#~ msgstr ""
 
 #~ msgid "No saved filters yet"
 #~ msgstr ""
@@ -17809,3 +17793,61 @@ msgstr ""
 #~ " activity, entry stays flagged). 0 "
 #~ "disables the cap."
 #~ msgstr ""
+
+# Command palette (from app/templates/partials/_head.html)
+msgid "Start Timer"
+msgstr "Start Timer"
+
+msgid "Start Timer → Select a project"
+msgstr "Start Timer → Select a project"
+
+msgid "New Time Entry"
+msgstr "New Time Entry"
+
+msgid "New Project"
+msgstr "New Project"
+
+msgid "New Invoice"
+msgstr "New Invoice"
+
+msgid "Go to Dashboard"
+msgstr "Go to Dashboard"
+
+msgid "Go to Reports"
+msgstr "Go to Reports"
+
+msgid "Go to Clients"
+msgstr "Go to Clients"
+
+msgid "Go to Projects"
+msgstr "Go to Projects"
+
+msgid "Go to Tasks"
+msgstr "Go to Tasks"
+
+msgid "Go to Invoices"
+msgstr "Go to Invoices"
+
+msgid "Go to Analytics"
+msgstr "Go to Analytics"
+
+msgid "Go to Calendar"
+msgstr "Go to Calendar"
+
+msgid "Go to Expenses"
+msgstr "Go to Expenses"
+
+msgid "Go to Time Entries"
+msgstr "Go to Time Entries"
+
+msgid "Go to Settings"
+msgstr "Go to Settings"
+
+msgid "No projects found."
+msgstr "No projects found."
+
+msgid "No commands found."
+msgstr "No commands found."
+
+msgid "Timer started"
+msgstr "Timer started"

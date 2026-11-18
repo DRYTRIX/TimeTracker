@@ -2,16 +2,35 @@ import React, { useEffect, useState } from 'react';
 import { classifyAxiosError } from '../services/api.js';
 import { EmptyState, Panel, SkeletonList, ViewHeader } from '../components/ui.jsx';
 import { listItems } from '../utils/format.js';
+import { t } from '../i18n/i18n.js';
+
+const LEAD_STATUSES = ['new', 'contacted', 'qualified', 'converted', 'lost'];
+const DEAL_STAGES = ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'];
 
 export function CrmView({ clients, apiClient, showToast }) {
   const [tab, setTab] = useState('leads');
   const [leads, setLeads] = useState([]);
   const [deals, setDeals] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [selectedDealId, setSelectedDealId] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', company_name: '', name: '', amount: '', content: '' });
+  const [form, setForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    company_name: '',
+    name: '',
+    value: '',
+    content: '',
+    status: 'new',
+    stage: 'lead',
+  });
+
+  const selectedLead = leads.find((l) => l.id === selectedLeadId) || null;
+  const selectedDeal = deals.find((d) => d.id === selectedDealId) || null;
 
   const loadLeadsDeals = async () => {
     setLoading(true);
@@ -58,11 +77,41 @@ export function CrmView({ clients, apiClient, showToast }) {
     if (tab === 'clients' && selectedClientId) loadClientExtras(selectedClientId);
   }, [tab, selectedClientId]);
 
+  useEffect(() => {
+    if (selectedLead) {
+      setForm((f) => ({
+        ...f,
+        first_name: selectedLead.first_name || '',
+        last_name: selectedLead.last_name || '',
+        email: selectedLead.email || '',
+        company_name: selectedLead.company_name || '',
+        status: selectedLead.status || 'new',
+      }));
+    }
+  }, [selectedLeadId]);
+
+  useEffect(() => {
+    if (selectedDeal) {
+      setForm((f) => ({
+        ...f,
+        name: selectedDeal.name || '',
+        value: selectedDeal.value != null ? String(selectedDeal.value) : '',
+        stage: selectedDeal.stage || selectedDeal.status || 'lead',
+      }));
+    }
+  }, [selectedDealId]);
+
   const createLead = async () => {
+    const firstName = form.first_name.trim();
+    const lastName = form.last_name.trim();
+    if (!firstName || !lastName) {
+      showToast('First and last name are required', 'error');
+      return;
+    }
     try {
       await apiClient.createLead({
-        first_name: form.first_name || 'Lead',
-        last_name: form.last_name || '',
+        first_name: firstName,
+        last_name: lastName,
         email: form.email || undefined,
         company_name: form.company_name || undefined,
       });
@@ -74,15 +123,65 @@ export function CrmView({ clients, apiClient, showToast }) {
     }
   };
 
+  const saveLead = async () => {
+    if (!selectedLeadId) return;
+    try {
+      await apiClient.updateLead(selectedLeadId, {
+        first_name: form.first_name.trim() || undefined,
+        last_name: form.last_name.trim() || undefined,
+        email: form.email || undefined,
+        company_name: form.company_name || undefined,
+        status: form.status || undefined,
+      });
+      showToast('Lead updated', 'success');
+      await loadLeadsDeals();
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    }
+  };
+
+  const convertLead = async (toDeal) => {
+    if (!selectedLeadId) return;
+    try {
+      if (toDeal) {
+        await apiClient.convertLeadToDeal(selectedLeadId);
+        showToast('Converted to deal', 'success');
+      } else {
+        await apiClient.convertLeadToClient(selectedLeadId);
+        showToast('Converted to client', 'success');
+      }
+      setSelectedLeadId(null);
+      await loadLeadsDeals();
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    }
+  };
+
   const createDeal = async () => {
+    const name = form.name.trim() || 'New deal';
     try {
       await apiClient.createDeal({
-        name: form.name || 'New deal',
-        amount: form.amount ? Number(form.amount) : 0,
+        name,
+        value: form.value ? Number(form.value) : undefined,
         client_id: selectedClientId ? Number(selectedClientId) : undefined,
       });
       showToast('Deal created', 'success');
-      setForm((f) => ({ ...f, name: '', amount: '' }));
+      setForm((f) => ({ ...f, name: '', value: '' }));
+      await loadLeadsDeals();
+    } catch (error) {
+      showToast(classifyAxiosError(error).message, 'error');
+    }
+  };
+
+  const saveDeal = async () => {
+    if (!selectedDealId) return;
+    try {
+      await apiClient.updateDeal(selectedDealId, {
+        name: form.name.trim() || undefined,
+        value: form.value !== '' ? Number(form.value) : undefined,
+        stage: form.stage || undefined,
+      });
+      showToast('Deal updated', 'success');
       await loadLeadsDeals();
     } catch (error) {
       showToast(classifyAxiosError(error).message, 'error');
@@ -91,13 +190,20 @@ export function CrmView({ clients, apiClient, showToast }) {
 
   const createContact = async () => {
     if (!selectedClientId) return;
+    const firstName = form.first_name.trim();
+    const lastName = form.last_name.trim();
+    if (!firstName || !lastName) {
+      showToast('First and last name are required', 'error');
+      return;
+    }
     try {
       await apiClient.createContact(selectedClientId, {
-        first_name: form.first_name || 'Contact',
-        last_name: form.last_name || '',
+        first_name: firstName,
+        last_name: lastName,
         email: form.email || undefined,
       });
       showToast('Contact created', 'success');
+      setForm((f) => ({ ...f, first_name: '', last_name: '', email: '' }));
       await loadClientExtras(selectedClientId);
     } catch (error) {
       showToast(classifyAxiosError(error).message, 'error');
@@ -116,13 +222,23 @@ export function CrmView({ clients, apiClient, showToast }) {
     }
   };
 
+  const tabs = [
+    { id: 'leads', label: t('crm.leads', 'Leads') },
+    { id: 'deals', label: t('crm.deals', 'Deals') },
+    { id: 'clients', label: t('crm.clients', 'Clients') },
+  ];
+
   return (
     <div className="view-stack">
-      <ViewHeader title="CRM" subtitle="Leads, deals, contacts, and client notes." />
+      <ViewHeader title={t('crm.title', 'CRM')} subtitle={t('crm.subtitle', 'Leads, deals, contacts, and client notes.')} />
       <div className="tab-row">
-        {['leads', 'deals', 'clients'].map((id) => (
-          <button key={id} className={`btn small ${tab === id ? 'primary' : 'ghost'}`} onClick={() => setTab(id)}>
-            {id[0].toUpperCase() + id.slice(1)}
+        {tabs.map((item) => (
+          <button
+            key={item.id}
+            className={`btn small ${tab === item.id ? 'primary' : 'ghost'}`}
+            onClick={() => setTab(item.id)}
+          >
+            {item.label}
           </button>
         ))}
       </div>
@@ -140,12 +256,38 @@ export function CrmView({ clients, apiClient, showToast }) {
           </Panel>
           <div className="list-card">
             {leads.length ? leads.map((lead) => (
-              <div className="list-row" key={lead.id}>
+              <button
+                type="button"
+                className={`list-row ${selectedLeadId === lead.id ? 'selected' : ''}`}
+                key={lead.id}
+                onClick={() => setSelectedLeadId(lead.id)}
+              >
                 <strong>{[lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.company_name || `Lead ${lead.id}`}</strong>
                 <span>{lead.status} · {lead.email || '—'}</span>
-              </div>
+              </button>
             )) : <EmptyState title="No leads" text="Create a lead or enable the CRM module." />}
           </div>
+          {selectedLead && (
+            <Panel title={t('crm.editLead', 'Edit lead')}>
+              <div className="form-grid report-filters">
+                <input placeholder="First name" value={form.first_name} onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))} />
+                <input placeholder="Last name" value={form.last_name} onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))} />
+                <input placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+                <input placeholder="Company" value={form.company_name} onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))} />
+                <label>
+                  {t('crm.status', 'Status')}
+                  <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
+                    {LEAD_STATUSES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </label>
+                <button className="btn primary" onClick={saveLead}>{t('crm.saveChanges', 'Save changes')}</button>
+                <button className="btn ghost" onClick={() => convertLead(false)}>{t('crm.convertToClient', 'Convert to client')}</button>
+                <button className="btn ghost" onClick={() => convertLead(true)}>{t('crm.convertToDeal', 'Convert to deal')}</button>
+              </div>
+            </Panel>
+          )}
         </>
       )}
       {!loading && tab === 'deals' && (
@@ -153,7 +295,7 @@ export function CrmView({ clients, apiClient, showToast }) {
           <Panel title="New deal">
             <div className="form-grid report-filters">
               <input placeholder="Deal name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-              <input placeholder="Amount" type="number" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+              <input placeholder="Value" type="number" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} />
               <select value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)}>
                 <option value="">Client (optional)</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -163,12 +305,34 @@ export function CrmView({ clients, apiClient, showToast }) {
           </Panel>
           <div className="list-card">
             {deals.length ? deals.map((deal) => (
-              <div className="list-row" key={deal.id}>
+              <button
+                type="button"
+                className={`list-row ${selectedDealId === deal.id ? 'selected' : ''}`}
+                key={deal.id}
+                onClick={() => setSelectedDealId(deal.id)}
+              >
                 <strong>{deal.name || `Deal ${deal.id}`}</strong>
-                <span>{deal.stage || deal.status} · {deal.amount}</span>
-              </div>
+                <span>{deal.stage || deal.status} · {deal.value != null ? deal.value : '—'}</span>
+              </button>
             )) : <EmptyState title="No deals" text="Create a deal to get started." />}
           </div>
+          {selectedDeal && (
+            <Panel title={t('crm.editDeal', 'Edit deal')}>
+              <div className="form-grid report-filters">
+                <input placeholder="Deal name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+                <input placeholder="Value" type="number" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} />
+                <label>
+                  {t('crm.stage', 'Stage')}
+                  <select value={form.stage} onChange={(e) => setForm((f) => ({ ...f, stage: e.target.value }))}>
+                    {DEAL_STAGES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </label>
+                <button className="btn primary" onClick={saveDeal}>{t('crm.saveChanges', 'Save changes')}</button>
+              </div>
+            </Panel>
+          )}
         </>
       )}
       {!loading && tab === 'clients' && (

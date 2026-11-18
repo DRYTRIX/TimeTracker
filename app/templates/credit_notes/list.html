@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
+
+{% block content %}
+{{ page_header('fas fa-file-invoice-dollar', _('Credit Notes'), breadcrumbs=[{'text': _('Credit Notes')}]) }}
+
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+  {% if credit_notes %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-left">
+      <thead>
+        <tr class="border-b border-border-light dark:border-border-dark">
+          <th class="p-3 text-sm font-medium">{{ _('Number') }}</th>
+          <th class="p-3 text-sm font-medium">{{ _('Invoice') }}</th>
+          <th class="p-3 text-sm font-medium">{{ _('Amount') }}</th>
+          <th class="p-3 text-sm font-medium">{{ _('Status') }}</th>
+          <th class="p-3 text-sm font-medium">{{ _('Created') }}</th>
+          <th class="p-3 text-sm font-medium">{{ _('Actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cn in credit_notes %}
+        <tr class="border-b border-border-light dark:border-border-dark">
+          <td class="p-3"><a class="text-primary hover:underline" href="{{ url_for('credit_notes.view_credit_note', cn_id=cn.id) }}">{{ cn.credit_number }}</a></td>
+          <td class="p-3">
+            {% if cn.invoice %}
+            <a class="text-primary hover:underline" href="{{ url_for('invoices.view_invoice', invoice_id=cn.invoice_id) }}">{{ cn.invoice.invoice_number }}</a>
+            {% else %}
+            #{{ cn.invoice_id }}
+            {% endif %}
+          </td>
+          <td class="p-3">{{ '%.2f'|format(cn.total_amount or cn.amount or 0) }} {{ cn.currency_code or '' }}</td>
+          <td class="p-3"><span class="px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700">{{ cn.status }}</span></td>
+          <td class="p-3 text-sm">{{ cn.created_at|user_datetime if cn.created_at else '—' }}</td>
+          <td class="p-3">
+            <a href="{{ url_for('credit_notes.view_credit_note', cn_id=cn.id) }}" class="btn btn-sm btn-secondary">{{ _('View') }}</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-gray-500">{{ _('No credit notes yet.') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

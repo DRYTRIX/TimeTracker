@@ -256,26 +256,48 @@ def build_peppol_ubl_invoice_xml(
     _party(inv_el, "AccountingSupplierParty", supplier)
     _party(inv_el, "AccountingCustomerParty", customer)
 
-    # Tax total (best-effort based on current Invoice model fields)
+    # Tax total — use tax_breakdown() for multi-rate support, fall back to flat rate
     tax_total = ET.SubElement(inv_el, cac + "TaxTotal")
     tax_amount_el = ET.SubElement(tax_total, cbc + "TaxAmount")
     tax_amount_el.set("currencyID", currency)
     tax_amount_el.text = _money(getattr(invoice, "tax_amount", 0))
 
     tax_rate = Decimal(str(getattr(invoice, "tax_rate", 0) or 0))
-    tax_sub = ET.SubElement(tax_total, cac + "TaxSubtotal")
-    taxable_amount_el = ET.SubElement(tax_sub, cbc + "TaxableAmount")
-    taxable_amount_el.set("currencyID", currency)
-    taxable_amount_el.text = _money(getattr(invoice, "subtotal", 0))
-    tax_sub_amount_el = ET.SubElement(tax_sub, cbc + "TaxAmount")
-    tax_sub_amount_el.set("currencyID", currency)
-    tax_sub_amount_el.text = _money(getattr(invoice, "tax_amount", 0))
+    try:
+        breakdown = invoice.tax_breakdown() if hasattr(invoice, "tax_breakdown") else []
+    except Exception:
+        breakdown = []
 
-    tax_cat = ET.SubElement(tax_sub, cac + "TaxCategory")
-    _text(tax_cat, cbc + "ID", "S" if tax_rate > 0 else "Z")
-    _text(tax_cat, cbc + "Percent", _money(tax_rate))
-    tax_scheme = ET.SubElement(tax_cat, cac + "TaxScheme")
-    _text(tax_scheme, cbc + "ID", "VAT")
+    if breakdown:
+        for grp in breakdown:
+            tax_sub = ET.SubElement(tax_total, cac + "TaxSubtotal")
+            taxable_amount_el = ET.SubElement(tax_sub, cbc + "TaxableAmount")
+            taxable_amount_el.set("currencyID", currency)
+            taxable_amount_el.text = _money(grp["taxable"])
+            tax_sub_amount_el = ET.SubElement(tax_sub, cbc + "TaxAmount")
+            tax_sub_amount_el.set("currencyID", currency)
+            tax_sub_amount_el.text = _money(grp["tax"])
+            tax_cat = ET.SubElement(tax_sub, cac + "TaxCategory")
+            grp_rate = Decimal(str(grp.get("rate", 0)))
+            grp_cat = grp.get("category") or ("S" if grp_rate > 0 else "Z")
+            _text(tax_cat, cbc + "ID", grp_cat)
+            _text(tax_cat, cbc + "Percent", _money(grp_rate))
+            tax_scheme = ET.SubElement(tax_cat, cac + "TaxScheme")
+            _text(tax_scheme, cbc + "ID", "VAT")
+    else:
+        # Fallback: single subtotal
+        tax_sub = ET.SubElement(tax_total, cac + "TaxSubtotal")
+        taxable_amount_el = ET.SubElement(tax_sub, cbc + "TaxableAmount")
+        taxable_amount_el.set("currencyID", currency)
+        taxable_amount_el.text = _money(getattr(invoice, "subtotal", 0))
+        tax_sub_amount_el = ET.SubElement(tax_sub, cbc + "TaxAmount")
+        tax_sub_amount_el.set("currencyID", currency)
+        tax_sub_amount_el.text = _money(getattr(invoice, "tax_amount", 0))
+        tax_cat = ET.SubElement(tax_sub, cac + "TaxCategory")
+        _text(tax_cat, cbc + "ID", "S" if tax_rate > 0 else "Z")
+        _text(tax_cat, cbc + "Percent", _money(tax_rate))
+        tax_scheme = ET.SubElement(tax_cat, cac + "TaxScheme")
+        _text(tax_scheme, cbc + "ID", "VAT")
 
     # Monetary totals
     legal_total = ET.SubElement(inv_el, cac + "LegalMonetaryTotal")
@@ -306,7 +328,14 @@ def build_peppol_ubl_invoice_xml(
     # Invoice lines (items + expenses + extra goods)
     line_id = 1
 
-    def _add_line(description: str, quantity: Any, unit_price: Any, line_total: Any) -> None:
+    def _add_line(
+        description: str,
+        quantity: Any,
+        unit_price: Any,
+        line_total: Any,
+        line_tax_rate: Optional[Decimal] = None,
+        line_vat_category: Optional[str] = None,
+    ) -> None:
         nonlocal line_id
         il = ET.SubElement(inv_el, cac + "InvoiceLine")
         _text(il, cbc + "ID", str(line_id))
@@ -320,11 +349,12 @@ def build_peppol_ubl_invoice_xml(
         item_el = ET.SubElement(il, cac + "Item")
         _text(item_el, cbc + "Name", description[:200])
 
-        # Each line needs exactly one ClassifiedTaxCategory (BT-151, BR-CO-04/UBL-SR-48);
-        # mirrors the document-level VAT category so BR-S-01/BR-S-08 tie out.
+        # Each line needs exactly one ClassifiedTaxCategory (BT-151, BR-CO-04/UBL-SR-48)
+        eff_rate = line_tax_rate if line_tax_rate is not None else tax_rate
+        eff_cat = line_vat_category or ("S" if eff_rate > 0 else "Z")
         line_tax_cat = ET.SubElement(item_el, cac + "ClassifiedTaxCategory")
-        _text(line_tax_cat, cbc + "ID", "S" if tax_rate > 0 else "Z")
-        _text(line_tax_cat, cbc + "Percent", _money(tax_rate))
+        _text(line_tax_cat, cbc + "ID", eff_cat)
+        _text(line_tax_cat, cbc + "Percent", _money(eff_rate))
         line_tax_scheme = ET.SubElement(line_tax_cat, cac + "TaxScheme")
         _text(line_tax_scheme, cbc + "ID", "VAT")
 
@@ -338,11 +368,20 @@ def build_peppol_ubl_invoice_xml(
     # Invoice items
     try:
         for it in list(getattr(invoice, "items", []) or []):
+            _it_tax = None
+            if getattr(it, "tax_rate", None) is not None:
+                _it_tax = Decimal(str(it.tax_rate))
+            _it_cat = getattr(it, "vat_category", None) or None
+            _line_total = getattr(it, "line_net", None)
+            if _line_total is None:
+                _line_total = getattr(it, "total_amount", 0)
             _add_line(
                 description=getattr(it, "description", "Item"),
                 quantity=getattr(it, "quantity", 1),
                 unit_price=getattr(it, "unit_price", 0),
-                line_total=getattr(it, "total_amount", 0),
+                line_total=_line_total,
+                line_tax_rate=_it_tax,
+                line_vat_category=_it_cat,
             )
     except Exception:
         pass
@@ -453,3 +492,139 @@ def send_ubl_via_access_point(
         raise PeppolAccessPointError(f"Access point returned HTTP {resp.status_code}: {data}")
 
     return {"status_code": resp.status_code, "data": data}
+
+
+def build_peppol_ubl_credit_note_xml(
+    credit_note,
+    invoice,
+    supplier: PeppolParty,
+    customer: PeppolParty,
+) -> Tuple[str, str]:
+    """Build a Peppol BIS 3 UBL CreditNote (document type 381) with BillingReference.
+
+    Returns (xml_string, document_id).
+    """
+    nsmap = {
+        "": "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2",
+        "cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
+        "cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+    }
+    # ElementTree does not support default nsmap the same way; use Clark notation.
+    ubl_ns = "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2"
+    cac = "{urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2}"
+    cbc = "{urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2}"
+
+    root = ET.Element(f"{{{ubl_ns}}}CreditNote")
+    root.set("xmlns", ubl_ns)
+    root.set("xmlns:cac", "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2")
+    root.set("xmlns:cbc", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2")
+
+    _text(root, cbc + "CustomizationID", PEPPOL_BIS3_CUSTOMIZATION_ID)
+    _text(root, cbc + "ProfileID", PEPPOL_BIS3_PROFILE_ID)
+    doc_id = getattr(credit_note, "credit_number", None) or str(getattr(credit_note, "id", ""))
+    _text(root, cbc + "ID", doc_id)
+
+    issue_date = getattr(credit_note, "issue_date", None) or date.today()
+    if hasattr(issue_date, "isoformat"):
+        _text(root, cbc + "IssueDate", issue_date.isoformat())
+
+    _text(root, cbc + "CreditNoteTypeCode", "381")
+
+    notes = getattr(credit_note, "reason", None) or getattr(credit_note, "notes", None)
+    if notes:
+        _text(root, cbc + "Note", notes)
+
+    currency = getattr(credit_note, "currency_code", None) or getattr(invoice, "currency_code", None) or "EUR"
+    _text(root, cbc + "DocumentCurrencyCode", currency)
+
+    # Billing reference to original invoice
+    inv_number = getattr(invoice, "invoice_number", None) or str(getattr(invoice, "id", ""))
+    billing_ref = ET.SubElement(root, cac + "BillingReference")
+    inv_doc_ref = ET.SubElement(billing_ref, cac + "InvoiceDocumentReference")
+    _text(inv_doc_ref, cbc + "ID", inv_number)
+    inv_issue = getattr(invoice, "issue_date", None)
+    if inv_issue and hasattr(inv_issue, "isoformat"):
+        _text(inv_doc_ref, cbc + "IssueDate", inv_issue.isoformat())
+
+    _party(root, "AccountingSupplierParty", supplier)
+    _party(root, "AccountingCustomerParty", customer)
+
+    tax_total = ET.SubElement(root, cac + "TaxTotal")
+    tax_amount_el = ET.SubElement(tax_total, cbc + "TaxAmount")
+    tax_amount_el.set("currencyID", currency)
+    tax_amount_el.text = _money(getattr(credit_note, "tax_amount", 0) or 0)
+
+    tax_rate = Decimal(str(getattr(credit_note, "tax_rate", 0) or getattr(invoice, "tax_rate", 0) or 0))
+    tax_sub = ET.SubElement(tax_total, cac + "TaxSubtotal")
+    taxable_amount_el = ET.SubElement(tax_sub, cbc + "TaxableAmount")
+    taxable_amount_el.set("currencyID", currency)
+    taxable_amount_el.text = _money(getattr(credit_note, "subtotal", 0) or 0)
+    tax_sub_amount_el = ET.SubElement(tax_sub, cbc + "TaxAmount")
+    tax_sub_amount_el.set("currencyID", currency)
+    tax_sub_amount_el.text = _money(getattr(credit_note, "tax_amount", 0) or 0)
+    tax_cat = ET.SubElement(tax_sub, cac + "TaxCategory")
+    _text(tax_cat, cbc + "ID", "S" if tax_rate > 0 else "Z")
+    _text(tax_cat, cbc + "Percent", _money(tax_rate))
+    tax_scheme = ET.SubElement(tax_cat, cac + "TaxScheme")
+    _text(tax_scheme, cbc + "ID", "VAT")
+
+    legal_total = ET.SubElement(root, cac + "LegalMonetaryTotal")
+    for tag, val in (
+        ("LineExtensionAmount", getattr(credit_note, "subtotal", 0) or 0),
+        ("TaxExclusiveAmount", getattr(credit_note, "subtotal", 0) or 0),
+        ("TaxInclusiveAmount", getattr(credit_note, "total_amount", 0) or getattr(credit_note, "amount", 0) or 0),
+        ("PayableAmount", getattr(credit_note, "total_amount", 0) or getattr(credit_note, "amount", 0) or 0),
+    ):
+        el = ET.SubElement(legal_total, cbc + tag)
+        el.set("currencyID", currency)
+        el.text = _money(val)
+
+    items = credit_note.items.all() if hasattr(credit_note.items, "all") else list(credit_note.items or [])
+    items = sorted(items, key=lambda x: getattr(x, "position", 0) or 0)
+    for idx, item in enumerate(items, start=1):
+        cl = ET.SubElement(root, cac + "CreditNoteLine")
+        _text(cl, cbc + "ID", str(idx))
+        qty_el = ET.SubElement(cl, cbc + "CreditedQuantity")
+        qty_el.set("unitCode", "C62")
+        qty_el.text = _qty(getattr(item, "quantity", 1))
+        lea = ET.SubElement(cl, cbc + "LineExtensionAmount")
+        lea.set("currencyID", currency)
+        lea.text = _money(getattr(item, "total_amount", 0))
+        item_el = ET.SubElement(cl, cac + "Item")
+        _text(item_el, cbc + "Name", getattr(item, "description", "") or f"Line {idx}")
+        line_tax_cat = ET.SubElement(item_el, cac + "ClassifiedTaxCategory")
+        item_rate = Decimal(str(item.tax_rate if getattr(item, "tax_rate", None) is not None else tax_rate))
+        _text(line_tax_cat, cbc + "ID", "S" if item_rate > 0 else "Z")
+        _text(line_tax_cat, cbc + "Percent", _money(item_rate))
+        ts = ET.SubElement(line_tax_cat, cac + "TaxScheme")
+        _text(ts, cbc + "ID", "VAT")
+        price = ET.SubElement(cl, cac + "Price")
+        pa = ET.SubElement(price, cbc + "PriceAmount")
+        pa.set("currencyID", currency)
+        pa.text = _money(getattr(item, "unit_price", 0))
+
+    if not items:
+        # Amount-only credit: single synthetic line
+        cl = ET.SubElement(root, cac + "CreditNoteLine")
+        _text(cl, cbc + "ID", "1")
+        qty_el = ET.SubElement(cl, cbc + "CreditedQuantity")
+        qty_el.set("unitCode", "C62")
+        qty_el.text = "1.00"
+        lea = ET.SubElement(cl, cbc + "LineExtensionAmount")
+        lea.set("currencyID", currency)
+        amount = getattr(credit_note, "subtotal", None) or getattr(credit_note, "amount", 0) or 0
+        lea.text = _money(amount)
+        item_el = ET.SubElement(cl, cac + "Item")
+        _text(item_el, cbc + "Name", getattr(credit_note, "reason", None) or "Credit")
+        line_tax_cat = ET.SubElement(item_el, cac + "ClassifiedTaxCategory")
+        _text(line_tax_cat, cbc + "ID", "S" if tax_rate > 0 else "Z")
+        _text(line_tax_cat, cbc + "Percent", _money(tax_rate))
+        ts = ET.SubElement(line_tax_cat, cac + "TaxScheme")
+        _text(ts, cbc + "ID", "VAT")
+        price = ET.SubElement(cl, cac + "Price")
+        pa = ET.SubElement(price, cbc + "PriceAmount")
+        pa.set("currencyID", currency)
+        pa.text = _money(amount)
+
+    xml_bytes = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+    return xml_bytes.decode("utf-8"), doc_id

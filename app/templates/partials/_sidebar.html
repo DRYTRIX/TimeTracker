@@ -268,11 +268,28 @@
                                     <i class="fas fa-handshake w-4 mr-2"></i>{{ _('Deals') }}
                                 </a>
                             </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded text-sm {% if ep == 'deals.deals_forecast' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('deals.deals_forecast') }}">
+                                    <i class="fas fa-chart-line w-4 mr-2"></i>{{ _('Deal Forecast') }}
+                                </a>
+                            </li>
                             {% endif %}
                             {% if is_module_enabled('leads') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_leads %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('leads.list_leads') }}">
                                     <i class="fas fa-user-tag w-4 mr-2"></i>{{ _('Leads') }}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="block px-2 py-1 rounded text-sm {% if ep == 'leads.lead_source_analytics' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('leads.lead_source_analytics') }}">
+                                    <i class="fas fa-chart-pie w-4 mr-2"></i>{{ _('Lead Sources') }}
+                                </a>
+                            </li>
+                            {% endif %}
+                            {% if is_module_enabled('contacts') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded text-sm {% if ep.startswith('contacts.') and 'template' in ep %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('contacts.list_communication_templates') }}">
+                                    <i class="fas fa-file-alt w-4 mr-2"></i>{{ _('Comm. Templates') }}
                                 </a>
                             </li>
                             {% endif %}

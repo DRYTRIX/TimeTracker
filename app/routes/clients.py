@@ -124,7 +124,7 @@ def list_clients():
             try:
                 from sqlalchemy import String, cast
 
-                active_definitions = CustomFieldDefinition.get_active_definitions()
+                active_definitions = CustomFieldDefinition.get_active_definitions("client")
                 for definition in active_definitions:
                     # PostgreSQL JSONB path query: custom_fields->>'field_key' ILIKE pattern
                     search_conditions.append(
@@ -151,7 +151,7 @@ def list_clients():
         try:
             search_lower = search.lower()
             filtered_clients = []
-            active_definitions = CustomFieldDefinition.get_active_definitions()
+            active_definitions = CustomFieldDefinition.get_active_definitions("client")
 
             for client in clients:
                 # Check if matches standard fields (already in results) or custom fields
@@ -180,7 +180,7 @@ def list_clients():
             current_app.logger.warning("Client list filtering failed, using original results: %s", e)
 
     # Get custom field definitions for the template
-    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
 
     # Get link templates for custom fields (for clickable values)
     from sqlalchemy.exc import ProgrammingError
@@ -272,6 +272,10 @@ def create_client():
         country = (request.form.get("country", "") or "").strip().upper()[:2] or None
         vat_id = sanitize_input(request.form.get("vat_id", "").strip(), max_length=50)
         leitweg_id = sanitize_input(request.form.get("leitweg_id", "").strip(), max_length=100)
+        sdi_codice_destinatario = sanitize_input(request.form.get("sdi_codice_destinatario", "").strip(), max_length=7)
+        pec_email = sanitize_input(request.form.get("pec_email", "").strip(), max_length=200)
+        codice_fiscale = sanitize_input(request.form.get("codice_fiscale", "").strip(), max_length=16)
+        provincia = sanitize_input(request.form.get("provincia", "").strip(), max_length=2)
         default_hourly_rate = request.form.get("default_hourly_rate", "").strip()
         prepaid_hours_input = request.form.get("prepaid_hours_monthly", "").strip()
         prepaid_reset_day_input = request.form.get("prepaid_reset_day", "").strip()
@@ -349,7 +353,7 @@ def create_client():
         # Parse custom fields from global definitions
         # Format: custom_field_<field_key> = value
         custom_fields = {}
-        active_definitions = CustomFieldDefinition.get_active_definitions()
+        active_definitions = CustomFieldDefinition.get_active_definitions("client")
 
         for definition in active_definitions:
             field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
@@ -384,6 +388,10 @@ def create_client():
             country=country,
             vat_id=vat_id or None,
             leitweg_id=leitweg_id or None,
+            sdi_codice_destinatario=sdi_codice_destinatario or None,
+            pec_email=pec_email or None,
+            codice_fiscale=codice_fiscale or None,
+            provincia=provincia or None,
             default_hourly_rate=default_hourly_rate,
             prepaid_hours_monthly=prepaid_hours_monthly,
             prepaid_reset_day=prepaid_reset_day,
@@ -436,7 +444,7 @@ def create_client():
         return redirect(url_for("clients.view_client", client_id=client.id))
 
     # Load active custom field definitions for the form
-    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
     return render_template("clients/create.html", custom_field_definitions=custom_field_definitions)
 
 
@@ -509,7 +517,7 @@ def view_client(client_id):
     # Get custom field definitions for friendly names
     custom_field_definitions_by_key = {}
     try:
-        for definition in CustomFieldDefinition.get_active_definitions():
+        for definition in CustomFieldDefinition.get_active_definitions("client"):
             custom_field_definitions_by_key[definition.field_key] = definition
     except ProgrammingError as e:
         # Handle case where custom_field_definitions table doesn't exist (migration not run)
@@ -627,6 +635,10 @@ def edit_client(client_id):
         country = (request.form.get("country", "") or "").strip().upper()[:2] or None
         vat_id = request.form.get("vat_id", "").strip()
         leitweg_id = request.form.get("leitweg_id", "").strip()
+        sdi_codice_destinatario = request.form.get("sdi_codice_destinatario", "").strip()
+        pec_email = request.form.get("pec_email", "").strip()
+        codice_fiscale = request.form.get("codice_fiscale", "").strip()
+        provincia = request.form.get("provincia", "").strip()
         default_hourly_rate = request.form.get("default_hourly_rate", "").strip()
         prepaid_hours_input = request.form.get("prepaid_hours_monthly", "").strip()
         prepaid_reset_day_input = request.form.get("prepaid_reset_day", "").strip()
@@ -634,7 +646,7 @@ def edit_client(client_id):
         # Validate required fields
         if not name:
             flash(_("Client name is required"), "error")
-            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
             return render_template(
                 "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
             )
@@ -643,7 +655,7 @@ def edit_client(client_id):
         existing = Client.query.filter_by(name=name).first()
         if existing and existing.id != client.id:
             flash(_("A client with this name already exists"), "error")
-            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
             return render_template(
                 "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
             )
@@ -653,7 +665,7 @@ def edit_client(client_id):
             default_hourly_rate = Decimal(default_hourly_rate) if default_hourly_rate else None
         except (InvalidOperation, ValueError):
             flash(_("Invalid hourly rate format"), "error")
-            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
             return render_template(
                 "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
             )
@@ -664,7 +676,7 @@ def edit_client(client_id):
                 raise InvalidOperation
         except (InvalidOperation, ValueError):
             flash(_("Prepaid hours must be a positive number."), "error")
-            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
             return render_template(
                 "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
             )
@@ -678,7 +690,7 @@ def edit_client(client_id):
 
         if prepaid_reset_day < 1 or prepaid_reset_day > 28:
             flash(_("Prepaid reset day must be between 1 and 28."), "error")
-            custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+            custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
             return render_template(
                 "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
             )
@@ -693,7 +705,7 @@ def edit_client(client_id):
         if portal_enabled:
             if not portal_username:
                 flash(_("Portal username is required when enabling portal access."), "error")
-                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
                 return render_template(
                     "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
                 )
@@ -702,7 +714,7 @@ def edit_client(client_id):
             existing_client = Client.query.filter_by(portal_username=portal_username).first()
             if existing_client and existing_client.id != client.id:
                 flash(_("This portal username is already in use by another client."), "error")
-                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
                 return render_template(
                     "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
                 )
@@ -710,7 +722,7 @@ def edit_client(client_id):
         # Parse custom fields from global definitions
         # Format: custom_field_<field_key> = value
         custom_fields = {}
-        active_definitions = CustomFieldDefinition.get_active_definitions()
+        active_definitions = CustomFieldDefinition.get_active_definitions("client")
 
         for definition in active_definitions:
             field_value = request.form.get(f"custom_field_{definition.field_key}", "").strip()
@@ -719,7 +731,7 @@ def edit_client(client_id):
             elif definition.is_mandatory:
                 # Validate mandatory fields
                 flash(_("Custom field '%(field)s' is required", field=definition.label), "error")
-                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
                 return render_template(
                     "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
                 )
@@ -737,6 +749,10 @@ def edit_client(client_id):
         client.country = country
         client.vat_id = vat_id or None
         client.leitweg_id = leitweg_id or None
+        client.sdi_codice_destinatario = (sdi_codice_destinatario or "").strip().upper() or None
+        client.pec_email = pec_email or None
+        client.codice_fiscale = (codice_fiscale or "").strip().upper() or None
+        client.provincia = (provincia or "").strip().upper()[:2] or None
         client.default_hourly_rate = default_hourly_rate
         client.prepaid_hours_monthly = prepaid_hours_monthly
         client.prepaid_reset_day = prepaid_reset_day
@@ -749,7 +765,7 @@ def edit_client(client_id):
             existing_domain = Client.query.filter(Client.custom_domain == custom_domain, Client.id != client.id).first()
             if existing_domain:
                 flash(_("That custom domain is already used by another client."), "error")
-                custom_field_definitions = CustomFieldDefinition.get_active_definitions()
+                custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
                 return render_template(
                     "clients/edit.html", client=client, custom_field_definitions=custom_field_definitions
                 )
@@ -768,6 +784,16 @@ def edit_client(client_id):
             client.portal_username = None
             client.portal_password_hash = None
 
+        # Reminder policy (Phase 4)
+        rp_id_raw = request.form.get("reminder_policy_id", "").strip()
+        if rp_id_raw:
+            try:
+                client.reminder_policy_id = int(rp_id_raw)
+            except ValueError:
+                client.reminder_policy_id = None
+        else:
+            client.reminder_policy_id = None
+
         client.updated_at = datetime.utcnow()
 
         if not safe_commit("edit_client", {"client_id": client.id}):
@@ -782,8 +808,20 @@ def edit_client(client_id):
         return redirect(url_for("clients.view_client", client_id=client.id))
 
     # Load active custom field definitions for the form
-    custom_field_definitions = CustomFieldDefinition.get_active_definitions()
-    return render_template("clients/edit.html", client=client, custom_field_definitions=custom_field_definitions)
+    custom_field_definitions = CustomFieldDefinition.get_active_definitions("client")
+    # Load reminder policies for the dropdown (Phase 4)
+    try:
+        from app.models.reminder_policy import ReminderPolicy as _RP
+
+        reminder_policies = _RP.query.filter_by(active=True).order_by(_RP.name).all()
+    except Exception:
+        reminder_policies = []
+    return render_template(
+        "clients/edit.html",
+        client=client,
+        custom_field_definitions=custom_field_definitions,
+        reminder_policies=reminder_policies,
+    )
 
 
 @clients_bp.route("/clients/<int:client_id>/send-portal-password-email", methods=["POST"])

@@ -49,7 +49,16 @@ class TestPresetMembership:
     def test_solo_preset_keeps_the_core_workflow(self):
         """Track time -> project/client -> invoice -> report must survive."""
         disabled = set(ModuleRegistry.get_disabled_ids_for_preset(ModulePreset.SOLO.value))
-        for essential in ("timer", "projects", "clients", "invoices", "reports", "tasks"):
+        for essential in (
+            "timer",
+            "projects",
+            "clients",
+            "invoices",
+            "reports",
+            "tasks",
+            "weekly_goals",
+            "time_entry_templates",
+        ):
             assert essential not in disabled, essential
 
 

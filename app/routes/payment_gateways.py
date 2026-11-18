@@ -51,7 +51,12 @@ def create_gateway():
             config = {
                 "client_id": request.form.get("client_id", "").strip(),
                 "client_secret": request.form.get("client_secret", "").strip(),
+                "webhook_id": request.form.get("webhook_id", "").strip(),
                 "sandbox": is_test_mode,
+            }
+        elif provider == "mollie":
+            config = {
+                "api_key": request.form.get("api_key", "").strip(),
             }
 
         service = PaymentGatewayService()
@@ -109,6 +114,20 @@ def stripe_webhook():
 def paypal_webhook():
     """Handle PayPal webhook"""
     gateway = PaymentGatewayService().get_active_gateway(provider="paypal")
+    if not gateway:
+        return jsonify({"error": "Gateway not found"}), 404
+
+    result = CheckoutService().complete_webhook(gateway, request.data, dict(request.headers))
+    status = result.get("status", 500 if not result.get("success") else 200)
+    if not result.get("success"):
+        return jsonify({"error": result.get("message")}), status
+    return jsonify({"status": "success"}), status
+
+
+@payment_gateways_bp.route("/payment-gateways/mollie/webhook", methods=["POST"])
+def mollie_webhook():
+    """Handle Mollie webhook"""
+    gateway = PaymentGatewayService().get_active_gateway(provider="mollie")
     if not gateway:
         return jsonify({"error": "Gateway not found"}), 404
 

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block title %}{{ _('Communication Templates') }} - {{ config.APP_NAME }}{% endblock %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('CRM')},
+    {'text': _('Communication Templates')}
+] %}
+
+{{ page_header(
+    icon_class='fas fa-file-alt',
+    title_text=_('Communication Templates'),
+    subtitle_text=_('Reusable templates when logging contact communications'),
+    breadcrumbs=breadcrumbs,
+    actions_html='<a href="' + url_for("contacts.create_communication_template") + '" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"><i class="fas fa-plus mr-2"></i>' + _('New Template') + '</a>'
+) }}
+
+<div class="bg-card-light dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark overflow-x-auto">
+    <table class="min-w-full text-sm">
+        <thead>
+            <tr class="border-b border-border-light dark:border-border-dark text-left">
+                <th class="px-4 py-3">{{ _('Name') }}</th>
+                <th class="px-4 py-3">{{ _('Type') }}</th>
+                <th class="px-4 py-3">{{ _('Subject') }}</th>
+                <th class="px-4 py-3"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in templates %}
+            <tr class="border-b border-border-light dark:border-border-dark">
+                <td class="px-4 py-3">{{ t.name }}</td>
+                <td class="px-4 py-3">{{ t.type }}</td>
+                <td class="px-4 py-3">{{ t.subject or '—' }}</td>
+                <td class="px-4 py-3 text-right">
+                    <a href="{{ url_for('contacts.edit_communication_template', template_id=t.id) }}" class="text-primary hover:underline">{{ _('Edit') }}</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="px-4 py-6 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No templates yet') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

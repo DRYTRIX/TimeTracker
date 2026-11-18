@@ -184,38 +184,11 @@ flask db upgrade
 
 ## Remaining Work
 
-### Templates Needed
-1. **Deals:**
-   - `deals/view.html` - Detailed deal view
-   - `deals/form.html` - Create/edit deal form
-   - `deals/activity_form.html` - Add activity form
+**Completed since original write-up:** templates, sidebar CRM nav, REST API (CRUD + activities + conversion + stage + forecast + communications), pipeline drag-and-drop, deal forecast, lead source analytics, communication templates, activity→calendar reminders, automated lead score history, module guards on CRM routes, and `tests/test_api_crm_v1.py`.
 
-2. **Leads:**
-   - `leads/view.html` - Detailed lead view
-   - `leads/form.html` - Create/edit lead form
-   - `leads/convert_to_client.html` - Convert to client form
-   - `leads/convert_to_deal.html` - Convert to deal form
-   - `leads/activity_form.html` - Add activity form
+**Optional follow-ups:** dedicated end-user CRM guide; fuller OpenAPI coverage for deals/leads; bidirectional external CRM sync; mobile/desktop **pipeline board** UI.
 
-3. **Contacts:**
-   - `contacts/communication_form.html` - Add communication form
-
-### Navigation Updates
-- Add "Deals" and "Leads" to main navigation menu
-- Add "Contacts" link in client view (already done)
-
-### API Endpoints
-- Add REST API endpoints for contacts, deals, and leads
-- Add to `app/routes/api_v1.py`
-
-### Testing
-- Unit tests for models
-- Route tests
-- Integration tests
-
-### Documentation
-- User guide for CRM features
-- API documentation updates
+**Client parity (2026-11):** Mobile and desktop now support lead/deal **detail, edit, stage/status**, lead **convert** (to client/deal), and client notes. Pipeline drag-and-drop remains web-only.
 
 ---
 

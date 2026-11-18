@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #16a34a;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+        }
+        .content {
+            background-color: #f9fafb;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .receipt-details {
+            background-color: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #16a34a;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #16a34a;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .row:last-child { border-bottom: none; }
+        .label { color: #6b7280; }
+        .value { font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>✓ Payment Received</h2>
+        <p>Thank you — your payment has been recorded.</p>
+    </div>
+
+    <div class="content">
+        <p>Dear {{ client_name or 'Valued Customer' }},</p>
+        <p>We have received your payment. Here is your receipt:</p>
+
+        <div class="receipt-details">
+            <div class="amount">{{ currency }} {{ "%.2f"|format(amount) }}</div>
+
+            <div style="margin-top: 15px;">
+                <div class="row">
+                    <span class="label">Invoice Number</span>
+                    <span class="value">{{ invoice_number }}</span>
+                </div>
+                <div class="row">
+                    <span class="label">Payment Date</span>
+                    <span class="value">{{ payment_date }}</span>
+                </div>
+                {% if payment_method %}
+                <div class="row">
+                    <span class="label">Payment Method</span>
+                    <span class="value">{{ payment_method }}</span>
+                </div>
+                {% endif %}
+                {% if reference %}
+                <div class="row">
+                    <span class="label">Reference</span>
+                    <span class="value">{{ reference }}</span>
+                </div>
+                {% endif %}
+                <div class="row">
+                    <span class="label">Status</span>
+                    <span class="value" style="color: #16a34a;">Completed</span>
+                </div>
+            </div>
+        </div>
+
+        <p>If you have any questions about this payment, please don't hesitate to contact us.</p>
+        <p>Thank you for your business!</p>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated payment receipt. Please do not reply to this email.</p>
+    </div>
+</body>
+</html>

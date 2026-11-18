@@ -100,10 +100,18 @@
                                 {% set count = item.time_entry_ids.split(',')|length %}
                                 <br><small class="time-entry-info">{{ _('Generated from %(num)d time entries', num=count) }}</small>
                             {% endif %}
+                            {% if item.discount_percent and item.discount_percent > 0 %}
+                                <br><small class="discount-info">{{ _('Discount: %(pct).2f%%', pct=item.discount_percent) }}</small>
+                            {% elif item.discount_amount and item.discount_amount > 0 %}
+                                <br><small class="discount-info">{{ _('Discount: -%(amt)s', amt=format_money(item.discount_amount)) }}</small>
+                            {% endif %}
+                            {% if item.tax_rate is not none and item.tax_rate != invoice.tax_rate %}
+                                <br><small class="tax-info">{{ _('Tax: %(rate).2f%%', rate=item.tax_rate) }}</small>
+                            {% endif %}
                         </td>
                         <td class="num">{{ '%.2f' % item.quantity }}</td>
                         <td class="num">{{ format_money(item.unit_price) }}</td>
-                        <td class="num">{{ format_money(item.total_amount) }}</td>
+                        <td class="num">{{ format_money(item.line_net) }}</td>
                     </tr>
                     {% endfor %}
                     {% for expense in invoice.expenses %}
@@ -153,11 +161,32 @@
                         <td colspan="3" class="num">{{ _('Subtotal:') }}</td>
                         <td class="num">{{ format_money(invoice.subtotal) }}</td>
                     </tr>
-                    {% if invoice.tax_rate > 0 %}
+                    {% if invoice.discount_amount and invoice.discount_amount > 0 %}
                     <tr>
-                        <td colspan="3" class="num">{{ _('Tax (%(rate).2f%%):', rate=invoice.tax_rate) }}</td>
-                        <td class="num">{{ format_money(invoice.tax_amount) }}</td>
+                        <td colspan="3" class="num">{{ _('Invoice Discount:') }}</td>
+                        <td class="num">-{{ format_money(invoice.discount_amount) }}</td>
                     </tr>
+                    {% elif invoice.discount_percent and invoice.discount_percent > 0 %}
+                    <tr>
+                        <td colspan="3" class="num">{{ _('Invoice Discount (%(pct).2f%%):', pct=invoice.discount_percent) }}</td>
+                        <td class="num"></td>
+                    </tr>
+                    {% endif %}
+                    {% if invoice.tax_amount > 0 %}
+                        {% set breakdown = invoice.tax_breakdown() %}
+                        {% if breakdown|length > 1 %}
+                            {% for grp in breakdown %}
+                            <tr>
+                                <td colspan="3" class="num">{{ _('VAT %(cat)s %(rate).2f%%:', cat=grp.category, rate=grp.rate) }}</td>
+                                <td class="num">{{ format_money(grp.tax) }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="num">{{ _('Tax (%(rate).2f%%):', rate=invoice.tax_rate) }}</td>
+                                <td class="num">{{ format_money(invoice.tax_amount) }}</td>
+                            </tr>
+                        {% endif %}
                     {% endif %}
                     <tr>
                         <td colspan="3" class="num">{{ _('Total Amount:') }}</td>

@@ -495,6 +495,7 @@ class InvoiceService:
         if "currency_code" in kwargs:
             invoice.currency_code = kwargs["currency_code"]
         # status transitions only when explicitly allowed (e.g. cancel soft-delete)
+        previous_status = invoice.status
         if "status" in kwargs and kwargs.get("_allow_status"):
             invoice.status = kwargs["status"]
 
@@ -504,6 +505,12 @@ class InvoiceService:
                 "message": "Could not update invoice due to a database error",
                 "error": "database_error",
             }
+
+        from app.utils.invoice_events import emit_invoice_event
+
+        emit_invoice_event(WebhookEvent.INVOICE_UPDATED.value, invoice)
+        if invoice.status == "sent" and previous_status != "sent":
+            emit_invoice_event(WebhookEvent.INVOICE_SENT.value, invoice)
 
         return {"success": True, "message": "Invoice updated successfully", "invoice": invoice}
 
@@ -526,6 +533,7 @@ class InvoiceService:
                 "error": "invalid_status",
             }
 
+        invoice_number = invoice.invoice_number
         invoice.release_invoiced_costs_and_expenses()
         db.session.delete(invoice)
 
@@ -535,6 +543,11 @@ class InvoiceService:
                 "message": "Could not delete invoice due to a database error",
                 "error": "database_error",
             }
+
+        emit_event(
+            WebhookEvent.INVOICE_DELETED.value,
+            {"invoice_id": invoice_id, "invoice_number": invoice_number},
+        )
 
         return {"success": True, "message": "Invoice deleted successfully"}
 
@@ -1118,7 +1131,7 @@ class InvoiceService:
             }
 
         invoice.items.delete()
-        for row in items:
+        for idx, row in enumerate(items):
             description = (row.get("description") or "").strip()
             if not description:
                 continue
@@ -1127,12 +1140,39 @@ class InvoiceService:
                 unit_price = Decimal(str(row.get("unit_price", 0)))
             except (InvalidOperation, TypeError, ValueError):
                 return {"success": False, "message": "Invalid quantity or unit_price", "error": "validation"}
+
+            # Optional per-line fields
+            _tax_rate = None
+            if row.get("tax_rate") is not None:
+                try:
+                    _tax_rate = Decimal(str(row["tax_rate"]))
+                except (InvalidOperation, TypeError, ValueError):
+                    _tax_rate = None
+            _vat_category = row.get("vat_category") or None
+            try:
+                _disc_pct = Decimal(str(row.get("discount_percent") or 0))
+            except (InvalidOperation, TypeError, ValueError):
+                _disc_pct = Decimal("0")
+            try:
+                _disc_amt = Decimal(str(row.get("discount_amount") or 0))
+            except (InvalidOperation, TypeError, ValueError):
+                _disc_amt = Decimal("0")
+            try:
+                _position = int(row.get("position", idx))
+            except (TypeError, ValueError):
+                _position = idx
+
             item = InvoiceItem(
                 invoice_id=invoice.id,
                 description=description,
                 quantity=quantity,
                 unit_price=unit_price,
                 time_entry_ids=row.get("time_entry_ids"),
+                tax_rate=_tax_rate,
+                vat_category=_vat_category,
+                discount_percent=_disc_pct,
+                discount_amount=_disc_amt,
+                position=_position,
             )
             db.session.add(item)
 
