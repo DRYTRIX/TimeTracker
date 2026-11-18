@@ -4,12 +4,31 @@ Send notifications and sync with Microsoft Teams.
 """
 
 import os
+import time
+from collections import defaultdict, deque
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Deque, Dict, List, Optional
 
 import requests
 
 from app.integrations.base import BaseConnector
+
+# In-process rate limit for Bot Framework messages (per conversation).
+_TEAMS_BOT_RATE_LIMIT = 20
+_TEAMS_BOT_RATE_WINDOW_SEC = 60
+_teams_bot_hits: Dict[str, Deque[float]] = defaultdict(deque)
+
+
+def _teams_bot_rate_limited(conversation_id: str) -> bool:
+    """Return True if conversation exceeded the sliding-window budget."""
+    now = time.monotonic()
+    bucket = _teams_bot_hits[conversation_id or "unknown"]
+    while bucket and now - bucket[0] > _TEAMS_BOT_RATE_WINDOW_SEC:
+        bucket.popleft()
+    if len(bucket) >= _TEAMS_BOT_RATE_LIMIT:
+        return True
+    bucket.append(now)
+    return False
 
 
 class MicrosoftTeamsConnector(BaseConnector):
@@ -280,6 +299,17 @@ class MicrosoftTeamsConnector(BaseConnector):
         activity_type = (activity.get("type") or "message").lower()
         if activity_type != "message":
             return {"status": 200, "body": {}}
+
+        conversation = activity.get("conversation") or {}
+        conversation_id = str(conversation.get("id") or activity.get("id") or "unknown")
+        if _teams_bot_rate_limited(conversation_id):
+            return {
+                "status": 429,
+                "body": {
+                    "type": "message",
+                    "text": "Too many commands. Please wait a minute and try again.",
+                },
+            }
 
         text = (activity.get("text") or "").strip()
         # Strip @mention prefix often injected by Teams

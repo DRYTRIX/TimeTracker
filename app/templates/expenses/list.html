@@ -555,7 +555,7 @@ function submitBulkDelete() {
 
     const checkboxes = document.querySelectorAll('.expense-checkbox:checked');
     if (checkboxes.length === 0) {
-        alert('Please select at least one expense to delete.');
+        if (window.ttAlert) window.ttAlert('Please select at least one expense to delete.', {variant:'warning'}); else if (window.showAlert) window.showAlert('Please select at least one expense to delete.'); else window.alert('Please select at least one expense to delete.');
         return;
     }
 
@@ -600,7 +600,7 @@ function submitBulkStatus() {
 
     const status = statusSelect.value;
     if (!status) {
-        alert('Please select a status');
+        if (window.ttAlert) window.ttAlert('Please select a status', {variant:'warning'}); else if (window.showAlert) window.showAlert('Please select a status'); else window.alert('Please select a status');
         return;
     }
 
@@ -618,7 +618,7 @@ function submitBulkStatus() {
     // Add selected expense IDs to form
     const checkboxes = document.querySelectorAll('.expense-checkbox:checked');
     if (checkboxes.length === 0) {
-        alert('Please select at least one expense to update.');
+        if (window.ttAlert) window.ttAlert('Please select at least one expense to update.', {variant:'warning'}); else if (window.showAlert) window.showAlert('Please select at least one expense to update.'); else window.alert('Please select at least one expense to update.');
         return;
     }
 
