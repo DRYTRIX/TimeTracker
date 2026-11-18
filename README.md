@@ -659,13 +659,14 @@ This starts:
 - **Push notifications** — Browser/PWA web push + optional FCM device registration (VAPID / Firebase env)
 - **Automation / workflows** — Rule engine, admin UI, and API (`workflows`)
 - **Forecasting** — Budget/project forecasting + CRM deal forecast (optional LLM narrative)
+- **FatturaPA / SDI** — Italian e-invoicing XML + intermediary adapter ([docs](docs/admin/configuration/FATTURAPA_SDI.md))
+- **Credit notes, dunning & line tax** — Credit notes, reminder policies/late fees, per-line tax/discounts
 
 ### Planned Features
 - 📊 **Advanced Analytics** — Deeper charts, insights, and cross-module reporting options
 - 🔌 **API Extensions** — Additional RESTful API endpoints for niche integrations and client parity
 - 📱 **Mobile & Desktop App Enhancements** — CRM pipeline boards, finance extras, and OIDC browser redirect
 - 📈 **Advanced Forecasting** — Richer AI-powered timeline and capacity predictions
-- 🇮🇹 **FatturaPA / SDI** — Italian e-invoicing XML + intermediary adapter (see Unreleased in CHANGELOG)
 
 
 ---
