@@ -61,6 +61,8 @@ def view_calendar():
         "time_entry": current_user.calendar_color_time_entries or defaults["time_entry"],
     }
 
+    from app.utils.time_rounding import get_calendar_snap_minutes
+
     return render_template(
         "calendar/view.html",
         view_type=view_type,
@@ -68,6 +70,7 @@ def view_calendar():
         projects=projects,
         clients=clients,
         type_colors=type_colors,
+        calendar_snap_minutes=get_calendar_snap_minutes(current_user),
     )
 
 

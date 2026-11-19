@@ -4,7 +4,7 @@
 {% block title %}Calendar - {{ app_name }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}?v=3">
+<link rel="stylesheet" href="{{ url_for('static', filename='calendar.css') }}?v=5">
 {% endblock %}
 
 {% block content %}
@@ -168,6 +168,54 @@
         </div>
     </div>
 
+    <!-- Create Time Entry Modal (drag-select on day/week) -->
+    <div id="timeEntryCreateModal" class="modal" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ _('Create Time Entry') }}</h3>
+                    <button type="button" class="close" data-dismiss="modal" data-modal="timeEntryCreateModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-sm text-muted mb-3">{{ _('Drag across a time range in day or week view to create a tracked entry. Snaps to your rounding interval (%(minutes)s min).', minutes=calendar_snap_minutes|default(15)) }}</p>
+                    <div class="mb-3">
+                        <label class="form-label" for="teCreateProject">{{ _('Project') }} *</label>
+                        <select id="teCreateProject" class="form-input" required>
+                            <option value="">{{ _('Select a project...') }}</option>
+                            {% for p in projects %}
+                            <option value="{{ p.id }}">{{ p.name }}{% if p.client %} ({{ p.client.name }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="form-label" for="teCreateStart">{{ _('Start') }}</label>
+                            <input type="datetime-local" id="teCreateStart" class="form-input user-datetime-input" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="teCreateEnd">{{ _('End') }}</label>
+                            <input type="datetime-local" id="teCreateEnd" class="form-input user-datetime-input" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="teCreateNotes">{{ _('Notes') }}</label>
+                        <input type="text" id="teCreateNotes" class="form-input" placeholder="{{ _('Optional notes') }}">
+                    </div>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" id="teCreateBillable" class="form-checkbox" checked>
+                        <span>{{ _('Billable') }}</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" data-modal="timeEntryCreateModal">{{ _('Cancel') }}</button>
+                    <button type="button" id="teCreateSubmit" class="btn btn-primary">{{ _('Create') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <!-- Pass data to JavaScript -->
 <script nonce="{{ csp_nonce() }}">
     window.calendarData = {
@@ -180,6 +228,9 @@
         deleteEventUrl: '{{ url_for('calendar.delete_event', event_id=0) }}'.replace('/0', ''),
         moveEventUrl: '{{ url_for('calendar.move_event', event_id=0) }}'.replace('/0', ''),
         resizeEventUrl: '{{ url_for('calendar.resize_event', event_id=0) }}'.replace('/0', ''),
+        updateEntryUrl: '/api/entry/',
+        createEntryUrl: '/api/entries',
+        snapMinutes: {{ calendar_snap_minutes|default(15)|int }},
         csrfToken: '{{ csrf_token() }}',
         typeColors: {
             event: '{{ type_colors.event }}',
@@ -192,5 +243,5 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<script src="{{ url_for('static', filename='calendar.js') }}?v=11"></script>
+<script src="{{ url_for('static', filename='calendar.js') }}?v=13"></script>
 {% endblock %}

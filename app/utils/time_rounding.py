@@ -211,6 +211,20 @@ def apply_user_rounding(duration_seconds: int, user) -> int:
     return apply_minimum_duration(rounded, settings["minimum_minutes"])
 
 
+def get_calendar_snap_minutes(user=None) -> int:
+    """
+    Minutes used for calendar grid snap (create / move / resize).
+
+    Uses the user's effective rounding interval when enabled and in
+    {5, 10, 15, 30, 60}; otherwise defaults to 15 for a usable UI grid.
+    """
+    settings = get_user_rounding_settings(user)
+    minutes = settings.get("minutes") or 1
+    if not settings.get("enabled") or minutes <= 1 or minutes not in (5, 10, 15, 30, 60):
+        return 15
+    return int(minutes)
+
+
 def format_rounding_interval(minutes: int) -> str:
     """
     Format a rounding interval in minutes as a human-readable string.

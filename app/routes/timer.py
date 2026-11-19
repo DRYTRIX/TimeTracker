@@ -2273,9 +2273,16 @@ def timer_page():
 @login_required
 def calendar_view():
     """Calendar UI combining day/week/month with list toggle."""
+    from app.utils.time_rounding import get_calendar_snap_minutes
+
     # Provide projects for quick assignment during drag-create
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
-    return render_template("timer/calendar.html", projects=active_projects)
+
+    return render_template(
+        "timer/calendar.html",
+        projects=active_projects,
+        calendar_snap_minutes=get_calendar_snap_minutes(current_user),
+    )
 
 
 @timer_bp.route("/timer/bulk/<int:project_id>")

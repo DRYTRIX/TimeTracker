@@ -11,7 +11,11 @@ class Calendar {
         this.apiUrl = options.apiUrl;
         this.moveEventUrl = options.moveEventUrl || (window.calendarData && window.calendarData.moveEventUrl) || '';
         this.resizeEventUrl = options.resizeEventUrl || (window.calendarData && window.calendarData.resizeEventUrl) || '';
+        this.updateEntryUrl = options.updateEntryUrl || (window.calendarData && window.calendarData.updateEntryUrl) || '/api/entry/';
+        this.createEntryUrl = options.createEntryUrl || (window.calendarData && window.calendarData.createEntryUrl) || '/api/entries';
         this.csrfToken = options.csrfToken || (window.calendarData && window.calendarData.csrfToken) || '';
+        const snap = parseInt(options.snapMinutes || (window.calendarData && window.calendarData.snapMinutes) || 15, 10);
+        this.snapMinutes = [5, 10, 15, 30, 60].includes(snap) ? snap : 15;
         this.events = [];
         this.tasks = [];
         this.timeEntries = [];
@@ -19,6 +23,7 @@ class Calendar {
         this.timeOff = [];
         this._dragState = null;
         this._resizeState = null;
+        this._selectState = null;
 
         // Filters
         this.showEvents = true;
@@ -35,6 +40,16 @@ class Calendar {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
+    }
+
+    formatLocalDateTimeInput(date) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${this.formatLocalDate(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    snapToInterval(minutes) {
+        const step = this.snapMinutes || 15;
+        return Math.round(minutes / step) * step;
     }
 
     renderDayOverlayBadges(day) {
@@ -75,21 +90,25 @@ class Calendar {
         this.container.addEventListener('dragover', (e) => this.onDragOver(e));
         this.container.addEventListener('dragleave', (e) => this.onDragLeave(e));
         this.container.addEventListener('drop', (e) => this.onDrop(e));
-        this.container.addEventListener('mousedown', (e) => this.onResizeMouseDown(e));
+        this.container.addEventListener('mousedown', (e) => this.onPointerDown(e));
 
-        document.addEventListener('mousemove', (e) => this.onResizeMouseMove(e));
-        document.addEventListener('mouseup', (e) => this.onResizeMouseUp(e));
+        document.addEventListener('mousemove', (e) => this.onPointerMove(e));
+        document.addEventListener('mouseup', (e) => this.onPointerUp(e));
     }
 
     onDragStart(e) {
-        const el = e.target.closest('[data-type="event"][draggable="true"]');
-        if (!el || !this.moveEventUrl) return;
+        const el = e.target.closest('[draggable="true"][data-type]');
+        if (!el) return;
+        const itemType = el.dataset.type;
+        if (itemType !== 'event' && itemType !== 'time_entry') return;
+        if (itemType === 'event' && !this.moveEventUrl) return;
         const id = el.dataset.id;
         const start = el.dataset.start;
         const end = el.dataset.end;
         if (!id || !start) return;
         this._dragState = {
             id: parseInt(id, 10),
+            itemType,
             start,
             end,
             durationMs: end ? (new Date(end) - new Date(start)) : 60 * 60 * 1000
@@ -104,10 +123,12 @@ class Calendar {
         const el = e.target.closest('.dragging');
         if (el) el.classList.remove('dragging');
         this.container.querySelectorAll('.drop-target').forEach(n => n.classList.remove('drop-target'));
+        this._clearSlotGhost();
         this._dragState = null;
     }
 
     _dropTargetFromEvent(e) {
+        const step = this.snapMinutes || 15;
         const monthCell = e.target.closest('.month-cell[data-date]');
         if (monthCell) return { kind: 'day', date: monthCell.dataset.date, el: monthCell };
 
@@ -116,10 +137,9 @@ class Calendar {
             const blocks = weekCol.querySelector('.week-day-blocks') || weekCol;
             const rect = blocks.getBoundingClientRect();
             const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-            const minutes = Math.round((y / 60) * 60 / 15) * 15; // 15-min snap within hour px
-            const hour = Math.floor(y / 60);
-            const min = Math.round(((y % 60) / 60) * 60 / 15) * 15;
-            return { kind: 'datetime', date: weekCol.dataset.date, minutes: hour * 60 + min, el: weekCol };
+            // 60px per hour → 1px per minute; snap to rounding interval
+            const minutes = this.snapToInterval(y);
+            return { kind: 'datetime', date: weekCol.dataset.date, minutes: Math.min(24 * 60 - step, minutes), el: weekCol, blocksEl: blocks };
         }
 
         const dayContainer = e.target.closest('.day-events-container, .events-column');
@@ -127,12 +147,13 @@ class Calendar {
             const container = this.container.querySelector('.day-events-container') || dayContainer;
             const rect = container.getBoundingClientRect();
             const y = Math.max(0, Math.min(1440, e.clientY - rect.top));
-            const minutes = Math.round(y / 15) * 15;
+            const minutes = this.snapToInterval(y);
             return {
                 kind: 'datetime',
                 date: this.formatLocalDate(this.currentDate),
-                minutes,
-                el: container
+                minutes: Math.min(24 * 60 - step, minutes),
+                el: container,
+                blocksEl: container
             };
         }
         return null;
@@ -150,12 +171,35 @@ class Calendar {
             if (n !== target.el) n.classList.remove('drop-target');
         });
         target.el.classList.add('drop-target');
+
+        // Ghost block at the snapped drop slot (not just a full-column wash)
+        let state = this._dragState;
+        if (!state) {
+            try {
+                state = JSON.parse(e.dataTransfer.getData('application/x-calendar-event') || 'null');
+            } catch (_) {
+                state = null;
+            }
+        }
+        if (target.kind === 'datetime' && target.blocksEl && state) {
+            const durationMin = Math.max(
+                this.snapMinutes || 15,
+                Math.round((state.durationMs || 3600000) / 60000)
+            );
+            const top = target.minutes;
+            const height = Math.min(durationMin, 1440 - top);
+            const label = this._formatMinutesRange(top, top + height);
+            this._showSlotGhost(target.blocksEl, top, height, label, 'drop');
+        } else if (target.kind === 'day') {
+            this._clearSlotGhost();
+        }
     }
 
     onDragLeave(e) {
         const el = e.target.closest('.drop-target');
         if (el && !el.contains(e.relatedTarget)) {
             el.classList.remove('drop-target');
+            this._clearSlotGhost();
         }
     }
 
@@ -163,6 +207,7 @@ class Calendar {
         e.preventDefault();
         const target = this._dropTargetFromEvent(e);
         this.container.querySelectorAll('.drop-target').forEach(n => n.classList.remove('drop-target'));
+        this._clearSlotGhost();
         let state = this._dragState;
         if (!state) {
             try {
@@ -171,7 +216,8 @@ class Calendar {
                 return;
             }
         }
-        if (!state || !target || !this.moveEventUrl) return;
+        if (!state || !target) return;
+        if (state.itemType === 'event' && !this.moveEventUrl) return;
 
         let newStart;
         if (target.kind === 'day') {
@@ -186,23 +232,54 @@ class Calendar {
         }
         const newEnd = new Date(newStart.getTime() + (state.durationMs || 3600000));
 
-        await this.postMoveOrResize('move', state.id, {
+        if (state.itemType === 'time_entry') {
+            await this.updateTimeEntryTimes(state.id, newStart, newEnd);
+        } else {
+            await this.postMoveOrResize('move', state.id, {
                 start: newStart.toISOString(),
                 end: newEnd.toISOString()
             });
+        }
         this._dragState = null;
         this.loadEvents();
     }
 
-    onResizeMouseDown(e) {
+    onPointerDown(e) {
+        if (e.button !== 0) return;
         const handle = e.target.closest('.event-resize-handle');
-        if (!handle || !this.resizeEventUrl) return;
+        if (handle) {
+            this.onResizeMouseDown(e, handle);
+            return;
+        }
+        // Drag-select empty area in day/week to create a time entry
+        if (e.target.closest('[draggable="true"], .event-card, .week-event-block, .event-badge, a, button, input, select')) {
+            return;
+        }
+        if (this.viewType !== 'day' && this.viewType !== 'week') return;
+        const target = this._dropTargetFromEvent(e);
+        if (!target || target.kind !== 'datetime' || !target.blocksEl) return;
+        e.preventDefault();
+        this._selectState = {
+            date: target.date,
+            startMinutes: target.minutes,
+            endMinutes: target.minutes + this.snapMinutes,
+            blocksEl: target.blocksEl
+        };
+        this._renderSelectPreview();
+    }
+
+    onResizeMouseDown(e, handle) {
+        const resizeHandle = handle || e.target.closest('.event-resize-handle');
+        if (!resizeHandle) return;
         e.preventDefault();
         e.stopPropagation();
-        const card = handle.closest('[data-type="event"]');
+        const card = resizeHandle.closest('[data-type="event"], [data-type="time_entry"]');
         if (!card) return;
+        const itemType = card.dataset.type;
+        if (itemType === 'event' && !this.resizeEventUrl) return;
         this._resizeState = {
             id: parseInt(card.dataset.id, 10),
+            itemType,
             start: card.dataset.start,
             end: card.dataset.end,
             startY: e.clientY,
@@ -211,20 +288,60 @@ class Calendar {
         card.classList.add('resizing');
     }
 
+    onPointerMove(e) {
+        if (this._resizeState) {
+            this.onResizeMouseMove(e);
+            return;
+        }
+        if (this._selectState) {
+            const target = this._dropTargetFromEvent(e);
+            if (!target || target.kind !== 'datetime') return;
+            if (target.date !== this._selectState.date) return;
+            const step = this.snapMinutes || 15;
+            let end = target.minutes;
+            if (end <= this._selectState.startMinutes) {
+                end = this._selectState.startMinutes + step;
+            }
+            this._selectState.endMinutes = end;
+            this._renderSelectPreview();
+        }
+    }
+
     onResizeMouseMove(e) {
         if (!this._resizeState) return;
+        const step = this.snapMinutes || 15;
         const deltaPx = e.clientY - this._resizeState.startY;
-        const deltaMin = Math.round(deltaPx / 15) * 15;
+        const deltaMin = this.snapToInterval(deltaPx);
         const start = new Date(this._resizeState.start);
         let end = new Date(this._resizeState.end || start.getTime() + 3600000);
         end = new Date(end.getTime() + deltaMin * 60 * 1000);
-        if (end <= start) end = new Date(start.getTime() + 15 * 60 * 1000);
+        if (end <= start) end = new Date(start.getTime() + step * 60 * 1000);
         this._resizeState.previewEnd = end;
-        const top = parseFloat(this._resizeState.el.style.top) || 0;
-        const startMin = start.getHours() * 60 + start.getMinutes();
-        const height = Math.max(30, (end - start) / 60000);
+        const height = Math.max(step, (end - start) / 60000);
         this._resizeState.el.style.height = `${height}px`;
-        void top; void startMin;
+        const startMin = start.getHours() * 60 + start.getMinutes();
+        const endMin = end.getHours() * 60 + end.getMinutes();
+        this._setBlockTimeBadge(this._resizeState.el, this._formatMinutesRange(startMin, endMin));
+    }
+
+    async onPointerUp(e) {
+        if (this._resizeState) {
+            await this.onResizeMouseUp();
+            return;
+        }
+        if (this._selectState) {
+            const state = this._selectState;
+            this._selectState = null;
+            this._clearSelectPreview();
+            if (!state || state.endMinutes <= state.startMinutes) return;
+            const start = new Date(`${state.date}T00:00:00`);
+            start.setHours(0, 0, 0, 0);
+            start.setMinutes(state.startMinutes);
+            const end = new Date(`${state.date}T00:00:00`);
+            end.setHours(0, 0, 0, 0);
+            end.setMinutes(state.endMinutes);
+            this.openTimeEntryCreateModal(start, end);
+        }
     }
 
     async onResizeMouseUp() {
@@ -232,9 +349,165 @@ class Calendar {
         const state = this._resizeState;
         this._resizeState = null;
         state.el.classList.remove('resizing');
+        this._clearBlockTimeBadge(state.el);
         if (!state.previewEnd) return;
-        await this.postMoveOrResize('resize', state.id, { end: state.previewEnd.toISOString() });
+        const start = new Date(state.start);
+        if (state.itemType === 'time_entry') {
+            await this.updateTimeEntryTimes(state.id, start, state.previewEnd);
+        } else {
+            await this.postMoveOrResize('resize', state.id, { end: state.previewEnd.toISOString() });
+        }
         this.loadEvents();
+    }
+
+    _minutesToLabel(totalMinutes) {
+        const mins = ((totalMinutes % (24 * 60)) + (24 * 60)) % (24 * 60);
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        const pad = (n) => String(n).padStart(2, '0');
+        if (window.userPrefs && window.userPrefs.timeFormat === '12h') {
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return `${h12}:${pad(m)} ${ampm}`;
+        }
+        return `${pad(h)}:${pad(m)}`;
+    }
+
+    _formatMinutesRange(startMin, endMin) {
+        return `${this._minutesToLabel(startMin)} – ${this._minutesToLabel(endMin)}`;
+    }
+
+    _showSlotGhost(blocksEl, topMinutes, heightMinutes, label, mode) {
+        if (!blocksEl) return;
+        const kind = mode || 'drop';
+        this._clearSlotGhost(blocksEl);
+        const ghost = document.createElement('div');
+        ghost.className = `time-slot-ghost time-slot-ghost--${kind}`;
+        ghost.style.top = `${topMinutes}px`;
+        ghost.style.height = `${Math.max(this.snapMinutes || 15, heightMinutes)}px`;
+        ghost.innerHTML = `<span class="time-slot-ghost-label">${this.escapeHtml(label || '')}</span>`;
+        // Horizontal guide at the snapped start edge
+        const line = document.createElement('div');
+        line.className = `time-slot-snap-line time-slot-snap-line--${kind}`;
+        line.style.top = `${topMinutes}px`;
+        blocksEl.appendChild(line);
+        blocksEl.appendChild(ghost);
+    }
+
+    _clearSlotGhost(scope) {
+        const root = scope || this.container;
+        if (!root) return;
+        root.querySelectorAll('.time-slot-ghost, .time-slot-snap-line').forEach(n => n.remove());
+    }
+
+    _setBlockTimeBadge(el, text) {
+        if (!el) return;
+        let badge = el.querySelector('.time-live-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'time-live-badge';
+            el.appendChild(badge);
+        }
+        badge.textContent = text;
+    }
+
+    _clearBlockTimeBadge(el) {
+        if (!el) return;
+        el.querySelectorAll('.time-live-badge').forEach(n => n.remove());
+    }
+
+    _renderSelectPreview() {
+        if (!this._selectState || !this._selectState.blocksEl) return;
+        const top = Math.min(this._selectState.startMinutes, this._selectState.endMinutes);
+        const height = Math.abs(this._selectState.endMinutes - this._selectState.startMinutes);
+        const label = this._formatMinutesRange(top, top + Math.max(this.snapMinutes, height));
+        this._showSlotGhost(this._selectState.blocksEl, top, Math.max(this.snapMinutes, height), label, 'select');
+    }
+
+    _clearSelectPreview() {
+        this._clearSlotGhost();
+    }
+
+    openTimeEntryCreateModal(start, end) {
+        const modal = document.getElementById('timeEntryCreateModal');
+        const startInput = document.getElementById('teCreateStart');
+        const endInput = document.getElementById('teCreateEnd');
+        if (!modal || !startInput || !endInput) return;
+        startInput.value = this.formatLocalDateTimeInput(start);
+        endInput.value = this.formatLocalDateTimeInput(end);
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+    }
+
+    closeTimeEntryCreateModal() {
+        const modal = document.getElementById('timeEntryCreateModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+    }
+
+    async createTimeEntryFromModal() {
+        const projectId = document.getElementById('teCreateProject')?.value;
+        const start = document.getElementById('teCreateStart')?.value;
+        const end = document.getElementById('teCreateEnd')?.value;
+        const notes = (document.getElementById('teCreateNotes')?.value || '').trim() || null;
+        const billable = !!document.getElementById('teCreateBillable')?.checked;
+        if (!projectId) {
+            ttAlert('Please select a project');
+            return;
+        }
+        if (!start || !end) {
+            ttAlert('Start and end are required');
+            return;
+        }
+        try {
+            const resp = await fetch(this.createEntryUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
+                },
+                body: JSON.stringify({
+                    project_id: parseInt(projectId, 10),
+                    start_time: start,
+                    end_time: end,
+                    notes,
+                    billable
+                })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.success) {
+                throw new Error(data.error || 'Failed to create entry');
+            }
+            this.closeTimeEntryCreateModal();
+            this.loadEvents();
+        } catch (err) {
+            console.error(err);
+            ttAlert(err.message || 'Failed to create entry');
+        }
+    }
+
+    async updateTimeEntryTimes(entryId, start, end) {
+        try {
+            const resp = await fetch(`${this.updateEntryUrl}${entryId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.csrfToken
+                },
+                body: JSON.stringify({
+                    start_time: start.toISOString(),
+                    end_time: end.toISOString()
+                })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.success) {
+                throw new Error(data.error || 'Failed to update entry');
+            }
+        } catch (err) {
+            console.error(err);
+            ttAlert(err.message || 'Failed to update time entry');
+        }
     }
 
     async postMoveOrResize(kind, eventId, body) {
@@ -297,6 +570,13 @@ class Calendar {
         return `draggable="true" data-id="${event.id}" data-type="event" data-start="${start}" data-end="${end}"`;
     }
 
+    _timeEntryDragAttrs(entry) {
+        if (!entry || !entry.id || !entry.start) return 'data-type="time_entry"';
+        const start = entry.start;
+        const end = entry.end || '';
+        return `draggable="true" data-id="${entry.id}" data-type="time_entry" data-start="${start}" data-end="${end}"`;
+    }
+
     setupEventListeners() {
         // View navigation
         document.getElementById('todayBtn')?.addEventListener('click', () => {
@@ -347,12 +627,28 @@ class Calendar {
         // Modal close
         document.querySelectorAll('[data-dismiss="modal"]').forEach(btn => {
             btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-modal');
+                if (targetId === 'timeEntryCreateModal') {
+                    this.closeTimeEntryCreateModal();
+                    return;
+                }
                 const eventModal = document.getElementById('eventModal');
                 if (eventModal) {
                     eventModal.style.display = 'none';
                     eventModal.classList.remove('show');
                 }
+                if (targetId) {
+                    const other = document.getElementById(targetId);
+                    if (other) {
+                        other.style.display = 'none';
+                        other.classList.remove('show');
+                    }
+                }
             });
+        });
+
+        document.getElementById('teCreateSubmit')?.addEventListener('click', () => {
+            this.createTimeEntryFromModal();
         });
     }
 
@@ -778,13 +1074,15 @@ class Calendar {
             } else if (item.type === 'time_entry') {
                 const durationText = item.entryEnd != null ? `${item.startTime} - ${item.endTimeStr}` : (item.time ? `${item.time} (active)` : '');
                 const notes = item.notes != null ? item.notes : '';
+                const entryObj = item.entry || { id: detailId, start: item.event?.start, end: item.event?.end };
                 html += `
-                    <div class="event-card time_entry" data-id="${detailId}" data-type="time_entry"
+                    <div class="event-card time_entry" ${this._timeEntryDragAttrs(entryObj)}
                          style="border-left-color: ${item.color}; ${style}"
                          onclick="window.calendar.showEventDetails(${detailId}, 'time_entry', event)">
                         ⏱ <strong>${item.title}</strong>
                         <br><small>${durationText}</small>
                         ${notes}
+                        <div class="event-resize-handle" title="Resize"></div>
                     </div>
                 `;
             }
@@ -958,7 +1256,8 @@ class Calendar {
             } else if (item.type === 'time_entry') {
                 const durationText = (item.entryEnd != null && item.startTime != null) ? `${item.startTime} - ${item.endTimeStr}` : (item.startTime || item.timeStr || '');
                 const blockId = (item.entry && item.entry.id) != null ? item.entry.id : item.event.id;
-                html += `<div class="week-event-block time_entry" data-id="${blockId}" data-type="time_entry" style="border-left-color: ${item.color}; ${style}" title="${item.title}" onclick="window.calendar.showEventDetails(${blockId}, 'time_entry', event)"><i class="fas fa-clock mr-1"></i><strong>${item.title}</strong><br><small>${durationText}</small></div>`;
+                const entryObj = item.entry || { id: blockId, start: item.entry?.start, end: item.entry?.end };
+                html += `<div class="week-event-block time_entry" ${this._timeEntryDragAttrs(entryObj)} style="border-left-color: ${item.color}; ${style}" title="${item.title}" onclick="window.calendar.showEventDetails(${blockId}, 'time_entry', event)"><i class="fas fa-clock mr-1"></i><strong>${item.title}</strong><br><small>${durationText}</small><div class="event-resize-handle" title="Resize"></div></div>`;
             } else {
                 html += `<div class="week-event-block task" data-id="${item.task.id}" data-type="task" style="border-left-color: ${item.color}; ${style}" onclick="window.calendar.showEventDetails(${item.task.id}, 'task', event); event.stopPropagation();" title="${item.title}">\uD83D\uDCCB ${item.title}</div>`;
             }
@@ -1245,6 +1544,9 @@ document.addEventListener('DOMContentLoaded', () => {
             apiUrl: window.calendarData.apiUrl,
             moveEventUrl: window.calendarData.moveEventUrl,
             resizeEventUrl: window.calendarData.resizeEventUrl,
+            updateEntryUrl: window.calendarData.updateEntryUrl,
+            createEntryUrl: window.calendarData.createEntryUrl,
+            snapMinutes: window.calendarData.snapMinutes,
             csrfToken: window.calendarData.csrfToken
         });
 
