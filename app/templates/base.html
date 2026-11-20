@@ -25,7 +25,7 @@
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
-<body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark{% if is_admin_user %} fab-dock-admin{% endif %}">
+<body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark{% if is_admin_user %} fab-dock-admin{% endif %}"{% if current_user.is_authenticated %} data-authenticated="true"{% endif %}>
     <script nonce="{{ csp_nonce() }}">
         // Sidebar collapsed ASAP
         (function(){ try { if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); } } catch(_) {} })();
