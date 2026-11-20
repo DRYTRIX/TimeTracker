@@ -60,11 +60,19 @@ def dashboard():
     # Get user's active timer
     active_timer = current_user.active_timer
 
-    # Get recent entries for the user (using repository to avoid N+1)
+    # Get recent entries for the user (last 7 days; using repository to avoid N+1)
     from app.repositories import TimeEntryRepository
 
     time_entry_repo = TimeEntryRepository()
-    recent_entries = time_entry_repo.get_by_user(user_id=current_user.id, limit=10, include_relations=True)
+    recent_end = datetime.utcnow()
+    recent_start = recent_end - timedelta(days=7)
+    recent_entries = time_entry_repo.get_by_date_range(
+        start_date=recent_start,
+        end_date=recent_end,
+        user_id=current_user.id,
+        include_relations=True,
+        limit=5,
+    )
 
     # Get active projects and clients for timer dropdown (scoped for subcontractors)
     from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
