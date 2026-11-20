@@ -30,23 +30,31 @@ class AnalyticsService:
         Returns:
             dict with dashboard metrics
         """
-        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        # periods are whole calendar days in the app timezone (stored times are naive in
+        # that timezone): an entry counts for the day it starts on, even if its start is later than now.
+        # The old window "midnight .. now" in the server's timezone dropped entries logged for later today.
+        from app.models.time_entry import local_now
+
+        now = local_now()
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
         week_start = today - timedelta(days=today.weekday())
         month_start = today.replace(day=1)
+        next_month = (month_start + timedelta(days=32)).replace(day=1)
+        last_moment = timedelta(microseconds=1)  # get_total_duration's end_date is inclusive
 
         # Today's time
         today_seconds = self.time_entry_repo.get_total_duration(
-            user_id=user_id, start_date=today, end_date=datetime.now()
+            user_id=user_id, start_date=today, end_date=today + timedelta(days=1) - last_moment
         )
 
         # This week's time
         week_seconds = self.time_entry_repo.get_total_duration(
-            user_id=user_id, start_date=week_start, end_date=datetime.now()
+            user_id=user_id, start_date=week_start, end_date=week_start + timedelta(days=7) - last_moment
         )
 
         # This month's time
         month_seconds = self.time_entry_repo.get_total_duration(
-            user_id=user_id, start_date=month_start, end_date=datetime.now()
+            user_id=user_id, start_date=month_start, end_date=next_month - last_moment
         )
 
         # Workday hours (separate axis — never summed with project hours)
@@ -56,10 +64,8 @@ class AnalyticsService:
         if user_id:
             today_date = today.date()
             workday_today = WorkdaySession.get_total_hours_for_period(user_id, today_date, today_date)
-            workday_week = WorkdaySession.get_total_hours_for_period(user_id, week_start.date(), datetime.now().date())
-            workday_month = WorkdaySession.get_total_hours_for_period(
-                user_id, month_start.date(), datetime.now().date()
-            )
+            workday_week = WorkdaySession.get_total_hours_for_period(user_id, week_start.date(), now.date())
+            workday_month = WorkdaySession.get_total_hours_for_period(user_id, month_start.date(), now.date())
 
         # Active projects
         active_projects = self.project_repo.get_active_projects(user_id=user_id)
