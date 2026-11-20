@@ -590,11 +590,13 @@
                     </label>
                     <select id="timezone" name="timezone"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <option value="">{{ _('System Default') }}</option>
+                        <option value="auto" {% if user.timezone_source|default('auto') == 'auto' %}selected{% endif %}>{{ _('Automatic (follow device)') }}</option>
+                        <option value="" {% if user.timezone_source|default('auto') == 'manual' and not user.timezone %}selected{% endif %}>{{ _('System Default') }}</option>
                         {% for tz in timezones %}
                         <option value="{{ tz }}" {% if user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
                         {% endfor %}
                     </select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ _('Automatic follows the timezone of your device — ideal when travelling.') }}</p>
                 </div>
 
                 <div>

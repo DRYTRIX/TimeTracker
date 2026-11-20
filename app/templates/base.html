@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="app-timezone" content="{{ timezone }}">
     <meta name="description" content="Professional time tracking and project management">
     <meta name="theme-color" content="#4F46E5">
 
@@ -25,7 +26,7 @@
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
 </head>
-<body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark{% if is_admin_user %} fab-dock-admin{% endif %}">
+<body class="font-sans antialiased bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark{% if is_admin_user %} fab-dock-admin{% endif %}"{% if current_user.is_authenticated %} data-authenticated="true"{% endif %}>
     <script nonce="{{ csp_nonce() }}">
         // Sidebar collapsed ASAP
         (function(){ try { if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); } } catch(_) {} })();
