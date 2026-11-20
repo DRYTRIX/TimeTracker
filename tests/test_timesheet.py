@@ -115,9 +115,12 @@ def test_page_shows_only_own_entries(app, authenticated_client, user, admin_user
     assert "чужая запись" not in html
 
 
-def test_sidebar_links_to_the_timesheet(app, authenticated_client):
+def test_sidebar_track_opens_the_timesheet(app, authenticated_client):
+    import re
+
     html = authenticated_client.get("/timesheet").get_data(as_text=True)
-    assert 'href="/timesheet"' in html
+    track = re.search(r'<a [^>]*href="([^"]*)"[^>]*>\s*<i class="fas fa-play w-4', html)
+    assert track and track.group(1) == "/timesheet"
 
 
 # --- Track time ------------------------------------------------------------------------------------
@@ -254,7 +257,9 @@ def test_tasks_of_a_project(app, authenticated_client, project, task):
 # --- Module switch ---------------------------------------------------------------------------------
 
 
-def test_module_off_hides_the_timesheet(app, authenticated_client):
+def test_module_off_hides_the_timesheet_and_track_goes_to_the_dashboard(app, authenticated_client):
+    import re
+
     from app.models import Settings
 
     settings = Settings.get_settings()
@@ -263,6 +268,8 @@ def test_module_off_hides_the_timesheet(app, authenticated_client):
     assert authenticated_client.get("/timesheet").status_code in (302, 403, 404)
     html = authenticated_client.get("/dashboard").get_data(as_text=True)
     assert 'href="/timesheet"' not in html
+    track = re.search(r'<a [^>]*href="([^"]*)"[^>]*>\s*<i class="fas fa-play w-4', html)
+    assert track and track.group(1) == "/dashboard"
 
 
 # --- Week grid -------------------------------------------------------------------------------------

@@ -63,17 +63,12 @@
                         </button>
                         <ul id="timeDropdown" class="{% if not time_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'main.dashboard' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('main.dashboard') }}" title="{{ _('Start and stop the live timer from the dashboard') }}">
+                                {# Track opens the timesheet when that module is on, else the dashboard timer #}
+                                {% set timesheet_on = is_module_enabled('timesheet') %}
+                                <a class="block px-2 py-1 rounded {% if (timesheet_on and ep.startswith('timesheet.')) or (not timesheet_on and ep == 'main.dashboard') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timesheet.day') if timesheet_on else url_for('main.dashboard') }}" title="{{ _('Your day and week: hours, notes, Start and Stop') if timesheet_on else _('Start and stop the live timer from the dashboard') }}">
                                     <i class="fas fa-play w-4 mr-2"></i>{{ _('Track') }}
                                 </a>
                             </li>
-                            {% if is_module_enabled('timesheet') %}
-                            <li>
-                                <a class="block px-2 py-1 rounded {% if ep.startswith('timesheet.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timesheet.day') }}" title="{{ _('Your day and week: hours, notes, Start and Stop') }}">
-                                    <i class="fas fa-table w-4 mr-2"></i>{{ _('Timesheet') }}
-                                </a>
-                            </li>
-                            {% endif %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'timer.manual_entry' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
                                     <i class="fas fa-pen w-4 mr-2"></i>{{ _('Log time') }}
