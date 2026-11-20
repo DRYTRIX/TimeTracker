@@ -4,7 +4,7 @@ import re
 import uuid
 from datetime import date, datetime, time, timedelta
 
-from flask import Blueprint, current_app, jsonify, make_response, request, send_from_directory, session
+from flask import Blueprint, current_app, flash, jsonify, make_response, request, send_from_directory, session
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
 from flask_socketio import join_room, leave_room
@@ -1445,7 +1445,20 @@ def create_entry():
     payload = entry.to_dict()
     payload["project_name"] = entry.project.name if entry.project else None
     payload["client_name"] = entry.client.name if entry.client else None
-    return jsonify({"success": True, "entry": payload}), 201
+    response = {"success": True, "entry": payload}
+    # A note for the person when the day went past their norm or 12 hours
+    try:
+        if entry.user_id == current_user.id and entry.start_time:
+            from app.utils.overwork_notes import note_for_day
+
+            note = note_for_day(current_user, entry.start_time.date())
+            if note:
+                response["notice"] = note
+                # The dashboard reloads right after Log Time, so the note also goes out as a flash message
+                flash(note["text"], "warning" if note["level"] == "long_day" else "info")
+    except Exception:
+        current_app.logger.debug("Overwork note skipped", exc_info=True)
+    return jsonify(response), 201
 
 
 @api_bp.route("/api/entries/bulk", methods=["POST"])
