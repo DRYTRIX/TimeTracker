@@ -20,6 +20,18 @@ from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload,
 api_v1_time_entries_bp = Blueprint("api_v1_time_entries", __name__, url_prefix="/api/v1")
 
 
+def _drop_dashboard_cache(user_id):
+    """the dashboard caches stats for 90 s; web routes clear it on change, API v1 did not."""
+    if not user_id:
+        return
+    try:
+        from app.utils.cache import invalidate_dashboard_for_user
+
+        invalidate_dashboard_for_user(user_id)
+    except Exception:
+        current_app.logger.debug("Could not invalidate dashboard cache", exc_info=True)
+
+
 @api_v1_time_entries_bp.route("/time-entries", methods=["GET"])
 @require_api_token("read:time_entries")
 def list_time_entries():
@@ -216,6 +228,8 @@ def create_time_entry():
 
     entry = result.get("entry")
     if entry:
+        _drop_dashboard_cache(entry.user_id)
+    if entry:
         from app.models import Activity
         from app.utils.audit import get_request_info
 
@@ -314,6 +328,8 @@ def update_time_entry(entry_id):
 
     entry = result.get("entry")
     if entry:
+        _drop_dashboard_cache(entry.user_id)
+    if entry:
         from app.models import Activity
         from app.utils.audit import get_request_info
 
@@ -353,6 +369,11 @@ def delete_time_entry(entry_id):
     # Optional body — tolerate DELETE with no Content-Type set
     data = request.get_json(silent=True) or {}
     reason = data.get("reason")
+    from app import db
+    from app.models import TimeEntry
+
+    owner = db.session.get(TimeEntry, entry_id)
+    owner_id = owner.user_id if owner else None
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.delete_entry(
         entry_id=entry_id,
@@ -365,6 +386,7 @@ def delete_time_entry(entry_id):
             result.get("message", "Could not delete time entry"),
             status_code=400,
         )
+    _drop_dashboard_cache(owner_id)
     return jsonify({"message": "Time entry deleted successfully"})
 
 

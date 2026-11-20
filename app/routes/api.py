@@ -2484,17 +2484,36 @@ def dashboard_stats():
     from datetime import datetime, timedelta
 
     from app.models import TimeEntry
+    from app.models.time_entry import local_now
     from app.utils.overtime import calculate_period_overtime, get_overtime_ytd, get_week_start_for_date
 
-    today = datetime.utcnow().date()
+    # same periods as the dashboard page: whole days in the app timezone (not UTC),
+    # each period closed at its last moment so later days are not counted in "today"
+
+    today = local_now().date()
     week_start = get_week_start_for_date(today, current_user)
     month_start = today.replace(day=1)
+    next_month = (month_start + timedelta(days=32)).replace(day=1)
 
-    today_hours = TimeEntry.get_total_hours_for_period(start_date=today, user_id=current_user.id)
+    def _day_start(d):
+        return datetime.combine(d, datetime.min.time())
 
-    week_hours = TimeEntry.get_total_hours_for_period(start_date=week_start, user_id=current_user.id)
+    def _period_end(d):
+        return _day_start(d) - timedelta(microseconds=1)
 
-    month_hours = TimeEntry.get_total_hours_for_period(start_date=month_start, user_id=current_user.id)
+    today_hours = TimeEntry.get_total_hours_for_period(
+        start_date=_day_start(today), end_date=_period_end(today + timedelta(days=1)), user_id=current_user.id
+    )
+
+    week_hours = TimeEntry.get_total_hours_for_period(
+        start_date=_day_start(week_start),
+        end_date=_period_end(week_start + timedelta(days=7)),
+        user_id=current_user.id,
+    )
+
+    month_hours = TimeEntry.get_total_hours_for_period(
+        start_date=_day_start(month_start), end_date=_period_end(next_month), user_id=current_user.id
+    )
 
     # Overtime for today, week, and YTD (for dashboard cards)
     today_overtime = calculate_period_overtime(current_user, today, today)
