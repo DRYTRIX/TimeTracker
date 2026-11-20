@@ -3,6 +3,7 @@
 from flask import g, request
 
 from app.routes.api_v1 import api_v1_bp
+from app.routes.api_v1_common import _require_module_enabled_for_api
 from app.services.attendance_compliance_service import AttendanceComplianceService
 from app.utils.api_auth import require_api_token
 from app.utils.api_responses import error_response, success_response
@@ -11,6 +12,9 @@ from app.utils.api_responses import error_response, success_response
 @api_v1_bp.route("/attendance/status", methods=["GET"])
 @require_api_token("read:time_entries")
 def api_attendance_status():
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     status = AttendanceComplianceService().get_status(g.api_user.id)
     return success_response(data=status)
 
@@ -18,6 +22,9 @@ def api_attendance_status():
 @api_v1_bp.route("/attendance/break/start", methods=["POST"])
 @require_api_token("write:time_entries")
 def api_attendance_break_start():
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     data = request.get_json(silent=True) or {}
     break_type = (data.get("break_type") or "rest").strip()
     result = AttendanceComplianceService().start_break(g.api_user.id, break_type=break_type)
@@ -33,6 +40,9 @@ def api_attendance_break_start():
 @api_v1_bp.route("/attendance/break/end", methods=["POST"])
 @require_api_token("write:time_entries")
 def api_attendance_break_end():
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     result = AttendanceComplianceService().end_break(g.api_user.id)
     if not result["success"]:
         return error_response(
@@ -46,6 +56,9 @@ def api_attendance_break_end():
 @api_v1_bp.route("/attendance/history", methods=["GET"])
 @require_api_token("read:time_entries")
 def api_attendance_history():
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     from datetime import datetime, timedelta
 
     days = request.args.get("days", 30, type=int)
@@ -64,6 +77,9 @@ def api_attendance_history():
 @api_v1_bp.route("/attendance/corrections", methods=["POST"])
 @require_api_token("write:time_entries")
 def api_attendance_request_correction():
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     data = request.get_json(silent=True) or {}
     result = AttendanceComplianceService().request_correction(
         attendance_day_id=data.get("attendance_day_id"),
@@ -81,6 +97,9 @@ def api_attendance_request_correction():
 @api_v1_bp.route("/reports/compliance/belgium-attendance", methods=["GET"])
 @require_api_token("read:reports")
 def api_belgium_attendance_report():
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     from datetime import datetime
 
     start = request.args.get("start_date")

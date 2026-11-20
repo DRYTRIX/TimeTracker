@@ -1721,15 +1721,19 @@ def process_remind_to_log():
 
 def process_missed_clock_in():
     """Email users who enabled missed clock-in reminders and have not started workday today."""
+    from app.models import Settings
     from app.services.notification_service import (
         _in_time_slot_after,
         has_workday_started_today,
         is_expected_work_day,
         parse_hhmm,
     )
+    from app.utils.module_registry import ModuleRegistry
     from app.utils.timezone import now_in_user_timezone
 
     try:
+        if not ModuleRegistry.is_enabled("workday", Settings.get_settings()):
+            return 0
         users = User.query.filter(
             User.is_active == True,
             User.email_notifications == True,
@@ -1778,9 +1782,12 @@ def check_working_time_limits():
     from app.services.workday_session_service import WorkdaySessionService
     from app.services.working_time_limit_service import WorkingTimeLimitService
     from app.utils.email import send_working_time_limit_exceeded_email
+    from app.utils.module_registry import ModuleRegistry
 
     try:
         settings = Settings.get_settings()
+        if not ModuleRegistry.is_enabled("workday", settings):
+            return 0
         if not getattr(settings, "hour_limits_enabled", True):
             WorkdaySessionService().auto_close_stale_sessions()
             return 0

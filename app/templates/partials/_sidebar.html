@@ -152,7 +152,7 @@
                                 </a>
                             </li>
                             {% endif %}
-                            {% if current_user.is_admin %}
+                            {% if current_user.is_admin and is_module_enabled('workday') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_attendance_corrections %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('workday.admin_corrections_list') }}">
                                     <i class="fas fa-user-clock w-4 mr-2"></i>{{ _('Attendance Corrections') }}

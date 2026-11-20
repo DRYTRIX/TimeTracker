@@ -538,6 +538,7 @@ def kiosk_stop_timer():
 @kiosk_bp.route("/api/kiosk/start-workday", methods=["POST"])
 @login_required
 @module_enabled("kiosk")
+@module_enabled("workday")
 def kiosk_start_workday():
     """Start workday session from kiosk interface."""
     from app.services.workday_session_service import WorkdaySessionService
@@ -554,6 +555,7 @@ def kiosk_start_workday():
 @kiosk_bp.route("/api/kiosk/end-workday", methods=["POST"])
 @login_required
 @module_enabled("kiosk")
+@module_enabled("workday")
 def kiosk_end_workday():
     """End workday session from kiosk interface."""
     from app.services.workday_session_service import WorkdaySessionService
@@ -569,6 +571,7 @@ def kiosk_end_workday():
 @kiosk_bp.route("/api/kiosk/workday-status", methods=["GET"])
 @login_required
 @module_enabled("kiosk")
+@module_enabled("workday")
 def kiosk_workday_status():
     """Get current workday session status."""
     from app.services.workday_session_service import WorkdaySessionService

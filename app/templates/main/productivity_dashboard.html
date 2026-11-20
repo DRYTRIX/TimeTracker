@@ -74,6 +74,7 @@
             </p>
         </div>
 
+        {% if is_module_enabled('workday') %}
         {# Workday vs project (today) #}
         <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-emerald-200 dark:border-emerald-800 shadow-sm sm:col-span-2 lg:col-span-1">
             <div class="flex items-center justify-between mb-3">
@@ -92,6 +93,7 @@
             </div>
             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2 text-center">{{ _('Shown separately — not summed') }}</p>
         </div>
+        {% endif %}
 
         {# Streak #}
         <div class="bg-card-light dark:bg-card-dark p-5 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
