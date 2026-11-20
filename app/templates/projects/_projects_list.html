@@ -1,7 +1,9 @@
+{% from "components/ui.html" import pagination_nav %}
 <div id="projectsListContainer">
     <div class="flex justify-between items-center mb-4">
+        {% set _project_count = pagination.total if pagination else (projects|length) %}
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
-            {{ projects|length }} project{{ 's' if projects|length != 1 else '' }} found
+            {{ _project_count }} project{{ 's' if _project_count != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
             <!-- View Toggle -->
@@ -294,4 +296,5 @@
         {{ empty_state('fas fa-folder-open', _('No projects yet'), _('Organize work by client and project, then track time against them. Create your first project to get started.'), actions, type='no-data') }}
     {% endif %}
     {% endif %}
+    {{ pagination_nav(pagination, 'projects.list_projects', pagination_url_params|default({}), aria_label=_('Projects pagination')) }}
 </div>

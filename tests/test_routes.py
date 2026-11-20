@@ -128,6 +128,43 @@ def test_projects_list_page(authenticated_client):
 
 @pytest.mark.integration
 @pytest.mark.routes
+def test_projects_list_renders_pagination(admin_authenticated_client, test_client, app):
+    """Projects list shows pagination when more than 20 projects exist (#921)."""
+    from app import db
+    from app.models import Project
+
+    with app.app_context():
+        projects = [
+            Project(
+                name=f"Pagination Project {i:02d}",
+                client_id=test_client.id,
+                description=f"Pagination test project {i}",
+                billable=True,
+                hourly_rate=Decimal("75.00"),
+                status="active",
+            )
+            for i in range(21)
+        ]
+        db.session.add_all(projects)
+        db.session.commit()
+
+        response = admin_authenticated_client.get("/projects")
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert 'aria-label="Projects pagination"' in html
+        assert "page=2" in html
+        assert "21 projects found" in html
+
+        filtered = admin_authenticated_client.get("/projects?status=active&search=Pagination")
+        assert filtered.status_code == 200
+        filtered_html = filtered.get_data(as_text=True)
+        assert 'aria-label="Projects pagination"' in filtered_html
+        assert "status=active" in filtered_html
+        assert "search=Pagination" in filtered_html
+
+
+@pytest.mark.integration
+@pytest.mark.routes
 def test_projects_create_page_contains_client_modal_trigger(admin_authenticated_client):
     """Projects create page should contain inline client creation trigger."""
     response = admin_authenticated_client.get("/projects/create")
