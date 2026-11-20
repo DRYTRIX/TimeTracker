@@ -681,8 +681,13 @@ class InvoiceService:
                 if part.isdigit():
                     on_this_invoice.add(int(part))
 
+        from sqlalchemy.orm import joinedload
+
         all_project_entries = (
-            TimeEntry.query.filter(TimeEntry.project_id == project_id).order_by(TimeEntry.start_time.asc()).all()
+            TimeEntry.query.options(joinedload(TimeEntry.user), joinedload(TimeEntry.task))
+            .filter(TimeEntry.project_id == project_id)
+            .order_by(TimeEntry.start_time.asc())
+            .all()
         )
 
         still_running = [e for e in all_project_entries if e.end_time is None]

@@ -392,6 +392,19 @@ def test_generate_from_time_page_renders_lists(app, client, user, project):
     db.session.add(pc)
     db.session.commit()
 
+    # Second user entry so both display names appear on the picker
+    other = UserFactory(username="gft_teammate", full_name="GFT Teammate")
+    db.session.commit()
+    TimeEntryFactory(
+        user_id=other.id,
+        project_id=project.id,
+        start_time=start - timedelta(hours=3),
+        end_time=start - timedelta(hours=1),
+        notes="Work B",
+        billable=True,
+    )
+    db.session.commit()
+
     # Visit page
     resp = client.get(f"/invoices/{inv.id}/generate-from-time")
     assert resp.status_code == 200
@@ -403,6 +416,15 @@ def test_generate_from_time_page_renders_lists(app, client, user, project):
     # Check summary numbers render
     assert "Total available hours" in html
     assert "Total available costs" in html
+    assert "Selected hours" in html
+    assert 'id="selected-hours-total"' in html
+    # Who logged each entry + select-all controls (#908)
+    assert user.display_name in html
+    assert other.display_name in html
+    assert "js-select-all-time" in html
+    assert "js-select-day" in html
+    assert "js-time-entry" in html
+    assert "data-duration=" in html
 
 
 @pytest.mark.routes
