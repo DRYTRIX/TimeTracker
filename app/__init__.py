@@ -1354,12 +1354,17 @@ def create_app(config=None):
     # Exempt legacy session JSON API and docs from CSRF.
     # /api/v1 is skipped by PathExemptCSRFProtect (path prefix), so split
     # api_v1_* blueprints do not need individual csrf.exempt() calls.
+    # SCIM clients use Bearer tokens only (no CSRF); exempt when SCIM_ENABLED.
     from app.routes.api import api_bp
     from app.routes.api_docs import api_docs_bp
 
     if app.config.get("WTF_CSRF_ENABLED"):
         csrf.exempt(api_bp)
         csrf.exempt(api_docs_bp)
+        if app.config.get("SCIM_ENABLED"):
+            from app.routes.api_scim import api_scim_bp
+
+            csrf.exempt(api_scim_bp)
 
     # Initialize OIDC IP cache
     from app.utils.oidc_metadata import initialize_ip_cache
