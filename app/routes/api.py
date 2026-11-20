@@ -2,7 +2,7 @@ import json
 import os
 import re
 import uuid
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 
 from flask import Blueprint, current_app, jsonify, make_response, request, send_from_directory, session
 from flask_babel import gettext as _
@@ -1347,11 +1347,16 @@ def create_entry():
     tags = (data.get("tags") or "").strip() or None
     billable = bool(data.get("billable", True))
 
-    if not (start_time_str and end_time_str):
-        return jsonify({"error": "start_time and end_time are required"}), 400
+    entry_date_str = data.get("date")
+    duration_seconds = data.get("duration_seconds")
+    duration_only = not (start_time_str and end_time_str) and bool(entry_date_str) and duration_seconds is not None
+    if not (start_time_str and end_time_str) and not duration_only:
+        return jsonify({"error": "start_time and end_time, or date and duration_seconds, are required"}), 400
 
     if not project_id and not client_id:
         return jsonify({"error": "Either project_id or client_id is required"}), 400
+
+    entry_user_id = current_user.id if not current_user.is_admin else (data.get("user_id") or current_user.id)
 
     def parse_iso_local(s: str):
         try:
@@ -1365,15 +1370,26 @@ def create_entry():
         except Exception:
             return None
 
-    start_dt = parse_iso_local(start_time_str)
-    end_dt = parse_iso_local(end_time_str)
-    if not (start_dt and end_dt) or end_dt <= start_dt:
-        return jsonify({"error": "Invalid start/end time"}), 400
+    if duration_only:
+        # hours on a day without a start time: placed after that day's last entry
+        try:
+            entry_day = date.fromisoformat(str(entry_date_str)[:10])
+        except ValueError:
+            return jsonify({"error": "Invalid date"}), 400
+        placement = TimeTrackingService().place_duration_entry(entry_user_id, entry_day, duration_seconds)
+        if not placement.get("success"):
+            return jsonify({"error": placement.get("message", "Could not place the entry")}), 400
+        start_dt, end_dt = placement["start_time"], placement["end_time"]
+    else:
+        start_dt = parse_iso_local(start_time_str)
+        end_dt = parse_iso_local(end_time_str)
+        if not (start_dt and end_dt) or end_dt <= start_dt:
+            return jsonify({"error": "Invalid start/end time"}), 400
 
     # Use service to create entry (handles validation)
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.create_manual_entry(
-        user_id=current_user.id if not current_user.is_admin else (data.get("user_id") or current_user.id),
+        user_id=entry_user_id,
         project_id=project_id,
         client_id=client_id,
         start_time=start_dt,

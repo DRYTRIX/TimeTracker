@@ -1755,11 +1755,21 @@ def manual_entry():
                 end_time_parsed = start_time_parsed + timedelta(minutes=worked_minutes)
                 duration_seconds_override = worked_minutes * 60
             else:
-                # Duration-only: no start given → end=now, start=end-duration
+                # duration only: place it on the chosen day (today if none), after that
+                # day's last entry, instead of ending it "now" and ignoring the date
+                from datetime import date as _date
+
                 from app.models.time_entry import local_now as _local_now_db
 
-                end_time_parsed = _local_now_db()
-                start_time_parsed = end_time_parsed - timedelta(minutes=worked_minutes)
+                placement_day = _date.fromisoformat(start_date) if start_date else _local_now_db().date()
+                placement = TimeTrackingService().place_duration_entry(
+                    selected_user_id, placement_day, worked_minutes * 60
+                )
+                if not placement.get("success"):
+                    flash(_(placement.get("message") or "Could not place the entry"), "error")
+                    return render_template("timer/manual_entry.html", **_manual_ctx(**prefill_kwargs))
+                start_time_parsed = placement["start_time"]
+                end_time_parsed = placement["end_time"]
                 duration_seconds_override = worked_minutes * 60
         except ValueError:
             flash(_("Invalid date/time format"), "error")
