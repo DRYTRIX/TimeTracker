@@ -2,7 +2,7 @@
 Service for time tracking business logic.
 """
 
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 from typing import Any, Dict, List, Optional
 
 from flask_login import current_user
@@ -33,6 +33,71 @@ class TimeTrackingService:
             start_time=start_time,
             end_time=end_time,
         )
+
+    # entries logged as hours only start here on an empty day
+    DURATION_ENTRY_DAY_START = time(9, 0)
+
+    def place_duration_entry(self, user_id: int, day: date, duration_seconds: int) -> Dict[str, Any]:
+        """Pick start/end for an entry logged as a duration on a day, without a start time.
+
+        The entry goes right after the user's last entry that starts on ``day`` (a running timer
+        counts as ending now), or at DURATION_ENTRY_DAY_START on an empty day. If it does not fit
+        before midnight, it takes the latest earlier free gap of the day that is long enough, placed
+        at the end of that gap (for example just before 09:00 on a long release day). Only when no
+        gap fits is there no room. Times are naive, in the app timezone, like every stored entry.
+        """
+        try:
+            duration_seconds = int(duration_seconds)
+        except (TypeError, ValueError):
+            return {"success": False, "message": "Invalid duration", "error": "invalid_duration"}
+        if duration_seconds <= 0:
+            return {"success": False, "message": "Duration must be positive", "error": "invalid_duration"}
+
+        day_start = datetime.combine(day, time(0, 0))
+        next_day = day_start + timedelta(days=1)
+        duration = timedelta(seconds=duration_seconds)
+        if duration > timedelta(days=1):
+            return {"success": False, "message": "Duration is longer than a day", "error": "invalid_duration"}
+
+        # Busy intervals that touch this day: finished entries, and a running timer up to now
+        busy = []
+        for e in TimeEntry.query.filter(
+            TimeEntry.user_id == user_id,
+            TimeEntry.start_time < next_day,
+            db.or_(TimeEntry.end_time.is_(None), TimeEntry.end_time > day_start),
+        ).all():
+            end = e.end_time if e.end_time is not None else max(local_now(), e.start_time)
+            busy.append((max(e.start_time, day_start), min(end, next_day)))
+        busy.sort()
+
+        def _no_clash(start, end):
+            return all(not (b_start < end and b_end > start) for b_start, b_end in busy)
+
+        same_day_ends = [b_end for b_start, b_end in busy if b_start >= day_start]
+        start = datetime.combine(day, self.DURATION_ENTRY_DAY_START)
+        if same_day_ends:
+            start = max(start, max(same_day_ends))
+        if start + duration <= next_day and _no_clash(start, start + duration):
+            return {"success": True, "start_time": start, "end_time": start + duration}
+
+        # Free gaps of the day, latest first; the entry sits at the end of the gap
+        gaps, cursor = [], day_start
+        for b_start, b_end in busy:
+            if b_start > cursor:
+                gaps.append((cursor, b_start))
+            cursor = max(cursor, b_end)
+        if cursor < next_day:
+            gaps.append((cursor, next_day))
+        for gap_start, gap_end in reversed(gaps):
+            if gap_end - gap_start >= duration:
+                return {"success": True, "start_time": gap_end - duration, "end_time": gap_end}
+
+        logged = sum(((b_end - b_start).total_seconds() for b_start, b_end in busy), 0.0) / 3600
+        return {
+            "success": False,
+            "message": f"No room left on {day.isoformat()}: {logged:.2f}h already logged that day.",
+            "error": "no_room_in_day",
+        }
 
     def can_start_timer(self, user_id: int) -> tuple[bool, Optional[str]]:
         """Return (True, None) if the user may start a new timer, else (False, message).

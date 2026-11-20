@@ -1202,13 +1202,13 @@
                     }
                     return;
                 }
-                var endDt = new Date(dateVal + 'T12:00:00');
-                var startDt = new Date(endDt.getTime() - durationSec * 1000);
+                // send the day and the hours; the server places the entry after that day's
+                // last entry (a fixed 12:00 end made every second entry of a day overlap)
                 var payload = {
                     project_id: parseInt(projectId, 10),
                     task_id: taskSelect && taskSelect.value ? parseInt(taskSelect.value, 10) : null,
-                    start_time: startDt.toISOString(),
-                    end_time: endDt.toISOString(),
+                    date: dateVal,
+                    duration_seconds: durationSec,
                     notes: (document.getElementById('quickLogNotes').value || '').trim() || null,
                     billable: true
                 };
