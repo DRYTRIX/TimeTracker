@@ -464,6 +464,7 @@ class Invoice(db.Model):
             "tax_rate": float(self.tax_rate),
             "tax_amount": float(self.tax_amount),
             "total_amount": float(self.total_amount),
+            "currency_code": self.currency_code,
             "discount_percent": float(self.discount_percent) if self.discount_percent else 0,
             "discount_amount": float(self.discount_amount) if self.discount_amount else 0,
             "vat_category": getattr(self, "vat_category", None),

@@ -354,12 +354,16 @@ class InvoicePDFGeneratorFallback:
         story.append(table)
         return story
 
+    def _currency(self):
+        """Currency code to print: the invoice's own, else the global setting (same rule as quotes)."""
+        return getattr(self.invoice, "currency_code", None) or self.settings.currency
+
     def _format_currency(self, value):
         """Format numeric currency with thousands separators and 2 decimals."""
         try:
-            return f"{float(value):,.2f} {self.settings.currency}"
+            return f"{float(value):,.2f} {self._currency()}"
         except Exception:
-            return f"{value} {self.settings.currency}"
+            return f"{value} {self._currency()}"
 
     def _add_page_number(self, canv, doc):
         """Add page number at the bottom-right of each page."""
