@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **API: time entry create** — `POST /api/v1/time-entries` no longer rejects every `task_id` ("task_id can only be set when project_id is provided") when `project_id` is sent. `"project_id": null` with a `client_id` (and the reverse) is accepted again, and `end_time` before `start_time` is now caught by the schema. The cross-field checks moved from field-level hooks, which never saw the other fields under marshmallow 4, to one schema-level check.
+- **Invoices: Add Item row** — A line added with "Add Item" on the invoice edit page no longer collapses into a narrow strip. The new row had the 12-column grid classes on its outer element, so the field grid and the per-line tax/discount strip each took one column.
 
 ## [5.21.0] - 2026-11-18
 ### Added

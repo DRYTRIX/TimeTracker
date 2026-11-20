@@ -604,7 +604,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const addBtn = document.getElementById('add-item');
     addBtn && addBtn.addEventListener('click', function() {
         const row = document.createElement('div');
-        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row hover:shadow-sm transition';
+        // Same outer classes as the server-rendered row: the inner div is the 12-column grid
+        row.className = 'rounded-xl md:rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row min-w-0 hover:shadow-sm transition shadow-sm md:shadow-none';
 
         // Build stock items dropdown
         let stockItemsHtml = '<option value="">{{ _("None") }}</option>';
