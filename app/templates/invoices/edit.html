@@ -119,9 +119,14 @@
                             </h2>
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Logged work hours are added here via Generate from Time/Costs or Add Time Entries.') }}</p>
                         </div>
-                        <button type="button" id="add-item" class="btn btn-primary shadow-sm">
-                            <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}
-                        </button>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{{ url_for('invoices.generate_from_time', invoice_id=invoice.id) }}" class="btn bg-primary text-white hover:bg-primary/90 shadow-sm">
+                                <i class="fas fa-clock mr-2"></i>{{ _('Add Time Entries') }}
+                            </a>
+                            <button type="button" id="add-item" class="btn btn-primary shadow-sm">
+                                <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Items header (desktop) -->
@@ -251,14 +256,9 @@
                             </h2>
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Expense-module records (travel, meals, etc.) — not time entries.') }}</p>
                         </div>
-                        <div class="flex flex-wrap gap-2">
-                        <a href="{{ url_for('invoices.generate_from_time', invoice_id=invoice.id) }}" class="btn bg-primary text-white hover:bg-primary/90 shadow-sm">
-                            <i class="fas fa-clock mr-2"></i>{{ _('Add Time Entries') }}
-                        </a>
                         <button type="button" id="add-expense" class="btn bg-amber-600 text-white hover:bg-amber-700 shadow-sm">
                             <i class="fas fa-plus mr-2"></i>{{ _('Add Expense') }}
                         </button>
-                        </div>
                     </div>
 
                     <!-- Expenses header (desktop) -->
