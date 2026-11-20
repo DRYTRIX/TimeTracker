@@ -37,6 +37,13 @@
 
                 <div class="mb-6">
                     <h2 class="text-lg font-semibold mb-3">{{ _('Unbilled Time Entries') }}</h2>
+                    {% if invoice.project and resolved_hourly_rate is defined and resolved_hourly_rate == 0 %}
+                    <div class="mb-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        {{ _('This project has no hourly rate: lines will be added at 0.00') }}
+                        <a href="{{ url_for('projects.edit_project', project_id=invoice.project.id) }}" class="ml-1 font-medium underline">{{ _('Project settings') }}</a>
+                    </div>
+                    {% endif %}
                     {% if grouped_time_entries %}
                     <label class="flex items-center gap-2 mb-3 text-sm cursor-pointer">
                         <input type="checkbox" class="js-select-all-time" id="select-all-time-entries">

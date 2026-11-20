@@ -519,7 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.invoice-item-row').forEach(row => {
             const qty = parseFloat(row.querySelector('.item-quantity')?.value || 0);
             const price = parseFloat(row.querySelector('.item-price')?.value || 0);
-            if (qty > 0 && price > 0) {
+            if (qty > 0) {
                 itemsTotal += qty * price;
                 itemsCount++;
             }
@@ -542,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.invoice-good-row').forEach(row => {
             const qty = parseFloat(row.querySelector('.good-quantity')?.value || 0);
             const price = parseFloat(row.querySelector('.good-price')?.value || 0);
-            if (qty > 0 && price > 0) {
+            if (qty > 0) {
                 goodsTotal += qty * price;
                 goodsCount++;
             }

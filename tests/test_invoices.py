@@ -428,6 +428,54 @@ def test_generate_from_time_page_renders_lists(app, client, user, project):
 
 
 @pytest.mark.routes
+def test_generate_from_time_warns_when_project_has_no_hourly_rate(app, client, user, project):
+    """Picker shows a warning when resolved rate is 0 so zero-price lines are not a surprise (#906)."""
+    from factories import TimeEntryFactory
+
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    project.hourly_rate = None
+    if project.client_obj:
+        project.client_obj.default_hourly_rate = None
+    db.session.commit()
+
+    cl = ClientFactory(name="Zero Rate Client", email="zerorate@test.com", default_hourly_rate=None)
+    db.session.commit()
+
+    inv = InvoiceFactory(
+        invoice_number="INV-TEST-ZERO-RATE-001",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=7),
+        created_by=user.id,
+        status="draft",
+    )
+    db.session.commit()
+
+    start = datetime.utcnow() - timedelta(hours=2)
+    end = datetime.utcnow()
+    TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        start_time=start,
+        end_time=end,
+        notes="Zero rate work",
+        billable=True,
+    )
+    db.session.commit()
+
+    resp = client.get(f"/invoices/{inv.id}/generate-from-time")
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+
+    assert "This project has no hourly rate: lines will be added at 0.00" in html
+    assert f"/projects/{project.id}/edit" in html
+
+
+@pytest.mark.routes
 def test_generate_from_time_links_expenses_without_creating_items(app, client, user, project):
     """Expenses selected on generate-from-time should link to the invoice, not become invoice items."""
     from factories import ExpenseFactory
