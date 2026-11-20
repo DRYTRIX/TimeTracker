@@ -593,11 +593,11 @@ if (startOverrideInput) {
 // Update timer display every second
 {% if active_timer %}
 let timerInterval;
-let startTime = (window.ttParseStart ? window.ttParseStart('{{ active_timer.start_time.isoformat() }}') : new Date('{{ active_timer.start_time.isoformat() }}').getTime());
+let startTime = NaN; function ensureStart() { if (isNaN(startTime)) startTime = (window.ttParseStart ? window.ttParseStart('{{ active_timer.start_time.isoformat() }}') : new Date('{{ active_timer.start_time.isoformat() }}').getTime()); return startTime; }
 
 function updateTimer() {
     const now = new Date().getTime();
-    const elapsed = Math.floor((now - startTime) / 1000);
+    const elapsed = Math.floor((now - ensureStart()) / 1000);
 
     const hours = Math.floor(elapsed / 3600);
     const minutes = Math.floor((elapsed % 3600) / 60);
