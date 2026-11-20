@@ -356,7 +356,7 @@
       longEntryNudgeShown = false;
     }
     if (longEntryNudgeShown || activeReminderToast) return;
-    const started = new Date(active.start_time).getTime();
+    const started = (window.ttParseStart ? window.ttParseStart(active.start_time) : new Date(active.start_time).getTime());
     if (isNaN(started)) return;
     const runningMs = Date.now() - started;
     if (runningMs < getLongEntryThresholdMs()) return;

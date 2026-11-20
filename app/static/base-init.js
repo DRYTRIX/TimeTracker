@@ -97,3 +97,37 @@
     })
     .catch(function () {});
 })();
+
+// Parse a naive ISO datetime (stored wall time in the app timezone, no zone
+// suffix) into a correct epoch. Browsers would otherwise interpret it in the
+// DEVICE zone, which is wrong when the user travels. Exposed globally so
+// dashboard, floating-timer-bar, and idle.js share one implementation.
+(function () {
+  'use strict';
+  function offsetFor(wallMs, tz) {
+    try {
+      var f = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      var p = {};
+      f.formatToParts(wallMs).forEach(function (x) { p[x.type] = x.value; });
+      var asUTC = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour) % 24, Number(p.minute), Number(p.second));
+      return asUTC - wallMs;
+    } catch (_) {
+      return 0;
+    }
+  }
+  window.ttParseStart = function (iso) {
+    if (!iso) return NaN;
+    var ms = new Date(iso).getTime();
+    if (!isNaN(ms) && /Z|[+-]\d{2}:?\d{2}$/.test(String(iso))) return ms; // already zone-aware
+    if (isNaN(ms)) return ms;
+    var tz = window.__TT_APP_TZ__ ||
+      (document.querySelector('meta[name="app-timezone"]') || {}).content || '';
+    if (!tz || tz === 'UTC') return ms;
+    var wall = Date.UTC(
+      new Date(iso).getUTCFullYear(), new Date(iso).getUTCMonth(), new Date(iso).getUTCDate(),
+      new Date(iso).getUTCHours(), new Date(iso).getUTCMinutes(), new Date(iso).getUTCSeconds()
+    );
+    var off = offsetFor(wall, tz);
+    return wall - off;
+  };
+})();

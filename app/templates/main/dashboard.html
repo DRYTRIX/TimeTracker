@@ -1301,7 +1301,7 @@
             if (!timerWidget) return;
             var startIso = timerWidget.getAttribute('data-timer-start');
             if (!startIso) return;
-            var startTime = new Date(startIso).getTime();
+            var startTime = (window.ttParseStart ? window.ttParseStart(startIso) : new Date(startIso).getTime());
             var todayHours = parseFloat(timerWidget.getAttribute('data-today-hours')) || 0;
             var weekHours = parseFloat(timerWidget.getAttribute('data-week-hours')) || 0;
             var monthHours = parseFloat(timerWidget.getAttribute('data-month-hours')) || 0;
@@ -1346,7 +1346,7 @@
             if (!workdayWidget) return;
             var startIso = workdayWidget.getAttribute('data-workday-start');
             if (!startIso) return;
-            var startTime = new Date(startIso).getTime();
+            var startTime = (window.ttParseStart ? window.ttParseStart(startIso) : new Date(startIso).getTime());
             var baseWorkdayHours = parseFloat({{ workday_today_hours|tojson }}) || 0;
             var pageLoadMs = Date.now();
             function formatWorkdayElapsed(seconds) {

@@ -593,7 +593,7 @@ if (startOverrideInput) {
 // Update timer display every second
 {% if active_timer %}
 let timerInterval;
-let startTime = new Date('{{ active_timer.start_time.isoformat() }}').getTime();
+let startTime = (window.ttParseStart ? window.ttParseStart('{{ active_timer.start_time.isoformat() }}') : new Date('{{ active_timer.start_time.isoformat() }}').getTime());
 
 function updateTimer() {
     const now = new Date().getTime();
@@ -704,7 +704,7 @@ function formatStartDisplay(isoString) {
             if (!res.ok || !data.success) {
                 throw new Error(data.error || '{{ _("Failed to update start time") }}');
             }
-            startTime = new Date(data.start_time).getTime();
+            startTime = (window.ttParseStart ? window.ttParseStart(data.start_time) : new Date(data.start_time).getTime());
             input.setAttribute('data-start-iso', data.start_time);
             if (display) display.textContent = formatStartDisplay(data.start_time);
             form.classList.add('hidden');
