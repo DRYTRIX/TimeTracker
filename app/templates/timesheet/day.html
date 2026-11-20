@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Timesheet') }} – {{ view.day.strftime('%a, %-d %b') }} – {{ app_name }}{% endblock %}
+
+{% macro client_of(e) -%}
+{%- if e.project and e.project.client_obj %}{{ e.project.client_obj.name }}{% elif e.client %}{{ e.client.name }}{% endif -%}
+{%- endmacro %}
+
+{% block content %}
+<div id="timesheet-day" class="max-w-6xl" data-day="{{ view.day.isoformat() }}" data-today="{{ view.today.isoformat() }}">
+
+  {# Header: day arrows, the day, Today #}
+  <div class="flex flex-wrap items-center gap-3 mb-6">
+    <a href="{{ url_for('timesheet.day', date=prev_day.isoformat()) }}" class="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Previous day') }}"><i class="fas fa-chevron-left" aria-hidden="true"></i></a>
+    <a href="{{ url_for('timesheet.day', date=next_day.isoformat()) }}" class="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Next day') }}"><i class="fas fa-chevron-right" aria-hidden="true"></i></a>
+    <h1 class="text-2xl font-semibold tracking-tight text-text-light dark:text-text-dark">
+      {%- if view.is_today %}{{ _('Today') }}: {% endif %}{{ view.day.strftime('%A, %-d %b') }}
+    </h1>
+    {% if not view.is_today %}
+    <a href="{{ url_for('timesheet.day') }}" class="px-3 py-2 text-sm rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Back to today') }}</a>
+    {% endif %}
+    <div role="group" aria-label="{{ _('View') }}" class="ml-auto flex rounded-lg border border-border-light dark:border-border-dark overflow-hidden bg-card-light dark:bg-card-dark text-sm">
+      <a href="{{ url_for('timesheet.day', date=view.day.isoformat()) }}" aria-current="page" class="px-5 py-2.5 font-semibold bg-primary/10 text-primary">{{ _('Day') }}</a>
+      <a href="{{ url_for('timesheet.week', date=view.day.isoformat()) }}" class="px-5 py-2.5 border-l border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Week') }}</a>
+    </div>
+  </div>
+
+  {# Track time and the week tabs #}
+  <div class="flex flex-wrap items-end gap-6 mb-6">
+    <button type="button" data-ts-new class="inline-flex items-center gap-2 px-5 h-14 rounded-xl bg-primary text-white text-lg font-semibold hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40">
+      <i class="fas fa-plus" aria-hidden="true"></i>{{ _('Track time') }}
+    </button>
+    <nav aria-label="{{ _('Days of the week') }}" class="flex flex-1 min-w-0 flex-wrap items-end gap-1 border-b border-border-light dark:border-border-dark">
+      <a href="{{ url_for('timesheet.day', date=prev_week.isoformat()) }}" class="px-2 pb-2 text-text-muted-light dark:text-text-muted-dark hover:text-primary" aria-label="{{ _('Previous week') }}"><i class="fas fa-angle-double-left" aria-hidden="true"></i></a>
+      {% for tab in view.tabs %}
+      {% set selected = tab.day == view.day %}
+      <a href="{{ url_for('timesheet.day', date=tab.day.isoformat()) }}"
+         {% if selected %}aria-current="date"{% endif %}
+         class="px-3 pb-2 pt-1 text-sm leading-tight border-b-2 -mb-px {% if selected %}border-primary text-text-light dark:text-text-dark font-semibold{% else %}border-transparent text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark{% endif %}">
+        <span class="block {% if tab.day == view.today %}text-primary{% endif %}">{{ tab.day.strftime('%a') }}</span>
+        <span class="block tabular-nums">{{ tab.total }}</span>
+      </a>
+      {% endfor %}
+      <a href="{{ url_for('timesheet.day', date=next_week.isoformat()) }}" class="px-2 pb-2 text-text-muted-light dark:text-text-muted-dark hover:text-primary" aria-label="{{ _('Next week') }}"><i class="fas fa-angle-double-right" aria-hidden="true"></i></a>
+      <div class="ml-auto px-3 pb-2 text-sm text-right leading-tight">
+        <span class="block text-text-muted-light dark:text-text-muted-dark">{{ _('Week total') }}</span>
+        <span class="block font-semibold tabular-nums">{{ fmt_hm(view.week_seconds) }}</span>
+      </div>
+    </nav>
+  </div>
+
+  {# The day's entries #}
+  <section aria-label="{{ _('Entries') }}" class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-hidden">
+    {% for e in view.entries %}
+    {% set running = e.end_time is none %}
+    <div class="flex flex-wrap items-center gap-4 px-6 py-4 border-b border-border-light dark:border-border-dark {% if running %}bg-amber-50 dark:bg-amber-900/20{% endif %}"
+         data-ts-entry="{{ e.id }}"
+         data-project-id="{{ e.project_id or '' }}"
+         data-task-id="{{ e.task_id or '' }}"
+         data-notes="{{ e.notes or '' }}"
+         data-hours="{{ fmt_hm(view.seconds_by_entry[e.id]) }}"
+         data-running="{{ 'true' if running else 'false' }}">
+      <div class="flex-1 min-w-[16rem]">
+        <div class="text-text-light dark:text-text-dark">
+          <span class="font-semibold">{{ e.project.name if e.project else _('No project') }}</span>
+          {% set c = client_of(e) %}{% if c %}<span class="text-text-muted-light dark:text-text-muted-dark">({{ c }})</span>{% endif %}
+        </div>
+        <div class="text-text-light dark:text-text-dark">{{ e.task.name if e.task else '' }}</div>
+        {% if e.notes %}<div class="text-sm text-text-muted-light dark:text-text-muted-dark whitespace-pre-line mt-0.5">{{ e.notes }}</div>{% endif %}
+      </div>
+      <div class="text-2xl font-semibold tabular-nums {% if running %}text-amber-700 dark:text-amber-300{% endif %}"
+           {% if running %}data-ts-ticking="{{ view.seconds_by_entry[e.id] }}"{% endif %}>{{ fmt_hm(view.seconds_by_entry[e.id]) }}</div>
+      <div class="flex items-center gap-2">
+        {% if running %}
+        <button type="button" data-ts-stop class="inline-flex items-center gap-2 px-4 h-11 rounded-lg bg-amber-700 text-white font-semibold hover:bg-amber-800"><i class="fas fa-stop" aria-hidden="true"></i>{{ _('Stop') }}</button>
+        {% elif view.is_today and e.project_id %}
+        <button type="button" data-ts-start class="inline-flex items-center gap-2 px-4 h-11 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark font-semibold"><i class="far fa-clock" aria-hidden="true"></i>{{ _('Start') }}</button>
+        {% endif %}
+        <button type="button" data-ts-edit class="px-3 h-11 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Edit') }}</button>
+      </div>
+    </div>
+    {% else %}
+    <div class="px-6 py-14 text-center text-text-muted-light dark:text-text-muted-dark">
+      {{ _('No time tracked for this day.') }}
+      <button type="button" data-ts-new class="text-primary underline hover:no-underline">{{ _('Track time') }}</button>
+    </div>
+    {% endfor %}
+    <div class="flex flex-wrap items-center gap-4 px-6 py-4">
+      <button type="button" data-ts-new class="inline-flex items-center gap-2 text-primary font-semibold hover:underline"><i class="fas fa-plus" aria-hidden="true"></i>{{ _('Track time') }}</button>
+      <div class="ml-auto flex items-center gap-3">
+        {% if view.overwork_level == 'long_day' %}
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200" title="{{ _('More than 12 hours this day. Take a proper break.') }}">{{ _('Long day') }}</span>
+        {% elif view.overwork_level == 'overtime' %}
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200" title="{{ _('More than your usual day') }}">{{ _('Overtime') }}</span>
+        {% endif %}
+        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Total:') }}</span>
+        <span class="text-2xl font-semibold tabular-nums" data-ts-day-total>{{ fmt_hm(view.day_seconds) }}</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+{# Track time / Edit entry dialog #}
+<div id="ts-dialog" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="ts-dialog-title">
+  <div class="absolute inset-0 bg-black/50" data-ts-close></div>
+  <div class="relative mx-auto mt-24 w-full max-w-xl rounded-xl bg-card-light dark:bg-card-dark shadow-xl">
+    <form id="ts-form" class="p-6 space-y-4" novalidate>
+      <div>
+        <h2 id="ts-dialog-title" class="text-lg font-semibold">{{ _('New time entry') }}</h2>
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark" data-ts-dialog-sub>{{ view.day.strftime('%A, %-d %b') }}</p>
+      </div>
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">{{ _('Project') }}</span>
+        <select name="project_id" required class="form-input w-full">
+          <option value="">{{ _('Choose a project') }}</option>
+          {% for group in projects|groupby('client') %}
+          <optgroup label="{{ group.grouper }}">
+            {% for p in group.list %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">{{ _('Task') }}</span>
+        <select name="task_id" class="form-input w-full" disabled>
+          <option value="">{{ _('No task') }}</option>
+        </select>
+      </label>
+      <button type="button" data-ts-new-task disabled class="mt-1.5 text-sm font-semibold text-primary hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed">{{ _('+ New task') }}</button>
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">{{ _('Notes') }}</span>
+        <textarea name="notes" rows="3" class="form-input w-full"></textarea>
+      </label>
+      <label class="block">
+        <span class="block text-sm font-medium mb-1">{{ _('Hours') }}</span>
+        <input name="hours" type="text" inputmode="decimal" autocomplete="off" placeholder="0:00" class="form-input w-40 text-lg tabular-nums">
+        <span class="block text-sm text-text-muted-light dark:text-text-muted-dark mt-1" data-ts-hours-help></span>
+      </label>
+      <p class="hidden text-sm text-red-700 dark:text-red-300" role="alert" data-ts-error></p>
+      <div class="flex flex-wrap items-center gap-3 pt-2">
+        <button type="submit" class="px-5 h-11 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90" data-ts-submit>{{ _('Save entry') }}</button>
+        <button type="button" class="px-5 h-11 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark" data-ts-close>{{ _('Cancel') }}</button>
+        <button type="button" class="hidden ml-auto px-4 h-11 rounded-lg text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20" data-ts-delete>{{ _('Delete') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# The shared Create Task window, as in Log time and on the dashboard #}
+{% include 'components/inline_create_task_modal.html' %}
+
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  const root = document.getElementById('timesheet-day');
+  const dialog = document.getElementById('ts-dialog');
+  const form = document.getElementById('ts-form');
+  const isToday = root.dataset.day === root.dataset.today;
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const T = {
+    newTitle: {{ _('New time entry')|tojson }},
+    editTitle: {{ _('Edit entry')|tojson }},
+    save: {{ _('Save entry')|tojson }},
+    start: {{ _('Start timer')|tojson }},
+    helpToday: {{ _('Leave hours empty to start a timer. Enter 1:30, 1.5 or 90m to save the entry.')|tojson }},
+    helpPast: {{ _('Enter 1:30, 1.5 or 90m.')|tojson }},
+    helpRunning: {{ _('The timer is running. Stop it to change the hours.')|tojson }},
+    noTask: {{ _('No task')|tojson }},
+    confirmDelete: {{ _('Delete this entry?')|tojson }},
+    failed: {{ _('Something went wrong. Try again.')|tojson }},
+  };
+  let editing = null; // {id, running} or null for a new entry
+
+  async function call(method, url, body) {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'same-origin',
+    });
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* not JSON */ }
+    if (!res.ok || data.success === false) throw new Error(data.error || data.message || T.failed);
+    return data;
+  }
+
+  function showError(msg) {
+    const el = form.querySelector('[data-ts-error]');
+    el.textContent = msg || '';
+    el.classList.toggle('hidden', !msg);
+  }
+
+  async function loadTasks(projectId, selectedId) {
+    const sel = form.elements.task_id;
+    sel.innerHTML = '';
+    sel.add(new Option(T.noTask, ''));
+    sel.disabled = !projectId;
+    form.querySelector('[data-ts-new-task]').disabled = !projectId;
+    if (!projectId) return;
+    try {
+      const data = await call('GET', `{{ url_for('timesheet.day') }}/api/projects/${projectId}/tasks`);
+      data.tasks.forEach((t) => sel.add(new Option(t.name, t.id)));
+      if (selectedId) sel.value = String(selectedId);
+      if (!selectedId && data.tasks.length === 1) sel.value = String(data.tasks[0].id);
+    } catch (e) { showError(e.message); }
+  }
+
+  function syncSubmit() {
+    const hours = form.elements.hours.value.trim();
+    const btn = form.querySelector('[data-ts-submit]');
+    const help = form.querySelector('[data-ts-hours-help]');
+    if (editing && editing.running) {
+      btn.textContent = T.save; help.textContent = T.helpRunning; return;
+    }
+    btn.textContent = (!editing && !hours && isToday) ? T.start : T.save;
+    help.textContent = (!editing && isToday) ? T.helpToday : T.helpPast;
+  }
+
+  function open(entryRow) {
+    showError('');
+    form.reset();
+    editing = entryRow ? { id: entryRow.dataset.tsEntry, running: entryRow.dataset.running === 'true' } : null;
+    dialog.querySelector('#ts-dialog-title').textContent = editing ? T.editTitle : T.newTitle;
+    form.querySelector('[data-ts-delete]').classList.toggle('hidden', !editing);
+    form.elements.hours.disabled = !!(editing && editing.running);
+    if (editing) {
+      form.elements.project_id.value = entryRow.dataset.projectId;
+      form.elements.notes.value = entryRow.dataset.notes;
+      form.elements.hours.value = editing.running ? '' : entryRow.dataset.hours;
+      loadTasks(entryRow.dataset.projectId, entryRow.dataset.taskId);
+    } else {
+      loadTasks('', null);
+    }
+    syncSubmit();
+    dialog.classList.remove('hidden');
+    form.elements.project_id.focus();
+  }
+
+  function close() { dialog.classList.add('hidden'); editing = null; }
+
+  form.elements.project_id.addEventListener('change', (ev) => loadTasks(ev.target.value, null));
+  form.querySelector('[data-ts-new-task]').addEventListener('click', () => {
+    if (window.ttInlineCreate) window.ttInlineCreate.open('task', { targetSelect: form.elements.task_id, projectId: form.elements.project_id.value });
+  });
+  form.elements.hours.addEventListener('input', syncSubmit);
+  dialog.querySelectorAll('[data-ts-close]').forEach((el) => el.addEventListener('click', close));
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !dialog.classList.contains('hidden')) close(); });
+  document.querySelectorAll('[data-ts-new]').forEach((el) => el.addEventListener('click', () => open(null)));
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    showError('');
+    const body = {
+      project_id: form.elements.project_id.value,
+      task_id: form.elements.task_id.value || 0,
+      notes: form.elements.notes.value,
+      hours: form.elements.hours.disabled ? '' : form.elements.hours.value,
+    };
+    const btn = form.querySelector('[data-ts-submit]');
+    btn.disabled = true;
+    try {
+      if (editing) {
+        await call('PATCH', `{{ url_for('timesheet.day') }}/api/entries/${editing.id}`, body);
+      } else {
+        body.date = root.dataset.day;
+        await call('POST', `{{ url_for('timesheet.day') }}/api/entries`, body);
+      }
+      window.location.reload();
+    } catch (e) {
+      showError(e.message);
+      btn.disabled = false;
+    }
+  });
+
+  form.querySelector('[data-ts-delete]').addEventListener('click', async () => {
+    if (!editing || !window.confirm(T.confirmDelete)) return;
+    try {
+      await call('DELETE', `{{ url_for('timesheet.day') }}/api/entries/${editing.id}`);
+      window.location.reload();
+    } catch (e) { showError(e.message); }
+  });
+
+  root.addEventListener('click', async (ev) => {
+    const row = ev.target.closest('[data-ts-entry]');
+    if (!row) return;
+    try {
+      if (ev.target.closest('[data-ts-edit]')) { open(row); return; }
+      if (ev.target.closest('[data-ts-stop]')) { await call('POST', `{{ url_for('timesheet.day') }}/api/stop`); window.location.reload(); return; }
+      if (ev.target.closest('[data-ts-start]')) { await call('POST', `{{ url_for('timesheet.day') }}/api/entries/${row.dataset.tsEntry}/start`); window.location.reload(); }
+    } catch (e) { window.alert(e.message); }
+  });
+
+  // The running timer and the day total count up once a minute
+  const ticking = root.querySelector('[data-ts-ticking]');
+  if (ticking) {
+    const startedAt = Date.now();
+    const base = parseInt(ticking.dataset.tsTicking, 10) || 0;
+    const totalEl = root.querySelector('[data-ts-day-total]');
+    const [th, tm] = totalEl.textContent.split(':').map(Number);
+    const dayBase = th * 3600 + tm * 60;
+    const fmt = (s) => `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}`;
+    setInterval(() => {
+      const extra = Math.floor((Date.now() - startedAt) / 1000);
+      ticking.textContent = fmt(base + extra);
+      totalEl.textContent = fmt(dayBase + extra);
+    }, 30000);
+  }
+})();
+</script>
+{% endblock %}

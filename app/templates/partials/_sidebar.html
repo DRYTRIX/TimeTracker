@@ -11,7 +11,7 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set time_open = ep == 'timer.manual_entry' or ep == 'timer.time_entries_overview' or ep == 'timer.focus_mode' or ep.startswith('workday.') %}
+                {% set time_open = ep == 'timer.manual_entry' or ep == 'timer.time_entries_overview' or ep == 'timer.focus_mode' or ep.startswith('workday.') or ep.startswith('timesheet.') %}
                 {% set work_open = (ep.startswith('issues.') or ep.startswith('time_approvals.') or ep.startswith('workflows.') or ep.startswith('recurring_tasks.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') or ep.startswith('workforce.') or ep.startswith('milestones.') or ep.startswith('resource_scheduling.')) %}
                 {% set calendar_open = ep.startswith('calendar.') %}
                 {% set finance_open = ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('mileage.') or ep.startswith('per_diem.') or ep.startswith('budget_alerts.') or ep.startswith('invoice_approvals.') or ep.startswith('payment_gateways.') %}
@@ -67,6 +67,13 @@
                                     <i class="fas fa-play w-4 mr-2"></i>{{ _('Track') }}
                                 </a>
                             </li>
+                            {% if is_module_enabled('timesheet') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('timesheet.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timesheet.day') }}" title="{{ _('Your day and week: hours, notes, Start and Stop') }}">
+                                    <i class="fas fa-table w-4 mr-2"></i>{{ _('Timesheet') }}
+                                </a>
+                            </li>
+                            {% endif %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'timer.manual_entry' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timer.manual_entry') }}">
                                     <i class="fas fa-pen w-4 mr-2"></i>{{ _('Log time') }}

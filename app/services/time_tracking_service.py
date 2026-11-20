@@ -37,7 +37,9 @@ class TimeTrackingService:
     # entries logged as hours only start here on an empty day
     DURATION_ENTRY_DAY_START = time(9, 0)
 
-    def place_duration_entry(self, user_id: int, day: date, duration_seconds: int) -> Dict[str, Any]:
+    def place_duration_entry(
+        self, user_id: int, day: date, duration_seconds: int, exclude_entry_id: Optional[int] = None
+    ) -> Dict[str, Any]:
         """Pick start/end for an entry logged as a duration on a day, without a start time.
 
         The entry goes right after the user's last entry that starts on ``day`` (a running timer
@@ -45,6 +47,7 @@ class TimeTrackingService:
         before midnight, it takes the latest earlier free gap of the day that is long enough, placed
         at the end of that gap (for example just before 09:00 on a long release day). Only when no
         gap fits is there no room. Times are naive, in the app timezone, like every stored entry.
+        ``exclude_entry_id`` leaves one entry out of the busy time, for moving an entry that is being edited.
         """
         try:
             duration_seconds = int(duration_seconds)
@@ -61,11 +64,14 @@ class TimeTrackingService:
 
         # Busy intervals that touch this day: finished entries, and a running timer up to now
         busy = []
-        for e in TimeEntry.query.filter(
+        busy_query = TimeEntry.query.filter(
             TimeEntry.user_id == user_id,
             TimeEntry.start_time < next_day,
             db.or_(TimeEntry.end_time.is_(None), TimeEntry.end_time > day_start),
-        ).all():
+        )
+        if exclude_entry_id is not None:
+            busy_query = busy_query.filter(TimeEntry.id != exclude_entry_id)
+        for e in busy_query.all():
             end = e.end_time if e.end_time is not None else max(local_now(), e.start_time)
             busy.append((max(e.start_time, day_start), min(end, next_day)))
         busy.sort()

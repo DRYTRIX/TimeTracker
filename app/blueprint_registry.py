@@ -124,6 +124,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.tasks import tasks_bp
     from app.routes.time_entry_templates import time_entry_templates_bp
     from app.routes.timer import timer_bp
+    from app.routes.timesheet import timesheet_bp
     from app.routes.user import user_bp
     from app.routes.webhooks import webhooks_bp
     from app.routes.weekly_goals import weekly_goals_bp
@@ -230,6 +231,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(milestones_bp)
     app.register_blueprint(resource_scheduling_bp)
     app.register_blueprint(timer_bp)
+    app.register_blueprint(timesheet_bp)
     app.register_blueprint(workday_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(admin_bp)
