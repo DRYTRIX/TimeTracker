@@ -83,7 +83,7 @@
   if (last === tz) return;
   var meta = document.querySelector('meta[name="csrf-token"]');
   var token = (meta && meta.getAttribute('content')) || '';
-  fetch('/user/api/timezone', {
+  fetch('/api/timezone', {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
