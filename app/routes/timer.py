@@ -2250,37 +2250,49 @@ def timer_page():
         .all()
     )
 
-    from app.services.attendance_compliance_service import AttendanceComplianceService
-    from app.services.workday_session_service import WorkdaySessionService
+    from app.utils.module_helpers import is_module_enabled
 
-    workday_svc = WorkdaySessionService()
-    active_workday_session = workday_svc.get_active_session(current_user.id)
-    attendance_status = AttendanceComplianceService().get_status(current_user.id)
-    overnight_open_workday = workday_svc.is_overnight_open_session(active_workday_session)
-    suggested_leave_time = (
-        workday_svc.suggested_leave_datetime_local(active_workday_session, current_user)
-        if overnight_open_workday and active_workday_session
-        else None
-    )
-    auto_closed_workday_session = (
-        None if overnight_open_workday else workday_svc.get_unconfirmed_auto_closed_session(current_user.id)
-    )
-    auto_closed_suggested_leave_time = (
-        workday_svc.suggested_leave_datetime_local(auto_closed_workday_session, current_user)
-        if auto_closed_workday_session
-        else None
-    )
-    auto_closed_max_leave_time = (
-        auto_closed_workday_session.end_time.strftime("%Y-%m-%dT%H:%M")
-        if auto_closed_workday_session and auto_closed_workday_session.end_time
-        else None
-    )
+    active_workday_session = None
+    attendance_break_active = False
+    overnight_open_workday = False
+    suggested_leave_time = None
+    auto_closed_workday_session = None
+    auto_closed_suggested_leave_time = None
+    auto_closed_max_leave_time = None
+
+    if is_module_enabled("workday"):
+        from app.services.attendance_compliance_service import AttendanceComplianceService
+        from app.services.workday_session_service import WorkdaySessionService
+
+        workday_svc = WorkdaySessionService()
+        active_workday_session = workday_svc.get_active_session(current_user.id)
+        attendance_status = AttendanceComplianceService().get_status(current_user.id)
+        attendance_break_active = attendance_status.get("break_active", False)
+        overnight_open_workday = workday_svc.is_overnight_open_session(active_workday_session)
+        suggested_leave_time = (
+            workday_svc.suggested_leave_datetime_local(active_workday_session, current_user)
+            if overnight_open_workday and active_workday_session
+            else None
+        )
+        auto_closed_workday_session = (
+            None if overnight_open_workday else workday_svc.get_unconfirmed_auto_closed_session(current_user.id)
+        )
+        auto_closed_suggested_leave_time = (
+            workday_svc.suggested_leave_datetime_local(auto_closed_workday_session, current_user)
+            if auto_closed_workday_session
+            else None
+        )
+        auto_closed_max_leave_time = (
+            auto_closed_workday_session.end_time.strftime("%Y-%m-%dT%H:%M")
+            if auto_closed_workday_session and auto_closed_workday_session.end_time
+            else None
+        )
 
     return render_template(
         "timer/timer_page.html",
         active_timer=active_timer,
         active_workday_session=active_workday_session,
-        attendance_break_active=attendance_status.get("break_active", False),
+        attendance_break_active=attendance_break_active,
         overnight_open_workday=overnight_open_workday,
         suggested_leave_time=suggested_leave_time,
         auto_closed_workday_session=auto_closed_workday_session,

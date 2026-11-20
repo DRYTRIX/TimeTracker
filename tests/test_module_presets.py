@@ -61,6 +61,15 @@ class TestPresetMembership:
         ):
             assert essential not in disabled, essential
 
+    def test_workday_enabled_for_team_disabled_for_solo(self):
+        """Attendance is a team surface; Solo Focus leaves it off."""
+        ModuleRegistry.initialize_defaults()
+        assert ModuleRegistry.get("workday") is not None
+        solo_disabled = set(ModuleRegistry.get_disabled_ids_for_preset(ModulePreset.SOLO.value))
+        team_disabled = set(ModuleRegistry.get_disabled_ids_for_preset(ModulePreset.TEAM.value))
+        assert "workday" in solo_disabled
+        assert "workday" not in team_disabled
+
 
 class TestPresetSafety:
     """A preset must never produce a state an admin could not save by hand."""

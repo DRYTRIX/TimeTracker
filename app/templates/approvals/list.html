@@ -84,7 +84,7 @@
             <i class="fas fa-paper-plane text-blue-500 mr-2"></i>
             {{ _('My Requests') }}
         </h2>
-        {% if my_requests or my_attendance_corrections %}
+        {% if my_requests or (is_module_enabled('workday') and my_attendance_corrections) %}
         <div class="space-y-4">
             {% for request in my_requests %}
             <div class="border border-border-light dark:border-border-dark rounded-lg p-4">
@@ -109,6 +109,7 @@
                 </div>
             </div>
             {% endfor %}
+            {% if is_module_enabled('workday') %}
             {% for correction in my_attendance_corrections %}
             <div class="border border-border-light dark:border-border-dark rounded-lg p-4">
                 <div class="flex justify-between items-start">
@@ -136,6 +137,7 @@
                 </div>
             </div>
             {% endfor %}
+            {% endif %}
         </div>
         {% else %}
         {{ empty_state(
@@ -147,7 +149,7 @@
     </div>
 </div>
 
-{% if current_user.is_admin %}
+{% if current_user.is_admin and is_module_enabled('workday') %}
 <div class="mt-6 bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <h2 class="text-xl font-semibold mb-4">
         <i class="fas fa-user-clock text-purple-500 mr-2"></i>

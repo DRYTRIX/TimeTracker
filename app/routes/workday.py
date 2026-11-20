@@ -10,6 +10,7 @@ from app.models import WorkingTimeViolation
 from app.services.attendance_compliance_service import AttendanceComplianceService
 from app.services.workday_session_service import WorkdaySessionService
 from app.services.working_time_limit_service import WorkingTimeLimitService
+from app.utils.module_helpers import module_enabled
 from app.utils.safe_redirect import safe_redirect, safe_redirect_target
 from app.utils.timezone import parse_user_local_datetime_from_string
 
@@ -18,6 +19,7 @@ workday_bp = Blueprint("workday", __name__)
 
 @workday_bp.route("/workday/start", methods=["POST"])
 @login_required
+@module_enabled("workday")
 def start_workday():
     notes = request.form.get("notes", "").strip() or None
     result = WorkdaySessionService().start_workday(current_user.id, notes=notes, source="manual")
@@ -30,6 +32,7 @@ def start_workday():
 
 @workday_bp.route("/workday/end", methods=["POST"])
 @login_required
+@module_enabled("workday")
 def end_workday():
     from app.services.workday_session_service import parse_workday_end_time
 
@@ -66,6 +69,7 @@ def _invalidate_dashboard_stats_cache(user_id: int) -> None:
 
 @workday_bp.route("/workday/auto-closed/<int:session_id>/resolve", methods=["POST"])
 @login_required
+@module_enabled("workday")
 def resolve_auto_closed_workday(session_id):
     from app.services.workday_session_service import parse_workday_end_time
 
@@ -114,6 +118,7 @@ def resolve_auto_closed_workday(session_id):
 
 @workday_bp.route("/workday/break/start", methods=["POST"])
 @login_required
+@module_enabled("workday")
 def start_break():
     break_type = request.form.get("break_type", "rest").strip() or "rest"
     result = AttendanceComplianceService().start_break(current_user.id, break_type=break_type)
@@ -126,6 +131,7 @@ def start_break():
 
 @workday_bp.route("/workday/break/end", methods=["POST"])
 @login_required
+@module_enabled("workday")
 def end_break():
     result = AttendanceComplianceService().end_break(current_user.id)
     if result["success"]:
@@ -137,6 +143,7 @@ def end_break():
 
 @workday_bp.route("/workday/status")
 @login_required
+@module_enabled("workday")
 def workday_status():
     status = AttendanceComplianceService().get_status(current_user.id)
     session = WorkdaySessionService().get_active_session(current_user.id)
@@ -148,6 +155,7 @@ def workday_status():
 
 @workday_bp.route("/workday/history")
 @login_required
+@module_enabled("workday")
 def workday_history():
     page = request.args.get("page", 1, type=int)
     per_page = 20
@@ -191,6 +199,7 @@ def workday_history():
 
 @workday_bp.route("/workday/corrections/request", methods=["POST"])
 @login_required
+@module_enabled("workday")
 def request_correction():
     service = AttendanceComplianceService()
     entity_type = request.form.get("entity_type")
@@ -262,6 +271,7 @@ def request_correction():
 
 @workday_bp.route("/admin/attendance/corrections")
 @login_required
+@module_enabled("workday")
 def admin_corrections_list():
     if not current_user.is_admin:
         flash(_("Admin access required"), "error")
@@ -296,6 +306,7 @@ def _parse_correction_review_decision():
 
 @workday_bp.route("/admin/attendance/corrections/<int:correction_id>/review", methods=["POST"])
 @login_required
+@module_enabled("workday")
 def admin_review_correction(correction_id):
     if not current_user.is_admin:
         flash(_("Admin access required"), "error")
@@ -326,6 +337,7 @@ def admin_review_correction(correction_id):
 
 @workday_bp.route("/working-time/violations")
 @login_required
+@module_enabled("workday")
 def violations_list():
     violations = WorkingTimeLimitService().get_pending_violations_for_user(current_user.id)
     return render_template("workday/violations_list.html", violations=violations)
@@ -333,6 +345,7 @@ def violations_list():
 
 @workday_bp.route("/working-time/violations/<int:violation_id>", methods=["GET", "POST"])
 @login_required
+@module_enabled("workday")
 def violation_justify(violation_id):
     violation = WorkingTimeViolation.query.filter_by(id=violation_id, user_id=current_user.id).first_or_404()
 
@@ -349,6 +362,7 @@ def violation_justify(violation_id):
 
 @workday_bp.route("/admin/working-time")
 @login_required
+@module_enabled("workday")
 def admin_working_time_list():
     if not current_user.is_admin:
         flash(_("Admin access required"), "error")
@@ -375,6 +389,7 @@ def admin_working_time_list():
 
 @workday_bp.route("/admin/working-time/<int:violation_id>/acknowledge", methods=["POST"])
 @login_required
+@module_enabled("workday")
 def admin_acknowledge_violation(violation_id):
     if not current_user.is_admin:
         flash(_("Admin access required"), "error")
