@@ -42,6 +42,18 @@
                         <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" inputmode="decimal" class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>
                     </div>
                     <div class="min-w-0">
+                        <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
+                        {% if financial_locked %}
+                        <input type="text" id="currency_code" value="{{ invoice.currency_code }}" readonly class="form-input text-base min-h-[44px]">
+                        {% else %}
+                        <select name="currency_code" id="currency_code" class="form-input text-base min-h-[44px]">
+                            {% for code in (currency_choices or [invoice.currency_code]) %}
+                            <option value="{{ code }}" {% if code == invoice.currency_code %}selected{% endif %}>{{ code }}</option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                    </div>
+                    <div class="min-w-0">
                         <label for="discount_percent" class="form-label">{{ _('Invoice Discount (%)') }}</label>
                         <input type="number" name="discount_percent" id="discount_percent" value="{{ invoice.discount_percent or '' }}" step="0.01" min="0" max="100" inputmode="decimal" class="form-input text-base min-h-[44px]" placeholder="0" {% if financial_locked %}readonly{% endif %}>
                     </div>

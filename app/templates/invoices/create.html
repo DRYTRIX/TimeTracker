@@ -18,7 +18,7 @@
                         <select name="project_id" id="project_id" required class="form-input text-base min-h-[44px]">
                             <option value="">{{ _('Select a project') }}</option>
                             {% for project in projects %}
-                            <option value="{{ project.id }}" data-client-name="{{ project.client_obj.name if project.client_obj else '' }}" data-client-email="{{ project.client_obj.email if project.client_obj else '' }}" data-client-address="{{ project.client_obj.address if project.client_obj else '' }}">{{ project.name }} ({{ project.client }})</option>
+                            <option value="{{ project.id }}" data-currency="{{ client_currencies.get(project.client_id, default_currency) }}" data-client-name="{{ project.client_obj.name if project.client_obj else '' }}" data-client-email="{{ project.client_obj.email if project.client_obj else '' }}" data-client-address="{{ project.client_obj.address if project.client_obj else '' }}">{{ project.name }} ({{ project.client }})</option>
                             {% endfor %}
                         </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Selecting a project will auto-fill client details') }}</p>
@@ -76,6 +76,15 @@
                     <div class="min-w-0">
                         <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
                         <input type="number" name="tax_rate" id="tax_rate" value="{{ settings.tax_rate or 0 }}" step="0.01" inputmode="decimal" class="form-input text-base min-h-[44px]">
+                    </div>
+                    <div class="min-w-0">
+                        <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
+                        <select name="currency_code" id="currency_code" class="form-input text-base min-h-[44px]" data-default-currency="{{ default_currency }}">
+                            {% for code in currency_choices %}
+                            <option value="{{ code }}" {% if code == (request.form.get('currency_code') or default_currency) %}selected{% endif %}>{{ code }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _("Defaults to the currency of the client's latest invoice") }}</p>
                     </div>
                     <div class="min-w-0">
                         <label for="discount_percent" class="form-label">{{ _('Invoice Discount (%)') }}</label>
@@ -137,6 +146,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var clientName = document.getElementById('client_name');
     var clientEmail = document.getElementById('client_email');
     var clientAddress = document.getElementById('client_address');
+    var currencyInput = document.getElementById('currency_code');
+    if (currencyInput) {
+        currencyInput.addEventListener('change', function() { currencyInput.dataset.touched = '1'; });
+    }
 
     function flashField(el) {
         if (!el) return;
@@ -151,6 +164,11 @@ document.addEventListener('DOMContentLoaded', function() {
         var name = opt.getAttribute('data-client-name') || '';
         var email = opt.getAttribute('data-client-email') || '';
         var address = opt.getAttribute('data-client-address') || '';
+        var currencySelect = document.getElementById('currency_code');
+        if (currencySelect && isUserAction && !currencySelect.dataset.touched) {
+            var cur = opt.getAttribute('data-currency') || currencySelect.getAttribute('data-default-currency');
+            if (cur) { currencySelect.value = cur; }
+        }
         clientName.value = name || clientName.value;
         clientEmail.value = email || '';
         clientAddress.value = address || '';
