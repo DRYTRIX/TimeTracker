@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Time entries: overtime notes** — When your own entry takes the day past your daily norm (`standard_hours_per_day`, 8 h by default), you get a gentle note; past 12 hours, a caring nudge to take a break. The entry is always saved. Three texts per level take turns. Shown after dashboard Log Time, manual entry and stopping the timer. `OVERWORK_NOTES=false` turns them off.
 - **Invoices: currency in the forms** — The create and edit forms have a Currency select. A new invoice defaults to the currency of the client's latest invoice, else the global currency setting, and follows the project until the user picks one. Drafts can change the currency; sent and paid invoices show it read-only. The choices are the active currencies, the currencies already used on invoices, and the global setting.
 
 ### Fixed

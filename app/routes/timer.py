@@ -168,6 +168,20 @@ def _edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown):
     }
 
 
+def _flash_overwork_note(entry, owner_id):
+    """After saving the user's own entry, a note if the day went past their norm or 12 hours."""
+    try:
+        if not entry or not entry.start_time or owner_id != current_user.id:
+            return
+        from app.utils.overwork_notes import note_for_day
+
+        note = note_for_day(current_user, entry.start_time.date())
+        if note:
+            flash(note["text"], "warning" if note["level"] == "long_day" else "info")
+    except Exception:
+        current_app.logger.debug("Overwork note skipped", exc_info=True)
+
+
 @timer_bp.route("/timer/start", methods=["POST"])
 @login_required
 def start_timer():
@@ -768,6 +782,8 @@ def stop_timer():
             current_app.logger.debug("Invalidated dashboard cache for user %s", current_user.id)
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
+
+        _flash_overwork_note(active_timer, current_user.id)
 
         # Pass data for post-timer toast (message + link to time entries; no flash to avoid duplicate)
         project_name = (
@@ -1886,6 +1902,7 @@ def manual_entry():
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
+        _flash_overwork_note(entry, target_user_id)
         return redirect(url_for("main.dashboard"))
 
     # Pre-fill start/end date with today in user's timezone (Issue #489)
