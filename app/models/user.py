@@ -79,6 +79,7 @@ class User(UserMixin, db.Model):
     smart_notify_missed_clock_in_at = db.Column(db.String(5), nullable=True)  # HH:MM; null = default 09:30
     notification_missed_clock_in = db.Column(db.Boolean, default=False, nullable=False)
     timezone = db.Column(db.String(50), nullable=True)  # User-specific timezone override
+    timezone_source = db.Column(db.String(10), nullable=False, default="auto")  # 'auto' = follow device, 'manual' = user-pinned
     date_format = db.Column(db.String(20), default=None, nullable=True)  # None = use system default
     time_format = db.Column(db.String(10), default=None, nullable=True)  # None = use system default
     week_start_day = db.Column(db.Integer, default=1, nullable=False)  # 0=Sunday, 1=Monday, etc.

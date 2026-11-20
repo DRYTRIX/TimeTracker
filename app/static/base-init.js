@@ -63,3 +63,37 @@
     }
   });
 })();
+
+// Auto-detect the device timezone and keep the server profile in sync.
+// Only runs for logged-in pages; users who pinned a timezone manually
+// ('manual' source) are ignored server-side.
+(function () {
+  'use strict';
+  if (!document.body || !document.body.dataset.authenticated) return;
+  var tz;
+  try {
+    tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch (_) {
+    return;
+  }
+  if (!tz) return;
+  var KEY = 'tt_device_tz';
+  var last = null;
+  try { last = localStorage.getItem(KEY); } catch (_) {}
+  if (last === tz) return;
+  var meta = document.querySelector('meta[name="csrf-token"]');
+  var token = (meta && meta.getAttribute('content')) || '';
+  fetch('/user/api/timezone', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+    body: JSON.stringify({ timezone: tz })
+  })
+    .then(function (res) { return res.ok ? res.json() : null; })
+    .then(function (data) {
+      if (data && data.success) {
+        try { localStorage.setItem(KEY, tz); } catch (_) {}
+      }
+    })
+    .catch(function () {});
+})();
