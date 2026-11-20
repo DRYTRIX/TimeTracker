@@ -91,7 +91,7 @@
   })
     .then(function (res) { return res.ok ? res.json() : null; })
     .then(function (data) {
-      if (data && data.success) {
+      if (data && data.success && !data.ignored) {
         try { localStorage.setItem(KEY, tz); } catch (_) {}
       }
     })
