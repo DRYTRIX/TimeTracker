@@ -191,7 +191,7 @@
                 const data = await res.json();
                 if (data.active && data.timer) {
                     this.timerData = data.timer;
-                    this.startTime = new Date(data.timer.start_time).getTime();
+                    this.startTime = (window.ttParseStart ? window.ttParseStart(data.timer.start_time) : new Date(data.timer.start_time).getTime());
                     this.render();
                     this.startElapsedUpdater();
                 } else {
