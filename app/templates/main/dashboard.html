@@ -330,16 +330,28 @@
                 </tr>
             </thead>
             <tbody>
-                {% for entry in recent_entries[:5] %}
+                {% for entry in recent_entries %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
                     <td class="p-3" data-label="{{ _('Project') }}">
-                        {% if entry.project %}
-                            <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="text-primary hover:underline font-medium">{{ entry.project.name }}</a>
-                        {% elif entry.client %}
-                            <a href="{{ url_for('clients.view_client', client_id=entry.client.id) }}" class="text-primary hover:underline font-medium">{{ entry.client.name }} <span class="text-xs opacity-75">({{ _('Direct') }})</span></a>
-                        {% else %}
-                            <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('N/A') }}</span>
-                        {% endif %}
+                        <div>
+                            {% if entry.project %}
+                                <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="text-primary hover:underline font-medium">{{ entry.project.name }}</a>
+                            {% elif entry.client %}
+                                <a href="{{ url_for('clients.view_client', client_id=entry.client.id) }}" class="text-primary hover:underline font-medium">{{ entry.client.name }} <span class="text-xs opacity-75">({{ _('Direct') }})</span></a>
+                            {% else %}
+                                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('N/A') }}</span>
+                            {% endif %}
+                            {% if entry.task or entry.notes %}
+                            <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-0.5">
+                                {% if entry.task %}{{ entry.task.name }}{% endif %}
+                                {% if entry.task and entry.notes %}<span class="opacity-60"> · </span>{% endif %}
+                                {% if entry.notes %}
+                                    {% set notes_first_line = entry.notes.split('\n')[0] %}
+                                    {{ notes_first_line[:80] }}{% if notes_first_line|length > 80 %}…{% endif %}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="p-3" data-label="{{ _('Duration') }}">
                         {% if active_timer and entry.id == active_timer.id %}<span class="dashboard-live-duration" data-timer-start="{{ active_timer.start_time.isoformat() }}">{{ entry.duration_formatted }}</span>{% else %}{{ entry.duration_formatted }}{% endif %}
@@ -360,7 +372,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4" class="p-8 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No recent entries found.') }}</td>
+                    <td colspan="4" class="p-8 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No entries in the last 7 days.') }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

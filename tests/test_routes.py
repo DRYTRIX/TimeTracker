@@ -436,6 +436,49 @@ def test_dashboard_contains_start_timer_modal(authenticated_client):
     assert 'id="openStartTimer"' in html
 
 
+@pytest.mark.integration
+@pytest.mark.routes
+def test_dashboard_recent_entries_window_and_notes(authenticated_client, app, user, project, task):
+    """Recent Entries shows last-7-days entries with task/notes; excludes older ones."""
+    from app import db
+    from app.models import TimeEntry
+
+    with app.app_context():
+        now = datetime.utcnow()
+        recent = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            task_id=task.id,
+            start_time=now - timedelta(days=1),
+            end_time=now - timedelta(days=1) + timedelta(hours=1),
+            notes="First line of notes\nSecond line ignored",
+            source="manual",
+            billable=True,
+        )
+        old = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=now - timedelta(days=30),
+            end_time=now - timedelta(days=30) + timedelta(hours=1),
+            notes="Old entry should not appear",
+            source="manual",
+            billable=True,
+        )
+        db.session.add_all([recent, old])
+        db.session.commit()
+
+        response = authenticated_client.get("/dashboard")
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+
+        # Recent Entries shows first notes line and task under the project
+        assert "First line of notes" in html
+        assert task.name in html
+        # Out-of-window entry notes must not appear
+        assert "Old entry should not appear" not in html
+        assert "No entries in the last 7 days." not in html
+
+
 @pytest.mark.smoke
 @pytest.mark.routes
 def test_base_layout_has_sidebar_toggle(authenticated_client):

@@ -138,6 +138,28 @@ class TestTimeEntryRepository:
         assert len(entries) == 1
         assert entries[0].id == entry1.id
 
+    def test_get_by_date_range_limit(self, repository, db_session, sample_user, sample_project):
+        """Test that limit caps results from get_by_date_range"""
+        base_date = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+
+        for i in range(5):
+            repository.create_manual_entry(
+                user_id=sample_user.id,
+                project_id=sample_project.id,
+                start_time=base_date - timedelta(hours=i + 1),
+                end_time=base_date - timedelta(hours=i),
+            )
+        db_session.commit()
+
+        start_date = base_date - timedelta(days=1)
+        end_date = base_date
+        entries = repository.get_by_date_range(
+            start_date=start_date, end_date=end_date, user_id=sample_user.id, limit=2
+        )
+
+        assert len(entries) == 2
+        assert entries[0].start_time > entries[1].start_time
+
     def test_get_distinct_project_ids_for_user(self, repository, db_session, sample_user, sample_project):
         """Test getting distinct project IDs for a user from their time entries"""
         # Create entries on one project
