@@ -15,10 +15,10 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                     <div class="min-w-0">
                         <label for="project_id" class="form-label">{{ _('Project') }} *</label>
-                        <select name="project_id" id="project_id" required class="form-input text-base min-h-[44px]">
+                        <select name="project_id" id="project_id" required class="form-input text-base min-h-[44px]"{% if selected_project_id %} data-preselected="1"{% endif %}>
                             <option value="">{{ _('Select a project') }}</option>
                             {% for project in projects %}
-                            <option value="{{ project.id }}" data-currency="{{ client_currencies.get(project.client_id, default_currency) }}" data-client-name="{{ project.client_obj.name if project.client_obj else '' }}" data-client-email="{{ project.client_obj.email if project.client_obj else '' }}" data-client-address="{{ project.client_obj.address if project.client_obj else '' }}">{{ project.name }} ({{ project.client }})</option>
+                            <option value="{{ project.id }}"{% if selected_project_id and project.id == selected_project_id %} selected{% endif %} data-currency="{{ client_currencies.get(project.client_id, default_currency) }}" data-client-name="{{ project.client_obj.name if project.client_obj else '' }}" data-client-email="{{ project.client_obj.email if project.client_obj else '' }}" data-client-address="{{ project.client_obj.address if project.client_obj else '' }}">{{ project.name }} ({{ project.client }})</option>
                             {% endfor %}
                         </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Selecting a project will auto-fill client details') }}</p>
@@ -180,7 +180,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     projectSelect.addEventListener('change', function() { applyFromSelected(true); });
-    applyFromSelected(false);
+    // A project preselected via ?project_id= fills client and currency, as if picked by hand
+    applyFromSelected(projectSelect.dataset.preselected === '1');
 });
 </script>
 {% endblock %}

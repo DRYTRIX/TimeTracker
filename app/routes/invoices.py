@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from flask import (
     Blueprint,
     Response,
+    abort,
     current_app,
     flash,
     jsonify,
@@ -92,6 +93,26 @@ def list_invoices():
         return response
 
     return render_template("invoices/list.html", invoices=result["invoices"], summary=result["summary"])
+
+
+@invoices_bp.route("/projects/<int:project_id>/invoices")
+@login_required
+@module_enabled("invoices")
+def project_invoices(project_id):
+    """List the invoices of one project, with the same table as the Invoices page."""
+    from app.services import InvoiceService
+    from app.utils.scope_filter import user_can_access_project
+
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    project = Project.query.get_or_404(project_id)
+
+    result = InvoiceService().list_invoices(
+        project_id=project.id,
+        user_id=current_user.id,
+        is_admin=current_user.is_admin,
+    )
+    return render_template("invoices/project_list.html", project=project, invoices=result["invoices"])
 
 
 @invoices_bp.route("/invoices/create", methods=["GET", "POST"])
@@ -273,6 +294,8 @@ def create_invoice():
         projects_query = projects_query.filter(scope_p)
     projects = projects_query.all()
     settings = Settings.get_settings()
+    # "New invoice" on a project's Invoices page passes ?project_id= to preselect it
+    selected_project_id = request.args.get("project_id", type=int)
 
     # Set default due date to 30 days from now
     default_due_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
@@ -287,6 +310,7 @@ def create_invoice():
         currency_choices=currency_choices(settings),
         client_currencies=default_currencies_by_client(settings),
         default_currency=settings_currency(settings),
+        selected_project_id=selected_project_id,
     )
 
 
@@ -1008,6 +1032,11 @@ def update_invoice_status(invoice_id):
     return jsonify({"success": True, "status": new_status})
 
 
+def _back_to_invoice_list():
+    """Redirect after a delete or bulk action: back to the list the action came from."""
+    return safe_redirect(request.form.get("next"), fallback_endpoint="invoices.list_invoices")
+
+
 @invoices_bp.route("/invoices/<int:invoice_id>/delete", methods=["POST"])
 @login_required
 def delete_invoice(invoice_id):
@@ -1017,7 +1046,7 @@ def delete_invoice(invoice_id):
     # Check access permissions
     if not current_user.is_admin and invoice.created_by != current_user.id:
         flash(_("You do not have permission to delete this invoice"), "error")
-        return redirect(url_for("invoices.list_invoices"))
+        return _back_to_invoice_list()
 
     if invoice.status != "draft":
         flash(_("Only draft invoices can be deleted."), "error")
@@ -1029,7 +1058,7 @@ def delete_invoice(invoice_id):
     db.session.delete(invoice)
     if not safe_commit("delete_invoice", {"invoice_id": invoice_id_for_event}):
         flash(_("Could not delete invoice due to a database error. Please check server logs."), "error")
-        return redirect(url_for("invoices.list_invoices"))
+        return _back_to_invoice_list()
 
     try:
         from app.constants import WebhookEvent
@@ -1043,7 +1072,7 @@ def delete_invoice(invoice_id):
         current_app.logger.debug("Failed to emit invoice.deleted for %s", invoice_id_for_event, exc_info=True)
 
     flash(f"Invoice {invoice_number} deleted successfully", "success")
-    return redirect(url_for("invoices.list_invoices"))
+    return _back_to_invoice_list()
 
 
 @invoices_bp.route("/invoices/bulk-delete", methods=["POST"])
@@ -1054,7 +1083,7 @@ def bulk_delete_invoices():
 
     if not invoice_ids:
         flash(_("No invoices selected for deletion"), "warning")
-        return redirect(url_for("invoices.list_invoices"))
+        return _back_to_invoice_list()
 
     deleted_count = 0
     skipped_count = 0
@@ -1097,7 +1126,7 @@ def bulk_delete_invoices():
     if deleted_count > 0:
         if not safe_commit("bulk_delete_invoices", {"count": deleted_count}):
             flash(_("Could not delete invoices due to a database error. Please check server logs."), "error")
-            return redirect(url_for("invoices.list_invoices"))
+            return _back_to_invoice_list()
 
     # Show appropriate messages
     if deleted_count > 0:
@@ -1106,7 +1135,7 @@ def bulk_delete_invoices():
     if skipped_count > 0:
         flash(f'Skipped {skipped_count} invoice{"s" if skipped_count != 1 else ""}: {"; ".join(errors[:3])}', "warning")
 
-    return redirect(url_for("invoices.list_invoices"))
+    return _back_to_invoice_list()
 
 
 @invoices_bp.route("/invoices/bulk-status", methods=["POST"])
@@ -1119,14 +1148,14 @@ def bulk_update_status():
 
     if not invoice_ids:
         flash(_("No invoices selected"), "warning")
-        return redirect(url_for("invoices.list_invoices"))
+        return _back_to_invoice_list()
 
     # Validate status
     # Mirror the single-update validator so bulk update can also set "issued".
     valid_statuses = ["draft", "issued", "sent", "paid", "overdue", "cancelled"]
     if not new_status or new_status not in valid_statuses:
         flash(_("Invalid status value"), "error")
-        return redirect(url_for("invoices.list_invoices"))
+        return _back_to_invoice_list()
 
     updated_count = 0
     skipped_count = 0
@@ -1169,7 +1198,7 @@ def bulk_update_status():
     if updated_count > 0:
         if not safe_commit("bulk_update_invoice_status", {"count": updated_count, "status": new_status}):
             flash(_("Could not update invoices due to a database error"), "error")
-            return redirect(url_for("invoices.list_invoices"))
+            return _back_to_invoice_list()
 
         flash(
             f'Successfully updated {updated_count} invoice{"s" if updated_count != 1 else ""} to {new_status}',
@@ -1179,7 +1208,7 @@ def bulk_update_status():
     if skipped_count > 0:
         flash(f'Skipped {skipped_count} invoice{"s" if skipped_count != 1 else ""} (no permission)', "warning")
 
-    return redirect(url_for("invoices.list_invoices"))
+    return _back_to_invoice_list()
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/generate-from-time", methods=["GET", "POST"])
@@ -1835,10 +1864,13 @@ def duplicate_invoice(invoice_id):
 def export_invoices_excel():
     """Export invoice list as Excel file"""
     # Get invoices (scope by user unless admin)
-    if current_user.is_admin:
-        invoices = Invoice.query.order_by(Invoice.created_at.desc()).all()
-    else:
-        invoices = Invoice.query.filter_by(created_by=current_user.id).order_by(Invoice.created_at.desc()).all()
+    query = Invoice.query
+    if not current_user.is_admin:
+        query = query.filter_by(created_by=current_user.id)
+    project_id = request.args.get("project_id", type=int)
+    if project_id:
+        query = query.filter_by(project_id=project_id)
+    invoices = query.order_by(Invoice.created_at.desc()).all()
 
     # Create Excel file
     output, filename = create_invoices_list_excel(invoices)

@@ -560,6 +560,7 @@ class InvoiceService:
         is_admin: bool = False,
         page: int = 1,
         per_page: int = 50,
+        project_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         List invoices with filtering.
@@ -571,6 +572,7 @@ class InvoiceService:
             search: Search in invoice number or client name
             user_id: User ID for filtering (non-admin users)
             is_admin: Whether user is admin
+            project_id: Only invoices of this project
 
         Returns:
             dict with 'invoices', 'summary' keys
@@ -598,6 +600,9 @@ class InvoiceService:
         if search:
             like = f"%{search}%"
             query = query.filter(db.or_(Invoice.invoice_number.ilike(like), Invoice.client_name.ilike(like)))
+
+        if project_id:
+            query = query.filter(Invoice.project_id == project_id)
 
         # Order by creation date and paginate
         pagination = query.order_by(Invoice.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)

@@ -1,0 +1,327 @@
+{# Scripts used by _invoices_list.html: row actions menu, bulk actions, delete dialog, export. #}
+<script nonce="{{ csp_nonce() }}">
+function resetInvoiceActionsMenu(menu) {
+    if (!menu) return;
+    menu.classList.add('hidden');
+    menu.style.position = '';
+    menu.style.left = '';
+    menu.style.top = '';
+    menu.style.bottom = '';
+    menu.style.right = '';
+    menu.style.zIndex = '';
+    delete menu.dataset.visible;
+}
+
+function closeInvoiceActionMenus() {
+    document.querySelectorAll('.invoice-actions-dropdown').forEach(resetInvoiceActionsMenu);
+}
+
+// Toggle invoice actions dropdown
+function toggleInvoiceActions(evt, invoiceId) {
+    if (evt) {
+        evt.preventDefault();
+        evt.stopPropagation();
+    }
+
+    const menu = document.getElementById('invoiceActions' + invoiceId);
+    if (!menu) return;
+
+    const willOpen = menu.classList.contains('hidden');
+
+    closeInvoiceActionMenus();
+
+    if (!willOpen) {
+        return;
+    }
+
+    const trigger = (evt && evt.currentTarget) || document.querySelector(`[data-invoice-actions-trigger="${invoiceId}"]`);
+    if (!trigger) return;
+
+    menu.classList.remove('hidden');
+    menu.style.position = 'fixed';
+    menu.style.zIndex = '1300';
+
+    // Measure after making visible
+    const rect = trigger.getBoundingClientRect();
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
+
+    let left = rect.right - menuWidth;
+    if (left < 16) {
+        left = rect.left;
+    }
+    if (left + menuWidth > window.innerWidth - 16) {
+        left = window.innerWidth - menuWidth - 16;
+    }
+    if (left < 16) {
+        left = 16;
+    }
+
+    let top = rect.bottom + 8;
+    if (top + menuHeight > window.innerHeight - 16) {
+        top = rect.top - menuHeight - 8;
+    }
+    if (top < 16) {
+        top = Math.max(16, rect.bottom + 8);
+    }
+
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    menu.dataset.visible = 'true';
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('[onclick*="toggleInvoiceActions"]') && !e.target.closest('.invoice-actions-dropdown')) {
+        closeInvoiceActionMenus();
+    }
+});
+
+window.addEventListener('scroll', closeInvoiceActionMenus, true);
+
+{% if current_user.is_admin %}
+// Bulk actions for invoices
+function toggleAllInvoices() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.invoice-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateBulkDeleteButton();
+}
+
+function updateBulkDeleteButton() {
+    const checkboxes = document.querySelectorAll('.invoice-checkbox:checked');
+    const count = checkboxes.length;
+    const btn = document.getElementById('bulkActionsBtn');
+    const countSpan = document.getElementById('selectedCount');
+
+    if (countSpan) countSpan.textContent = count;
+    if (btn) btn.disabled = count === 0;
+}
+
+function closeAllMenus() {
+    document.querySelectorAll('.bulk-menu').forEach(m => m.classList.add('hidden'));
+}
+
+function openMenu(triggerEl, menuId) {
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    const willOpen = menu.classList.contains('hidden');
+    closeAllMenus();
+    if (!willOpen) return;
+
+    // Position menu (dropup if not enough space below)
+    menu.style.top = '';
+    menu.style.bottom = '';
+    const rect = triggerEl.getBoundingClientRect();
+    const menuHeight = menu.offsetHeight || 200;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    if (spaceBelow < menuHeight + 16 && spaceAbove > menuHeight + 16) {
+        menu.style.bottom = 'calc(100% + 8px)';
+    } else {
+        menu.style.top = 'calc(100% + 8px)';
+    }
+    menu.classList.remove('hidden');
+}
+
+// Click outside to close
+document.addEventListener('click', function(e) {
+    const insideTrigger = e.target.closest('#bulkActionsBtn');
+    const insideMenu = e.target.closest('#invoicesBulkMenu');
+    if (!insideTrigger && !insideMenu) {
+        closeAllMenus();
+    }
+});
+
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeAllMenus();
+});
+
+function showBulkDeleteConfirm() {
+    const count = document.querySelectorAll('.invoice-checkbox:checked').length;
+    if (count === 0) return false;
+    document.getElementById('confirmBulkDelete').classList.remove('hidden');
+    return false;
+}
+
+function closeBulkDeleteDialog() {
+    document.getElementById('confirmBulkDelete').classList.add('hidden');
+}
+
+function submitBulkDelete() {
+    const form = document.getElementById('confirmBulkDelete-form');
+    if (!form) return;
+
+    form.querySelectorAll('input[name="invoice_ids[]"]').forEach(input => input.remove());
+
+    const checkboxes = document.querySelectorAll('.invoice-checkbox:checked');
+    if (checkboxes.length === 0) {
+        if (window.ttAlert) window.ttAlert('Please select at least one invoice to delete.', {variant:'warning'}); else if (window.showAlert) window.showAlert('Please select at least one invoice to delete.'); else window.alert('Please select at least one invoice to delete.');
+        return;
+    }
+
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'invoice_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    let originalHTML = '';
+    if (btn) {
+        originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+
+    // Submit the form - routes are already implemented
+    form.submit();
+}
+
+function showBulkStatusDialog() {
+    const dialog = document.getElementById('bulkStatusDialog');
+    if (dialog) {
+        dialog.classList.remove('hidden');
+        // Reset form fields
+        const statusSelect = document.getElementById('bulkStatusSelect');
+        const referenceField = document.getElementById('invoiceReferenceField');
+        const referenceInput = document.getElementById('bulkInvoiceReference');
+        if (statusSelect) statusSelect.value = '';
+        if (referenceField) referenceField.classList.add('hidden');
+        if (referenceInput) referenceInput.value = '';
+    }
+    return false;
+}
+
+function closeBulkStatusDialog() {
+    document.getElementById('bulkStatusDialog').classList.add('hidden');
+    // Reset form fields
+    const statusSelect = document.getElementById('bulkStatusSelect');
+    const referenceField = document.getElementById('invoiceReferenceField');
+    const referenceInput = document.getElementById('bulkInvoiceReference');
+    if (statusSelect) statusSelect.value = '';
+    if (referenceField) referenceField.classList.add('hidden');
+    if (referenceInput) referenceInput.value = '';
+}
+
+function toggleInvoiceReferenceField() {
+    const statusSelect = document.getElementById('bulkStatusSelect');
+    const referenceField = document.getElementById('invoiceReferenceField');
+    if (!statusSelect || !referenceField) return;
+
+    if (statusSelect.value === 'paid') {
+        referenceField.classList.remove('hidden');
+    } else {
+        referenceField.classList.add('hidden');
+    }
+}
+
+function submitBulkStatus() {
+    const statusSelect = document.getElementById('bulkStatusSelect');
+    if (!statusSelect) return;
+
+    const status = statusSelect.value;
+    if (!status) {
+        if (window.ttAlert) window.ttAlert('Please select a status', {variant:'warning'}); else if (window.showAlert) window.showAlert('Please select a status'); else window.alert('Please select a status');
+        return;
+    }
+
+    const form = document.getElementById('bulkStatusForm');
+    if (!form) return;
+
+    const statusValueInput = document.getElementById('bulkStatusValue');
+    if (statusValueInput) {
+        statusValueInput.value = status;
+    }
+
+    // Clear existing invoice_reference input if any
+    const existingRefInput = form.querySelector('input[name="invoice_reference"]');
+    if (existingRefInput) {
+        existingRefInput.remove();
+    }
+
+    // Add invoice reference if provided and status is paid
+    const referenceInput = document.getElementById('bulkInvoiceReference');
+    if (status === 'paid' && referenceInput && referenceInput.value.trim()) {
+        const refInput = document.createElement('input');
+        refInput.type = 'hidden';
+        refInput.name = 'invoice_reference';
+        refInput.value = referenceInput.value.trim();
+        form.appendChild(refInput);
+    }
+
+    // Clear existing hidden inputs
+    form.querySelectorAll('input[name="invoice_ids[]"]').forEach(input => input.remove());
+
+    // Add selected invoice IDs to form
+    const checkboxes = document.querySelectorAll('.invoice-checkbox:checked');
+    if (checkboxes.length === 0) {
+        if (window.ttAlert) window.ttAlert('Please select at least one invoice to update.', {variant:'warning'}); else if (window.showAlert) window.showAlert('Please select at least one invoice to update.'); else window.alert('Please select at least one invoice to update.');
+        return;
+    }
+
+    // Show loading state
+    const btn = document.getElementById('bulkActionsBtn');
+    let originalHTML = '';
+    if (btn) {
+        originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+
+        // Re-enable after timeout (safety fallback)
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }, 10000);
+    }
+
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'invoice_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+
+    // Submit the form - routes are already implemented
+    form.submit();
+}
+{% endif %}
+
+function showDeleteModal(invoiceId, invoiceNumber) {
+  const numberEl = document.getElementById('deleteInvoiceNumber');
+  const formEl = document.getElementById('deleteInvoiceForm');
+  if (numberEl) numberEl.textContent = invoiceNumber || '';
+  if (formEl) formEl.action = "{{ url_for('invoices.delete_invoice', invoice_id=0) }}".replace('0', invoiceId);
+  const modal = document.getElementById('deleteInvoiceModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function hideDeleteModal() {
+  const modal = document.getElementById('deleteInvoiceModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// Export loading state
+function showExportLoading(link) {
+    const originalHTML = link.innerHTML;
+    link.classList.add('pointer-events-none', 'opacity-60');
+    link.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> <span class="export-text">Exporting...</span>';
+
+    // Reset after 5 seconds (fallback)
+    setTimeout(() => {
+        link.innerHTML = originalHTML;
+        link.classList.remove('pointer-events-none', 'opacity-60');
+    }, 5000);
+}
+</script>
