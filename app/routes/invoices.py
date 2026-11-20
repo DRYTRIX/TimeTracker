@@ -185,9 +185,13 @@ def create_invoice():
             current_user.id, {"project_id": project_id, "has_email": bool(client_email), "has_tax": tax_rate > 0}
         )
 
-        # Get currency from settings
+        # Currency: chosen in the form, else the client's latest invoice currency, else settings
+        from app.utils.invoice_currency import default_currency_for_client, normalize_currency_code
+
         settings = Settings.get_settings()
-        currency_code = settings.currency if settings else "USD"
+        currency_code = normalize_currency_code(request.form.get("currency_code")) or default_currency_for_client(
+            project.client_id, settings
+        )
 
         # Create invoice
         invoice = Invoice(
@@ -273,8 +277,16 @@ def create_invoice():
     # Set default due date to 30 days from now
     default_due_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
 
+    from app.utils.invoice_currency import currency_choices, default_currencies_by_client, settings_currency
+
     return render_template(
-        "invoices/create.html", projects=projects, settings=settings, default_due_date=default_due_date
+        "invoices/create.html",
+        projects=projects,
+        settings=settings,
+        default_due_date=default_due_date,
+        currency_choices=currency_choices(settings),
+        client_currencies=default_currencies_by_client(settings),
+        default_currency=settings_currency(settings),
     )
 
 
@@ -508,6 +520,9 @@ def edit_invoice(invoice_id):
         invoice.tax_rate = Decimal(request.form.get("tax_rate", "0"))
         invoice.notes = request.form.get("notes", "").strip()
         invoice.terms = request.form.get("terms", "").strip()
+        from app.utils.invoice_currency import normalize_currency_code
+
+        invoice.currency_code = normalize_currency_code(request.form.get("currency_code")) or invoice.currency_code
 
         # Read invoice-level discount (draft only since we're in the full edit path)
         try:
@@ -785,7 +800,14 @@ def edit_invoice(invoice_id):
         stock_items_json=stock_items_json,
         warehouses_json=warehouses_json,
         financial_locked=financial_locked,
+        currency_choices=_invoice_currency_choices(invoice),
     )
+
+
+def _invoice_currency_choices(invoice):
+    from app.utils.invoice_currency import currency_choices
+
+    return currency_choices(Settings.get_settings(), extra=[invoice.currency_code])
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/status", methods=["POST"])
