@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy.pool import NullPool
 
 from app import create_app, db
-from app.models import ApiToken, Client, Project, Settings, Task, TimeEntry, User
+from app.models import ApiToken, Client, Milestone, Project, Settings, Task, TimeEntry, User
 
 pytestmark = [pytest.mark.api, pytest.mark.integration]
 
@@ -928,6 +928,146 @@ class TestTasks:
         data = json.loads(response.data)
         names = {task["name"] for task in data["tasks"]}
         assert names == {"Todo Task", "Review Task"}
+
+    def test_create_task_with_milestone(self, client, api_token, test_user, test_project):
+        """POST /tasks accepts milestone_id when it belongs to the project."""
+        milestone = Milestone(project_id=test_project.id, name="M1", created_by=int(test_user))
+        db.session.add(milestone)
+        db.session.commit()
+
+        headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+        response = client.post(
+            "/api/v1/tasks",
+            json={
+                "name": "Milestone Task",
+                "project_id": test_project.id,
+                "priority": "medium",
+                "milestone_id": milestone.id,
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 201
+        data = json.loads(response.data)
+        assert data["task"]["milestone_id"] == milestone.id
+
+    def test_create_task_rejects_foreign_milestone(self, client, api_token, test_user, test_project, test_client_model):
+        """POST /tasks returns 400 when milestone belongs to another project."""
+        other_project = Project(
+            name="Other Project",
+            description="Other",
+            hourly_rate=50.0,
+            status="active",
+            client_id=test_client_model.id,
+            created_by=int(test_user),
+        )
+        db.session.add(other_project)
+        db.session.flush()
+        foreign_milestone = Milestone(project_id=other_project.id, name="Foreign", created_by=int(test_user))
+        db.session.add(foreign_milestone)
+        db.session.commit()
+
+        headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+        response = client.post(
+            "/api/v1/tasks",
+            json={
+                "name": "Bad Milestone Task",
+                "project_id": test_project.id,
+                "priority": "medium",
+                "milestone_id": foreign_milestone.id,
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 400
+
+    def test_update_task_milestone_unlink_and_reject(
+        self, client, api_token, test_user, test_project, test_client_model
+    ):
+        """PATCH can set, clear, and reject invalid milestone_id."""
+        milestone = Milestone(project_id=test_project.id, name="M1", created_by=int(test_user))
+        other_project = Project(
+            name="Other Project",
+            description="Other",
+            hourly_rate=50.0,
+            status="active",
+            client_id=test_client_model.id,
+            created_by=int(test_user),
+        )
+        db.session.add_all([milestone, other_project])
+        db.session.flush()
+        foreign_milestone = Milestone(project_id=other_project.id, name="Foreign", created_by=int(test_user))
+        task = Task(
+            name="Linked Task",
+            project_id=test_project.id,
+            status="todo",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        db.session.add_all([foreign_milestone, task])
+        db.session.commit()
+        task.milestone_id = milestone.id
+        db.session.commit()
+
+        headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+
+        bad = client.patch(
+            f"/api/v1/tasks/{task.id}",
+            json={"milestone_id": foreign_milestone.id},
+            headers=headers,
+        )
+        assert bad.status_code == 400
+
+        unlink = client.patch(
+            f"/api/v1/tasks/{task.id}",
+            json={"milestone_id": None},
+            headers=headers,
+        )
+        assert unlink.status_code == 200
+        assert json.loads(unlink.data)["task"]["milestone_id"] is None
+
+        relink = client.patch(
+            f"/api/v1/tasks/{task.id}",
+            json={"milestone_id": milestone.id},
+            headers=headers,
+        )
+        assert relink.status_code == 200
+        assert json.loads(relink.data)["task"]["milestone_id"] == milestone.id
+
+    def test_list_tasks_filter_by_milestone(self, client, api_token, test_user, test_project):
+        """GET /tasks?milestone_id= returns only tasks linked to that milestone."""
+        milestone = Milestone(project_id=test_project.id, name="M1", created_by=int(test_user))
+        db.session.add(milestone)
+        db.session.flush()
+        linked = Task(
+            name="Linked",
+            project_id=test_project.id,
+            status="todo",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        unlinked = Task(
+            name="Unlinked",
+            project_id=test_project.id,
+            status="todo",
+            priority="medium",
+            created_by=int(test_user),
+        )
+        db.session.add_all([linked, unlinked])
+        db.session.commit()
+        linked.milestone_id = milestone.id
+        db.session.commit()
+
+        headers = {"Authorization": f"Bearer {api_token}"}
+        response = client.get(
+            f"/api/v1/tasks?project_id={test_project.id}&milestone_id={milestone.id}",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        names = {t["name"] for t in data["tasks"]}
+        assert names == {"Linked"}
 
 
 class TestClients:

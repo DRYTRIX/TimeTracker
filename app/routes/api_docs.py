@@ -281,6 +281,11 @@ Example: `2024-01-15T14:30:00Z`
                         "is_overdue": {"type": "boolean", "description": "True if past due date and not closed"},
                         "tags": {"type": "string", "nullable": True, "description": "Comma-separated tag string"},
                         "tag_list": {"type": "array", "items": {"type": "string"}, "description": "Tags as a list"},
+                        "milestone_id": {
+                            "type": "integer",
+                            "nullable": True,
+                            "description": "Linked milestone ID (must belong to the task's project)",
+                        },
                     },
                 },
                 "Client": {
@@ -696,6 +701,12 @@ Example: `2024-01-15T14:30:00Z`
                     "description": "Get a paginated list of tasks with optional filters",
                     "parameters": [
                         {"name": "project_id", "in": "query", "schema": {"type": "integer"}},
+                        {
+                            "name": "milestone_id",
+                            "in": "query",
+                            "schema": {"type": "integer"},
+                            "description": "Filter tasks linked to this milestone",
+                        },
                         {"name": "status", "in": "query", "schema": {"type": "string"}},
                         {"name": "tags", "in": "query", "schema": {"type": "string"}},
                         {"name": "page", "in": "query", "schema": {"type": "integer", "default": 1}},
@@ -739,6 +750,11 @@ Example: `2024-01-15T14:30:00Z`
                                         "due_date": {"type": "string", "format": "date"},
                                         "estimated_hours": {"type": "number"},
                                         "tags": {"type": "string"},
+                                        "milestone_id": {
+                                            "type": "integer",
+                                            "nullable": True,
+                                            "description": "Milestone ID in the same project; null or omit to leave unlinked",
+                                        },
                                     },
                                 }
                             }
@@ -792,6 +808,11 @@ Example: `2024-01-15T14:30:00Z`
                                         "due_date": {"type": "string", "format": "date"},
                                         "estimated_hours": {"type": "number"},
                                         "tags": {"type": "string"},
+                                        "milestone_id": {
+                                            "type": "integer",
+                                            "nullable": True,
+                                            "description": "Milestone ID in the same project; null unlinks",
+                                        },
                                     },
                                 }
                             }
