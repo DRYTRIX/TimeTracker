@@ -144,6 +144,19 @@ def list_projects():
 
     custom_field_definitions = CustomFieldService().get_definitions("project")
 
+    # Filter params for pagination links (page is added by pagination_nav)
+    pagination_url_params = {}
+    if search:
+        pagination_url_params["search"] = search
+    if status:
+        pagination_url_params["status"] = status
+    if client_name:
+        pagination_url_params["client"] = client_name
+    if favorites_only:
+        pagination_url_params["favorites"] = "true"
+    for key, value in client_custom_field.items():
+        pagination_url_params[f"custom_field_{key}"] = value
+
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the projects list HTML for AJAX requests
@@ -154,6 +167,7 @@ def list_projects():
                 "projects/_projects_list.html",
                 projects=result["projects"],
                 pagination=result["pagination"],
+                pagination_url_params=pagination_url_params,
                 favorite_project_ids=favorite_project_ids,
                 search=search,
                 status=status,
@@ -166,6 +180,7 @@ def list_projects():
         "projects/list.html",
         projects=result["projects"],
         pagination=result["pagination"],
+        pagination_url_params=pagination_url_params,
         status=status or "all",  # Ensure status is always set
         search=search,
         clients=client_list,
