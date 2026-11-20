@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **API: time entry create** — `POST /api/v1/time-entries` no longer rejects every `task_id` ("task_id can only be set when project_id is provided") when `project_id` is sent. `"project_id": null` with a `client_id` (and the reverse) is accepted again, and `end_time` before `start_time` is now caught by the schema. The cross-field checks moved from field-level hooks, which never saw the other fields under marshmallow 4, to one schema-level check.
+- **Invoices: currency** — Invoice PDFs (default and fallback generators) print the invoice's own `currency_code` instead of the global currency setting. Invoices without a currency still use the setting, as quotes do. `GET /api/v1/invoices` and `GET /api/v1/invoices/{id}` now return `currency_code`.
 
 ## [5.21.0] - 2026-11-18
 ### Added

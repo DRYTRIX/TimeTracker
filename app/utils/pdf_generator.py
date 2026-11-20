@@ -755,9 +755,9 @@ class InvoicePDFGenerator:
 
         def format_money(value):
             try:
-                return f"{float(value):,.2f} {self.settings.currency}"
+                return f"{float(value):,.2f} {self._currency()}"
             except Exception:
-                return f"{value} {self.settings.currency}"
+                return f"{value} {self._currency()}"
 
         # PEPPOL compliance: include when invoices_peppol_compliant is on
         result = {
@@ -1393,12 +1393,16 @@ class InvoicePDFGenerator:
             return f'<div class="additional-info">{"".join(html_parts)}</div>'
         return ""
 
+    def _currency(self):
+        """Currency code to print: the invoice's own, else the global setting (same rule as quotes)."""
+        return getattr(self.invoice, "currency_code", None) or self.settings.currency
+
     def _format_currency(self, value):
         """Format numeric currency with thousands separators and 2 decimals."""
         try:
-            return f"{float(value):,.2f} {self.settings.currency}"
+            return f"{float(value):,.2f} {self._currency()}"
         except Exception:
-            return f"{value} {self.settings.currency}"
+            return f"{value} {self._currency()}"
 
     def _get_payment_info_html(self):
         """Generate HTML for payment information"""
