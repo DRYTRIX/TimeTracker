@@ -429,6 +429,20 @@ class ModuleRegistry:
 
         cls.register(
             ModuleDefinition(
+                id="timesheet",
+                name="Timesheet",
+                description="Day view and week grid of your own hours: Track time, Start and Stop on a row",
+                category=ModuleCategory.TIME_TRACKING,
+                blueprint_name="timesheet",
+                default_enabled=True,
+                dependencies=["timer"],
+                icon="fa-table",
+                order=15,
+            )
+        )
+
+        cls.register(
+            ModuleDefinition(
                 id="time_entry_templates",
                 name="Time Entry Templates",
                 description="Reusable time entry templates",
@@ -862,6 +876,7 @@ class ModuleRegistry:
         "import_export",
         "weekly_goals",
         "time_entry_templates",
+        "timesheet",
     }
 
     #: Adds collaboration, scheduling and light process on top of SOLO.

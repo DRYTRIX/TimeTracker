@@ -1,0 +1,561 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Timesheet') }} – {{ _('Week') }} {{ view.monday.strftime('%-d %b') }} – {{ app_name }}{% endblock %}
+
+{% block content %}
+<div id="timesheet-week" class="max-w-7xl">
+
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div class="flex flex-wrap items-center gap-3">
+      <a href="{{ url_for('timesheet.week', date=prev_week.isoformat()) }}" class="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Previous week') }}"><i class="fas fa-chevron-left" aria-hidden="true"></i></a>
+      <a href="{{ url_for('timesheet.week', date=next_week.isoformat()) }}" class="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('Next week') }}"><i class="fas fa-chevron-right" aria-hidden="true"></i></a>
+      <h1 class="text-2xl font-semibold tracking-tight text-text-light dark:text-text-dark">
+        {%- if this_week %}{{ _('This week') }}: {% endif %}{{ view.days[0].strftime('%-d %b') }} – {{ view.days[6].strftime('%-d %b %Y') }}
+      </h1>
+      {% if not this_week %}
+      <a href="{{ url_for('timesheet.week') }}" class="px-3 py-2 text-sm rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Back to this week') }}</a>
+      {% endif %}
+    </div>
+    <div role="group" aria-label="{{ _('View') }}" class="flex rounded-lg border border-border-light dark:border-border-dark overflow-hidden bg-card-light dark:bg-card-dark text-sm">
+      <a href="{{ url_for('timesheet.day', date=(view.today if this_week else view.monday).isoformat()) }}" class="px-5 py-2.5 hover:bg-background-light dark:hover:bg-background-dark">{{ _('Day') }}</a>
+      <a href="{{ url_for('timesheet.week', date=view.monday.isoformat()) }}" aria-current="page" class="px-5 py-2.5 font-semibold bg-primary/10 text-primary border-l border-border-light dark:border-border-dark">{{ _('Week') }}</a>
+    </div>
+  </div>
+
+  <section aria-label="{{ _('Week timesheet') }}" class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark overflow-x-auto">
+    <table class="w-full min-w-[64rem] border-collapse text-[15px]">
+      <thead data-ts-head></thead>
+      <tbody data-ts-body></tbody>
+      <tfoot data-ts-foot></tfoot>
+    </table>
+  </section>
+
+  {# Add row: project and task #}
+  <div data-ts-addrow class="hidden mt-3 flex flex-wrap items-end gap-3 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-6 py-4">
+    <label class="block min-w-[16rem]">
+      <span class="block text-sm font-medium mb-1">{{ _('Project') }}</span>
+      <select name="project_id" class="form-input w-full">
+        <option value="">{{ _('Choose a project') }}</option>
+        {% for group in projects|groupby('client') %}
+        <optgroup label="{{ group.grouper }}">
+          {% for p in group.list %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="block min-w-[16rem]">
+      <span class="block text-sm font-medium mb-1">{{ _('Task') }}</span>
+      <select name="task_id" class="form-input w-full" disabled><option value="">{{ _('No task') }}</option></select>
+    </label>
+    <button type="button" data-ts-new-task disabled class="h-11 px-2 text-sm font-semibold text-primary hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed">{{ _('+ New task') }}</button>
+    <button type="button" data-ts-addrow-ok class="px-5 h-11 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90">{{ _('Add row') }}</button>
+    <button type="button" data-ts-addrow-cancel class="px-5 h-11 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">{{ _('Cancel') }}</button>
+  </div>
+
+  {# The panel under the grid: description, or one line per entry for a cell with several #}
+  <section data-ts-panel aria-label="{{ _('Entries in the cell') }}" class="hidden mt-4 rounded-xl border-2 border-primary bg-card-light dark:bg-card-dark px-6 py-4"></section>
+
+  <p class="mt-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Saved when you leave a cell') }}</p>
+</div>
+
+{# The shared Create Task window, as in Log time and on the dashboard #}
+{% include 'components/inline_create_task_modal.html' %}
+
+{# Undo after a cell was cleared #}
+<div data-ts-undo class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 rounded-lg bg-gray-900 text-white px-5 py-3 shadow-xl" role="status">
+  <span data-ts-undo-text>{{ _('Entry deleted') }}</span>
+  <button type="button" data-ts-undo-btn class="font-semibold underline hover:no-underline">{{ _('Undo') }}</button>
+</div>
+
+
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  const DATA = {{ week_data|tojson }};
+  const BASE = {{ url_for('timesheet.day')|tojson }};
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const T = {
+    projectTask: {{ _('Project / Task')|tojson }},
+    total: {{ _('Total')|tojson }},
+    addRow: {{ _('+ Add row')|tojson }},
+    removeRow: {{ _('Remove row')|tojson }},
+    noDescription: {{ _('No description')|tojson }},
+    notSaved: {{ _('Not saved')|tojson }},
+    running: {{ _('Timer running · Stop it in the day view')|tojson }},
+    stopFirst: {{ _('Stop the timer in this row first')|tojson }},
+    what: {{ _('What did you do?')|tojson }},
+    placeholder: {{ _('Clients see this line on the invoice')|tojson }},
+    entry: {{ _('Entry')|tojson }},
+    inEntries: {{ _('in %(n)s entries')|tojson }},
+    addAnother: {{ _('+ Add another entry')|tojson }},
+    keysOne: {{ _('Enter to save and go to the next day · Shift+Enter for a new line · Esc to close')|tojson }},
+    keysMany: {{ _('Enter to save · Tab to the next field · Esc to close')|tojson }},
+    required: {{ _('Required: at least %(n)s characters')|tojson }},
+    tooShort: {{ _('The description needs at least %(n)s characters')|tojson }},
+    needHours: {{ _('Enter hours for this entry')|tojson }},
+    badHours: {{ _('Enter hours as 1:30, 1.5 or 90m')|tojson }},
+    deleteRow: {{ _('Delete %(n)s entries (%(h)s)?')|tojson }},
+    deleteEntry: {{ _('Delete entry')|tojson }},
+    noTask: {{ _('No task')|tojson }},
+    deleted: {{ _('Entry deleted')|tojson }},
+    failed: {{ _('Something went wrong. Try again.')|tojson }},
+    alreadyRow: {{ _('This row is already in the week')|tojson }},
+  };
+  const root = document.getElementById('timesheet-week');
+  const head = root.querySelector('[data-ts-head]');
+  const body = root.querySelector('[data-ts-body]');
+  const foot = root.querySelector('[data-ts-foot]');
+  const panel = root.querySelector('[data-ts-panel]');
+  const addrow = root.querySelector('[data-ts-addrow]');
+  const rows = DATA.rows; // [{key, project_id, task_id, project, client, task, editable, cells: [[entry]]}]
+  const fmt = (s) => { const m = Math.round((s || 0) / 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+  const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const tr = (tpl, vars) => tpl.replace(/%\((\w+)\)s/g, (_, k) => vars[k]);
+  const DOW = DATA.days.map((d) => new Date(d + 'T12:00:00'));
+
+  function parseHours(raw) {
+    const t = String(raw || '').trim().toLowerCase();
+    if (!t) return null;
+    let m, s = null;
+    if ((m = t.match(/^(\d{1,2}):([0-5]\d)$/))) s = +m[1] * 3600 + +m[2] * 60;
+    else if ((m = t.match(/^(\d{1,2})\s*h\s*(\d{1,2})\s*m?$/))) s = +m[1] * 3600 + +m[2] * 60;
+    else if ((m = t.match(/^(\d{1,4})\s*m$/))) s = +m[1] * 60;
+    else if ((m = t.match(/^(\d{1,2}(?:[.,]\d+)?)\s*h?$/))) s = Math.round(parseFloat(m[1].replace(',', '.')) * 3600);
+    return s && s > 0 && s <= 86400 ? s : NaN;
+  }
+
+  async function call(method, url, payload) {
+    const res = await fetch(BASE + url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' },
+      body: payload ? JSON.stringify(payload) : undefined,
+      credentials: 'same-origin',
+      keepalive: true, // a save started when leaving the page still reaches the server
+    });
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* not JSON */ }
+    if (!res.ok || data.success === false) throw new Error(data.error || data.message || T.failed);
+    return data;
+  }
+
+  // One request at a time: hours placed on the same day must not race for the same free slot
+  let queue = Promise.resolve();
+  const enqueue = (job) => (queue = queue.then(job, job));
+
+  function toast(text, level) {
+    const tm = window.toastManager;
+    if (tm && tm[level]) tm[level](text); else if (tm && tm.info) tm.info(text);
+  }
+
+  // --- State helpers ------------------------------------------------------------------------------
+
+  const rowByKey = (key) => rows.find((r) => r.key === key);
+  const cellSeconds = (row, i) => row.cells[i].reduce((a, e) => a + (e.seconds || 0), 0);
+  const rowSeconds = (row) => row.cells.reduce((a, _, i) => a + cellSeconds(row, i), 0);
+  const daySeconds = (i) => rows.reduce((a, r) => a + cellSeconds(r, i), 0);
+  const isRunning = (row, i) => row.cells[i].some((e) => e.running);
+  const runningToday = () => rows.some((r) => r.cells.some((c) => c.some((e) => e.running)));
+  const pending = {}; // "rowKey|day" -> {hours, notes, error} for a cell that could not be saved yet
+
+  // --- Rendering ----------------------------------------------------------------------------------
+
+  function renderHead() {
+    const clock = '<i class="far fa-clock mr-1" aria-hidden="true"></i>';
+    head.innerHTML = `<tr class="border-b border-border-light dark:border-border-dark text-sm text-text-muted-light dark:text-text-muted-dark">
+      <th scope="col" class="text-left font-medium px-6 py-3">${esc(T.projectTask)}</th>
+      ${DATA.days.map((d, i) => {
+        const today = d === DATA.today;
+        const label = DOW[i].toLocaleDateString('en-GB', { weekday: 'short' });
+        return `<th scope="col" class="w-20 px-1.5 py-3 font-medium ${today ? 'bg-primary/5 text-text-light dark:text-text-dark font-semibold' : ''} ${today && runningToday() ? 'text-amber-700 dark:text-amber-300' : ''}">
+          ${today && runningToday() ? clock : ''}${label}<br>${DOW[i].getDate()}</th>`;
+      }).join('')}
+      <th scope="col" class="w-20 px-1.5 py-3 font-medium text-right">${esc(T.total)}</th>
+      <th scope="col" class="w-14"><span class="sr-only">${esc(T.removeRow)}</span></th>
+    </tr>`;
+  }
+
+  function cellHtml(row, i) {
+    const entries = row.cells[i];
+    const key = `${row.key}|${i}`;
+    const today = DATA.days[i] === DATA.today;
+    const td = `px-1.5 py-2 ${today ? 'bg-primary/5' : ''}`;
+    const base = 'w-[4.5rem] h-11 rounded-md text-center tabular-nums border focus:outline-none focus:ring-2 focus:ring-primary/40';
+    if (isRunning(row, i)) {
+      return `<td class="px-1.5 py-2 bg-amber-100 dark:bg-amber-900/30" data-cell="${key}">
+        <button type="button" data-ts-cell title="${esc(T.running)}" class="w-[4.5rem] h-11 inline-flex items-center justify-center gap-1 font-bold text-amber-800 dark:text-amber-200 tabular-nums" role="timer">
+          <i class="far fa-clock" aria-hidden="true"></i>${fmt(cellSeconds(row, i))}</button></td>`;
+    }
+    if (!row.editable) {
+      return `<td class="${td} text-center tabular-nums text-text-muted-light dark:text-text-muted-dark">${entries.length ? fmt(cellSeconds(row, i)) : ''}</td>`;
+    }
+    const p = pending[key];
+    const missing = entries.some((e) => !e.notes.trim());
+    const value = p ? p.hours : (entries.length ? fmt(cellSeconds(row, i)) : '');
+    const multi = entries.length > 1;
+    const title = p && p.error ? `${T.notSaved}: ${p.error}` : (missing ? T.noDescription : '');
+    const ring = p && p.error ? 'border-red-500 ring-2 ring-red-200' : 'border-border-light dark:border-border-dark';
+    return `<td class="${td}" data-cell="${key}">
+      <span class="relative inline-block">
+        <input data-ts-cell type="text" inputmode="decimal" autocomplete="off" value="${esc(value)}"
+          ${multi ? 'readonly' : ''} title="${esc(title)}"
+          aria-label="${esc(row.project)} ${esc(row.task)}, ${esc(DOW[i].toDateString())}${missing ? ', ' + esc(T.noDescription) : ''}"
+          class="${base} ${ring} ${multi ? 'bg-background-light dark:bg-background-dark cursor-pointer' : 'bg-card-light dark:bg-card-dark'}">
+        ${missing || (p && p.error) ? '<span aria-hidden="true" class="absolute top-0 right-0 w-0 h-0 border-t-[12px] border-t-red-600 border-l-[12px] border-l-transparent rounded-tr-md pointer-events-none"></span>' : ''}
+        ${multi ? `<span class="absolute -top-2 -left-1.5 px-1.5 rounded-full bg-primary/15 text-primary text-[11px] font-semibold leading-4 pointer-events-none">×${entries.length}</span>` : ''}
+      </span></td>`;
+  }
+
+  function rowHtml(row) {
+    const label = row.project
+      ? `<span class="font-semibold">${esc(row.project)}</span>${row.client ? ` <span class="text-text-muted-light dark:text-text-muted-dark">(${esc(row.client)})</span>` : ''}<br>${esc(row.task || T.noTask)}`
+      : `<span class="font-semibold">${esc(row.client)}</span>`;
+    const canRemove = !row.cells.some((c) => c.some((e) => e.running));
+    return `<tr class="border-b border-border-light dark:border-border-dark" data-row="${row.key}">
+      <th scope="row" class="text-left font-normal px-6 py-3 max-w-sm">${label}</th>
+      ${row.cells.map((_, i) => cellHtml(row, i)).join('')}
+      <td class="px-1.5 py-2 text-right font-semibold tabular-nums" data-row-total>${fmt(rowSeconds(row))}</td>
+      <td class="pr-6 pl-1.5 py-2">${row.editable ? `<button type="button" data-ts-remove ${canRemove ? '' : 'disabled'} title="${esc(canRemove ? T.removeRow : T.stopFirst)}" aria-label="${esc(T.removeRow)}"
+        class="w-9 h-9 inline-flex items-center justify-center rounded-md border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-40 disabled:cursor-not-allowed"><i class="fas fa-times" aria-hidden="true"></i></button>` : ''}</td>
+    </tr>`;
+  }
+
+  function renderFoot() {
+    foot.innerHTML = `<tr class="font-semibold">
+      <td class="px-6 py-4"><button type="button" data-ts-add class="text-primary font-semibold hover:underline">${esc(T.addRow)}</button></td>
+      ${DATA.days.map((d, i) => `<td class="px-1.5 py-4 text-center tabular-nums ${d === DATA.today ? 'bg-primary/5' : ''} ${daySeconds(i) ? '' : 'font-normal text-text-muted-light dark:text-text-muted-dark'}">${fmt(daySeconds(i))}</td>`).join('')}
+      <td class="px-1.5 py-4 text-right text-lg tabular-nums">${fmt(rows.reduce((a, r) => a + rowSeconds(r), 0))}</td><td></td>
+    </tr>`;
+  }
+
+  function render() {
+    renderHead();
+    body.innerHTML = rows.map(rowHtml).join('');
+    renderFoot();
+  }
+
+  function refreshCell(row, i) {
+    const td = body.querySelector(`[data-cell="${row.key}|${i}"]`);
+    if (td) td.outerHTML = cellHtml(row, i);
+    const tr = body.querySelector(`[data-row="${row.key}"] [data-row-total]`);
+    if (tr) tr.textContent = fmt(rowSeconds(row));
+    renderFoot();
+  }
+
+  // --- The panel under the grid -------------------------------------------------------------------
+
+  let active = null; // {row, i, items: [{id, hours, notes, orig, running}], many}
+
+  function itemsFor(row, i) {
+    const key = `${row.key}|${i}`;
+    const p = pending[key];
+    const items = row.cells[i].map((e) => ({ id: e.id, hours: e.running ? '' : e.hours, notes: e.notes, orig: { hours: e.hours, notes: e.notes }, running: e.running }));
+    if (p && p.items) return p.items.map((x) => ({ ...x }));
+    if (!items.length) items.push({ id: null, hours: p ? p.hours : '', notes: p ? p.notes : '', orig: null, running: false });
+    return items;
+  }
+
+  function cellInput(row, i) { return body.querySelector(`[data-cell="${row.key}|${i}"] [data-ts-cell]`); }
+
+  function ruleLine(text) {
+    if (!DATA.rule.required) return '';
+    const n = DATA.rule.min_length;
+    return `<div class="mt-1.5 text-[13px] text-text-muted-light dark:text-text-muted-dark" data-ts-rule>${esc(tr(T.required, { n }))} · <b class="text-text-light dark:text-text-dark" data-ts-count>${text.trim().length} / ${n}</b></div>`;
+  }
+
+  function renderPanel() {
+    if (!active) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+    const { row, i, items } = active;
+    const day = DOW[i].toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const where = `${esc(day)} · ${esc(row.project)} · ${esc(row.task || T.noTask)}`;
+    const p = pending[`${row.key}|${i}`];
+    const err = p && p.error ? `<p class="mt-2 text-sm text-red-700 dark:text-red-300" role="alert">${esc(T.notSaved)}: ${esc(p.error)}</p>` : '';
+    const running = items.some((x) => x.running);
+    if (!active.many) {
+      const it = items[0];
+      const hours = it.running ? fmt(cellSeconds(row, i)) : (cellInput(row, i)?.value || '');
+      const flag = !it.notes.trim() && (hours || it.id) ? `<span class="text-[13px] font-semibold text-red-700 dark:text-red-300">${esc(T.noDescription)}</span>` : '';
+      panel.innerHTML = `
+        <div class="flex flex-wrap items-baseline gap-3 mb-2"><h2 class="text-base font-bold">${where}${hours ? ' · ' + esc(hours) : ''}</h2>${flag}</div>
+        <label class="block"><span class="block text-sm font-medium mb-1.5">${esc(T.what)}</span>
+          <textarea data-ts-notes data-idx="0" rows="2" placeholder="${esc(T.placeholder)}" class="form-input w-full">${esc(it.notes)}</textarea></label>
+        ${ruleLine(it.notes)}${err}
+        <div class="flex flex-wrap justify-between gap-4 mt-3 pt-2.5 border-t border-border-light dark:border-border-dark text-[13px] text-text-muted-light dark:text-text-muted-dark">
+          ${running ? `<span>${esc(T.running)}</span>` : `<button type="button" data-ts-another class="text-sm font-semibold text-primary hover:underline">${esc(T.addAnother)}</button>`}
+          <span>${esc(T.keysOne)}</span></div>`;
+    } else {
+      const total = items.reduce((a, x) => a + (x.running ? 0 : (parseHours(x.hours) || 0)), 0) + (running ? cellSeconds(row, i) : 0);
+      panel.innerHTML = `
+        <div class="flex flex-wrap items-baseline gap-3 mb-2"><h2 class="text-base font-bold">${where}</h2>
+          <span class="text-[13px] text-text-muted-light dark:text-text-muted-dark">${esc(fmt(total))} ${esc(tr(T.inEntries, { n: items.length }))}</span></div>
+        ${items.map((x, k) => `
+          <div class="flex gap-3 items-start py-2.5 border-t border-border-light dark:border-border-dark" data-item="${k}">
+            <label class="flex-none w-24"><span class="block text-[13px] text-text-muted-light dark:text-text-muted-dark mb-1">${esc(T.entry)} ${k + 1}</span>
+              <input data-ts-item-hours data-idx="${k}" value="${esc(x.running ? fmt(cellSeconds(row, i)) : x.hours)}" ${x.running ? 'readonly title="' + esc(T.running) + '"' : ''} inputmode="decimal" autocomplete="off" class="form-input w-24 h-11 text-center font-semibold tabular-nums"></label>
+            <label class="flex-1 min-w-0"><span class="block text-[13px] text-text-muted-light dark:text-text-muted-dark mb-1">${esc(T.what)}</span>
+              <textarea data-ts-notes data-idx="${k}" rows="1" placeholder="${esc(T.placeholder)}" class="form-input w-full min-h-[2.75rem]">${esc(x.notes)}</textarea>
+              ${ruleLine(x.notes)}</label>
+            <button type="button" data-ts-item-delete data-idx="${k}" ${x.running ? 'disabled' : ''} aria-label="${esc(T.deleteEntry)} ${k + 1}" class="mt-6 w-11 h-11 flex-none inline-flex items-center justify-center rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-40"><i class="far fa-trash-alt" aria-hidden="true"></i></button>
+          </div>`).join('')}
+        ${err}
+        <div class="flex flex-wrap justify-between gap-4 pt-2.5 border-t border-border-light dark:border-border-dark text-[13px] text-text-muted-light dark:text-text-muted-dark">
+          <button type="button" data-ts-another class="text-sm font-semibold text-primary hover:underline">${esc(T.addAnother)}</button>
+          <span>${esc(T.keysMany)}</span></div>`;
+    }
+    panel.classList.remove('hidden');
+  }
+
+  function open(row, i) {
+    if (active && active.row === row && active.i === i) return;
+    if (active) commit();
+    const items = itemsFor(row, i);
+    active = { row, i, items, many: items.length > 1 };
+    renderPanel();
+  }
+
+  function close() { if (active) commit(); active = null; renderPanel(); }
+
+  // --- Saving --------------------------------------------------------------------------------
+
+  function commit() {
+    const { row, i } = active;
+    const items = active.items.map((x) => ({ ...x }));
+    if (!active.many) {
+      const input = cellInput(row, i);
+      if (input && !items[0].running) items[0].hours = input.value.trim();
+    }
+    const key = `${row.key}|${i}`;
+    const ops = [];
+    for (const it of items) {
+      if (it.running) {
+        if (it.notes !== it.orig.notes) ops.push({ kind: 'patch', it, body: { notes: it.notes } });
+        continue;
+      }
+      const secs = parseHours(it.hours);
+      if (Number.isNaN(secs)) return markError(row, i, items, T.badHours);
+      if (!it.id) {
+        if (secs) ops.push({ kind: 'post', it, secs });
+        else if (it.notes.trim()) return markError(row, i, items, T.needHours);
+        continue;
+      }
+      if (!secs) { ops.push({ kind: 'delete', it }); continue; }
+      if (fmt(secs) !== it.orig.hours || it.notes !== it.orig.notes) ops.push({ kind: 'patch', it, body: { hours: it.hours, notes: it.notes } });
+    }
+    if (DATA.rule.required) {
+      const short = ops.find((o) => o.kind !== 'delete' && o.it.notes.trim().length < DATA.rule.min_length);
+      if (short) return markError(row, i, items, tr(T.tooShort, { n: DATA.rule.min_length }));
+    }
+    if (!ops.length) { delete pending[key]; refreshCell(row, i); return; }
+    enqueue(async () => {
+      try {
+        for (const op of ops) {
+          if (op.kind === 'post') {
+            const res = await call('POST', '/api/entries', { project_id: row.project_id, task_id: row.task_id || 0, date: DATA.days[i], hours: op.it.hours, notes: op.it.notes, flash: false });
+            row.cells[i].push(res.entry);
+            if (res.notice) toast(res.notice.text, res.notice.level === 'long_day' ? 'warning' : 'info');
+          } else if (op.kind === 'patch') {
+            const res = await call('PATCH', `/api/entries/${op.it.id}`, { ...op.body, flash: false });
+            row.cells[i] = row.cells[i].map((e) => (e.id === op.it.id ? res.entry : e));
+            if (res.notice) toast(res.notice.text, res.notice.level === 'long_day' ? 'warning' : 'info');
+          } else {
+            const res = await call('DELETE', `/api/entries/${op.it.id}`);
+            row.cells[i] = row.cells[i].filter((e) => e.id !== op.it.id);
+            offerUndo(row, i, res.deleted);
+          }
+        }
+        delete pending[key];
+      } catch (e) {
+        pending[key] = { hours: items.length === 1 ? items[0].hours : fmt(cellSeconds(row, i)), notes: items[0].notes, items: items.length > 1 ? items : null, error: e.message };
+      }
+      refreshCell(row, i);
+      if (active && active.row === row && active.i === i) { active.items = itemsFor(row, i); renderPanel(); }
+    });
+  }
+
+  function markError(row, i, items, message) {
+    const key = `${row.key}|${i}`;
+    pending[key] = { hours: items.length === 1 ? items[0].hours : fmt(cellSeconds(row, i)), notes: items[0].notes, items: items.length > 1 ? items : null, error: message };
+    refreshCell(row, i);
+    if (active && active.row === row && active.i === i) renderPanel();
+  }
+
+  // --- Undo ---------------------------------------------------------------------------------------
+
+  const undoBar = document.querySelector('[data-ts-undo]');
+  let undoTimer = null, undoJob = null;
+  function offerUndo(row, i, deleted) {
+    if (!deleted) return;
+    undoJob = () => enqueue(async () => {
+      try {
+        const res = await call('POST', '/api/entries', { project_id: deleted.project_id, task_id: deleted.task_id || 0, date: deleted.date, hours: deleted.hours, notes: deleted.notes, flash: false });
+        row.cells[i].push(res.entry);
+        refreshCell(row, i);
+      } catch (e) { toast(e.message, 'error'); }
+    });
+    undoBar.classList.remove('hidden');
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(() => { undoBar.classList.add('hidden'); undoJob = null; }, 8000);
+  }
+  undoBar.querySelector('[data-ts-undo-btn]').addEventListener('click', () => {
+    undoBar.classList.add('hidden');
+    if (undoJob) undoJob();
+    undoJob = null;
+  });
+
+  // --- Events -------------------------------------------------------------------------------------
+
+  function cellFrom(el) {
+    const td = el && el.closest && el.closest('[data-cell]');
+    if (!td) return null;
+    const [key, i] = td.dataset.cell.split('|');
+    return { row: rowByKey(key), i: +i };
+  }
+
+  // A click on an empty part of the page moves focus nowhere, so focusin never fires: it still means "left the cell"
+  document.addEventListener('mousedown', (ev) => {
+    if (!active || panel.contains(ev.target) || cellFrom(ev.target)) return;
+    if (ev.target.closest('a, button, input, select, textarea')) return; // focusin handles these
+    close();
+  });
+  window.addEventListener('pagehide', () => { if (active) close(); });
+  // Cells the server refused live only on this page: ask before they are lost
+  window.addEventListener('beforeunload', (ev) => {
+    if (Object.values(pending).some((p) => p && p.error)) { ev.preventDefault(); ev.returnValue = ''; }
+  });
+
+  document.addEventListener('focusin', (ev) => {
+    const c = cellFrom(ev.target);
+    if (c) { open(c.row, c.i); return; }
+    if (panel.contains(ev.target)) return;
+    if (active) close();
+  });
+
+  body.addEventListener('click', async (ev) => {
+    const c = cellFrom(ev.target);
+    if (c) { open(c.row, c.i); }
+    const rm = ev.target.closest('[data-ts-remove]');
+    if (!rm) return;
+    const row = rowByKey(rm.closest('[data-row]').dataset.row);
+    const count = row.cells.reduce((a, c2) => a + c2.length, 0);
+    if (count && !window.confirm(tr(T.deleteRow, { n: count, h: fmt(rowSeconds(row)) }))) return;
+    if (active && active.row === row) { active = null; renderPanel(); }
+    enqueue(async () => {
+      try {
+        if (count) await call('POST', '/api/week/remove-row', { date: DATA.days[0], project_id: row.project_id, task_id: row.task_id || 0 });
+        rows.splice(rows.indexOf(row), 1);
+        render();
+      } catch (e) { toast(e.message, 'error'); }
+    });
+  });
+
+  body.addEventListener('keydown', (ev) => {
+    const c = cellFrom(ev.target);
+    if (!c) return;
+    if (ev.key === 'Enter') { ev.preventDefault(); open(c.row, c.i); panel.querySelector('[data-ts-notes]')?.focus(); }
+    if (ev.key === 'Escape') { ev.preventDefault(); close(); ev.target.blur(); }
+  });
+
+  panel.addEventListener('input', (ev) => {
+    if (!active) return;
+    const k = +ev.target.dataset.idx;
+    if (ev.target.matches('[data-ts-notes]')) {
+      active.items[k].notes = ev.target.value;
+      const count = ev.target.parentElement.parentElement.querySelector('[data-ts-count]') || panel.querySelector('[data-ts-count]');
+      if (count) count.textContent = `${ev.target.value.trim().length} / ${DATA.rule.min_length}`;
+    }
+    if (ev.target.matches('[data-ts-item-hours]')) active.items[k].hours = ev.target.value;
+  });
+
+  function nextEditable(row, i) {
+    for (let j = i + 1; j < 7; j++) if (!isRunning(row, j) && row.cells[j].length <= 1) return j;
+    return null;
+  }
+
+  panel.addEventListener('keydown', (ev) => {
+    if (!active) return;
+    if (ev.key === 'Escape') { ev.preventDefault(); const { row, i } = active; close(); cellInput(row, i)?.focus({ preventScroll: true }); cellInput(row, i)?.blur(); return; }
+    if (ev.key === 'Enter' && !ev.shiftKey && (ev.target.matches('[data-ts-notes]') || ev.target.matches('[data-ts-item-hours]'))) {
+      ev.preventDefault();
+      const { row, i, many } = active;
+      commit();
+      active = null;
+      const j = many ? null : nextEditable(row, i);
+      if (j !== null) cellInput(row, j)?.focus(); else { renderPanel(); }
+    }
+  });
+
+  panel.addEventListener('click', (ev) => {
+    if (!active) return;
+    if (ev.target.closest('[data-ts-another]')) {
+      if (!active.many) {
+        const input = cellInput(active.row, active.i);
+        if (input && !active.items[0].running) active.items[0].hours = input.value.trim();
+        active.many = true;
+      }
+      active.items.push({ id: null, hours: '', notes: '', orig: null, running: false });
+      renderPanel();
+      panel.querySelectorAll('[data-ts-item-hours]')[active.items.length - 1]?.focus();
+      return;
+    }
+    const del = ev.target.closest('[data-ts-item-delete]');
+    if (del) {
+      const k = +del.dataset.idx;
+      const it = active.items[k];
+      if (it.id) it.hours = ''; else active.items.splice(k, 1);
+      const { row, i } = active;
+      commit();
+      active.items = active.items.filter((x) => x.id || x.hours);
+      if (!active.items.length) { active = null; }
+      renderPanel();
+      refreshCell(row, i);
+    }
+  });
+
+  // --- Add row ------------------------------------------------------------------------------------
+
+  const addProject = addrow.querySelector('select[name=project_id]');
+  const addTask = addrow.querySelector('select[name=task_id]');
+  foot.addEventListener('click', (ev) => {
+    if (!ev.target.closest('[data-ts-add]')) return;
+    addrow.classList.remove('hidden');
+    addProject.focus();
+  });
+  const newTask = addrow.querySelector('[data-ts-new-task]');
+  newTask.addEventListener('click', () => {
+    if (window.ttInlineCreate) window.ttInlineCreate.open('task', { targetSelect: addTask, projectId: addProject.value });
+  });
+  addProject.addEventListener('change', async () => {
+    addTask.innerHTML = ''; addTask.add(new Option(T.noTask, '')); addTask.disabled = !addProject.value;
+    newTask.disabled = !addProject.value;
+    if (!addProject.value) return;
+    try {
+      const data = await call('GET', `/api/projects/${addProject.value}/tasks`);
+      data.tasks.forEach((t) => addTask.add(new Option(t.name, t.id)));
+      if (data.tasks.length === 1) addTask.value = String(data.tasks[0].id);
+    } catch (e) { toast(e.message, 'error'); }
+  });
+  addrow.querySelector('[data-ts-addrow-cancel]').addEventListener('click', () => addrow.classList.add('hidden'));
+  addrow.querySelector('[data-ts-addrow-ok]').addEventListener('click', () => {
+    if (!addProject.value) { addProject.focus(); return; }
+    const pid = +addProject.value, tid = addTask.value ? +addTask.value : 0;
+    const key = `${pid}:${tid}`;
+    if (rowByKey(key)) { toast(T.alreadyRow, 'info'); cellInput(rowByKey(key), 0)?.focus(); return; }
+    const opt = addProject.selectedOptions[0];
+    rows.push({ key, project_id: pid, task_id: tid || null, project: opt.textContent, client: opt.parentElement.label || '', task: tid ? addTask.selectedOptions[0].textContent : '', editable: true, cells: [[], [], [], [], [], [], []] });
+    render();
+    addrow.classList.add('hidden');
+    addProject.value = ''; addProject.dispatchEvent(new Event('change'));
+    cellInput(rows[rows.length - 1], 0)?.focus();
+  });
+
+  // The running timer ticks once a minute
+  setInterval(() => {
+    rows.forEach((row) => row.cells.forEach((c, i) => {
+      const e = c.find((x) => x.running);
+      if (!e) return;
+      e.seconds += 60;
+      if (!(active && active.row === row && active.i === i)) refreshCell(row, i);
+    }));
+  }, 60000);
+
+  render();
+})();
+</script>
+{% endblock %}
