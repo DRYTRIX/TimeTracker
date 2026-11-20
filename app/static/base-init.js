@@ -123,10 +123,9 @@
     var tz = window.__TT_APP_TZ__ ||
       (document.querySelector('meta[name="app-timezone"]') || {}).content || '';
     if (!tz || tz === 'UTC') return ms;
-    var wall = Date.UTC(
-      new Date(iso).getUTCFullYear(), new Date(iso).getUTCMonth(), new Date(iso).getUTCDate(),
-      new Date(iso).getUTCHours(), new Date(iso).getUTCMinutes(), new Date(iso).getUTCSeconds()
-    );
+    var m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return ms;
+    var wall = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6] || 0));
     var off = offsetFor(wall, tz);
     return wall - off;
   };
