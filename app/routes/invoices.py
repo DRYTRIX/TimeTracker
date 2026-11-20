@@ -1346,6 +1346,7 @@ def generate_from_time(invoice_id):
 
     data = InvoiceService().get_unbilled_data_for_invoice(invoice)
     focus = request.args.get("focus", "").strip()
+    resolved_hourly_rate = RateOverride.resolve_rate(invoice.project)
     return render_template(
         "invoices/generate_from_time.html",
         invoice=invoice,
@@ -1365,6 +1366,7 @@ def generate_from_time(invoice_id):
         focus=focus,
         diagnostics=data.get("diagnostics", {}),
         invoice_group_time_entries=data.get("invoice_group_time_entries", True),
+        resolved_hourly_rate=resolved_hourly_rate,
     )
 
 
