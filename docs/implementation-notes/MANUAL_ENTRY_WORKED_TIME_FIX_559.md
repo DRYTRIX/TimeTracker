@@ -29,3 +29,7 @@ Recalculation ran synchronously in `change` handlers for the date/time inputs. I
 
 - Worked time now updates correctly as soon as the user selects dates and times, including when the end date is in the past, without needing to reselect the end date.
 - Recalculation runs after every relevant selection (date or time), as requested in the issue.
+
+## Follow-up
+
+Issue [#925](./MANUAL_ENTRY_WORKED_TIME_FIX_925.md) addresses remaining past-date `24:00` lock-in (auto-filled duration treated as explicit) and Flatpickr `altInput` hooks on the Log Time form.
