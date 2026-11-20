@@ -89,6 +89,22 @@ class TaskService:
     # so users with custom kanban columns (e.g. on_hold) aren't silently coerced to todo.
     VALID_STATUSES = ("todo", "in_progress", "review", "done", "on_hold", "cancelled")
 
+    @staticmethod
+    def _validate_milestone_for_project(milestone_id: Optional[int], project_id: int) -> Optional[Dict[str, Any]]:
+        """Return an error dict if milestone_id is set but does not belong to project_id."""
+        if milestone_id is None:
+            return None
+        from app.models import Milestone
+
+        milestone = Milestone.query.filter_by(id=milestone_id, project_id=project_id).first()
+        if not milestone:
+            return {
+                "success": False,
+                "message": "Milestone must belong to the task's project",
+                "error": "invalid_milestone",
+            }
+        return None
+
     def create_task(
         self,
         name: str,
@@ -103,6 +119,7 @@ class TaskService:
         color: Optional[str] = None,
         status: Optional[str] = None,
         tags: Optional[str] = None,
+        milestone_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Create a new task.
@@ -119,6 +136,7 @@ class TaskService:
             created_by: User ID of creator
             color: Optional Gantt chart bar color (hex e.g. #3b82f6)
             status: Optional initial status (todo, in_progress, review, done, cancelled)
+            milestone_id: Optional milestone in the same project (None = unlinked)
 
         Returns:
             dict with 'success', 'message', and 'task' keys
@@ -127,6 +145,10 @@ class TaskService:
         project = self.project_repo.get_by_id(project_id)
         if not project:
             return {"success": False, "message": "Invalid project", "error": "invalid_project"}
+
+        milestone_error = self._validate_milestone_for_project(milestone_id, project_id)
+        if milestone_error:
+            return milestone_error
 
         # Validate status against the configured kanban columns for this project.
         # Falls back to the hardcoded VALID_STATUSES tuple if KanbanColumn is unavailable
@@ -156,6 +178,8 @@ class TaskService:
         )
         if color:
             task.color = color
+        if milestone_id is not None:
+            task.milestone_id = milestone_id
 
         db.session.flush()
         task.apply_pending_assignees()
@@ -254,6 +278,11 @@ class TaskService:
             from app.services.custom_field_service import CustomFieldService
 
             CustomFieldService().apply_from_dict(task, "task", custom_fields, merge=True)
+
+        if "milestone_id" in kwargs:
+            milestone_error = self._validate_milestone_for_project(kwargs.get("milestone_id"), task.project_id)
+            if milestone_error:
+                return milestone_error
 
         # Update scalar fields
         self.task_repo.update(task, **kwargs)

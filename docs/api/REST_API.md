@@ -823,6 +823,7 @@ GET /api/v1/tasks
 
 **Query Parameters:**
 - `project_id` - Filter by project
+- `milestone_id` - Filter by milestone (must be a milestone of a project; tasks linked to that milestone)
 - `status` - Filter by status (`todo`, `in_progress`, `review`, `done`, `cancelled`, or any custom Kanban column key). Aliases `active` and `open` match all non-closed tasks (excludes `done` and `cancelled`, including custom statuses such as `on_hold` or `blocked`). Comma-separated values match any listed status (e.g. `todo,review`).
 - `page` - Page number
 - `per_page` - Items per page
@@ -841,9 +842,22 @@ POST /api/v1/tasks
   "description": "Add user authentication",
   "project_id": 1,
   "status": "todo",
-  "priority": 1
+  "priority": "medium",
+  "milestone_id": 3
 }
 ```
+
+`milestone_id` is optional. When set, the milestone must belong to the same project as the task; otherwise the API returns `400`. Omit or send `null` to leave the task unlinked.
+
+#### Update Task
+```
+PUT /api/v1/tasks/{id}
+PATCH /api/v1/tasks/{id}
+```
+
+**Required Scope:** `write:tasks`
+
+Partial updates are supported. Include `milestone_id` to link a task to a milestone of its project, or `null` to unlink. A milestone from another project (or a nonexistent id) returns `400`.
 
 ### Clients
 
