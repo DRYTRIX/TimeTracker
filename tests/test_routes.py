@@ -574,8 +574,9 @@ def test_invoices_list_renders_pagination(admin_authenticated_client, test_clien
     """Invoices list shows pagination when more than 50 invoices exist (#927)."""
     from datetime import date, timedelta
 
-    from app import db
     from factories import InvoiceFactory
+
+    from app import db
 
     with app.app_context():
         for i in range(51):
