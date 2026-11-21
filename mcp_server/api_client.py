@@ -79,9 +79,7 @@ class TimeTrackerClient:
         if resp.status_code >= 400:
             message = body.get("message") if isinstance(body, dict) else None
             error = body.get("error") if isinstance(body, dict) else None
-            raise RuntimeError(
-                f"API {method} {path} failed ({resp.status_code}): {message or error or body}"
-            )
+            raise RuntimeError(f"API {method} {path} failed ({resp.status_code}): {message or error or body}")
         return body if isinstance(body, dict) else {"data": body}
 
     def get(self, path: str, **params: Any) -> dict[str, Any]:

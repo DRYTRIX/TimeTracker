@@ -351,11 +351,7 @@ _MCP_DCR_REDIRECT_ALLOW_PREFIXES = (
 
 
 def _issuer_base() -> str:
-    return (
-        current_app.config.get("APP_URL")
-        or current_app.config.get("APP_BASE_URL")
-        or request.url_root
-    ).rstrip("/")
+    return (current_app.config.get("APP_URL") or current_app.config.get("APP_BASE_URL") or request.url_root).rstrip("/")
 
 
 def _redirect_uri_allowed_for_dcr(uri: str) -> bool:

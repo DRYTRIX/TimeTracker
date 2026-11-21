@@ -137,7 +137,7 @@ def register_user_tools(mcp: FastMCP, *, allow_writes: bool = True) -> None:
             end_date=end.isoformat(),
             per_page=200,
         )
-        by_day = { (start + timedelta(days=i)).isoformat(): 0.0 for i in range(7) }
+        by_day = {(start + timedelta(days=i)).isoformat(): 0.0 for i in range(7)}
         for e in entries.get("time_entries") or []:
             st = e.get("start_time") or ""
             day = st[:10]
@@ -231,7 +231,7 @@ def register_user_tools(mcp: FastMCP, *, allow_writes: bool = True) -> None:
         result: dict[str, Any] = {"created": created, "idempotency_key": key}
 
         if unconfirmed:
-            entry = (created.get("time_entry") or {})
+            entry = created.get("time_entry") or {}
             entry_id = entry.get("id")
             if entry_id:
                 try:
@@ -300,8 +300,18 @@ def register_user_tools(mcp: FastMCP, *, allow_writes: bool = True) -> None:
     ) -> str:
         set_tool_name("start_timer")
         if not confirm:
-            return _json({"preview": True, "would_start": {"project_id": project_id, "client_id": client_id, "task_id": task_id}, "hint": "Pass confirm=true to start."})
-        body = {k: v for k, v in {"project_id": project_id, "client_id": client_id, "task_id": task_id, "notes": notes}.items() if v is not None}
+            return _json(
+                {
+                    "preview": True,
+                    "would_start": {"project_id": project_id, "client_id": client_id, "task_id": task_id},
+                    "hint": "Pass confirm=true to start.",
+                }
+            )
+        body = {
+            k: v
+            for k, v in {"project_id": project_id, "client_id": client_id, "task_id": task_id, "notes": notes}.items()
+            if v is not None
+        }
         return _json(_client().post("/api/v1/timer/start", body))
 
     @mcp.tool(
@@ -341,7 +351,9 @@ def register_user_tools(mcp: FastMCP, *, allow_writes: bool = True) -> None:
     def update_my_time_entry(entry_id: int, fields: dict[str, Any], confirm: bool = False) -> str:
         set_tool_name("update_my_time_entry")
         if not confirm:
-            return _json({"preview": True, "entry_id": entry_id, "fields": fields, "hint": "Pass confirm=true to apply."})
+            return _json(
+                {"preview": True, "entry_id": entry_id, "fields": fields, "hint": "Pass confirm=true to apply."}
+            )
         return _json(_client().patch(f"/api/v1/time-entries/{entry_id}", fields))
 
     @mcp.tool(

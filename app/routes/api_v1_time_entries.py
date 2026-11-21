@@ -189,10 +189,15 @@ def _resolve_entry_times(time_tracking_service, target_user_id, validated):
     if start_time is None and day is not None and duration_seconds is not None:
         placed = time_tracking_service.place_duration_entry(target_user_id, day, duration_seconds)
         if not placed.get("success"):
-            return None, None, None, error_response(
-                placed.get("message", "Could not place duration entry"),
-                status_code=400,
-                error_code=placed.get("error"),
+            return (
+                None,
+                None,
+                None,
+                error_response(
+                    placed.get("message", "Could not place duration entry"),
+                    status_code=400,
+                    error_code=placed.get("error"),
+                ),
             )
         start_time = placed["start_time"]
         end_time = placed["end_time"]
