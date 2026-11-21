@@ -39,17 +39,28 @@ class TimeEntrySchema(Schema):
 
 
 class TimeEntryCreateSchema(Schema):
-    """Schema for creating a time entry"""
+    """Schema for creating a time entry.
+
+    Provide either ``start_time`` (and optional ``end_time``) or ``date`` + ``duration_seconds``
+    for duration-only placement on that day.
+    """
 
     user_id = fields.Int(allow_none=True)  # Admin-only: create on behalf of another user
     project_id = fields.Int(allow_none=True)
     client_id = fields.Int(allow_none=True)
     task_id = fields.Int(allow_none=True)
-    start_time = fields.DateTime(required=True)
+    start_time = fields.DateTime(allow_none=True)
     end_time = fields.DateTime(allow_none=True)
+    date = fields.Date(allow_none=True)
+    duration_seconds = fields.Int(allow_none=True)
     break_seconds = fields.Int(allow_none=True)
     notes = fields.Str(allow_none=True, validate=validate.Length(max=5000))
     tags = fields.Str(allow_none=True, validate=validate.Length(max=500))
+    source = fields.Str(
+        allow_none=True,
+        validate=validate.OneOf([s.value for s in TimeEntrySource]),
+        load_default=TimeEntrySource.API.value,
+    )
     billable = fields.Bool(load_default=True)
     paid = fields.Bool(load_default=False)
     invoice_number = fields.Str(allow_none=True, validate=validate.Length(max=100))
@@ -71,6 +82,14 @@ class TimeEntryCreateSchema(Schema):
             errors["task_id"] = ["task_id can only be set when project_id is provided"]
         start_time = data.get("start_time")
         end_time = data.get("end_time")
+        date_val = data.get("date")
+        duration_seconds = data.get("duration_seconds")
+        has_range = start_time is not None
+        has_duration = date_val is not None and duration_seconds is not None
+        if not has_range and not has_duration:
+            errors["start_time"] = ["Provide start_time, or date with duration_seconds"]
+        if has_duration and (duration_seconds is None or duration_seconds <= 0):
+            errors["duration_seconds"] = ["duration_seconds must be a positive integer"]
         same_kind = start_time and end_time and (start_time.tzinfo is None) == (end_time.tzinfo is None)
         if same_kind and end_time <= start_time:
             errors["end_time"] = ["end_time must be after start_time"]

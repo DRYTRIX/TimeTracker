@@ -138,6 +138,28 @@ services:
       retries: 3
       start_period: 40s
 
+  # Optional: MCP server (Model Context Protocol) for AI assistants.
+  # Opt-in: docker compose --profile mcp up -d
+  # Docs: docs/integrations/MCP.md
+  mcp:
+    profiles:
+      - mcp
+    build:
+      context: .
+      dockerfile: mcp_server/Dockerfile
+    container_name: timetracker-mcp
+    environment:
+      - TIMETRACKER_BASE_URL=${TIMETRACKER_BASE_URL:-http://app:8080}
+      - TIMETRACKER_API_TOKEN=${MCP_API_TOKEN:-}
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8090
+      - MCP_TOOLSET=${MCP_TOOLSET:-auto}
+    depends_on:
+      - app
+    ports: []
+    restart: unless-stopped
+
   # Optional: Peppol Bridge (adapter) for self-hosted Peppol e-invoicing.
   # Configure via Admin → System Settings → Peppol → Setup wizard.
   peppol-bridge:

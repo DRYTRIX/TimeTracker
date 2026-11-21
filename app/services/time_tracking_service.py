@@ -509,6 +509,7 @@ class TimeTrackingService:
         invoice_number: Optional[str] = None,
         custom_fields: Optional[dict] = None,
         skip_entry_requirements: bool = False,
+        source: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create a manual time entry.
@@ -636,6 +637,8 @@ class TimeTrackingService:
         # Create entry (duration_seconds is net; break_seconds is stored and subtracted when computing from start/end)
         if break_seconds is not None:
             break_seconds = max(0, int(break_seconds))
+        allowed_sources = {s.value for s in TimeEntrySource}
+        entry_source = source if source in allowed_sources else TimeEntrySource.MANUAL.value
         entry = self.time_entry_repo.create_manual_entry(
             user_id=user_id,
             project_id=project_id,
@@ -651,6 +654,7 @@ class TimeTrackingService:
             paid=paid,
             invoice_number=invoice_number,
             custom_fields=custom_fields,
+            source=entry_source,
         )
 
         commit_data = {"user_id": user_id}
