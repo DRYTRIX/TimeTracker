@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Invoice templates') }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+{% include "admin/invoice_templates/_tabs.html" %}
+
+{% macro used_by_cell(ref) %}
+    {% set who = used_by.get(ref, []) %}
+    {% if who %}{{ who | join(', ') }}{% else %}<span class="text-text-muted-light dark:text-text-muted-dark">{{ _('Not used') }}</span>{% endif %}
+{% endmacro %}
+
+{% if templates %}
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark max-w-2xl">{{ _('HTML pages with their own styles. Write one here, upload an .html file, or copy a built-in one.') }}</p>
+    <div class="flex flex-wrap gap-2">
+        <form method="POST" action="{{ url_for('invoice_templates.upload_template') }}" enctype="multipart/form-data" id="uploadForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="btn btn-secondary cursor-pointer">
+                <i class="fas fa-upload mr-2" aria-hidden="true"></i>{{ _('Upload .html') }}
+                <input type="file" name="file" accept=".html,.htm,text/html" class="sr-only" onchange="this.form.submit()">
+            </label>
+        </form>
+        <a href="{{ url_for('invoice_templates.new_template') }}" class="btn btn-primary"><i class="fas fa-plus mr-2" aria-hidden="true"></i>{{ _('New template') }}</a>
+    </div>
+</div>
+
+<div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-x-auto">
+    <table class="min-w-full text-sm">
+        <thead class="bg-background-light dark:bg-background-dark text-left text-xs uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">
+            <tr>
+                <th scope="col" class="px-4 py-3 font-semibold">{{ _('Name') }}</th>
+                <th scope="col" class="px-4 py-3 font-semibold">{{ _('Source') }}</th>
+                <th scope="col" class="px-4 py-3 font-semibold">{{ _('Used by') }}</th>
+                <th scope="col" class="px-4 py-3 font-semibold">{{ _('Updated') }}</th>
+                <th scope="col" class="px-4 py-3 font-semibold text-right">{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-light dark:divide-border-dark">
+            {% for t in templates %}
+            <tr>
+                <td class="px-4 py-3">
+                    <a href="{{ url_for('invoice_templates.edit_template', template_id=t.id) }}" class="font-semibold text-primary hover:underline">{{ t.name }}</a>
+                    {% if t.description %}<div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ t.description }}</div>{% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">{{ _('Uploaded') if t.source == 'uploaded' else _('Custom') }}</span>
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('version %(n)s', n=t.version_number) }}</div>
+                </td>
+                <td class="px-4 py-3">{{ used_by_cell(t.ref) }}</td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    {{ t.updated_at.strftime('%d/%m/%Y') if t.updated_at else '' }}
+                    {% if t.updater %}<div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('by %(name)s', name=t.updater.display_name) }}</div>{% endif %}
+                </td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <a href="{{ url_for('invoice_templates.edit_template', template_id=t.id) }}" class="text-primary hover:underline ml-3">{{ _('Edit') }}</a>
+                    <a href="{{ url_for('invoice_templates.download_template', template_id=t.id) }}" class="text-primary hover:underline ml-3">{{ _('Download') }}</a>
+                    <form method="POST" action="{{ url_for('invoice_templates.duplicate_template', template_id=t.id) }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="text-primary hover:underline ml-3">{{ _('Duplicate') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% for b in builtins %}
+            <tr>
+                <td class="px-4 py-3">
+                    <a href="{{ url_for('invoice_templates.view_builtin', name=b.name) }}" class="font-semibold text-text-light dark:text-text-dark hover:underline">{{ b.name }}</a>
+                    {% if b.description %}<div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ b.description }}</div>{% endif %}
+                </td>
+                <td class="px-4 py-3">
+                    <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ _('Built-in') }}</span>
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('ships with the app') }}</div>
+                </td>
+                <td class="px-4 py-3">{{ used_by_cell(b.ref) }}</td>
+                <td class="px-4 py-3 text-text-muted-light dark:text-text-muted-dark">{{ _('Read-only') }}</td>
+                <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <a href="{{ url_for('invoice_templates.view_builtin', name=b.name) }}" class="text-primary hover:underline ml-3">{{ _('Preview') }}</a>
+                    <a href="{{ url_for('invoice_templates.download_builtin', name=b.name) }}" class="text-primary hover:underline ml-3">{{ _('Download') }}</a>
+                    <form method="POST" action="{{ url_for('invoice_templates.duplicate_builtin', name=b.name) }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="text-primary hover:underline ml-3">{{ _('Duplicate') }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark">
+    {{ _('Duplicate a built-in template to change it. Which template an invoice prints with is set in') }}
+    <a href="{{ url_for('admin.settings') }}#section-invoices" class="text-primary hover:underline">{{ _('Settings') }}</a>{{ _(', or on a legal entity.') }}
+</p>
+
+{% else %}
+<section class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm px-6 py-12 text-center" aria-labelledby="empty-h">
+    <div class="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+        <i class="fas fa-file-invoice text-primary text-2xl" aria-hidden="true"></i>
+    </div>
+    <h2 id="empty-h" class="text-xl font-semibold">{{ _('Make your first invoice template') }}</h2>
+    <p class="mt-2 text-text-muted-light dark:text-text-muted-dark max-w-xl mx-auto">{{ _('A template is one HTML page with its own styles. Copy the built-in one and change it, or upload an .html file you already have.') }}</p>
+    <div class="mt-5 flex flex-wrap justify-center gap-2">
+        {% if builtins %}
+        <form method="POST" action="{{ url_for('invoice_templates.duplicate_builtin', name=builtins[0].name) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-primary"><i class="far fa-copy mr-2" aria-hidden="true"></i>{{ _('Start from "%(name)s"', name=builtins[0].name) }}</button>
+        </form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('invoice_templates.upload_template') }}" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="btn btn-secondary cursor-pointer">
+                <i class="fas fa-upload mr-2" aria-hidden="true"></i>{{ _('Upload .html') }}
+                <input type="file" name="file" accept=".html,.htm,text/html" class="sr-only" onchange="this.form.submit()">
+            </label>
+        </form>
+        <a href="{{ url_for('invoice_templates.new_template') }}" class="btn btn-secondary border-0 text-primary">{{ _('Write from scratch') }}</a>
+    </div>
+    <p class="mt-4 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Invoices keep printing as set in Settings until you choose a template there or on a legal entity.') }}</p>
+</section>
+
+{% if builtins %}
+<h2 class="text-base font-semibold mt-8 mb-3">{{ _('Built-in templates') }}</h2>
+<div class="flex flex-wrap gap-4">
+    {% for b in builtins %}
+    <article class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-4 max-w-md">
+        <div class="flex items-center gap-2">
+            <span class="font-semibold">{{ b.name }}</span>
+            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ _('Built-in') }}</span>
+        </div>
+        <p class="mt-1 text-sm text-text-muted-light dark:text-text-muted-dark">{{ b.description }}</p>
+        <div class="mt-3 flex gap-4 text-sm">
+            <a href="{{ url_for('invoice_templates.view_builtin', name=b.name) }}" class="text-primary hover:underline">{{ _('Preview') }}</a>
+            <a href="{{ url_for('invoice_templates.download_builtin', name=b.name) }}" class="text-primary hover:underline">{{ _('Download') }}</a>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

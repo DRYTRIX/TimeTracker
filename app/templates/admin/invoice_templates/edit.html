@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}{{ template.name or _('New template') }} - {{ _('Invoice templates') }} - {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/codemirror/codemirror.css') }}">
+<style>
+    .tpl-editor .CodeMirror { height: 640px; font-size: 13px; border-radius: 0 0 0.75rem 0.75rem; }
+    .tpl-editor textarea#html { height: 640px; }
+    .tpl-error-line { background: rgba(220, 38, 38, 0.12) !important; }
+    .tpl-preview-frame { width: 794px; height: 1123px; border: 0; background: #fff; transform-origin: 0 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+    <div>
+        <nav class="text-sm text-text-muted-light dark:text-text-muted-dark mb-1" aria-label="{{ _('Breadcrumb') }}">
+            <a href="{{ url_for('invoice_templates.list_templates') }}" class="text-primary hover:underline">{{ _('Invoice templates') }}</a>
+            {% if template.name %}/ {{ template.name }}{% endif %}
+        </nav>
+        <h1 class="text-2xl font-bold">
+            {% if is_builtin %}{{ template.name }} <span class="ml-2 align-middle inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{{ _('Built-in') }}</span>
+            {% elif template.is_new %}{{ _('New template') }}
+            {% else %}{{ _('Edit template') }}{% endif %}
+        </h1>
+    </div>
+    {% if template.version is defined and template.version %}
+    <div class="text-sm text-text-muted-light dark:text-text-muted-dark">
+        {{ _('Version %(n)s', n=template.version) }}{% if template.updated_at %}, {{ _('saved %(d)s', d=template.updated_at.strftime('%d/%m/%Y')) }}{% endif %}{% if template.updater %} {{ _('by %(name)s', name=template.updater.display_name) }}{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% if error %}
+<div role="alert" class="mb-4 flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3">
+    <i class="fas fa-circle-exclamation text-red-600 mt-0.5" aria-hidden="true"></i>
+    <div class="flex-1 text-sm text-red-800 dark:text-red-200">
+        <div class="font-semibold">{{ _('Template not saved') }}{% if error.line %}: {{ _('line %(n)s', n=error.line) }}{% endif %}</div>
+        <div>{{ error.error }}{% if error.hint %}. {{ _('Did you mean') }} <code class="px-1 rounded bg-red-100 dark:bg-red-900/40">{{ error.hint }}</code>?{% endif %}</div>
+        {% if not template.is_new %}<div class="text-xs mt-1">{{ _('The saved version is still the one in use. Your changes are kept below.') }}</div>{% endif %}
+    </div>
+    {% if error.line %}<button type="button" class="btn btn-secondary text-sm" data-goto-line="{{ error.line }}">{{ _('Go to line %(n)s', n=error.line) }}</button>{% endif %}
+</div>
+{% endif %}
+
+<form method="POST" id="templateForm"
+      action="{% if is_builtin %}#{% elif template.is_new %}{{ url_for('invoice_templates.new_template') }}{% else %}{{ url_for('invoice_templates.edit_template', template_id=template.id) }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm p-4 grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div>
+            <label for="name" class="form-label">{{ _('Name') }}</label>
+            <input type="text" id="name" name="name" value="{{ template.name }}" class="form-input" maxlength="120" required {% if is_builtin %}readonly{% endif %}>
+        </div>
+        <div class="md:col-span-3">
+            <label for="description" class="form-label">{{ _('Description') }}</label>
+            <input type="text" id="description" name="description" value="{{ template.description or '' }}" class="form-input" maxlength="255" {% if is_builtin %}readonly{% endif %}>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+        <section class="tpl-editor bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm min-w-0" aria-labelledby="code-h">
+            <div class="flex items-center justify-between gap-3 px-4 py-2 border-b border-border-light dark:border-border-dark">
+                <h2 id="code-h" class="text-sm font-semibold">template.html</h2>
+                <div class="flex gap-4 text-sm">
+                    {% if template.id %}<a href="{{ url_for('invoice_templates.download_template', template_id=template.id) }}" class="text-primary hover:underline">{{ _('Download') }}</a>
+                    {% elif is_builtin %}<a href="{{ url_for('invoice_templates.download_builtin', name=template.builtin) }}" class="text-primary hover:underline">{{ _('Download') }}</a>{% endif %}
+                </div>
+            </div>
+            <textarea id="html" name="html" spellcheck="false" class="w-full p-3 font-mono text-xs bg-background-light dark:bg-background-dark border-0 rounded-b-xl" {% if is_builtin %}readonly{% endif %}>{{ template.html }}</textarea>
+
+            <div class="border-t border-border-light dark:border-border-dark px-4 py-3">
+                <div class="flex items-baseline justify-between gap-3 mb-2">
+                    <h3 class="text-sm font-semibold">{{ _('Variables') }}</h3>
+                    {% if not is_builtin %}<span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Click to insert at the cursor') }}</span>{% endif %}
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                    {% for code, hint, snippet in variables %}
+                    <button type="button" class="tpl-var px-2 py-1 rounded-md border border-primary/20 bg-primary/5 text-primary font-mono text-xs" title="{{ hint }}" data-snippet="{{ snippet }}" {% if is_builtin %}disabled{% endif %}>{{ code }}</button>
+                    {% endfor %}
+                </div>
+                <p class="mt-3 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    {{ _('Logo:') }} <code>{{ logo_snippet }}</code>. {{ _('Page size and margins are set in the template with @page.') }}
+                </p>
+                <details class="mt-2 text-xs text-text-muted-light dark:text-text-muted-dark">
+                    <summary class="cursor-pointer">{{ _('Fonts you can use (%(n)s)', n=fonts|length) }}</summary>
+                    <p class="mt-1">{{ _('In CSS:') }} <code>@font-face { src: url("fonts/&lt;file&gt;") }</code></p>
+                    <ul class="mt-1 font-mono">{% for f in fonts %}<li>fonts/{{ f }}</li>{% endfor %}</ul>
+                </details>
+            </div>
+        </section>
+
+        <section class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm min-w-0" aria-labelledby="pv-h">
+            <div class="flex flex-wrap items-center gap-3 px-4 py-2 border-b border-border-light dark:border-border-dark">
+                <h2 id="pv-h" class="text-sm font-semibold">{{ _('Preview') }}</h2>
+                <label for="preview_invoice" class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('on invoice') }}</label>
+                <select id="preview_invoice" name="preview_invoice" class="form-input flex-1 min-w-0 text-sm py-1.5">
+                    {% for value, label in preview_choices %}
+                    <option value="{{ value }}" {% if value == preview_invoice %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <span id="previewStatus" class="text-xs text-text-muted-light dark:text-text-muted-dark" aria-live="polite"></span>
+            </div>
+            <div id="previewError" class="hidden mx-4 mt-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-800 dark:text-red-200"></div>
+            <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-b-xl overflow-hidden">
+                <div id="previewBox" class="mx-auto bg-white shadow" style="width: 100%; max-width: 794px;">
+                    <iframe id="previewFrame" class="tpl-preview-frame" title="{{ _('Invoice preview') }}" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="mt-4 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm px-4 py-3 flex flex-wrap items-center gap-3">
+        {% if not is_builtin %}
+        <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+        {% endif %}
+        <button type="button" id="previewPdfBtn" class="btn btn-secondary"><i class="far fa-file-pdf mr-2" aria-hidden="true"></i>{{ _('Preview PDF') }}</button>
+        <a href="{{ url_for('invoice_templates.list_templates') }}" class="btn btn-secondary border-0">{{ _('Cancel') if not is_builtin else _('Back') }}</a>
+        <span class="flex-1"></span>
+        {% if is_builtin %}
+        <button type="submit" form="duplicateForm" class="btn btn-primary"><i class="far fa-copy mr-2" aria-hidden="true"></i>{{ _('Duplicate to edit') }}</button>
+        {% else %}
+        <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('On save the template is checked on the preview invoice. A broken template is not saved.') }}</span>
+        {% if template.id %}
+        <details class="relative">
+            <summary class="btn btn-secondary text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 list-none cursor-pointer">{{ _('Delete template') }}</summary>
+            <div class="absolute right-0 bottom-full mb-2 w-72 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-lg p-3 text-sm z-10">
+                <p class="mb-3">{{ _('Delete "%(name)s"? Legal entities and the default that use it switch to the Visual layout. Invoices already sent keep printing as they were.', name=template.name) }}</p>
+                <button type="submit" form="deleteForm" class="btn btn-primary bg-red-600 hover:bg-red-700 border-red-600 w-full">{{ _('Delete') }}</button>
+            </div>
+        </details>
+        {% endif %}
+        {% endif %}
+    </div>
+</form>
+
+{% if template.id %}
+<form method="POST" id="deleteForm" action="{{ url_for('invoice_templates.delete_template', template_id=template.id) }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% elif is_builtin %}
+<form method="POST" id="duplicateForm" action="{{ url_for('invoice_templates.duplicate_builtin', name=template.builtin) }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+
+<form method="POST" id="previewPdfForm" action="{{ url_for('invoice_templates.preview_pdf') }}" target="_blank" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="html">
+    <input type="hidden" name="invoice">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='vendor/codemirror/codemirror.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/codemirror/mode/xml/xml.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/codemirror/mode/javascript/javascript.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/codemirror/mode/css/css.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/codemirror/mode/htmlmixed/htmlmixed.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
+(function () {
+    const textarea = document.getElementById('html');
+    const readonly = {{ 'true' if is_builtin else 'false' }};
+    const previewUrl = "{{ url_for('invoice_templates.preview') }}";
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const frame = document.getElementById('previewFrame');
+    const box = document.getElementById('previewBox');
+    const status = document.getElementById('previewStatus');
+    const errorBox = document.getElementById('previewError');
+    const invoiceSelect = document.getElementById('preview_invoice');
+    let cm = null;
+    let errorLine = null;
+
+    if (window.CodeMirror) {
+        cm = window.CodeMirror.fromTextArea(textarea, {
+            mode: 'htmlmixed', lineNumbers: true, lineWrapping: true, readOnly: readonly, indentUnit: 2, tabSize: 2,
+        });
+        cm.on('change', schedule);
+    } else {
+        textarea.addEventListener('input', schedule);
+    }
+
+    function source() { return cm ? cm.getValue() : textarea.value; }
+
+    function markLine(line) {
+        if (!cm) return;
+        if (errorLine !== null) cm.removeLineClass(errorLine, 'background', 'tpl-error-line');
+        errorLine = null;
+        if (line) { errorLine = line - 1; cm.addLineClass(errorLine, 'background', 'tpl-error-line'); }
+    }
+
+    function gotoLine(line) {
+        if (cm) { cm.focus(); cm.setCursor({ line: line - 1, ch: 0 }); cm.scrollIntoView({ line: line - 1, ch: 0 }, 120); markLine(line); return; }
+        const lines = textarea.value.split('\n');
+        let pos = 0; for (let i = 0; i < line - 1 && i < lines.length; i++) pos += lines[i].length + 1;
+        textarea.focus(); textarea.setSelectionRange(pos, pos);
+    }
+    document.querySelectorAll('[data-goto-line]').forEach(function (b) {
+        b.addEventListener('click', function () { gotoLine(parseInt(b.dataset.gotoLine, 10)); });
+    });
+    {% if error and error.line %}markLine({{ error.line|int }});{% endif %}
+
+    document.querySelectorAll('.tpl-var').forEach(function (b) {
+        b.addEventListener('click', function () {
+            const snippet = b.dataset.snippet;
+            if (cm) { cm.replaceSelection(snippet); cm.focus(); return; }
+            const s = textarea.selectionStart, e = textarea.selectionEnd;
+            textarea.value = textarea.value.slice(0, s) + snippet + textarea.value.slice(e);
+            textarea.selectionStart = textarea.selectionEnd = s + snippet.length;
+            textarea.focus(); schedule();
+        });
+    });
+
+    function fit() {
+        const scale = Math.min(1, box.clientWidth / 794);
+        frame.style.transform = 'scale(' + scale + ')';
+        box.style.height = Math.round(1123 * scale) + 'px';
+    }
+    window.addEventListener('resize', fit);
+    fit();
+
+    let timer = null, seq = 0;
+    function schedule() {
+        status.textContent = '{{ _("Updating…") }}';
+        clearTimeout(timer);
+        timer = setTimeout(render, 500);
+    }
+
+    function render() {
+        const mine = ++seq;
+        fetch(previewUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ html: source(), invoice: invoiceSelect.value }),
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (mine !== seq) return;
+            if (data.html !== undefined) {
+                frame.srcdoc = data.html;
+                errorBox.classList.add('hidden');
+                markLine(null);
+                status.textContent = '{{ _("Up to date") }}';
+            } else {
+                let msg = data.error || '{{ _("Preview failed") }}';
+                if (data.line) msg = '{{ _("Line") }} ' + data.line + ': ' + msg;
+                if (data.hint) msg += '. {{ _("Did you mean") }} ' + data.hint + '?';
+                errorBox.textContent = msg;
+                errorBox.classList.remove('hidden');
+                markLine(data.line);
+                status.textContent = '{{ _("Has errors") }}';
+            }
+        }).catch(function () {
+            if (mine === seq) status.textContent = '{{ _("Preview failed") }}';
+        });
+    }
+
+    invoiceSelect.addEventListener('change', render);
+    document.getElementById('previewPdfBtn').addEventListener('click', function () {
+        const f = document.getElementById('previewPdfForm');
+        f.elements.html.value = source();
+        f.elements.invoice.value = invoiceSelect.value;
+        f.submit();
+    });
+    document.getElementById('templateForm').addEventListener('submit', function () { if (cm) cm.save(); });
+    render();
+})();
+</script>
+{% endblock %}

@@ -9,7 +9,7 @@
 {{ page_header('fas fa-building', _('Add legal entity'), subtitle_text=_('A company or an individual entrepreneur that issues invoices.'), actions_html=actions, breadcrumbs=[{'text': _('Admin')}, {'text': _('Our legal entities'), 'url': url_for('billing_entities.index')}, {'text': _('Add entity')}]) }}
 
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
-    <form method="POST" action="{{ url_for('billing_entities.create') }}" class="lg:col-span-3 min-w-0 space-y-4 sm:space-y-6">
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('billing_entities.create') }}" class="lg:col-span-3 min-w-0 space-y-4 sm:space-y-6">
         {{ details_section(entity) }}
         {{ defaults_section(entity, vat_categories) }}
         <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm px-4 sm:px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">

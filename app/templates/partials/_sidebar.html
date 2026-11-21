@@ -607,8 +607,8 @@
                                 </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
-                                    <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoice PDF') }}
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' or ep.startswith('invoice_templates.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoice_templates.list_templates') }}">
+                                    <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoice templates') }}
                                 </a>
                             </li>
                             <li>

@@ -1658,6 +1658,8 @@
 {% endblock %}
 
 {% block content %}
+{% set active_tab = 'visual' %}
+{% include "admin/invoice_templates/_tabs.html" %}
 <!-- Page Header -->
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
     <div>

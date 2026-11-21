@@ -102,6 +102,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.gamification import gamification_bp
     from app.routes.import_export import import_export_bp
     from app.routes.inventory import inventory_bp
+    from app.routes.invoice_templates import invoice_templates_bp
     from app.routes.invoices import invoices_bp
     from app.routes.issues import issues_bp
     from app.routes.kanban import kanban_bp
@@ -277,6 +278,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(tasks_bp)
     app.register_blueprint(issues_bp)
     app.register_blueprint(invoices_bp)
+    app.register_blueprint(invoice_templates_bp)
     app.register_blueprint(recurring_invoices_bp)
     app.register_blueprint(payments_bp)
     app.register_blueprint(bank_reconciliation_bp)

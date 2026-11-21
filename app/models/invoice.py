@@ -41,6 +41,12 @@ class Invoice(db.Model):
     total_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     currency_code = db.Column(db.String(3), nullable=False, default="EUR")
     template_id = db.Column(db.Integer, db.ForeignKey("invoice_templates.id"), nullable=True, index=True)
+    # Template the PDF prints with, fixed when the invoice leaves draft (app/utils/invoice_templates.py).
+    # Empty: chosen at print time (legal entity, then Settings).
+    pdf_template_ref = db.Column(db.String(64), nullable=True)
+    pdf_template_version_id = db.Column(
+        db.Integer, db.ForeignKey("invoice_html_template_versions.id", ondelete="SET NULL"), nullable=True
+    )
     recurring_invoice_id = db.Column(db.Integer, db.ForeignKey("recurring_invoices.id"), nullable=True, index=True)
 
     # Notes and terms

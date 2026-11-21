@@ -202,6 +202,7 @@ class SellerSettings:
         self._settings = settings
         self._snapshot = snapshot or {}
         self._payment_text = payment_text or ""
+        self.payment_text = self._payment_text  # as typed, for HTML templates (company_bank_info is escaped)
         self._iban = iban or ""
 
     def __getattr__(self, name):
@@ -228,17 +229,23 @@ class SellerSettings:
             # Printed as HTML / ReportLab markup by the generators: escape, keep line breaks.
             return html.escape(self._payment_text).replace("\n", "<br/>")
         if name == "company_logo_filename":
-            return ""
+            return self._snapshot.get("logo_filename") or ""
         return getattr(self._settings, name)
 
+    def _logo_path(self):
+        from app.models import BillingEntity
+
+        return BillingEntity.logo_path(self._snapshot.get("logo_filename"))
+
     def has_logo(self):
-        return False
+        return self._logo_path() is not None
 
     def get_logo_path(self):
-        return None
+        return self._logo_path()
 
     def get_logo_url(self):
-        return None
+        name = self._snapshot.get("logo_filename")
+        return f"/uploads/logos/{name}" if name and self._logo_path() else None
 
 
 def seller_settings_for(invoice, settings):

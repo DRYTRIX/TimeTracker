@@ -33,7 +33,7 @@
     <div class="lg:col-span-3 min-w-0">
         {% if entity %}
         {% set accounts = entity.payment_accounts.all() %}
-        <form method="POST" id="entityForm" action="{{ url_for('billing_entities.update', entity_id=entity.id) }}" class="space-y-4 sm:space-y-6">
+        <form method="POST" enctype="multipart/form-data" id="entityForm" action="{{ url_for('billing_entities.update', entity_id=entity.id) }}" class="space-y-4 sm:space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 class="text-xl font-bold">{{ entity.short_name }}</h2>
                 {{ status_pill(entity.is_active) }}

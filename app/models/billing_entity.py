@@ -30,8 +30,12 @@ class BillingEntity(db.Model):
     email = db.Column(db.String(200), nullable=True)
     phone = db.Column(db.String(50), nullable=True)
     website = db.Column(db.String(200), nullable=True)
+    # Logo printed on this entity's invoices; a file in the logo upload folder (see logo_path)
+    logo_filename = db.Column(db.String(255), nullable=True)
 
     # Invoice defaults
+    # Invoice PDF template ("visual", "builtin:<name>", "html:<id>"); empty: the default from Settings
+    pdf_template = db.Column(db.String(64), nullable=True)
     number_format = db.Column(db.String(120), nullable=True)  # e.g. "INV-{YYYY}-{SEQ}"
     number_counter = db.Column(db.Integer, nullable=False, default=0)  # used by {SEQ}
     default_vat_category = db.Column(db.String(5), nullable=True)
@@ -83,7 +87,24 @@ class BillingEntity(db.Model):
             "email": self.email or "",
             "phone": self.phone or "",
             "website": self.website or "",
+            "logo_filename": self.logo_filename or "",
         }
+
+    @staticmethod
+    def logo_path(filename):
+        """Absolute path of a logo file in the shared logo upload folder, or None."""
+        if not filename or "/" in filename or "\\" in filename:
+            return None
+        import os
+
+        try:
+            from flask import current_app
+
+            folder = os.path.join(current_app.root_path, "static", "uploads", "logos")
+        except RuntimeError:
+            folder = os.path.join("app", "static", "uploads", "logos")
+        path = os.path.join(folder, filename)
+        return path if os.path.isfile(path) else None
 
 
 class PaymentAccount(db.Model):
