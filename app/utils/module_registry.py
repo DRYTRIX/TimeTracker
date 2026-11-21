@@ -610,6 +610,20 @@ class ModuleRegistry:
 
         cls.register(
             ModuleDefinition(
+                id="client_entities",
+                name="Client legal entities",
+                description="Several legal entities per client; an invoice picks one as Bill to",
+                category=ModuleCategory.FINANCE,
+                blueprint_name="client_entities",
+                default_enabled=False,
+                dependencies=["clients", "invoices"],
+                icon="fa-building-user",
+                order=35,
+            )
+        )
+
+        cls.register(
+            ModuleDefinition(
                 id="payments",
                 name="Payments",
                 description="Payment tracking",

@@ -1177,6 +1177,7 @@ class InvoicePDFGenerator:
                     <div class="card">
                         <div class="section-title">{_('Bill To')}</div>
                         <div><strong>{self._escape(self.invoice.client_name)}</strong></div>
+                        {self._get_client_entity_html()}
                         {self._get_client_email_html()}
                         {self._get_client_address_html()}
                     </div>
@@ -1270,6 +1271,15 @@ class InvoicePDFGenerator:
         if self.invoice.client_email:
             return f'<div class="client-email">{self.invoice.client_email}</div>'
         return ""
+
+    def _get_client_entity_html(self):
+        """Registration number and VAT of the invoice's Bill to legal entity, if it has them"""
+        from app.utils.client_entities import buyer_lines
+
+        return "".join(
+            f'<div class="client-entity">{self._escape(label)}: {self._escape(value)}</div>'
+            for label, value in buyer_lines(self.invoice)
+        )
 
     def _get_client_address_html(self):
         """Generate HTML for client address if available"""

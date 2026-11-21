@@ -98,6 +98,7 @@
             </a>
             {% endif %}
         </div>
+        {% include "client_entities/_client_card.html" %}
         {% if client.contact_person or client.email or client.phone or client.address %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Legacy Contact Info') }}</h2>

@@ -35,6 +35,12 @@
                         <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
                         <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>
                     </div>
+                    {% if client_entities_enabled and not financial_locked %}
+                    {% set bill_to_mode = 'edit' %}
+                    {% include 'client_entities/_invoice_bill_to.html' %}
+                    {% elif invoice.client_entity_id and invoice.buyer_snapshot %}
+                    <div class="min-w-0 text-sm text-text-muted-light dark:text-text-muted-dark self-end">{{ _('Bill to') }}: {{ invoice.buyer_snapshot.get('legal_name', '') }}</div>
+                    {% endif %}
                     <div class="min-w-0">
                         <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
                         <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>

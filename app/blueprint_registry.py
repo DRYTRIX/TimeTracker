@@ -88,6 +88,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.billing_entities import billing_entities_bp
     from app.routes.budget_alerts import budget_alerts_bp
     from app.routes.calendar import calendar_bp
+    from app.routes.client_entities import client_entities_bp
     from app.routes.client_notes import client_notes_bp
     from app.routes.client_portal import client_portal_bp
     from app.routes.clients import clients_bp
@@ -281,6 +282,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(bank_reconciliation_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(client_notes_bp)
+    app.register_blueprint(client_entities_bp)
     app.register_blueprint(client_portal_bp)
     app.register_blueprint(comments_bp)
     app.register_blueprint(kanban_bp)
