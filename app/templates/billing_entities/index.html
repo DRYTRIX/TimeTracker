@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+{% from "billing_entities/_entity_fields.html" import details_section, defaults_section, status_pill %}
+
+{% block content %}
+{% set actions %}
+<a href="{{ url_for('billing_entities.create') }}" class="btn btn-primary"><i class="fas fa-plus"></i> {{ _('Add entity') }}</a>
+{% endset %}
+{{ page_header('fas fa-building', _('Our legal entities'), subtitle_text=_('Who issues invoices: details, payment accounts, invoice defaults.'), actions_html=actions, breadcrumbs=[{'text': _('Admin')}, {'text': _('Our legal entities')}]) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
+    <aside class="min-w-0">
+        <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-hidden">
+            {% if entities %}
+            <ul>
+                {% for e in entities %}
+                {% set selected = entity and entity.id == e.id %}
+                <li class="{% if not loop.first %}border-t border-border-light dark:border-border-dark{% endif %}">
+                    <a href="{{ url_for('billing_entities.index', entity_id=e.id) }}" class="block px-4 py-3 [overflow-wrap:anywhere] border-l-4 {% if selected %}border-primary bg-primary/10{% else %}border-transparent hover:bg-background-light dark:hover:bg-background-dark{% endif %}" {% if selected %}aria-current="page"{% endif %}>
+                        <div class="font-semibold {% if selected %}text-primary{% elif not e.is_active %}text-text-muted-light dark:text-text-muted-dark{% else %}text-text-light dark:text-text-dark{% endif %}">{{ e.short_name }}</div>
+                        {% set n = e.payment_accounts.count() %}
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ e.country or '–' }} · {{ ngettext('%(num)d account', '%(num)d accounts', n) }}{% if not e.is_active %} · {{ _('Archived') }}{% endif %}</div>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No legal entities yet. Invoices use the company from Settings.') }}</p>
+            {% endif %}
+        </div>
+    </aside>
+
+    <div class="lg:col-span-3 min-w-0">
+        {% if entity %}
+        {% set accounts = entity.payment_accounts.all() %}
+        <form method="POST" id="entityForm" action="{{ url_for('billing_entities.update', entity_id=entity.id) }}" class="space-y-4 sm:space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-xl font-bold">{{ entity.short_name }}</h2>
+                {{ status_pill(entity.is_active) }}
+            </div>
+
+            {{ details_section(entity) }}
+
+            <section class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm" aria-label="{{ _('Payment accounts') }}">
+                <div class="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-6 pb-3 sm:pb-3">
+                    <div>
+                        <h3 class="text-lg font-semibold">{{ _('Payment accounts') }}</h3>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Where clients pay this entity. Each account is edited on its own page.') }}</p>
+                    </div>
+                    <a href="{{ url_for('billing_entities.new_account', entity_id=entity.id) }}" class="btn btn-secondary"><i class="fas fa-plus"></i> {{ _('Add account') }}</a>
+                </div>
+                {% if accounts %}
+                <div class="overflow-x-auto pb-3">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">
+                            <tr>
+                                <th class="px-4 sm:px-6 py-2 font-semibold">{{ _('Account') }}</th>
+                                <th class="px-2 py-2 font-semibold">{{ _('IBAN') }}</th>
+                                <th class="px-2 py-2 font-semibold">{{ _('Status') }}</th>
+                                <th class="px-4 sm:px-6 py-2"><span class="sr-only">{{ _('Open') }}</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for a in accounts %}
+                            <tr class="border-t border-border-light dark:border-border-dark {% if not a.is_active %}text-text-muted-light dark:text-text-muted-dark{% endif %}">
+                                <td class="px-4 sm:px-6 py-3 font-semibold whitespace-nowrap">{{ a.bank_name or a.currency }} · {{ a.currency }}</td>
+                                <td class="px-2 py-3 font-mono text-xs whitespace-nowrap">{% for i in range(0, (a.iban or '')|length, 4) %}{{ a.iban[i:i+4] }} {% endfor %}</td>
+                                <td class="px-2 py-3">{{ status_pill(a.is_active) }}</td>
+                                <td class="px-4 sm:px-6 py-3 text-right"><a href="{{ url_for('billing_entities.account', entity_id=entity.id, account_id=a.id) }}" class="text-primary hover:underline">{{ _('Open') }}</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="px-4 sm:px-6 pb-6 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No payment accounts yet. Invoices from this entity will have no payment details.') }}</p>
+                {% endif %}
+            </section>
+
+            {{ defaults_section(entity, vat_categories) }}
+
+            <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm px-4 sm:px-6 py-4 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="flex flex-wrap gap-2">
+                    <button type="submit" form="entityArchiveForm" class="btn btn-secondary">{{ _('Restore') if not entity.is_active else _('Archive') }}</button>
+                    {% if entity.is_used() %}
+                    <button type="button" disabled class="btn btn-secondary opacity-50 cursor-not-allowed" title="{{ _('Used on invoices, archive it instead') }}">{{ _('Delete') }}</button>
+                    {% else %}
+                    <button type="submit" form="entityDeleteForm" class="btn btn-secondary text-red-600 dark:text-red-400 border-red-200 dark:border-red-800">{{ _('Delete') }}</button>
+                    {% endif %}
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Saves details and invoice defaults') }}</span>
+                    <button type="submit" class="btn btn-primary">{{ _('Save changes') }}</button>
+                </div>
+            </div>
+        </form>
+        <form method="POST" id="entityArchiveForm" action="{{ url_for('billing_entities.toggle_archive', entity_id=entity.id) }}" class="hidden">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
+        {% if not entity.is_used() %}
+        <form method="POST" id="entityDeleteForm" action="{{ url_for('billing_entities.delete', entity_id=entity.id) }}" class="hidden">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
+        {% endif %}
+        {% else %}
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm text-center">
+            <p class="text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Add the first legal entity to issue invoices from it.') }}</p>
+            <a href="{{ url_for('billing_entities.create') }}" class="btn btn-primary"><i class="fas fa-plus"></i> {{ _('Add entity') }}</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

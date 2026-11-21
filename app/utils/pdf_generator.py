@@ -302,8 +302,10 @@ class InvoicePDFGenerator:
     """Generate PDF invoices with company branding"""
 
     def __init__(self, invoice, settings=None, page_size="A4"):
+        from app.utils.billing_entities import seller_settings_for
+
         self.invoice = invoice
-        self.settings = settings or Settings.get_settings()
+        self.settings = seller_settings_for(invoice, settings or Settings.get_settings())
         self.page_size = page_size or "A4"
 
     def generate_pdf(self):

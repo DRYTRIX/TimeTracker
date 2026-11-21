@@ -197,8 +197,31 @@ def create_invoice():
                             exc_info=True,
                         )
 
-        # Generate invoice number
-        invoice_number = Invoice.generate_invoice_number()
+        # Currency is needed to check the payment account; resolved again below as before
+        # Seller ("From") and payment account (optional Legal entities module)
+        from app.utils import billing_entities as billing
+        from app.utils.invoice_currency import normalize_currency_code as _norm_cur
+
+        billing_entity = payment_account = None
+        if billing.module_on():
+            billing_entity, payment_account, billing_error = billing.resolve_from_form(
+                request.form, _norm_cur(request.form.get("currency_code"))
+            )
+            if billing_error:
+                flash(_(billing_error), "error")
+                return redirect(url_for("invoices.create_invoice"))
+
+        # Generate invoice number: typed by hand, else the entity's format, else the global series
+        invoice_number = None
+        typed_number = (request.form.get("invoice_number", "") or "").strip()
+        preview_number = (request.form.get("invoice_number_preview", "") or "").strip()
+        if billing_entity:
+            if typed_number and typed_number != preview_number:
+                invoice_number = billing.unique_number(typed_number)
+            else:
+                invoice_number = billing.allocate_invoice_number(billing_entity)
+        if not invoice_number:
+            invoice_number = Invoice.generate_invoice_number()
         _invoice_create_t0 = time.monotonic()
 
         # Track project selected for invoice
@@ -238,6 +261,8 @@ def create_invoice():
             discount_percent=discount_percent,
             discount_amount=discount_amount,
         )
+        if billing_entity:
+            billing.apply_to_invoice(invoice, billing_entity, payment_account)
 
         db.session.add(invoice)
         if not safe_commit("create_invoice", {"invoice_number": invoice_number, "project_id": project_id}):
@@ -300,6 +325,7 @@ def create_invoice():
     # Set default due date to 30 days from now
     default_due_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
 
+    from app.utils.billing_entities import form_context as billing_form_context
     from app.utils.invoice_currency import currency_choices, default_currencies_by_client, settings_currency
 
     return render_template(
@@ -311,6 +337,7 @@ def create_invoice():
         client_currencies=default_currencies_by_client(settings),
         default_currency=settings_currency(settings),
         selected_project_id=selected_project_id,
+        **billing_form_context(projects, settings),
     )
 
 
@@ -547,6 +574,19 @@ def edit_invoice(invoice_id):
         from app.utils.invoice_currency import normalize_currency_code
 
         invoice.currency_code = normalize_currency_code(request.form.get("currency_code")) or invoice.currency_code
+
+        # Seller ("From") and payment account: a draft may change them (Legal entities module)
+        from app.utils import billing_entities as billing
+
+        if billing.module_on() and "billing_entity_id" in request.form:
+            billing_entity, payment_account, billing_error = billing.resolve_from_form(
+                request.form, invoice.currency_code
+            )
+            if billing_error:
+                flash(_(billing_error), "error")
+                return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
+            # A draft always takes the entity's current details; they freeze once it leaves draft
+            billing.apply_to_invoice(invoice, billing_entity, payment_account)
 
         # Read invoice-level discount (draft only since we're in the full edit path)
         try:
@@ -825,7 +865,14 @@ def edit_invoice(invoice_id):
         warehouses_json=warehouses_json,
         financial_locked=financial_locked,
         currency_choices=_invoice_currency_choices(invoice),
+        **_billing_edit_context(invoice),
     )
+
+
+def _billing_edit_context(invoice):
+    from app.utils.billing_entities import form_context
+
+    return form_context(None, Settings.get_settings())
 
 
 def _invoice_currency_choices(invoice):

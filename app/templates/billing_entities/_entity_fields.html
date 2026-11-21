@@ -1,0 +1,107 @@
+{# Field sections shared by the entity page and the Add entity page (Legal entities module). #}
+{% macro card_open(label) %}<section class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" aria-label="{{ label }}">{% endmacro %}
+
+{% macro details_section(entity) %}
+{{ card_open(_('Details')) }}
+    <h3 class="text-lg font-semibold">{{ _('Details') }}</h3>
+    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Printed in the "From" block of the invoice.') }}</p>
+    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div class="md:col-span-3">
+            <label for="short_name" class="form-label">{{ _('Short name, in lists') }} *</label>
+            <input type="text" name="short_name" id="short_name" required value="{{ entity.short_name or '' if entity else '' }}" class="form-input min-h-[44px]">
+        </div>
+        <div class="md:col-span-3">
+            <label for="legal_name" class="form-label">{{ _('Legal name, on invoices') }}</label>
+            <input type="text" name="legal_name" id="legal_name" value="{{ entity.legal_name or '' if entity else '' }}" class="form-input min-h-[44px]">
+        </div>
+        <div class="md:col-span-2">
+            <label for="registration_number" class="form-label">{{ _('Identification number') }}</label>
+            <input type="text" name="registration_number" id="registration_number" value="{{ entity.registration_number or '' if entity else '' }}" class="form-input min-h-[44px]">
+        </div>
+        <div class="md:col-span-2">
+            <label for="vat_number" class="form-label">{{ _('VAT no.') }}</label>
+            <input type="text" name="vat_number" id="vat_number" value="{{ entity.vat_number or '' if entity else '' }}" class="form-input min-h-[44px]" placeholder="{{ _('if registered') }}">
+        </div>
+        <div class="md:col-span-2">
+            <label for="country" class="form-label">{{ _('Country code') }}</label>
+            <input type="text" name="country" id="country" maxlength="2" value="{{ entity.country or '' if entity else '' }}" class="form-input min-h-[44px] uppercase" aria-describedby="country_hint">
+            <p id="country_hint" class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Two letters, ISO 3166') }}</p>
+        </div>
+        <div class="md:col-span-6">
+            <label for="address" class="form-label">{{ _('Legal address') }}</label>
+            <textarea name="address" id="address" rows="2" class="form-input">{{ entity.address or '' if entity else '' }}</textarea>
+        </div>
+        <div class="md:col-span-2">
+            <label for="email" class="form-label">{{ _('E-mail') }}</label>
+            <input type="email" name="email" id="email" value="{{ entity.email or '' if entity else '' }}" class="form-input min-h-[44px]">
+        </div>
+        <div class="md:col-span-2">
+            <label for="phone" class="form-label">{{ _('Phone') }}</label>
+            <input type="text" name="phone" id="phone" value="{{ entity.phone or '' if entity else '' }}" class="form-input min-h-[44px]">
+        </div>
+        <div class="md:col-span-2">
+            <label for="website" class="form-label">{{ _('Website') }}</label>
+            <input type="text" name="website" id="website" value="{{ entity.website or '' if entity else '' }}" class="form-input min-h-[44px]">
+        </div>
+    </div>
+</section>
+{% endmacro %}
+
+{% macro token(t) %}<code class="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs">{{ t }}</code>{% endmacro %}
+
+{% macro defaults_section(entity, vat_categories) %}
+{{ card_open(_('Invoice defaults')) }}
+    <h3 class="text-lg font-semibold">{{ _('Invoice defaults') }}</h3>
+    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Filled into a new invoice from this entity. You can change them on the invoice.') }}</p>
+    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div class="md:col-span-6">
+            <label for="number_format" class="form-label">{{ _('Number format') }}</label>
+            <input type="text" name="number_format" id="number_format" value="{{ entity.number_format or '' if entity else '' }}" class="form-input min-h-[44px] font-mono md:max-w-sm" placeholder="INV-{YYYY}-{SEQ}">
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 leading-relaxed">
+                {{ _('Tokens') }} {{ token('{YYYY}') }} {{ token('{MM}') }} {{ _('– the billing period, the month before the issue date. Also') }} {{ token('{YY}') }} {{ token('{DD}') }} {{ token('{SEQ}') }}. {{ _('A taken number gets -2, -3. Empty: the series from Settings.') }}
+            </p>
+        </div>
+        <div class="md:col-span-2">
+            <label for="default_vat_category" class="form-label">{{ _('VAT category') }}</label>
+            <select name="default_vat_category" id="default_vat_category" class="form-input min-h-[44px]">
+                <option value="">{{ _('Default from settings') }}</option>
+                {% for c in vat_categories %}
+                <option value="{{ c }}" {% if entity and entity.default_vat_category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="md:col-span-2">
+            <label for="default_tax_rate" class="form-label">{{ _('Tax rate, %') }}</label>
+            <input type="number" step="0.01" name="default_tax_rate" id="default_tax_rate" value="{{ entity.default_tax_rate if entity and entity.default_tax_rate is not none else '' }}" class="form-input min-h-[44px]">
+        </div>
+        <div class="md:col-span-2">
+            <label for="default_vat_exemption_code" class="form-label">{{ _('VAT exemption code') }}</label>
+            <input type="text" name="default_vat_exemption_code" id="default_vat_exemption_code" value="{{ entity.default_vat_exemption_code or '' if entity else '' }}" class="form-input min-h-[44px]">
+        </div>
+        <div class="md:col-span-6">
+            <label for="default_vat_exemption_reason" class="form-label">{{ _('VAT exemption reason') }}</label>
+            <input type="text" name="default_vat_exemption_reason" id="default_vat_exemption_reason" value="{{ entity.default_vat_exemption_reason or '' if entity else '' }}" class="form-input min-h-[44px]">
+        </div>
+        <div class="md:col-span-6">
+            <label for="default_terms" class="form-label">{{ _('Terms, at the bottom of the invoice') }}</label>
+            <textarea name="default_terms" id="default_terms" rows="2" class="form-input">{{ entity.default_terms or '' if entity else '' }}</textarea>
+        </div>
+        <div class="md:col-span-6">
+            <label for="default_notes" class="form-label">{{ _('Notes') }}</label>
+            <textarea name="default_notes" id="default_notes" rows="2" class="form-input">{{ entity.default_notes or '' if entity else '' }}</textarea>
+        </div>
+    </div>
+</section>
+{% endmacro %}
+
+{% macro status_pill(active) %}
+{% if active %}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">{{ _('Active') }}</span>
+{% else %}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ _('Archived') }}</span>{% endif %}
+{% endmacro %}
+
+{% macro help_card() %}
+<aside class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm text-sm leading-relaxed space-y-3" aria-label="{{ _('Help') }}">
+    <h3 class="text-lg font-semibold">{{ _('Help') }}</h3>
+    {{ caller() }}
+</aside>
+{% endmacro %}

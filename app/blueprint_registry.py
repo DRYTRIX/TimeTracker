@@ -85,6 +85,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api_v1_workflows import api_v1_workflows_bp
     from app.routes.auth import auth_bp
     from app.routes.bank_reconciliation import bank_reconciliation_bp
+    from app.routes.billing_entities import billing_entities_bp
     from app.routes.budget_alerts import budget_alerts_bp
     from app.routes.calendar import calendar_bp
     from app.routes.client_notes import client_notes_bp
@@ -294,6 +295,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(calendar_bp)
     app.register_blueprint(gamification_bp)
     app.register_blueprint(expense_categories_bp)
+    app.register_blueprint(billing_entities_bp)
     app.register_blueprint(mileage_bp)
     app.register_blueprint(per_diem_bp)
     app.register_blueprint(budget_alerts_bp)

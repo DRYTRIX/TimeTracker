@@ -25,9 +25,11 @@ class InvoicePDFGeneratorFallback:
     """Generate PDF invoices with company branding using ReportLab"""
 
     def __init__(self, invoice, settings=None):
+        from app.utils.billing_entities import seller_settings_for
+
         ensure_pdf_fonts_registered()
         self.invoice = invoice
-        self.settings = settings or Settings.get_settings()
+        self.settings = seller_settings_for(invoice, settings or Settings.get_settings())
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
 
