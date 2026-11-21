@@ -19,6 +19,12 @@ class Invoice(db.Model):
     buyer_reference = db.Column(db.String(200), nullable=True)  # PEPPOL BT-10 / EN 16931
     # Link to clients table (enforced by DB schema)
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True)
+    # "Bill to" legal entity of the client, from the optional Client legal entities module.
+    # Empty: the invoice is billed to the client's own details as before.
+    client_entity_id = db.Column(
+        db.Integer, db.ForeignKey("client_entities.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    buyer_snapshot = db.Column(db.JSON, nullable=True)  # copy of the entity's details (number, VAT, …)
     quote_id = db.Column(db.Integer, db.ForeignKey("quotes.id"), nullable=True, index=True)
 
     # Invoice details
@@ -91,6 +97,7 @@ class Invoice(db.Model):
     # Relationships
     project = db.relationship("Project", backref="invoices")
     client = db.relationship("Client", backref="invoices")
+    client_entity = db.relationship("ClientEntity")
     quote = db.relationship("Quote", backref="invoices")
     creator = db.relationship("User", backref="created_invoices")
     items = db.relationship("InvoiceItem", backref="invoice", lazy="dynamic", cascade="all, delete-orphan")

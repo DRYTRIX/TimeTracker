@@ -1,10 +1,12 @@
 {# From / Pay to block of the invoice create and edit forms (Legal entities module).
    Expects: billing_entities, billing_entity_data, billing_entity_by_client, billing_project_clients;
-   mode = 'create' | 'edit'; current_entity_id, current_account_id (edit). #}
-<div class="md:col-span-2 min-w-0 rounded-lg border border-border-light dark:border-border-dark p-4" id="billingSellerBlock" data-mode="{{ mode }}">
+   mode = 'create' | 'edit'; current_entity_id, current_account_id (edit).
+   #billToSlot / #billToPreviewSlot: room for a "Bill to" field and preview from another module; the
+   one that fills them adds .has-bill-to to this block, and the columns make room. #}
+<div class="group md:col-span-2 min-w-0 rounded-lg border border-border-light dark:border-border-dark p-4" id="billingSellerBlock" data-mode="{{ mode }}" data-bill-to-host>
     <h3 class="text-base font-semibold mb-3">{{ _('Who bills whom') }}</h3>
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div class="min-w-0 md:col-span-2">
+    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div class="min-w-0 md:col-span-2 md:group-[.has-bill-to]:col-span-3">
             <label for="billing_entity_id" class="form-label">{{ _('From') }}</label>
             <select name="billing_entity_id" id="billing_entity_id" class="form-input text-base min-h-[44px]">
                 <option value="">{{ _('Company from Settings') }}</option>
@@ -16,9 +18,10 @@
             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Same as the last invoice for this client') }}</p>
             {% endif %}
         </div>
+        <div id="billToSlot" class="hidden"></div>
         {# The form's Currency field is moved here by the script below #}
         <div class="min-w-0" id="billingCurrencySlot"></div>
-        <div class="min-w-0 md:col-span-2">
+        <div class="min-w-0 md:col-span-3 md:group-[.has-bill-to]:col-span-4">
             <label for="payment_account_id" class="form-label">{{ _('Pay to') }}</label>
             <select name="payment_account_id" id="payment_account_id" class="form-input text-base min-h-[44px]" data-current="{{ current_account_id or '' }}">
                 <option value="">{{ _('No payment details') }}</option>
@@ -26,18 +29,19 @@
             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1" id="payToHint">{{ _('Active accounts of the entity. Picking one sets the invoice currency.') }}</p>
         </div>
         {% if mode == 'create' %}
-        <div class="min-w-0 md:col-span-5" id="invoiceNumberRow">
+        <div class="min-w-0 md:col-span-6" id="invoiceNumberRow">
             <label for="invoice_number" class="form-label">{{ _('Number') }}</label>
             <input type="text" name="invoice_number" id="invoice_number" value="" class="form-input text-base min-h-[44px]">
             <input type="hidden" name="invoice_number_preview" id="invoice_number_preview" value="">
             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _("From the entity's number format. You can edit it.") }}</p>
         </div>
         {% endif %}
-        <div class="min-w-0 md:col-span-2">
+        <div class="min-w-0 md:col-span-3 md:group-[.has-bill-to]:col-span-2">
             <div class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('From, as printed') }}</div>
             <div id="sellerPreview" class="[overflow-wrap:anywhere] text-sm whitespace-pre-line rounded-lg bg-background-light dark:bg-background-dark p-3 min-h-[3rem]"></div>
         </div>
-        <div class="min-w-0 md:col-start-4 md:col-span-2">
+        <div id="billToPreviewSlot" class="hidden"></div>
+        <div class="min-w-0 md:col-span-3 md:group-[.has-bill-to]:col-span-2">
             <div class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Pay to, as printed') }}</div>
             <div id="payToPreview" class="[overflow-wrap:anywhere] text-sm font-mono whitespace-pre-line rounded-lg bg-background-light dark:bg-background-dark p-3 min-h-[3rem]"></div>
         </div>
@@ -63,6 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var currencyWrap = currencySel ? currencySel.closest('.min-w-0') : null;
     if (currencySlot && currencyWrap) {
         currencySlot.replaceWith(currencyWrap);
+        currencyWrap.classList.add('md:col-span-1', 'md:group-[.has-bill-to]:col-span-2');
     } else if (currencySlot) {
         currencySlot.remove();
     }

@@ -65,6 +65,13 @@
             <div class="card">
                 <div class="section-title">{{ _('Bill To') }}</div>
                 <div><strong>{{ invoice.client_name|e }}</strong></div>
+                {% set buyer = invoice.buyer_snapshot or {} %}
+                {% if buyer.get('registration_number') %}
+                    <div class="client-entity">{{ _('Registration number') }}: {{ buyer.get('registration_number')|e }}</div>
+                {% endif %}
+                {% if buyer.get('vat_number') %}
+                    <div class="client-entity">{{ _('VAT') }}: {{ buyer.get('vat_number')|e }}</div>
+                {% endif %}
                 {% if invoice.client_email %}
                     <div class="client-email">{{ invoice.client_email|e }}</div>
                 {% endif %}

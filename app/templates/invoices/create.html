@@ -31,6 +31,10 @@
                     {% set mode = 'create' %}{% set current_entity_id = None %}{% set current_account_id = None %}
                     {% include 'billing_entities/_invoice_seller_fields.html' %}
                     {% endif %}
+                    {% if client_entities_enabled %}
+                    {% set bill_to_mode = 'create' %}
+                    {% include 'client_entities/_invoice_bill_to.html' %}
+                    {% endif %}
                     <div class="min-w-0">
                         <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
                         <input type="email" name="client_email" id="client_email" value="{{ request.form.get('client_email','') }}" class="form-input text-base min-h-[44px]">

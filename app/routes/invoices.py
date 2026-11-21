@@ -264,6 +264,16 @@ def create_invoice():
         if billing_entity:
             billing.apply_to_invoice(invoice, billing_entity, payment_account)
 
+        # "Bill to" legal entity of the client (Client legal entities module)
+        from app.utils import client_entities as bill_to
+
+        if bill_to.module_on():
+            bill_to_entity, bill_to_error = bill_to.resolve_from_form(request.form, project.client_id)
+            if bill_to_error:
+                flash(_(bill_to_error), "error")
+                return redirect(url_for("invoices.create_invoice", project_id=project_id))
+            bill_to.apply_to_invoice(invoice, bill_to_entity)
+
         db.session.add(invoice)
         if not safe_commit("create_invoice", {"invoice_number": invoice_number, "project_id": project_id}):
             flash(_("Could not create invoice due to a database error. Please check server logs."), "error")
@@ -326,6 +336,7 @@ def create_invoice():
     default_due_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
 
     from app.utils.billing_entities import form_context as billing_form_context
+    from app.utils.client_entities import form_context as bill_to_form_context
     from app.utils.invoice_currency import currency_choices, default_currencies_by_client, settings_currency
 
     return render_template(
@@ -338,6 +349,7 @@ def create_invoice():
         default_currency=settings_currency(settings),
         selected_project_id=selected_project_id,
         **billing_form_context(projects, settings),
+        **bill_to_form_context(projects),
     )
 
 
@@ -571,6 +583,20 @@ def edit_invoice(invoice_id):
         invoice.tax_rate = Decimal(request.form.get("tax_rate", "0"))
         invoice.notes = request.form.get("notes", "").strip()
         invoice.terms = request.form.get("terms", "").strip()
+
+        # "Bill to" legal entity (Client legal entities module): a draft takes the entity's
+        # current details each time it is saved
+        from app.utils import client_entities as bill_to
+
+        if bill_to.module_on() and "client_entity_id" in request.form:
+            bill_to_entity, bill_to_error = bill_to.resolve_from_form(
+                request.form, invoice.client_id, invoice.client_entity_id
+            )
+            if bill_to_error:
+                flash(_(bill_to_error), "error")
+                return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
+            bill_to.apply_to_invoice(invoice, bill_to_entity)
+
         from app.utils.invoice_currency import normalize_currency_code
 
         invoice.currency_code = normalize_currency_code(request.form.get("currency_code")) or invoice.currency_code
@@ -866,6 +892,7 @@ def edit_invoice(invoice_id):
         financial_locked=financial_locked,
         currency_choices=_invoice_currency_choices(invoice),
         **_billing_edit_context(invoice),
+        **_bill_to_edit_context(invoice),
     )
 
 
@@ -873,6 +900,12 @@ def _billing_edit_context(invoice):
     from app.utils.billing_entities import form_context
 
     return form_context(None, Settings.get_settings())
+
+
+def _bill_to_edit_context(invoice):
+    from app.utils.client_entities import form_context
+
+    return form_context(None, invoice=invoice)
 
 
 def _invoice_currency_choices(invoice):

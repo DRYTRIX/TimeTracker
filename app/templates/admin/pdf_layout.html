@@ -2032,6 +2032,16 @@
                         <div class="variable-name">{{ '{{' }} invoice.client_address {{ '}}' }}</div>
                         <div class="variable-desc">{{ _('Client full address') }}</div>
                     </div>
+                    {% if is_module_enabled('client_entities') %}
+                    <div class="variable-item" data-variable="invoice.buyer_snapshot.registration_number">
+                        <div class="variable-name">{{ '{{' }} invoice.buyer_snapshot.registration_number {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Bill to legal entity: registration number') }}</div>
+                    </div>
+                    <div class="variable-item" data-variable="invoice.buyer_snapshot.vat_number">
+                        <div class="variable-name">{{ '{{' }} invoice.buyer_snapshot.vat_number {{ '}}' }}</div>
+                        <div class="variable-desc">{{ _('Bill to legal entity: VAT number') }}</div>
+                    </div>
+                    {% endif %}
                     <div class="variable-item" data-variable="invoice.client.contact_person">
                         <div class="variable-name">{{ '{{' }} invoice.client.contact_person {{ '}}' }}</div>
                         <div class="variable-desc">{{ _('Client contact person') }}</div>

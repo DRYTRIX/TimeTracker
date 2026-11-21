@@ -19,6 +19,7 @@ from .calendar_event import CalendarEvent
 from .calendar_integration import CalendarIntegration, CalendarSyncEvent
 from .client import Client
 from .client_attachment import ClientAttachment
+from .client_entity import ClientEntity
 from .client_message import ClientMessage
 from .client_note import ClientNote
 from .client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
@@ -144,6 +145,7 @@ __all__ = [
     "Invoice",
     "InvoiceItem",
     "Client",
+    "ClientEntity",
     "TaskActivity",
     "TaskChecklistItem",
     "Comment",

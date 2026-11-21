@@ -91,6 +91,9 @@
         <div>
             <h2 class="text-lg font-semibold">Client</h2>
             <p>{{ invoice.client_name }}</p>
+            {% set buyer = invoice.buyer_snapshot or {} %}
+            {% if buyer.get('registration_number') %}<p>{{ _('Registration number') }}: {{ buyer.get('registration_number') }}</p>{% endif %}
+            {% if buyer.get('vat_number') %}<p>{{ _('VAT') }}: {{ buyer.get('vat_number') }}</p>{% endif %}
             <p>{{ invoice.client_email }}</p>
             <p>{{ invoice.client_address }}</p>
         </div>

@@ -220,6 +220,11 @@ class InvoicePDFGeneratorFallback:
         story.append(Paragraph("Bill To:", self.styles["SectionHeader"]))
         story.append(Paragraph(self.invoice.client_name, self.styles["NormalText"]))
 
+        from app.utils.client_entities import buyer_lines
+
+        for label, value in buyer_lines(self.invoice):
+            story.append(Paragraph(f"{label}: {value}", self.styles["NormalText"]))
+
         if self.invoice.client_email:
             story.append(Paragraph(self.invoice.client_email, self.styles["NormalText"]))
 

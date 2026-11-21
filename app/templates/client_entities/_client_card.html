@@ -1,0 +1,32 @@
+{# Legal entities card on the client page (Client legal entities module). #}
+{% set card = client_entities_card(client) %}
+{% if card %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" aria-labelledby="clientEntitiesTitle">
+    <div class="flex justify-between items-center mb-3">
+        <h2 id="clientEntitiesTitle" class="text-lg font-semibold">{{ _('Legal entities') }}</h2>
+        <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Bill to on invoices') }}</span>
+    </div>
+    {% if card.entities %}
+    <ul class="mb-3">
+        {% for e in card.entities %}
+        <li class="py-2 {% if not loop.first %}border-t border-border-light dark:border-border-dark{% endif %} [overflow-wrap:anywhere]">
+            {% if card.can_edit %}
+            <a href="{{ url_for('client_entities.edit_entity', client_id=client.id, entity_id=e.id) }}" class="font-medium {% if e.is_active %}text-primary{% else %}text-text-muted-light dark:text-text-muted-dark{% endif %} hover:underline">{{ e.legal_name }}</a>
+            {% else %}
+            <span class="font-medium {% if not e.is_active %}text-text-muted-light dark:text-text-muted-dark{% endif %}">{{ e.legal_name }}</span>
+            {% endif %}
+            {% set meta = [e.country, e.registration_number or e.vat_number] | select | list %}
+            <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ meta | join(' · ') }}{% if not e.is_active %}{% if meta %} · {% endif %}{{ _('Archived') }}{% endif %}</div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-text-muted-light dark:text-text-muted-dark text-sm mb-3">{{ _("None yet. Invoices use the client's own details from Edit Client.") }}</p>
+    {% endif %}
+    {% if card.can_edit %}
+    <a href="{{ url_for('client_entities.new_entity', client_id=client.id) }}" class="text-primary hover:underline text-sm">
+        <i class="fas fa-plus mr-1"></i>{{ _('Add legal entity') }}
+    </a>
+    {% endif %}
+</div>
+{% endif %}
