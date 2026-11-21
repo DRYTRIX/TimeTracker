@@ -1,0 +1,13 @@
+{# Header and tabs shared by the HTML templates list and the stock layout designer page.
+   Set active_tab = "html" or "visual" before including. #}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold">{{ _('Invoice templates') }}</h1>
+    <nav class="mt-4 flex gap-1 border-b border-border-light dark:border-border-dark" aria-label="{{ _('Template kind') }}">
+        <a href="{{ url_for('invoice_templates.list_templates') }}"
+           class="px-4 py-2 -mb-px text-sm {% if active_tab == 'html' %}font-semibold text-primary border-b-2 border-primary{% else %}text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark{% endif %}"
+           {% if active_tab == 'html' %}aria-current="page"{% endif %}>{{ _('HTML templates') }}</a>
+        <a href="{{ url_for('admin.pdf_layout') }}"
+           class="px-4 py-2 -mb-px text-sm {% if active_tab == 'visual' %}font-semibold text-primary border-b-2 border-primary{% else %}text-text-muted-light dark:text-text-muted-dark hover:text-text-light dark:hover:text-text-dark{% endif %}"
+           {% if active_tab == 'visual' %}aria-current="page"{% endif %}>{{ _('Visual layout') }}</a>
+    </nav>
+</div>

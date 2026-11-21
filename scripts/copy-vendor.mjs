@@ -49,6 +49,14 @@ const ASSETS = [
 
   ['konva/konva.min.js', 'konva/konva.min.js'],
 
+  // CodeMirror 5: code editor on Admin > Invoice templates (HTML templates).
+  ['codemirror/lib/codemirror.js', 'codemirror/codemirror.js'],
+  ['codemirror/lib/codemirror.css', 'codemirror/codemirror.css'],
+  ['codemirror/mode/xml/xml.js', 'codemirror/mode/xml/xml.js'],
+  ['codemirror/mode/javascript/javascript.js', 'codemirror/mode/javascript/javascript.js'],
+  ['codemirror/mode/css/css.js', 'codemirror/mode/css/css.js'],
+  ['codemirror/mode/htmlmixed/htmlmixed.js', 'codemirror/mode/htmlmixed/htmlmixed.js'],
+
   ['sortablejs/Sortable.min.js', 'sortablejs/Sortable.min.js'],
 
   // FullCalendar v7: index.global.min.js was renamed to all/global.js; styles are no

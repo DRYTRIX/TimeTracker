@@ -123,6 +123,9 @@ class Settings(db.Model):
     invoice_number_pattern = db.Column(db.String(120), default=DEFAULT_INVOICE_PATTERN, nullable=False)
     invoice_start_number = db.Column(db.Integer, default=1000, nullable=False)
     invoice_terms = db.Column(db.Text, default="Payment is due within 30 days of invoice date.", nullable=False)
+    # Which template invoice PDFs print with when the invoice (or its legal entity) names none:
+    # "visual" (layout designer), "builtin:<name>" or "html:<id>". See app/utils/invoice_templates.py
+    invoice_pdf_template = db.Column(db.String(64), default="visual", nullable=False, server_default="visual")
     invoice_notes = db.Column(db.Text, default="Thank you for your business!", nullable=False)
     # When True (default), time entries on invoices are grouped by task/project; False = one line per entry
     invoice_group_time_entries = db.Column(db.Boolean, default=True, nullable=False)
@@ -351,6 +354,7 @@ class Settings(db.Model):
         self.invoice_number_pattern = kwargs.get("invoice_number_pattern", DEFAULT_INVOICE_PATTERN)
         self.invoice_start_number = kwargs.get("invoice_start_number", 1000)
         self.invoice_terms = kwargs.get("invoice_terms", "Payment is due within 30 days of invoice date.")
+        self.invoice_pdf_template = kwargs.get("invoice_pdf_template", "visual")
         self.invoice_notes = kwargs.get("invoice_notes", "Thank you for your business!")
         self.invoice_group_time_entries = kwargs.get("invoice_group_time_entries", True)
 
@@ -702,6 +706,7 @@ class Settings(db.Model):
             "invoice_number_pattern": self.invoice_number_pattern,
             "invoice_start_number": self.invoice_start_number,
             "invoice_terms": self.invoice_terms,
+            "invoice_pdf_template": getattr(self, "invoice_pdf_template", "visual") or "visual",
             "invoice_notes": self.invoice_notes,
             "invoice_group_time_entries": getattr(self, "invoice_group_time_entries", True),
             "quote_prefix": self.quote_prefix,

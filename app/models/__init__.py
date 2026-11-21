@@ -55,6 +55,7 @@ from .integration_sync_error import IntegrationSyncError
 from .invoice import Invoice, InvoiceItem
 from .invoice_approval import InvoiceApproval
 from .invoice_email import InvoiceEmail
+from .invoice_html_template import InvoiceHtmlTemplate, InvoiceHtmlTemplateVersion
 from .invoice_image import InvoiceImage
 from .invoice_pdf_template import InvoicePDFTemplate
 from .invoice_peppol import InvoicePeppolTransmission, PeppolInboundDocument
@@ -204,6 +205,8 @@ __all__ = [
     "DataImport",
     "DataExport",
     "InvoicePDFTemplate",
+    "InvoiceHtmlTemplate",
+    "InvoiceHtmlTemplateVersion",
     "ClientPrepaidConsumption",
     "AuditLog",
     "BankTransaction",

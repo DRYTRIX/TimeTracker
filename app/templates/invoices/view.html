@@ -10,6 +10,7 @@
 <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary" title="{{ _('Only notes, terms and due date can be changed. Use a credit note for amount corrections.') }}">{{ _('Notes / Due date') }}</a>
 {% endif %}
 <div class="flex flex-wrap gap-2 items-center">
+    {% if invoice_uses_visual_layout(invoice) %}
     <select id="pdf-size-selector" class="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
         <option value="A4">A4</option>
         <option value="Letter">Letter</option>
@@ -18,6 +19,7 @@
         <option value="A5">A5</option>
         <option value="Tabloid">Tabloid</option>
     </select>
+    {% endif %}
     <a id="export-pdf-link" href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="btn bg-secondary text-white hover:bg-secondary-dark">{{ _('Export PDF') }}</a>
 </div>
 <button type="button" onclick="showSendEmailModal()" class="btn bg-blue-500 text-white hover:bg-blue-600">
