@@ -570,6 +570,48 @@ def test_invoices_list_page(authenticated_client):
 
 @pytest.mark.integration
 @pytest.mark.routes
+def test_invoices_list_renders_pagination(admin_authenticated_client, test_client, project, admin_user, app):
+    """Invoices list shows pagination when more than 50 invoices exist (#927)."""
+    from datetime import date, timedelta
+
+    from factories import InvoiceFactory
+
+    from app import db
+
+    with app.app_context():
+        for i in range(51):
+            InvoiceFactory(
+                invoice_number=f"INV-PAGE-{i:03d}",
+                project_id=project.id,
+                client_id=test_client.id,
+                client_name=test_client.name,
+                due_date=date.today() + timedelta(days=30),
+                created_by=admin_user.id,
+                tax_rate=Decimal("20.00"),
+                status="draft",
+            )
+        db.session.commit()
+
+        response = admin_authenticated_client.get("/invoices")
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert 'aria-label="Invoices pagination"' in html
+        assert "page=2" in html
+        assert "51 invoices found" in html
+
+        page2 = admin_authenticated_client.get("/invoices?page=2")
+        assert page2.status_code == 200
+
+        filtered = admin_authenticated_client.get("/invoices?status=draft&search=INV-PAGE")
+        assert filtered.status_code == 200
+        filtered_html = filtered.get_data(as_text=True)
+        assert 'aria-label="Invoices pagination"' in filtered_html
+        assert "status=draft" in filtered_html
+        assert "search=INV-PAGE" in filtered_html
+
+
+@pytest.mark.integration
+@pytest.mark.routes
 def test_invoice_detail_page(authenticated_client, invoice, app):
     """Test invoice detail page."""
     with app.app_context():
