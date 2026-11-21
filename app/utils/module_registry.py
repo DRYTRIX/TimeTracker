@@ -581,6 +581,21 @@ class ModuleRegistry:
 
         cls.register(
             ModuleDefinition(
+                id="billing_entities",
+                name="Legal entities",
+                description="Several legal entities that issue invoices, each with its own details and payment accounts",
+                category=ModuleCategory.FINANCE,
+                blueprint_name="billing_entities",
+                default_enabled=False,
+                dependencies=["invoices"],
+                routes=["billing_entities.index"],
+                icon="fa-building",
+                order=34,
+            )
+        )
+
+        cls.register(
+            ModuleDefinition(
                 id="recurring_invoices",
                 name="Recurring Invoices",
                 description="Recurring invoice management",

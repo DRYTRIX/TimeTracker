@@ -77,6 +77,17 @@ class Invoice(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     integration_metadata = db.Column(db.JSON, nullable=True)
 
+    # Seller ("From") and payment account, from the optional Legal entities module.
+    # Empty: the invoice prints the seller from Settings.company_* as before.
+    billing_entity_id = db.Column(
+        db.Integer, db.ForeignKey("billing_entities.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    payment_account_id = db.Column(
+        db.Integer, db.ForeignKey("payment_accounts.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    seller_snapshot = db.Column(db.JSON, nullable=True)  # copy of the entity's details when issued
+    payment_details_text = db.Column(db.Text, nullable=True)  # copy of the payment text, {IBAN} filled in
+
     # Relationships
     project = db.relationship("Project", backref="invoices")
     client = db.relationship("Client", backref="invoices")
@@ -90,6 +101,8 @@ class Invoice(db.Model):
     )
     template = db.relationship("InvoiceTemplate", backref="invoices", lazy="joined")
     extra_goods = db.relationship("ExtraGood", backref="invoice", lazy="dynamic", cascade="all, delete-orphan")
+    billing_entity = db.relationship("BillingEntity", foreign_keys=[billing_entity_id])
+    payment_account = db.relationship("PaymentAccount", foreign_keys=[payment_account_id])
 
     def __init__(self, invoice_number, project_id, client_name, due_date, created_by, client_id, **kwargs):
         self.invoice_number = invoice_number

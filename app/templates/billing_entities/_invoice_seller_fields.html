@@ -1,0 +1,189 @@
+{# From / Pay to block of the invoice create and edit forms (Legal entities module).
+   Expects: billing_entities, billing_entity_data, billing_entity_by_client, billing_project_clients;
+   mode = 'create' | 'edit'; current_entity_id, current_account_id (edit). #}
+<div class="md:col-span-2 min-w-0 rounded-lg border border-border-light dark:border-border-dark p-4" id="billingSellerBlock" data-mode="{{ mode }}">
+    <h3 class="text-base font-semibold mb-3">{{ _('Who bills whom') }}</h3>
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="min-w-0 md:col-span-2">
+            <label for="billing_entity_id" class="form-label">{{ _('From') }}</label>
+            <select name="billing_entity_id" id="billing_entity_id" class="form-input text-base min-h-[44px]">
+                <option value="">{{ _('Company from Settings') }}</option>
+                {% for e in billing_entities %}
+                <option value="{{ e.id }}" {% if current_entity_id == e.id %}selected{% endif %}>{{ e.short_name }}</option>
+                {% endfor %}
+            </select>
+            {% if mode == 'create' %}
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Same as the last invoice for this client') }}</p>
+            {% endif %}
+        </div>
+        {# The form's Currency field is moved here by the script below #}
+        <div class="min-w-0" id="billingCurrencySlot"></div>
+        <div class="min-w-0 md:col-span-2">
+            <label for="payment_account_id" class="form-label">{{ _('Pay to') }}</label>
+            <select name="payment_account_id" id="payment_account_id" class="form-input text-base min-h-[44px]" data-current="{{ current_account_id or '' }}">
+                <option value="">{{ _('No payment details') }}</option>
+            </select>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1" id="payToHint">{{ _('Active accounts of the entity. Picking one sets the invoice currency.') }}</p>
+        </div>
+        {% if mode == 'create' %}
+        <div class="min-w-0 md:col-span-5" id="invoiceNumberRow">
+            <label for="invoice_number" class="form-label">{{ _('Number') }}</label>
+            <input type="text" name="invoice_number" id="invoice_number" value="" class="form-input text-base min-h-[44px]">
+            <input type="hidden" name="invoice_number_preview" id="invoice_number_preview" value="">
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _("From the entity's number format. You can edit it.") }}</p>
+        </div>
+        {% endif %}
+        <div class="min-w-0 md:col-span-2">
+            <div class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('From, as printed') }}</div>
+            <div id="sellerPreview" class="[overflow-wrap:anywhere] text-sm whitespace-pre-line rounded-lg bg-background-light dark:bg-background-dark p-3 min-h-[3rem]"></div>
+        </div>
+        <div class="min-w-0 md:col-start-4 md:col-span-2">
+            <div class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Pay to, as printed') }}</div>
+            <div id="payToPreview" class="[overflow-wrap:anywhere] text-sm font-mono whitespace-pre-line rounded-lg bg-background-light dark:bg-background-dark p-3 min-h-[3rem]"></div>
+        </div>
+    </div>
+</div>
+<script type="application/json" id="billingEntityData" nonce="{{ csp_nonce() }}">{{ {'entities': billing_entity_data, 'byClient': billing_entity_by_client, 'projectClients': billing_project_clients or {}} | tojson }}</script>
+<script nonce="{{ csp_nonce() }}">
+document.addEventListener('DOMContentLoaded', function () {
+    var block = document.getElementById('billingSellerBlock');
+    if (!block) return;
+    var mode = block.dataset.mode;
+    var data = JSON.parse(document.getElementById('billingEntityData').textContent || '{}');
+    var entities = data.entities || {};
+    var entitySel = document.getElementById('billing_entity_id');
+    var accountSel = document.getElementById('payment_account_id');
+    var currencySel = document.getElementById('currency_code');
+    var projectSel = document.getElementById('project_id');
+    var numberInput = document.getElementById('invoice_number');
+    var numberPreview = document.getElementById('invoice_number_preview');
+    var sellerPreview = document.getElementById('sellerPreview');
+    var payToPreview = document.getElementById('payToPreview');
+    var currencySlot = document.getElementById('billingCurrencySlot');
+    var currencyWrap = currencySel ? currencySel.closest('.min-w-0') : null;
+    if (currencySlot && currencyWrap) {
+        currencySlot.replaceWith(currencyWrap);
+    } else if (currencySlot) {
+        currencySlot.remove();
+    }
+    var touched = {};
+    ['vat_category', 'tax_rate', 'vat_exemption_code', 'vat_exemption_reason', 'terms', 'notes'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', function () { touched[id] = true; });
+        if (el) el.addEventListener('change', function () { touched[id] = true; });
+    });
+    if (numberInput) numberInput.addEventListener('input', function () { numberInput.dataset.touched = '1'; });
+
+    function currentEntity() { return entities[entitySel.value] || null; }
+    function currency() { return currencySel ? (currencySel.value || '').toUpperCase() : ''; }
+
+    function renderSeller(e) {
+        if (!e) { sellerPreview.textContent = {{ _('The company from Settings') | tojson }}; return; }
+        var s = e.seller || {};
+        var lines = [s.legal_name];
+        if (s.registration_number) lines.push({{ _('Identification Number') | tojson }} + ': ' + s.registration_number);
+        if (s.vat_number) lines.push({{ _('VAT') | tojson }} + ': ' + s.vat_number);
+        if (s.address) lines.push(s.address);
+        if (s.email) lines.push(s.email);
+        sellerPreview.textContent = lines.filter(Boolean).join('\n');
+    }
+
+    function accountById(e, id) {
+        return e && id ? (e.accounts || []).find(function (a) { return String(a.id) === String(id); }) : null;
+    }
+
+    function setCurrency(code) {
+        if (!currencySel || !code || currency() === code) return;
+        if (!Array.prototype.some.call(currencySel.options, function (o) { return o.value === code; })) {
+            var o = document.createElement('option');
+            o.value = code;
+            o.textContent = code;
+            currencySel.appendChild(o);
+        }
+        currencySel.value = code;
+        currencySel.dataset.touched = '1';
+    }
+
+    // All active accounts of the entity are listed. The pick stays if it is in the invoice
+    // currency (or is the saved one); otherwise the only account in that currency is picked.
+    function fillAccounts(keepCurrent) {
+        var e = currentEntity();
+        var cur = currency();
+        var wanted = keepCurrent ? accountSel.dataset.current : accountSel.value;
+        accountSel.innerHTML = '';
+        var none = document.createElement('option');
+        none.value = '';
+        none.textContent = {{ _('No payment details') | tojson }};
+        accountSel.appendChild(none);
+        var accounts = e ? (e.accounts || []) : [];
+        accounts.forEach(function (a) {
+            var o = document.createElement('option');
+            o.value = String(a.id);
+            o.textContent = a.label;
+            accountSel.appendChild(o);
+        });
+        var pick = accountById(e, wanted);
+        if (!pick || (!keepCurrent && cur && pick.currency !== cur)) {
+            var inCurrency = accounts.filter(function (a) { return !cur || a.currency === cur; });
+            pick = inCurrency.length === 1 ? inCurrency[0] : null;
+        }
+        accountSel.value = pick ? String(pick.id) : '';
+        accountSel.disabled = !e;
+        renderPayTo();
+    }
+
+    function onAccountChange() {
+        var a = accountById(currentEntity(), accountSel.value);
+        if (a) setCurrency(a.currency);
+        renderPayTo();
+    }
+
+    function renderPayTo() {
+        var e = currentEntity();
+        var a = e && (e.accounts || []).find(function (x) { return String(x.id) === accountSel.value; });
+        payToPreview.textContent = a ? a.text : (e ? {{ _('No payment details on this invoice') | tojson }} : {{ _('Bank info from Settings') | tojson }});
+    }
+
+    function applyDefaults(e) {
+        if (mode !== 'create' || !e) return;
+        var d = e.defaults || {};
+        Object.keys(d).forEach(function (key) {
+            var el = document.getElementById(key);
+            if (!el || touched[key] || d[key] === '') return;
+            el.value = d[key];
+        });
+        if (numberInput && !numberInput.dataset.touched) {
+            numberInput.value = e.number || '';
+            numberPreview.value = e.number || '';
+        }
+    }
+
+    function onEntityChange(keepAccount) {
+        var e = currentEntity();
+        if (document.getElementById('invoiceNumberRow')) {
+            document.getElementById('invoiceNumberRow').style.display = e && e.number ? '' : 'none';
+        }
+        renderSeller(e);
+        fillAccounts(keepAccount);
+        applyDefaults(e);
+    }
+
+    function entityForProject() {
+        if (!projectSel) return;
+        var clientId = (data.projectClients || {})[projectSel.value];
+        var entityId = clientId != null ? (data.byClient || {})[String(clientId)] : null;
+        if (entityId && entities[entityId]) {
+            entitySel.value = String(entityId);
+        }
+        onEntityChange(false);
+    }
+
+    entitySel.addEventListener('change', function () { onEntityChange(false); });
+    accountSel.addEventListener('change', onAccountChange);
+    if (currencySel) currencySel.addEventListener('change', function () { fillAccounts(false); });
+    if (projectSel && mode === 'create') projectSel.addEventListener('change', function () { setTimeout(entityForProject, 0); });
+
+    onEntityChange(true);
+    if (mode === 'create') entityForProject();
+});
+</script>

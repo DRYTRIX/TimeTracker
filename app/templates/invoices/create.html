@@ -27,6 +27,10 @@
                         <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
                         <input type="text" name="client_name" id="client_name" value="{{ request.form.get('client_name','') }}" required class="form-input text-base min-h-[44px]">
                     </div>
+                    {% if billing_enabled %}
+                    {% set mode = 'create' %}{% set current_entity_id = None %}{% set current_account_id = None %}
+                    {% include 'billing_entities/_invoice_seller_fields.html' %}
+                    {% endif %}
                     <div class="min-w-0">
                         <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
                         <input type="email" name="client_email" id="client_email" value="{{ request.form.get('client_email','') }}" class="form-input text-base min-h-[44px]">

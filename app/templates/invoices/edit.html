@@ -25,6 +25,12 @@
             <form method="POST" id="editInvoiceForm" novalidate data-validate-form data-unsaved-guard>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 min-w-0">
+                    {% if billing_enabled and not financial_locked %}
+                    {% set mode = 'edit' %}{% set current_entity_id = invoice.billing_entity_id %}{% set current_account_id = invoice.payment_account_id %}
+                    {% include 'billing_entities/_invoice_seller_fields.html' %}
+                    {% elif invoice.billing_entity_id %}
+                    <div class="md:col-span-2 min-w-0 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('From') }}: {{ (invoice.seller_snapshot or {}).get('legal_name', '') }}{% if invoice.payment_account %} · {{ _('Pay to') }}: {{ invoice.payment_account.label }}{% endif %}</div>
+                    {% endif %}
                     <div class="min-w-0">
                         <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
                         <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>

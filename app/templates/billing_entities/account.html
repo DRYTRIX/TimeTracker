@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+{% from "billing_entities/_entity_fields.html" import help_card, token %}
+
+{% block content %}
+{% set entity_url = url_for('billing_entities.index', entity_id=entity.id) %}
+{% set actions %}
+<a href="{{ entity_url }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> {{ _('Back to the entity') }}</a>
+{% endset %}
+{% set title = account.label if account else _('Add payment account') %}
+{{ page_header('fas fa-university', title, subtitle_text=entity.short_name, actions_html=actions, breadcrumbs=[{'text': _('Admin')}, {'text': _('Our legal entities'), 'url': url_for('billing_entities.index')}, {'text': entity.short_name, 'url': entity_url}, {'text': account.label if account else _('Add account')}]) }}
+
+{% if created and not account %}
+<div role="status" class="flex items-start gap-3 mb-4 sm:mb-6 p-4 rounded-xl border border-green-200 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-900/30 dark:text-green-100">
+    <i class="fas fa-check mt-1 text-green-600 dark:text-green-400" aria-hidden="true"></i>
+    <div><strong>{{ _('Legal entity created.') }}</strong> {{ _('Add the account clients pay to, so invoices from this entity show payment details. You can skip this and add it later.') }}</div>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
+    <form method="POST" action="{{ url_for('billing_entities.account', entity_id=entity.id, account_id=account.id) if account else url_for('billing_entities.new_account', entity_id=entity.id, created=1 if created else none) }}" class="lg:col-span-3 min-w-0 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div class="md:col-span-2">
+                <label for="bank_name" class="form-label">{{ _('Bank, short name for lists') }}</label>
+                <input type="text" name="bank_name" id="bank_name" value="{{ form.get('bank_name') or (account.bank_name if account else '') or '' }}" class="form-input min-h-[44px]">
+            </div>
+            <div class="md:col-span-2">
+                <label for="currency" class="form-label">{{ _('Currency') }} *</label>
+                <input type="text" name="currency" id="currency" maxlength="3" required value="{{ form.get('currency') or (account.currency if account else '') }}" class="form-input min-h-[44px] uppercase" aria-describedby="currency_hint">
+                <p id="currency_hint" class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Three letters, ISO 4217') }}</p>
+            </div>
+            <div class="md:col-span-2">
+                {% set status = form.get('status') or (account.status if account else 'active') %}
+                <label for="status" class="form-label">{{ _('Status') }}</label>
+                <select name="status" id="status" class="form-input min-h-[44px]">
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>{{ _('Active') }}</option>
+                    <option value="archived" {% if status == 'archived' %}selected{% endif %}>{{ _('Archived') }}</option>
+                </select>
+            </div>
+            <div class="md:col-span-6">
+                <label for="iban" class="form-label">{{ _('IBAN') }} *</label>
+                <input type="text" name="iban" id="iban" required value="{{ form.get('iban') or (account.iban if account else '') }}" class="form-input min-h-[44px] font-mono">
+            </div>
+            <div class="md:col-span-6">
+                <label for="details_text" class="form-label">{{ _('As printed on documents') }}</label>
+                <textarea name="details_text" id="details_text" rows="8" class="form-input font-mono text-sm">{{ form.get('details_text') or (account.details_text if account else '') or '' }}</textarea>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Typed by hand: bank, SWIFT, beneficiary, intermediary banks.') }} {{ token('{IBAN}') }} {{ _('is filled from the field above.') }}</p>
+            </div>
+        </div>
+
+        <div class="px-4 sm:px-6 py-4 border-t border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40 rounded-b-xl flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3">
+            {% if account %}
+            <details class="relative">
+                <summary class="list-none cursor-pointer inline-flex items-center justify-center w-11 h-11 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('More actions') }}" title="{{ _('More actions') }}"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></summary>
+                <div class="absolute left-0 bottom-full mb-2 z-20 w-64 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-lg p-1">
+                    <button type="submit" form="accountArchiveForm" class="w-full text-left px-3 py-2 rounded hover:bg-background-light dark:hover:bg-background-dark text-sm">{{ _('Restore') if not account.is_active else _('Archive') }}</button>
+                    {% if account.is_used() %}
+                    <button type="button" disabled class="w-full text-left px-3 py-2 text-sm text-text-muted-light dark:text-text-muted-dark cursor-not-allowed">{{ _('Delete') }}<span class="block text-xs">{{ _('Used on an invoice, archive it instead') }}</span></button>
+                    {% else %}
+                    <button type="submit" form="accountDeleteForm" class="w-full text-left px-3 py-2 rounded hover:bg-background-light dark:hover:bg-background-dark text-sm text-red-600 dark:text-red-400">{{ _('Delete') }}</button>
+                    {% endif %}
+                </div>
+            </details>
+            {% elif created %}
+            <a href="{{ entity_url }}" class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark hover:underline">{{ _('Skip, add later') }}</a>
+            {% else %}
+            <span></span>
+            {% endif %}
+            <div class="flex flex-col-reverse sm:flex-row gap-3">
+                {% if account %}
+                <a href="{{ entity_url }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+                <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+                {% else %}
+                {% if not created %}<a href="{{ entity_url }}" class="btn btn-secondary">{{ _('Cancel') }}</a>{% endif %}
+                <button type="submit" name="next" value="another" class="btn btn-secondary">{{ _('Save and add another') }}</button>
+                <button type="submit" class="btn btn-primary">{{ _('Save account') }}</button>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    {% call help_card() %}
+    <p>{{ _('One record per IBAN and currency. If one IBAN takes USD and EUR, add two accounts.') }}</p>
+    <p>{{ _('An invoice offers the active accounts of its entity. Picking one sets the invoice currency.') }}</p>
+    {% endcall %}
+</div>
+
+{% if account %}
+<form method="POST" id="accountArchiveForm" action="{{ url_for('billing_entities.archive_account', entity_id=entity.id, account_id=account.id) }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% if not account.is_used() %}
+<form method="POST" id="accountDeleteForm" action="{{ url_for('billing_entities.delete_account', entity_id=entity.id, account_id=account.id) }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

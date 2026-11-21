@@ -594,6 +594,13 @@
                                     <i class="fas fa-sliders-h w-4 mr-2"></i>{{ _('Settings') }}
                                 </a>
                             </li>
+                            {% if is_module_enabled('billing_entities') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('billing_entities.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('billing_entities.index') }}">
+                                    <i class="fas fa-building w-4 mr-2"></i>{{ _('Legal entities') }}
+                                </a>
+                            </li>
+                            {% endif %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.manage_modules' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.manage_modules') }}">
                                     <i class="fas fa-puzzle-piece w-4 mr-2"></i>{{ _('Modules') }}
