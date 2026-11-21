@@ -3,7 +3,7 @@ Service for invoice business logic.
 """
 
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional
 
@@ -783,6 +783,15 @@ class InvoiceService:
             "other_project_names": other_project_names,
         }
 
+        pending_approval_entry_ids = self.pending_approval_entry_ids([e.id for e in unbilled_entries])
+        warning = None
+        if pending_approval_entry_ids:
+            warning = (
+                f"{len(pending_approval_entry_ids)} unbilled time "
+                f"{'entry has' if len(pending_approval_entry_ids) == 1 else 'entries have'} "
+                "pending approval and should be confirmed before invoicing."
+            )
+
         return {
             "time_entries": unbilled_entries,
             "grouped_time_entries": grouped_time_entries,
@@ -799,7 +808,26 @@ class InvoiceService:
             "prepaid_reset_day": invoice.client.prepaid_reset_day if invoice.client else None,
             "diagnostics": diagnostics,
             "invoice_group_time_entries": invoice_group_time_entries,
+            "pending_approval_entry_ids": pending_approval_entry_ids,
+            "warning": warning,
         }
+
+    @staticmethod
+    def pending_approval_entry_ids(entry_ids: List[int]) -> List[int]:
+        """Return time entry IDs that currently have a pending TimeEntryApproval."""
+        if not entry_ids:
+            return []
+        from app.models.time_entry_approval import ApprovalStatus, TimeEntryApproval
+
+        rows = (
+            TimeEntryApproval.query.filter(
+                TimeEntryApproval.time_entry_id.in_(entry_ids),
+                TimeEntryApproval.status == ApprovalStatus.PENDING,
+            )
+            .with_entities(TimeEntryApproval.time_entry_id)
+            .all()
+        )
+        return sorted({r[0] for r in rows})
 
     def _time_entry_hours_decimal(self, entry: TimeEntry) -> Decimal:
         if not entry.duration_seconds:
@@ -943,12 +971,133 @@ class InvoiceService:
             rate = RateOverride.resolve_rate(proj)
             estimated += hrs * rate
 
+        pending_approval_entry_ids = self.pending_approval_entry_ids([e.id for e in entries])
+        warning = None
+        if pending_approval_entry_ids:
+            warning = (
+                f"{len(pending_approval_entry_ids)} unbilled time "
+                f"{'entry has' if len(pending_approval_entry_ids) == 1 else 'entries have'} "
+                "pending approval and should be confirmed before invoicing."
+            )
+
         return {
             "entry_count": len(entries),
             "total_hours": float(total_hours),
             "estimated_total": float(estimated.quantize(Decimal("0.01"))),
             "currency": currency,
             "blocked_reason": None,
+            "pending_approval_entry_ids": pending_approval_entry_ids,
+            "warning": warning,
+        }
+
+    def get_unbilled_report(
+        self,
+        *,
+        client_id: Optional[int] = None,
+        project_id: Optional[int] = None,
+        start_dt: Optional[datetime] = None,
+        end_dt: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
+        """Unbilled hours and amount per project using invoice rate resolution."""
+        from sqlalchemy.orm import joinedload
+
+        from app.models import Project, RateOverride, Settings
+
+        query = TimeEntry.query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.user)).filter(
+            TimeEntry.end_time.isnot(None),
+            TimeEntry.billable == True,  # noqa: E712
+            TimeEntry.project_id.isnot(None),
+        )
+        if project_id:
+            query = query.filter(TimeEntry.project_id == project_id)
+        if client_id:
+            query = query.filter(
+                db.or_(
+                    TimeEntry.client_id == client_id,
+                    TimeEntry.project_id.in_(
+                        db.session.query(Project.id).filter(Project.client_id == client_id).scalar_subquery()
+                    ),
+                )
+            )
+        if start_dt:
+            query = query.filter(TimeEntry.start_time >= start_dt)
+        if end_dt:
+            query = query.filter(TimeEntry.start_time <= end_dt)
+
+        entries = query.order_by(TimeEntry.start_time.asc()).all()
+        if not entries:
+            settings = Settings.get_settings()
+            return {
+                "projects": [],
+                "total_hours": 0.0,
+                "total_amount": 0.0,
+                "currency": settings.currency if settings else "EUR",
+                "pending_approval_entry_ids": [],
+                "warning": None,
+            }
+
+        # Group by client for billed-id lookup, then filter unbilled
+        by_client: Dict[Optional[int], List[TimeEntry]] = {}
+        for entry in entries:
+            cid = entry.client_id
+            if cid is None and entry.project is not None:
+                cid = entry.project.client_id
+            by_client.setdefault(cid, []).append(entry)
+
+        unbilled: List[TimeEntry] = []
+        for cid, client_entries in by_client.items():
+            billed = self._billed_time_entry_ids_for_client(cid) if cid else set()
+            unbilled.extend(e for e in client_entries if e.id not in billed)
+
+        projects_by_id: Dict[int, Any] = {}
+        for entry in unbilled:
+            if entry.project_id and entry.project_id not in projects_by_id:
+                projects_by_id[entry.project_id] = entry.project
+
+        by_project: Dict[int, List[TimeEntry]] = {}
+        for entry in unbilled:
+            by_project.setdefault(entry.project_id, []).append(entry)
+
+        project_rows = []
+        total_hours = Decimal("0")
+        total_amount = Decimal("0")
+        for pid, elist in sorted(by_project.items(), key=lambda x: x[0]):
+            proj = projects_by_id.get(pid)
+            hrs = sum((self._time_entry_hours_decimal(e) for e in elist), Decimal("0"))
+            rate = RateOverride.resolve_rate(proj) if proj else Decimal("0")
+            amount = (hrs * rate).quantize(Decimal("0.01"))
+            total_hours += hrs
+            total_amount += amount
+            project_rows.append(
+                {
+                    "project_id": pid,
+                    "project_name": proj.name if proj else None,
+                    "client_id": proj.client_id if proj else None,
+                    "entry_count": len(elist),
+                    "hours": float(hrs),
+                    "hourly_rate": float(rate),
+                    "amount": float(amount),
+                    "entry_ids": [e.id for e in elist],
+                }
+            )
+
+        settings = Settings.get_settings()
+        pending_approval_entry_ids = self.pending_approval_entry_ids([e.id for e in unbilled])
+        warning = None
+        if pending_approval_entry_ids:
+            warning = (
+                f"{len(pending_approval_entry_ids)} unbilled time "
+                f"{'entry has' if len(pending_approval_entry_ids) == 1 else 'entries have'} "
+                "pending approval and should be confirmed before invoicing."
+            )
+
+        return {
+            "projects": project_rows,
+            "total_hours": float(total_hours),
+            "total_amount": float(total_amount.quantize(Decimal("0.01"))),
+            "currency": settings.currency if settings else "EUR",
+            "pending_approval_entry_ids": pending_approval_entry_ids,
+            "warning": warning,
         }
 
     def create_client_unbilled_invoice(self, client_id: int, acting_user_id: int) -> Dict[str, Any]:

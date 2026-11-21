@@ -23,6 +23,7 @@ class TimeEntrySource(Enum):
     API = "api"
     TEMPLATE = "template"
     BULK = "bulk"
+    AGENT = "agent"
 
 
 class ProjectStatus(Enum):

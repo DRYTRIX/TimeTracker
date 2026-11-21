@@ -3016,6 +3016,35 @@ def download_credit_note_ubl_api(cn_id):
 # ==================== Reports ====================
 
 
+@api_v1_bp.route("/reports/unbilled", methods=["GET"])
+@require_api_token("read:reports")
+def report_unbilled():
+    """Unbilled time and amount per project (same rate resolution as invoice generation)."""
+    from app.services.invoice_service import InvoiceService
+
+    if not g.api_user.is_admin:
+        return forbidden_response("Admin access required for unbilled report")
+
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    start_dt = parse_datetime(start_date) if start_date else None
+    end_dt = parse_datetime(end_date) if end_date else None
+    if start_date or end_date:
+        parsed_start, parsed_end = _parse_date_range(start_date, end_date)
+        start_dt = parsed_start or start_dt
+        end_dt = parsed_end or end_dt
+
+    client_id = request.args.get("client_id", type=int)
+    project_id = request.args.get("project_id", type=int)
+    report = InvoiceService().get_unbilled_report(
+        client_id=client_id,
+        project_id=project_id,
+        start_dt=start_dt,
+        end_dt=end_dt,
+    )
+    return jsonify(report)
+
+
 @api_v1_bp.route("/reports/summary", methods=["GET"])
 @require_api_token("read:reports")
 def report_summary():
@@ -3172,14 +3201,25 @@ def get_current_user():
     from app.models import Settings
     from app.utils.module_registry import ModuleRegistry
 
-    response = {"user": g.api_user.to_dict()}
+    user = g.api_user
+    response = {"user": user.to_dict()}
     settings = Settings.get_settings()
     response["time_entry_requirements"] = {
         "require_task": getattr(settings, "time_entry_require_task", False),
         "require_description": getattr(settings, "time_entry_require_description", False),
         "description_min_length": getattr(settings, "time_entry_description_min_length", 20),
     }
-    response["enabled_modules"] = [m.id for m in ModuleRegistry.get_enabled_modules(settings=settings, user=g.api_user)]
+    response["enabled_modules"] = [m.id for m in ModuleRegistry.get_enabled_modules(settings=settings, user=user)]
+    # MCP / tooling helpers
+    token_scopes = []
+    api_token = getattr(g, "api_token", None)
+    if api_token is not None and getattr(api_token, "scopes", None):
+        token_scopes = [s.strip() for s in str(api_token.scopes).split(",") if s.strip()]
+    response["is_admin"] = bool(user.is_admin)
+    response["role_names"] = list(user.get_role_names() or [])
+    response["token_scopes"] = token_scopes
+    response["standard_hours_per_day"] = float(getattr(user, "standard_hours_per_day", 8.0) or 8.0)
+    response["timezone"] = (user.to_dict() or {}).get("timezone")
     return jsonify(response)
 
 

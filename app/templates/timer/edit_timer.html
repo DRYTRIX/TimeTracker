@@ -487,6 +487,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <select class="form-input" id="source" name="source">
                             <option value="manual" {% if timer.source == 'manual' %}selected{% endif %}>{{ _('Manual') }}</option>
                             <option value="auto" {% if timer.source == 'auto' %}selected{% endif %}>{{ _('Automatic') }}</option>
+                            <option value="api" {% if timer.source == 'api' %}selected{% endif %}>{{ _('API') }}</option>
+                            <option value="agent" {% if timer.source == 'agent' %}selected{% endif %}>{{ _('Agent') }}</option>
+                            <option value="template" {% if timer.source == 'template' %}selected{% endif %}>{{ _('Template') }}</option>
+                            <option value="bulk" {% if timer.source == 'bulk' %}selected{% endif %}>{{ _('Bulk') }}</option>
                         </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('How this entry was created') }}</p>
                     </div>
@@ -619,6 +623,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         {% if timer.source == 'manual' %}
                         <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
                             {{ _('Manual') }}
+                        </span>
+                        {% elif timer.source == 'agent' %}
+                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            {{ _('Agent') }}
+                        </span>
+                        {% elif timer.source == 'api' %}
+                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                            {{ _('API') }}
                         </span>
                         {% else %}
                         <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">

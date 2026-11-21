@@ -28,6 +28,12 @@ enabled or disabled by each user without affecting anyone else.
   for clock-in/out and breaks. Maps Slack users by ID or profile email.
   Configured under **Integrations → Workspace integrations**.
 
+## AI assistants
+
+- **[MCP](MCP.md)** — Optional Model Context Protocol sidecar (`mcp_server/`)
+  for Cursor, Claude, and local agents. Role-scoped tools over `/api/v1`,
+  stdio or Streamable HTTP, OAuth + limited DCR.
+
 ## Workspace / project connectors
 
 - **[ActivityWatch](ACTIVITYWATCH.md)** — Local-first automated time

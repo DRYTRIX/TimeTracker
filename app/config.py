@@ -65,6 +65,8 @@ class Config:
     # reverse proxies). Prefer APP_BASE_URL; otherwise the app learns the host
     # from live requests (see app.utils.urls.remember_request_base_url).
     APP_BASE_URL = os.getenv("APP_BASE_URL", "").strip()
+    # Optional override for RFC 9728 protected-resource metadata (defaults to {issuer}/mcp)
+    MCP_RESOURCE_URL = os.getenv("MCP_RESOURCE_URL", "").strip()
     PREFERRED_URL_SCHEME = os.getenv("PREFERRED_URL_SCHEME", "http")
     ROUNDING_MINUTES = int(os.getenv("ROUNDING_MINUTES", 1))
     ROUNDING_METHOD = os.getenv("ROUNDING_METHOD", "nearest")

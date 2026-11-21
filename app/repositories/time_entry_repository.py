@@ -205,6 +205,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         paid: bool = False,
         invoice_number: Optional[str] = None,
         custom_fields: Optional[dict] = None,
+        source: Optional[str] = None,
     ) -> TimeEntry:
         """Create a manual time entry. duration_seconds is net (worked time); break_seconds is subtracted when computing from start/end."""
         entry = self.model(
@@ -222,7 +223,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
             paid=paid,
             invoice_number=invoice_number,
             custom_fields=custom_fields,
-            source=TimeEntrySource.MANUAL.value,
+            source=source or TimeEntrySource.MANUAL.value,
         )
         # No override, or boundary mode (override path skips timestamp adjustment):
         # recompute so start/end and duration stay consistent.

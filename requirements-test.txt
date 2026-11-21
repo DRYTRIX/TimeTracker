@@ -38,6 +38,10 @@ faker==40.54.0  # Fake data generation
 requests-mock==1.12.1  # Mock HTTP requests
 responses==0.26.3  # Mock HTTP responses
 
+# MCP sidecar unit tests (tests/test_mcp_server.py)
+mcp==1.26.0
+httpx>=0.27.0,<1
+
 # Optional Factur-X XSD validation (Akretion factur-x)
 factur-x>=7.9
 

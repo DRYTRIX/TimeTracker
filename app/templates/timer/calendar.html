@@ -956,7 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         <div class="event-detail-row">
           <div class="event-detail-label">{{ _("Source") }}</div>
-          <div class="event-detail-value">${props.source === 'auto' ? '{{ _("Automatic Timer") }}' : '{{ _("Manual Entry") }}'}</div>
+          <div class="event-detail-value">${props.source === 'auto' ? '{{ _("Automatic Timer") }}' : props.source === 'agent' ? '{{ _("Agent") }}' : props.source === 'api' ? '{{ _("API") }}' : '{{ _("Manual Entry") }}'}</div>
         </div>
         ` : ''}
       `;
