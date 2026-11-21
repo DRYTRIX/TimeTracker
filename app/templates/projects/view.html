@@ -43,6 +43,12 @@
         <i class="fas fa-flag"></i>
         {{ _('Milestones') }}
     </a>
+    {% if is_module_enabled('invoices') %}
+    <a href="{{ url_for('invoices.project_invoices', project_id=project.id) }}" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition">
+        <i class="fas fa-file-invoice-dollar"></i>
+        {{ _('Invoices') }}
+    </a>
+    {% endif %}
     {% if project.budget_amount and (current_user.is_admin or has_any_permission('edit_projects', 'archive_projects')) %}
     <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition shadow-lg">
         <i class="fas fa-wallet"></i>

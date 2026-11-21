@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set breadcrumbs = [
+    {'text': _('Projects'), 'url': url_for('projects.list_projects')},
+    {'text': project.name, 'url': url_for('projects.view_project', project_id=project.id)},
+    {'text': _('Invoices')}
+] %}
+
+{% set actions %}
+<a href="{{ url_for('invoices.create_invoice', project_id=project.id) }}" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>{{ _('New Invoice') }}</a>
+{% endset %}
+{{ page_header('fas fa-file-invoice-dollar', _('Invoices'), subtitle_text=project.name, breadcrumbs=breadcrumbs, actions_html=actions) }}
+
+{% set invoices_project = project %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm overflow-visible" id="invoicesContainer">
+    {% include 'invoices/_invoices_list.html' %}
+</div>
+
+{% set invoices_return_url = url_for('invoices.project_invoices', project_id=project.id) %}
+{% include 'invoices/_invoices_list_dialogs.html' %}
+{% endblock %}
+
+{% block scripts_extra %}
+{% include 'invoices/_invoices_list_scripts.html' %}
+{% endblock %}
