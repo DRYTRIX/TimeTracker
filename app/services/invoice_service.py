@@ -110,13 +110,8 @@ class InvoiceService:
         # Generate invoice number
         invoice_number = self.invoice_repo.generate_invoice_number()
 
-        # Calculate totals
+        # Totals are recomputed from the line items below (rate per entry)
         subtotal = Decimal("0.00")
-        for entry in entries:
-            if entry.duration_seconds:
-                hours = Decimal(str(entry.duration_seconds / 3600))
-                rate = project.hourly_rate or Decimal("0.00")
-                subtotal += hours * rate
 
         # Resolve tax rate and currency from project/client/settings
         resolved_issue_date = issue_date or date.today()
@@ -150,22 +145,20 @@ class InvoiceService:
 
         # Create invoice items from time entries
         from app.models import Settings
-        from app.utils.invoice_time_entry_items import build_invoice_items_from_entries
+        from app.utils.invoice_time_entry_items import build_time_entry_lines
 
         settings = Settings.get_settings()
         group_entries = getattr(settings, "invoice_group_time_entries", True) if settings else True
-        rate = project.hourly_rate or Decimal("0.00")
-        items = build_invoice_items_from_entries(
+        lines = build_time_entry_lines(
             invoice.id,
             entries,
-            rate,
             group=group_entries,
             project_name=project.name,
         )
-        for item in items:
+        for item in lines.items:
             db.session.add(item)
 
-        grouped_entries = items  # for telemetry line_item_count
+        grouped_entries = lines.items  # for telemetry line_item_count
 
         if include_expenses:
             from app.models import Expense
@@ -209,7 +202,12 @@ class InvoiceService:
         record_invoice_created()
         record_invoice_duration_seconds(time.monotonic() - t0, "create")
 
-        return {"success": True, "message": "Invoice created successfully", "invoice": invoice}
+        return {
+            "success": True,
+            "message": "Invoice created successfully",
+            "invoice": invoice,
+            "warnings": lines.warnings,
+        }
 
     def create_invoice(
         self,
@@ -955,7 +953,7 @@ class InvoiceService:
                 "blocked_reason": br,
             }
 
-        from app.models import RateOverride
+        from app.utils.invoice_time_entry_items import build_time_entry_lines
 
         entries: List[TimeEntry] = state["unbilled_entries"]
         groups: Dict[int, List[TimeEntry]] = state["groups"]
@@ -963,13 +961,15 @@ class InvoiceService:
 
         total_hours = sum(self._time_entry_hours_decimal(e) for e in entries)
         estimated = Decimal("0")
+        rate_warnings: List[str] = []
         for pid, elist in groups.items():
             proj = projects_by_id.get(pid)
             if not proj:
                 continue
-            hrs = sum(self._time_entry_hours_decimal(e) for e in elist)
-            rate = RateOverride.resolve_rate(proj)
-            estimated += hrs * rate
+            # Same lines create_client_unbilled_invoice builds; nothing is added to the session
+            lines = build_time_entry_lines(None, elist, group=True, group_by_task=False, project_name=proj.name)
+            estimated += sum((item.line_net for item in lines.items), Decimal("0"))
+            rate_warnings.extend(lines.warnings)
 
         pending_approval_entry_ids = self.pending_approval_entry_ids([e.id for e in entries])
         warning = None
@@ -988,6 +988,7 @@ class InvoiceService:
             "blocked_reason": None,
             "pending_approval_entry_ids": pending_approval_entry_ids,
             "warning": warning,
+            "rate_warnings": rate_warnings,
         }
 
     def get_unbilled_report(
@@ -1107,7 +1108,8 @@ class InvoiceService:
         Returns:
             success + invoice_id, invoice_number, total, item_count; or success False + error/message.
         """
-        from app.models import Client, RateOverride, Settings
+        from app.models import Client, Settings
+        from app.utils.invoice_time_entry_items import build_time_entry_lines
 
         state = self._client_unbilled_invoice_state(client_id)
         if state.get("error") == "not_found":
@@ -1194,26 +1196,18 @@ class InvoiceService:
         db.session.flush()
 
         item_count = 0
+        warnings: List[str] = []
         for pid in sorted(groups.keys()):
             elist = groups[pid]
             proj = projects_by_id.get(pid)
             if not proj:
                 continue
-            total_h = sum(self._time_entry_hours_decimal(e) for e in elist)
-            if total_h <= 0:
-                continue
-            rate = RateOverride.resolve_rate(proj)
-            desc = f"Project: {proj.name}"
-            tids = ",".join(str(e.id) for e in elist)
-            item = InvoiceItem(
-                invoice_id=invoice.id,
-                description=desc,
-                quantity=total_h,
-                unit_price=rate,
-                time_entry_ids=tids,
-            )
-            db.session.add(item)
-            item_count += 1
+            # One line per project and rate: entries with different rates get separate lines
+            lines = build_time_entry_lines(invoice.id, elist, group=True, group_by_task=False, project_name=proj.name)
+            for item in lines.items:
+                db.session.add(item)
+                item_count += 1
+            warnings.extend(lines.warnings)
 
         invoice.calculate_totals()
 
@@ -1238,6 +1232,7 @@ class InvoiceService:
             "total": float(invoice.total_amount),
             "item_count": item_count,
             "invoice": invoice,
+            "warnings": warnings,
         }
 
     def user_can_access_invoice(self, invoice: Invoice, user_id: int, is_admin: bool) -> bool:
@@ -1355,7 +1350,7 @@ class InvoiceService:
     ) -> Dict[str, Any]:
         """Add grouped line items from billable time entries to an existing invoice."""
         from app.models import Settings
-        from app.utils.invoice_time_entry_items import build_invoice_items_from_entries
+        from app.utils.invoice_time_entry_items import build_time_entry_lines
 
         invoice = self.invoice_repo.get_by_id(invoice_id)
         if not invoice:
@@ -1384,15 +1379,13 @@ class InvoiceService:
         group_entries = (
             group if group is not None else getattr(settings, "invoice_group_time_entries", True) if settings else True
         )
-        rate = project.hourly_rate or Decimal("0.00")
-        items = build_invoice_items_from_entries(
+        lines = build_time_entry_lines(
             invoice.id,
             entries,
-            rate,
             group=group_entries,
             project_name=project.name,
         )
-        for item in items:
+        for item in lines.items:
             db.session.add(item)
 
         invoice.calculate_totals()
@@ -1402,7 +1395,12 @@ class InvoiceService:
                 "message": "Could not generate items due to a database error",
                 "error": "database_error",
             }
-        return {"success": True, "message": "Invoice items generated from time entries", "invoice": invoice}
+        return {
+            "success": True,
+            "message": "Invoice items generated from time entries",
+            "invoice": invoice,
+            "warnings": lines.warnings,
+        }
 
     def generate_pdf_bytes(
         self,

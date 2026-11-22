@@ -1349,14 +1349,12 @@ def generate_from_time(invoice_id):
 
         total_prepaid_allocated = Decimal("0")
         prepaid_allocator = None
+        missing_rate_warnings = []
 
         # Process time entries
         if selected_entries:
             from app.models import Settings
-            from app.utils.invoice_time_entry_items import (
-                build_invoice_items_from_entries,
-                resolve_group_time_entries_from_form,
-            )
+            from app.utils.invoice_time_entry_items import build_time_entry_lines, resolve_group_time_entries_from_form
 
             time_entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids)).all()
 
@@ -1370,16 +1368,15 @@ def generate_from_time(invoice_id):
                 request.form.get("per_entry_lines") == "on",
                 default_group,
             )
-            hourly_rate = RateOverride.resolve_rate(invoice.project)
-            items = build_invoice_items_from_entries(
+            lines = build_time_entry_lines(
                 invoice.id,
                 processed_entries,
-                hourly_rate,
                 group=group_entries,
                 project_name=invoice.project.name if invoice.project else None,
             )
-            for item in items:
+            for item in lines.items:
                 db.session.add(item)
+            missing_rate_warnings = lines.missing_rates
 
         # Process project costs
         if selected_costs:
@@ -1458,6 +1455,15 @@ def generate_from_time(invoice_id):
             )
         else:
             flash(_("Invoice updated successfully"), "success")
+        for missing in missing_rate_warnings:
+            flash(
+                _(
+                    "%(hours)s h were added at 0: no hourly rate for %(target)s",
+                    hours=str(missing.rounded_hours),
+                    target=missing.target,
+                ),
+                "warning",
+            )
         if total_prepaid_allocated and total_prepaid_allocated > 0:
             flash(
                 _(

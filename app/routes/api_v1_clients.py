@@ -216,6 +216,7 @@ def post_client_invoice_unbilled(client_id):
                 "invoice_number": result["invoice_number"],
                 "total": result["total"],
                 "item_count": result["item_count"],
+                "warnings": result.get("warnings", []),
             }
         ),
         200,

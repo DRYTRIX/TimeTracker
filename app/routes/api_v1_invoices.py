@@ -236,7 +236,16 @@ def create_invoice_from_time_entries():
     detail = _invoice_service().get_invoice_detail(
         result["invoice"].id, user_id=g.api_user.id, is_admin=g.api_user.is_admin
     )
-    return jsonify({"message": result["message"], "invoice": detail.get("invoice", result["invoice"].to_dict())}), 201
+    return (
+        jsonify(
+            {
+                "message": result["message"],
+                "invoice": detail.get("invoice", result["invoice"].to_dict()),
+                "warnings": result.get("warnings", []),
+            }
+        ),
+        201,
+    )
 
 
 @api_v1_invoices_bp.route("/invoices/<int:invoice_id>/generate-from-time", methods=["POST"])
@@ -264,7 +273,9 @@ def generate_invoice_from_time(invoice_id):
             status = 404
         return error_response(result.get("message", "Could not generate items"), status_code=status)
     detail = _invoice_service().get_invoice_detail(invoice_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
-    return jsonify({"message": result["message"], "invoice": detail.get("invoice")})
+    return jsonify(
+        {"message": result["message"], "invoice": detail.get("invoice"), "warnings": result.get("warnings", [])}
+    )
 
 
 @api_v1_invoices_bp.route("/invoices/<int:invoice_id>/items", methods=["PUT"])
