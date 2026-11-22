@@ -4,9 +4,10 @@ from decimal import Decimal
 from dateutil.relativedelta import relativedelta
 
 from app import db
+from app.models.cost_category import ExpenseCategoryLinkMixin
 
 
-class RecurringProjectCost(db.Model):
+class RecurringProjectCost(ExpenseCategoryLinkMixin, db.Model):
     """Recurring project cost template for automated expense generation."""
 
     __tablename__ = "recurring_project_costs"
@@ -16,6 +17,7 @@ class RecurringProjectCost(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
 
     description = db.Column(db.String(500), nullable=False)
+    # Legacy string kept for one release; category_id (from ExpenseCategoryLinkMixin) is the source of truth
     category = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     billable = db.Column(db.Boolean, nullable=False, default=True)
@@ -49,6 +51,7 @@ class RecurringProjectCost(db.Model):
         self.user_id = user_id
         self.description = description.strip() if description else ""
         self.category = category
+        self.category_id = kwargs.get("category_id")
         self.amount = Decimal(str(amount))
         self.frequency = frequency
         self.next_run_date = next_run_date
@@ -95,7 +98,8 @@ class RecurringProjectCost(db.Model):
             "project_id": self.project_id,
             "user_id": self.user_id,
             "description": self.description,
-            "category": self.category,
+            "category": self.category_name,
+            "category_id": self.category_id,
             "amount": float(self.amount),
             "billable": self.billable,
             "currency_code": self.currency_code,

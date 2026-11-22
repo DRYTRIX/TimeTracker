@@ -296,16 +296,16 @@
                             </div>
                             <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <select name="expense_category[]" class="form-input" disabled title="{{ _('Linked expense - category cannot be edited') }}">
-                                    <option value="travel" {% if expense.category == 'travel' %}selected{% endif %}>{{ _('Travel') }}</option>
-                                    <option value="meals" {% if expense.category == 'meals' %}selected{% endif %}>{{ _('Meals') }}</option>
-                                    <option value="accommodation" {% if expense.category == 'accommodation' %}selected{% endif %}>{{ _('Accommodation') }}</option>
-                                    <option value="supplies" {% if expense.category == 'supplies' %}selected{% endif %}>{{ _('Supplies') }}</option>
-                                    <option value="software" {% if expense.category == 'software' %}selected{% endif %}>{{ _('Software') }}</option>
-                                    <option value="equipment" {% if expense.category == 'equipment' %}selected{% endif %}>{{ _('Equipment') }}</option>
-                                    <option value="services" {% if expense.category == 'services' %}selected{% endif %}>{{ _('Services') }}</option>
-                                    <option value="marketing" {% if expense.category == 'marketing' %}selected{% endif %}>{{ _('Marketing') }}</option>
-                                    <option value="training" {% if expense.category == 'training' %}selected{% endif %}>{{ _('Training') }}</option>
-                                    <option value="other" {% if expense.category == 'other' %}selected{% endif %}>{{ _('Other') }}</option>
+                                    {% set expense_key = (expense.category or '')|lower %}
+                                    {% set cat_match = namespace(found=false) %}
+                                    {% for cat in expense_categories %}
+                                    {% set is_match = expense_key and (expense_key == (cat.code or '')|lower or expense_key == cat.name|lower) %}
+                                    {% if is_match %}{% set cat_match.found = true %}{% endif %}
+                                    <option value="{{ cat.code or cat.name }}" {% if is_match %}selected{% endif %}>{{ cat.name }}</option>
+                                    {% endfor %}
+                                    {% if expense.category and not cat_match.found %}
+                                    <option value="{{ expense.category }}" selected>{{ expense.category|title }}</option>
+                                    {% endif %}
                                 </select>
                             </div>
                             <div class="md:col-span-2 min-w-0 flex flex-col">

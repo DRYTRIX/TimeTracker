@@ -126,6 +126,35 @@ class ExpenseCategory(db.Model):
         """Get all active categories"""
         return cls.query.filter_by(is_active=True).order_by(cls.name).all()
 
+    @property
+    def legacy_key(self):
+        """String stored in the legacy ``category`` column of records that reference this category.
+
+        The lowercased name matches the values the old hard-coded lists used ("travel", "equipment").
+        """
+        return (self.name or "").lower()[:50]
+
+    @classmethod
+    def find_by_key(cls, value):
+        """Find a category by code or name, ignoring case. Returns None when nothing matches."""
+        key = (value or "").strip().lower()
+        if not key:
+            return None
+        match = cls.query.filter(db.func.lower(cls.code) == key).first()
+        if match is None:
+            match = cls.query.filter(db.func.lower(cls.name) == key).first()
+        return match
+
+    @classmethod
+    def get_choices(cls, include_id=None):
+        """Active categories for a select, plus the category ``include_id`` even when it is inactive."""
+        categories = cls.get_active_categories()
+        if include_id and not any(c.id == include_id for c in categories):
+            current = cls.query.get(include_id)
+            if current is not None:
+                categories = sorted(categories + [current], key=lambda c: c.name.lower())
+        return categories
+
     @classmethod
     def get_categories_over_budget(cls, period="monthly"):
         """Get categories that are over their budget threshold"""

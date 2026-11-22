@@ -37,7 +37,7 @@
                     <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Non-billable') }}</span>
                     {% endif %}
                 </td>
-                <td class="px-6 py-4" data-label="{{ _('Category') }}">{{ recurring.category|capitalize }}</td>
+                <td class="px-6 py-4" data-label="{{ _('Category') }}">{{ recurring.category_name }}</td>
                 <td class="px-6 py-4 font-medium" data-label="{{ _('Amount') }}">{{ '%.2f'|format(recurring.amount) }} {{ recurring.currency_code }}</td>
                 <td class="px-6 py-4" data-label="{{ _('Frequency') }}">
                     {{ _('Every') }} {{ recurring.interval }} {{ recurring.frequency }}{% if recurring.interval > 1 %}s{% endif %}

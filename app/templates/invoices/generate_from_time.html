@@ -134,7 +134,7 @@
                         <label class="flex items-start gap-3 p-3 rounded border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
                             <input type="checkbox" class="mt-1" name="project_costs[]" value="{{ cost.id }}">
                             <div class="flex-1 text-sm">
-                                <div class="font-medium">{{ cost.description }} ({{ cost.category|title }}) · {{ '%.2f'|format(cost.amount) }} {{ cost.currency_code }}</div>
+                                <div class="font-medium">{{ cost.description }} ({{ cost.category_name }}) · {{ '%.2f'|format(cost.amount) }} {{ cost.currency_code }}</div>
                                 <div class="text-text-muted-light dark:text-text-muted-dark">{{ cost.cost_date|format_date }}</div>
                             </div>
                         </label>

@@ -100,3 +100,65 @@ def test_project_costs_crud(client, api_token, project):
     # delete
     r = client.delete(f"/api/v1/project-costs/{cost_id}", headers=_auth(api_token))
     assert r.status_code == 200
+
+
+def test_project_cost_category_by_id_or_string(client, api_token, project):
+    from app.models import ExpenseCategory
+
+    category = ExpenseCategory(name="Equipment", code="equipment", requires_approval=False)
+    other = ExpenseCategory(name="Hosting", code="hosting", requires_approval=False)
+    db.session.add_all([category, other])
+    db.session.commit()
+    base = {"description": "Laptop", "amount": 1200.0, "cost_date": date.today().isoformat()}
+
+    # Old clients: a category string is matched to the directory, ignoring case
+    r = client.post(
+        f"/api/v1/projects/{project.id}/costs", headers=_auth(api_token), json={**base, "category": "EQUIPMENT"}
+    )
+    assert r.status_code == 201
+    cost = r.get_json()["cost"]
+    assert cost["category_id"] == category.id
+    assert cost["category"] == "Equipment"
+
+    # An unknown string is still accepted and stored as the legacy value
+    r = client.post(
+        f"/api/v1/projects/{project.id}/costs", headers=_auth(api_token), json={**base, "category": "misc-stuff"}
+    )
+    assert r.status_code == 201
+    assert r.get_json()["cost"]["category_id"] is None
+    assert r.get_json()["cost"]["category"] == "misc-stuff"
+
+    # New clients: category_id
+    r = client.post(
+        f"/api/v1/projects/{project.id}/costs", headers=_auth(api_token), json={**base, "category_id": other.id}
+    )
+    assert r.status_code == 201
+    cost_id = r.get_json()["cost"]["id"]
+    assert r.get_json()["cost"]["category"] == "Hosting"
+
+    r = client.patch(f"/api/v1/project-costs/{cost_id}", headers=_auth(api_token), json={"category_id": category.id})
+    assert r.status_code == 200
+    assert r.get_json()["cost"]["category_id"] == category.id
+
+    r = client.post(f"/api/v1/projects/{project.id}/costs", headers=_auth(api_token), json=base)
+    assert r.status_code == 400
+
+    r = client.post(
+        f"/api/v1/projects/{project.id}/costs", headers=_auth(api_token), json={**base, "category_id": 999999}
+    )
+    assert r.status_code == 400
+
+    # Recurring costs take the same inputs
+    r = client.post(
+        f"/api/v1/projects/{project.id}/recurring-costs",
+        headers=_auth(api_token),
+        json={
+            "description": "Monthly hosting",
+            "category": "hosting",
+            "amount": 20,
+            "frequency": "monthly",
+            "next_run_date": date.today().isoformat(),
+        },
+    )
+    assert r.status_code == 201
+    assert r.get_json()["recurring_cost"]["category_id"] == other.id
