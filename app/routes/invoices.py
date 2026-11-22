@@ -26,6 +26,7 @@ from flask_login import current_user, login_required
 from app import db, log_event, track_event
 from app.models import (
     Expense,
+    ExpenseCategory,
     ExtraGood,
     Invoice,
     InvoiceImage,
@@ -866,6 +867,7 @@ def edit_invoice(invoice_id):
                 invoice=invoice,
                 projects=Project.query.filter_by(status="active").order_by(Project.name).all(),
                 financial_locked=False,
+                expense_categories=ExpenseCategory.query.order_by(ExpenseCategory.name).all(),
             )
 
         flash(_("Invoice updated successfully"), "success")
@@ -910,6 +912,7 @@ def edit_invoice(invoice_id):
         warehouses_json=warehouses_json,
         financial_locked=financial_locked,
         currency_choices=_invoice_currency_choices(invoice),
+        expense_categories=ExpenseCategory.query.order_by(ExpenseCategory.name).all(),
         **_billing_edit_context(invoice),
         **_bill_to_edit_context(invoice),
     )
@@ -1391,7 +1394,7 @@ def generate_from_time(invoice_id):
                 # Create invoice item for each cost
                 item = InvoiceItem(
                     invoice_id=invoice.id,
-                    description=f"{cost.description} ({cost.category.title()})",
+                    description=f"{cost.description} ({cost.category_name})",
                     quantity=1,  # Costs are typically a single unit
                     unit_price=cost.amount,
                 )

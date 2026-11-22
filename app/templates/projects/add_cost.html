@@ -33,14 +33,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label for="category" class="form-label">{{ _('Category') }} <span class="text-danger">*</span></label>
-                                <select class="form-input" id="category" name="category" required>
+                                <select class="form-input" id="category" name="category_id" required>
                                     <option value="">{{ _('Select category') }}</option>
-                                    <option value="travel">{{ _('Travel') }}</option>
-                                    <option value="materials">{{ _('Materials') }}</option>
-                                    <option value="services">{{ _('Services') }}</option>
-                                    <option value="equipment">{{ _('Equipment') }}</option>
-                                    <option value="software">{{ _('Software/Licenses') }}</option>
-                                    <option value="other">{{ _('Other') }}</option>
+                                    {% for cat in expense_categories %}
+                                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
 

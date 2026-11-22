@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Invoices: Add Item row** — A line added with "Add Item" on the invoice edit page no longer collapses into a narrow strip. The new row had the 12-column grid classes on its outer element, so the field grid and the per-line tax/discount strip each took one column.
 - **Invoices: currency** — Invoice PDFs (default and fallback generators) print the invoice's own `currency_code` instead of the global currency setting. Invoices without a currency still use the setting, as quotes do. `GET /api/v1/invoices` and `GET /api/v1/invoices/{id}` now return `currency_code`.
 
+### Changed
+
+- **Project costs: categories from Expense categories** — Project costs and recurring project costs take their category from **Expense categories** (Admin), the same list expenses use, instead of a fixed list that differed between forms. The add, edit and recurring forms offer the active categories; an existing cost keeps its category in the form even after it is deactivated. The category filter on the Costs page, the category breakdown, the invoice line text for a cost and the inline expense categories on the invoice edit form use the list too. `project_costs` and `recurring_project_costs` get `category_id`; the old `category` string stays for one release and is filled on every write. Migration `218_project_cost_expense_categories` links every category string in use, plus travel, materials, services, equipment, software and other, to an expense category by code or name (ignoring case), and creates a missing one with receipts and approval off. API v1 accepts `category_id` or `category` (a code or name; an unknown string is kept as before) and returns `category` (the stored string, as before), `category_id` and `category_name`.
+
 ## [5.21.0] - 2026-11-18
 ### Added
 

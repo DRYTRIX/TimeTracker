@@ -1897,8 +1897,10 @@ def list_project_costs(project_id):
 def create_project_cost(project_id):
     """Create project cost"""
     data = request.get_json() or {}
-    required = ["description", "category", "amount", "cost_date"]
+    required = ["description", "amount", "cost_date"]
     missing = [f for f in required if not data.get(f)]
+    if not data.get("category_id") and not data.get("category"):
+        missing.insert(1, "category")
     if missing:
         return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
     from decimal import Decimal
@@ -1914,13 +1916,16 @@ def create_project_cost(project_id):
         project_id=project_id,
         user_id=g.api_user.id,
         description=data["description"],
-        category=data["category"],
+        category=None,
         amount=amount,
         cost_date=cost_date,
         billable=bool(data.get("billable", True)),
         notes=data.get("notes"),
         currency_code=data.get("currency_code", "EUR"),
     )
+    category_error = cost.set_category_from_input(data.get("category_id"), data.get("category"))
+    if category_error:
+        return jsonify({"error": category_error}), 400
     db.session.add(cost)
     db.session.commit()
     return jsonify({"message": "Project cost created successfully", "cost": cost.to_dict()}), 201
@@ -1951,9 +1956,13 @@ def update_project_cost(cost_id):
         .first_or_404()
     )
     data = request.get_json() or {}
-    for field in ("description", "category", "currency_code", "notes", "billable"):
+    for field in ("description", "currency_code", "notes", "billable"):
         if field in data:
             setattr(cost, field, data[field])
+    if "category_id" in data or "category" in data:
+        category_error = cost.set_category_from_input(data.get("category_id"), data.get("category"))
+        if category_error:
+            return validation_error_response({"category": [category_error]}, message=category_error)
     if "amount" in data:
         try:
             from decimal import Decimal
@@ -2025,8 +2034,10 @@ def list_recurring_project_costs(project_id):
 def create_recurring_project_cost(project_id):
     """Create a recurring project cost template."""
     data = request.get_json() or {}
-    required = ["description", "category", "amount", "frequency", "next_run_date"]
+    required = ["description", "amount", "frequency", "next_run_date"]
     missing = [field for field in required if not data.get(field)]
+    if not data.get("category_id") and not data.get("category"):
+        missing.insert(1, "category")
     if missing:
         return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
 
@@ -2047,7 +2058,7 @@ def create_recurring_project_cost(project_id):
         project_id=project_id,
         user_id=g.api_user.id,
         description=data["description"],
-        category=data["category"],
+        category=None,
         amount=amount,
         frequency=freq,
         next_run_date=next_date,
@@ -2057,6 +2068,9 @@ def create_recurring_project_cost(project_id):
         currency_code=data.get("currency_code", "EUR"),
         is_active=bool(data.get("is_active", True)),
     )
+    category_error = recurring.set_category_from_input(data.get("category_id"), data.get("category"))
+    if category_error:
+        return jsonify({"error": category_error}), 400
     db.session.add(recurring)
     db.session.commit()
     return (
@@ -2078,9 +2092,13 @@ def update_recurring_project_cost(project_id, rid):
     recurring = RecurringProjectCost.query.filter_by(id=rid, project_id=project_id).first_or_404()
     data = request.get_json() or {}
 
-    for field in ("description", "category", "currency_code"):
+    for field in ("description", "currency_code"):
         if field in data:
             setattr(recurring, field, data[field])
+    if "category_id" in data or "category" in data:
+        category_error = recurring.set_category_from_input(data.get("category_id"), data.get("category"))
+        if category_error:
+            return validation_error_response({"category": [category_error]}, message=category_error)
     if "frequency" in data and data["frequency"] in ("daily", "weekly", "monthly", "yearly"):
         recurring.frequency = data["frequency"]
     if "interval" in data:

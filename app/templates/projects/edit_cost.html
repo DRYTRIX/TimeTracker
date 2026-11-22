@@ -40,14 +40,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label for="category" class="form-label">{{ _('Category') }} <span class="text-danger">*</span></label>
-                                <select class="form-input" id="category" name="category" required>
+                                <select class="form-input" id="category" name="category_id" required>
                                     <option value="">{{ _('Select category') }}</option>
-                                    <option value="travel" {% if cost.category == 'travel' %}selected{% endif %}>{{ _('Travel') }}</option>
-                                    <option value="materials" {% if cost.category == 'materials' %}selected{% endif %}>{{ _('Materials') }}</option>
-                                    <option value="services" {% if cost.category == 'services' %}selected{% endif %}>{{ _('Services') }}</option>
-                                    <option value="equipment" {% if cost.category == 'equipment' %}selected{% endif %}>{{ _('Equipment') }}</option>
-                                    <option value="software" {% if cost.category == 'software' %}selected{% endif %}>{{ _('Software/Licenses') }}</option>
-                                    <option value="other" {% if cost.category == 'other' %}selected{% endif %}>{{ _('Other') }}</option>
+                                    {% for cat in expense_categories %}
+                                    <option value="{{ cat.id }}" {% if cost.category_id == cat.id %}selected{% endif %}>{{ cat.name }}{% if not cat.is_active %} ({{ _('inactive') }}){% endif %}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
 
