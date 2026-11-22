@@ -17,6 +17,8 @@
                 </button>
                 <ul id="bulkActionsMenu" class="hidden absolute right-0 mt-2 w-56 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-md shadow-lg z-50">
                     <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkPaidDialog()"><i class="fas fa-check-circle mr-2"></i>{{ _('Mark Paid/Unpaid') }}</a></li>
+                    <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkBillableDialog(true)"><i class="fas fa-dollar-sign mr-2"></i>{{ _('Mark billable') }}</a></li>
+                    <li><a class="block px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkBillableDialog(false)"><i class="fas fa-ban mr-2"></i>{{ _('Mark non-billable') }}</a></li>
                     <li><hr class="my-1 border-border-light dark:border-border-dark"></li>
                     <li><a class="block px-4 py-2 text-sm text-rose-600 hover:bg-gray-100 dark:hover:bg-gray-700" href="#" onclick="return showBulkDeleteConfirm()"><i class="fas fa-trash mr-2"></i>{{ _('Delete') }}</a></li>
                 </ul>

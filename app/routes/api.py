@@ -1483,9 +1483,13 @@ def bulk_entries_action():
     result = apply_bulk_time_entry_actions(
         ids_int, action, value, user_id=current_user.id, is_admin=current_user.is_admin
     )
+    skipped = {"skipped": result.get("skipped", 0), "skipped_reasons": result.get("skipped_reasons", {})}
     if not result.get("success"):
-        return jsonify({"error": result.get("error", "Bulk operation failed")}), result.get("http_status", 400)
-    return jsonify({"success": True, "affected": result.get("affected", 0)})
+        body = {"error": result.get("error", "Bulk operation failed")}
+        if result.get("skipped"):
+            body.update(skipped)
+        return jsonify(body), result.get("http_status", 400)
+    return jsonify({"success": True, "affected": result.get("affected", 0), **skipped})
 
 
 @api_bp.route("/api/calendar/events")

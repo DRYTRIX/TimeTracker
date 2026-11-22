@@ -89,3 +89,52 @@ class TestAPITimeEntriesComplete:
         assert response.status_code == 200
         data = response.get_json()
         assert "time_entry" in data
+
+    def _completed_entry(self, user, project, *, paid=False, hours_ago=3):
+        from app import db
+
+        start = datetime.utcnow() - timedelta(hours=hours_ago)
+        entry = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=start,
+            end_time=start + timedelta(hours=1),
+            source="manual",
+            billable=True,
+        )
+        entry.paid = paid
+        db.session.add(entry)
+        db.session.commit()
+        return entry.id
+
+    def test_bulk_set_billable_reports_skipped_entries(self, app, client_with_token, user, project, active_timer):
+        open_id = self._completed_entry(user, project)
+        paid_id = self._completed_entry(user, project, paid=True, hours_ago=5)
+
+        response = client_with_token.post(
+            "/api/v1/time-entries/bulk",
+            json={"entry_ids": [open_id, paid_id, active_timer.id], "action": "set_billable", "value": False},
+        )
+
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["affected"] == 1
+        assert data["skipped"] == 2
+        assert data["skipped_reasons"] == {"already_invoiced": 1, "timer_running": 1}
+        from app import db
+
+        db.session.expire_all()
+        assert TimeEntry.query.get(open_id).billable is False
+        assert TimeEntry.query.get(paid_id).billable is True
+
+    def test_bulk_set_billable_all_skipped_returns_400_with_details(self, app, client_with_token, user, project):
+        paid_id = self._completed_entry(user, project, paid=True)
+
+        response = client_with_token.post(
+            "/api/v1/time-entries/bulk",
+            json={"entry_ids": [paid_id], "action": "set_billable", "value": False},
+        )
+
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data["details"] == {"skipped": 1, "skipped_reasons": {"already_invoiced": 1}}

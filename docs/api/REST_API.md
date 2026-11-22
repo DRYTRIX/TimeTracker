@@ -643,6 +643,20 @@ POST /api/v1/time-entries/bulk
 **`action`** (required): one of `delete`, `set_billable`, `set_paid`, `add_tag`, `remove_tag`.  
 **`value`**: required for tag actions (string tag); for `set_billable` / `set_paid`, pass a boolean.  
 Active (running) entries are skipped for non-delete actions; delete skips active entries.
+`set_billable` also skips entries that are already invoiced (`paid` is true).
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "affected": 3,
+  "skipped": 2,
+  "skipped_reasons": { "already_invoiced": 1, "timer_running": 1 }
+}
+```
+
+`skipped_reasons` lists only the reasons that occurred. When every entry is skipped, the request fails with `400` and the same counts in `details`.
 
 Same access rules as the web UI: non-admins may only affect their own entries.
 

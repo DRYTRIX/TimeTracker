@@ -127,3 +127,75 @@ def test_bulk_access_denied_other_users_entry(app, user, project, admin_user):
 
     assert result["success"] is False
     assert result["http_status"] == 403
+
+
+def _completed_entry(user, project, *, paid=False, billable=True, hours_ago=3):
+    start = datetime.utcnow() - timedelta(hours=hours_ago)
+    entry = TimeEntry(
+        user_id=user.id,
+        project_id=project.id,
+        start_time=start,
+        end_time=start + timedelta(hours=1),
+        source="manual",
+        billable=billable,
+    )
+    entry.paid = paid
+    db.session.add(entry)
+    db.session.commit()
+    return entry
+
+
+@pytest.mark.unit
+def test_bulk_set_billable_skips_invoiced_and_running_entries(app, user, project):
+    open_entry = _completed_entry(user, project)
+    paid_entry = _completed_entry(user, project, paid=True, hours_ago=5)
+    running = TimeEntry(
+        user_id=user.id, project_id=project.id, start_time=datetime.utcnow(), source="auto", billable=True
+    )
+    db.session.add(running)
+    db.session.commit()
+
+    result = apply_bulk_time_entry_actions(
+        [open_entry.id, paid_entry.id, running.id],
+        "set_billable",
+        False,
+        user_id=user.id,
+        is_admin=False,
+    )
+
+    assert result["success"] is True
+    assert result["affected"] == 1
+    assert result["affected_ids"] == [open_entry.id]
+    assert result["skipped"] == 2
+    assert result["skipped_reasons"] == {"already_invoiced": 1, "timer_running": 1}
+    db.session.expire_all()
+    assert TimeEntry.query.get(open_entry.id).billable is False
+    assert TimeEntry.query.get(paid_entry.id).billable is True
+    assert TimeEntry.query.get(running.id).billable is True
+
+
+@pytest.mark.unit
+def test_bulk_set_billable_all_invoiced_returns_400_with_counts(app, user, project):
+    paid_entry = _completed_entry(user, project, paid=True)
+
+    result = apply_bulk_time_entry_actions([paid_entry.id], "set_billable", False, user_id=user.id, is_admin=False)
+
+    assert result["success"] is False
+    assert result["http_status"] == 400
+    assert "invoiced" in result["error"]
+    assert result["skipped"] == 1
+    assert result["skipped_reasons"] == {"already_invoiced": 1}
+    db.session.expire_all()
+    assert TimeEntry.query.get(paid_entry.id).billable is True
+
+
+@pytest.mark.unit
+def test_bulk_set_paid_does_not_skip_paid_entries(app, user, project):
+    paid_entry = _completed_entry(user, project, paid=True)
+
+    result = apply_bulk_time_entry_actions([paid_entry.id], "set_paid", False, user_id=user.id, is_admin=False)
+
+    assert result["success"] is True
+    assert result["affected"] == 1
+    assert result["skipped"] == 0
+    assert result["skipped_reasons"] == {}
