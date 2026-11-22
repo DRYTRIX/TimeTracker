@@ -62,7 +62,7 @@ Project costs and recurring project costs take their category from **Expense Cat
 
 Before this change, costs had a fixed list (travel, materials, services, equipment, software, other). Migration `218_project_cost_expense_categories` links every category string in use, plus that fixed list, to an expense category by code or name (case-insensitive). A missing category is created with receipts and approval off.
 
-The API (`/api/v1/projects/<id>/costs`, `/api/v1/project-costs/<id>`, recurring costs) accepts `category_id` or `category` (a code or name). A string that matches no category is stored as before, with `category_id` empty. Responses return `category` (the category name) and `category_id`.
+The API (`/api/v1/projects/<id>/costs`, `/api/v1/project-costs/<id>`, recurring costs) accepts `category_id` or `category` (a code or name). A string that matches no category is stored as before, with `category_id` empty. Responses return `category` (the stored string, as before), `category_id` and `category_name` (the category's display name).
 
 ## Usage
 

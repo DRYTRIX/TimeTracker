@@ -118,7 +118,8 @@ def test_project_cost_category_by_id_or_string(client, api_token, project):
     assert r.status_code == 201
     cost = r.get_json()["cost"]
     assert cost["category_id"] == category.id
-    assert cost["category"] == "Equipment"
+    assert cost["category"] == "equipment"
+    assert cost["category_name"] == "Equipment"
 
     # An unknown string is still accepted and stored as the legacy value
     r = client.post(
@@ -127,6 +128,7 @@ def test_project_cost_category_by_id_or_string(client, api_token, project):
     assert r.status_code == 201
     assert r.get_json()["cost"]["category_id"] is None
     assert r.get_json()["cost"]["category"] == "misc-stuff"
+    assert r.get_json()["cost"]["category_name"] == "misc-stuff"
 
     # New clients: category_id
     r = client.post(
@@ -134,7 +136,8 @@ def test_project_cost_category_by_id_or_string(client, api_token, project):
     )
     assert r.status_code == 201
     cost_id = r.get_json()["cost"]["id"]
-    assert r.get_json()["cost"]["category"] == "Hosting"
+    assert r.get_json()["cost"]["category"] == "hosting"
+    assert r.get_json()["cost"]["category_name"] == "Hosting"
 
     r = client.patch(f"/api/v1/project-costs/{cost_id}", headers=_auth(api_token), json={"category_id": category.id})
     assert r.status_code == 200

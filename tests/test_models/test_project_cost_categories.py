@@ -37,8 +37,10 @@ def test_category_name_comes_from_linked_category(app, project, user):
     assert cost.category == "travel"
     assert cost.category_name == "Travel"
     data = cost.to_dict()
-    assert data["category"] == "Travel"
+    # "category" keeps the legacy string for API compatibility
+    assert data["category"] == "travel"
     assert data["category_id"] == category.id
+    assert data["category_name"] == "Travel"
 
 
 def test_category_name_falls_back_to_legacy_string(app, project, user):
@@ -50,6 +52,7 @@ def test_category_name_falls_back_to_legacy_string(app, project, user):
     data = cost.to_dict()
     assert data["category"] == "materials"
     assert data["category_id"] is None
+    assert data["category_name"] == "materials"
 
 
 def test_set_category_fills_legacy_string_from_name(app, project, user):
