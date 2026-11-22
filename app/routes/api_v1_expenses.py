@@ -14,6 +14,20 @@ from app.utils.api_responses import error_response, forbidden_response, validati
 api_v1_expenses_bp = Blueprint("api_v1_expenses", __name__, url_prefix="/api/v1")
 
 
+@api_v1_expenses_bp.route("/expense-categories", methods=["GET"])
+@require_api_token("read:expenses")
+def list_expense_categories():
+    """List expense categories (active by default)."""
+    from app.models import ExpenseCategory
+
+    include_inactive = (request.args.get("include_inactive") or "").lower() in ("1", "true", "yes")
+    query = ExpenseCategory.query.order_by(ExpenseCategory.name)
+    if not include_inactive:
+        query = query.filter_by(is_active=True)
+    categories = query.all()
+    return jsonify({"expense_categories": [c.to_dict() for c in categories]})
+
+
 @api_v1_expenses_bp.route("/expenses", methods=["GET"])
 @require_api_token("read:expenses")
 def list_expenses():

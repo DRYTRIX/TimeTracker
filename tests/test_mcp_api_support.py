@@ -173,6 +173,126 @@ def test_unbilled_report_matches_rate_override(app, admin_token_client, admin_us
     assert denied.status_code == 403
 
 
+def test_bulk_set_project_and_task_api(app, admin_token_client, user, project, task, test_client):
+    from app.models import Project
+
+    with app.app_context():
+        other = Project(name="MCP Bulk Target", client_id=test_client.id, description="bulk", billable=True)
+        db.session.add(other)
+        start = datetime.utcnow() - timedelta(hours=2)
+        end = datetime.utcnow() - timedelta(hours=1)
+        entry = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            task_id=task.id,
+            start_time=start,
+            end_time=end,
+            duration_seconds=3600,
+            billable=True,
+            source="manual",
+        )
+        db.session.add(entry)
+        db.session.commit()
+        entry_id = entry.id
+        other_id = other.id
+
+    moved = admin_token_client.post(
+        "/api/v1/time-entries/bulk",
+        json={"entry_ids": [entry_id], "action": "set_project", "value": other_id},
+    )
+    assert moved.status_code == 200
+    assert moved.get_json()["affected"] == 1
+
+    with app.app_context():
+        refreshed = TimeEntry.query.get(entry_id)
+        assert refreshed.project_id == other_id
+        assert refreshed.task_id is None
+
+    back = admin_token_client.post(
+        "/api/v1/time-entries/bulk",
+        json={"entry_ids": [entry_id], "action": "set_project", "value": project.id},
+    )
+    assert back.status_code == 200
+    tasked = admin_token_client.post(
+        "/api/v1/time-entries/bulk",
+        json={"entry_ids": [entry_id], "action": "set_task", "value": task.id},
+    )
+    assert tasked.status_code == 200
+    with app.app_context():
+        assert TimeEntry.query.get(entry_id).task_id == task.id
+
+
+def test_expense_categories_and_reports_api(app, admin_token_client, admin_user, user, project):
+    from datetime import date
+
+    from app.models import Expense, ExpenseCategory
+
+    with app.app_context():
+        cat = ExpenseCategory.query.filter_by(name="Travel").first()
+        if cat is None:
+            cat = ExpenseCategory(name="Travel", code="TRV")
+            db.session.add(cat)
+            db.session.flush()
+        expense = Expense(
+            user_id=user.id,
+            title="Taxi",
+            category=cat.name,
+            amount=Decimal("25.00"),
+            expense_date=date.today(),
+            project_id=project.id,
+            status="approved",
+        )
+        db.session.add(expense)
+        db.session.commit()
+
+    cats = admin_token_client.get("/api/v1/expense-categories")
+    assert cats.status_code == 200
+    names = [c["name"] for c in cats.get_json().get("expense_categories") or []]
+    assert "Travel" in names
+
+    start = (date.today().replace(day=1)).isoformat()
+    end = date.today().isoformat()
+    expenses_report = admin_token_client.get(f"/api/v1/reports/expenses?start_date={start}&end_date={end}")
+    assert expenses_report.status_code == 200
+    edata = expenses_report.get_json()
+    assert edata["count"] >= 1
+    assert edata["total_amount"] >= 25.0
+
+    missing = admin_token_client.get(f"/api/v1/reports/missing-hours?start_date={start}&end_date={end}")
+    assert missing.status_code == 200
+    mdata = missing.get_json()
+    assert "users" in mdata
+    assert mdata["weekdays"] >= 0
+
+
+def test_admin_can_update_other_users_time_entry(app, admin_token_client, user, project):
+    with app.app_context():
+        start = datetime.utcnow() - timedelta(hours=2)
+        end = datetime.utcnow() - timedelta(hours=1)
+        entry = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=start,
+            end_time=end,
+            duration_seconds=3600,
+            billable=True,
+            notes="before",
+            source="manual",
+        )
+        db.session.add(entry)
+        db.session.commit()
+        entry_id = entry.id
+
+    resp = admin_token_client.patch(
+        f"/api/v1/time-entries/{entry_id}",
+        json={"notes": "admin fixed", "billable": False},
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()["time_entry"]
+    assert body["notes"] == "admin fixed"
+    assert body["billable"] is False
+
+
 def test_unbilled_preview_pending_approval_warning(app, admin_user, project):
     with app.app_context():
         start = datetime.utcnow() - timedelta(hours=3)
