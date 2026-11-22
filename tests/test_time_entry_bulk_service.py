@@ -199,3 +199,68 @@ def test_bulk_set_paid_does_not_skip_paid_entries(app, user, project):
     assert result["affected"] == 1
     assert result["skipped"] == 0
     assert result["skipped_reasons"] == {}
+
+
+@pytest.mark.unit
+def test_bulk_set_project_and_task(app, user, project, task, test_client):
+    from app.models import Project
+
+    other = Project(
+        name="Other Bulk Project",
+        client_id=test_client.id,
+        description="bulk move target",
+        billable=True,
+    )
+    db.session.add(other)
+    db.session.commit()
+
+    entry = _completed_entry(user, project)
+    entry.task_id = task.id
+    db.session.commit()
+
+    moved = apply_bulk_time_entry_actions(
+        [entry.id],
+        "set_project",
+        other.id,
+        user_id=user.id,
+        is_admin=False,
+    )
+    assert moved["success"] is True
+    db.session.refresh(entry)
+    assert entry.project_id == other.id
+    assert entry.task_id is None  # cleared — task belonged to old project
+
+    # Move back, then set task on matching project
+    apply_bulk_time_entry_actions([entry.id], "set_project", project.id, user_id=user.id, is_admin=False)
+    tasked = apply_bulk_time_entry_actions(
+        [entry.id],
+        "set_task",
+        task.id,
+        user_id=user.id,
+        is_admin=False,
+    )
+    assert tasked["success"] is True
+    db.session.refresh(entry)
+    assert entry.task_id == task.id
+
+
+@pytest.mark.unit
+def test_bulk_set_project_skips_invoiced(app, user, project, test_client):
+    from app.models import Project
+
+    other = Project(name="Paid Skip Project", client_id=test_client.id, description="x", billable=True)
+    db.session.add(other)
+    db.session.commit()
+    paid_entry = _completed_entry(user, project, paid=True)
+
+    result = apply_bulk_time_entry_actions(
+        [paid_entry.id],
+        "set_project",
+        other.id,
+        user_id=user.id,
+        is_admin=False,
+    )
+    assert result["success"] is False
+    assert result["skipped_reasons"] == {"already_invoiced": 1}
+    db.session.refresh(paid_entry)
+    assert paid_entry.project_id == project.id

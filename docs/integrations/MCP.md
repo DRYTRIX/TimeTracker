@@ -74,12 +74,36 @@ Scope presets on register: `user` (default), `admin`, `admin_readonly` (`scope_p
 
 ## Admin tools (admin token)
 
-Clients, projects, tasks, expenses, quotes, invoices (create/draft only — no send), reports including **`report_unbilled`**, and `log_time_for_user`.  
+Clients, projects, tasks, expenses, quotes, invoices (create/draft only — no send), reports, and `log_time_for_user`.  
 Read-only mode registers only read tools (`MCP_TOOLSET=admin_readonly` or a token with no write scopes).
+
+| Tool | Notes |
+|------|--------|
+| `list_users` / `list_clients` / `get_client` | |
+| `list_projects_admin` / `get_project` / `create_project` / `update_project` | |
+| `list_tasks` / `create_task` / `update_task` / `delete_task` | Any project |
+| `list_time_entries_admin` / `get_time_entry_admin` | Any user |
+| `update_time_entry_admin` / `delete_time_entry_admin` | Confirm; delete refused when invoiced |
+| `bulk_update_time_entries` | `billable` / `project_id` / `task_id`; confirm + preview |
+| `log_time_for_user` | Preview unless confirm; `source=agent` |
+| `list_expenses` / `get_expense` / `create_expense` / `update_expense` | |
+| `approve_expense` / `reject_expense` / `list_expense_categories` | |
+| `list_quotes` / `get_quote` / `create_quote` / `update_quote` | |
+| `list_project_costs` / `create_project_cost` | Non-hourly costs |
+| `list_invoices` / `get_invoice` / `create_invoice` / `update_invoice` | Drafts; no send |
+| `delete_invoice` | Drafts only; soft-cancel |
+| `list_invoice_time_entries` | From line-item `time_entry_ids` |
+| `invoice_from_unbilled` / `invoice_generate_from_time` / `update_invoice_items` | No send |
+| `get_invoice_pdf` / `get_invoice_pdf_url` | PDF as base64 (or path); no email/Peppol |
+| `report_summary` / `report_unbilled` / `report_expenses` | |
+| `report_budget` / `report_missing_hours` | Health + estimates + alerts; closing the month |
 
 ## API additions used by MCP
 
 - `POST /api/v1/time-entries/preview`
+- `POST /api/v1/time-entries/bulk` actions: `set_billable`, `set_project`, `set_task`, …
 - `GET /api/v1/reports/unbilled` (`read:reports`, admin)
+- `GET /api/v1/reports/expenses` / `GET /api/v1/reports/missing-hours` (admin)
+- `GET /api/v1/expense-categories`
 - `source=agent` on time entries; list filter `?source=agent`
 - Duration-only create: `date` + `duration_seconds` on `POST /api/v1/time-entries`

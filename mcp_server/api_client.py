@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import uuid
 from contextvars import ContextVar
 from typing import Any, Optional
@@ -11,6 +12,8 @@ import httpx
 
 _token_var: ContextVar[Optional[str]] = ContextVar("timetracker_api_token", default=None)
 _tool_var: ContextVar[Optional[str]] = ContextVar("mcp_tool_name", default=None)
+
+_FILENAME_RE = re.compile(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?', re.IGNORECASE)
 
 
 def set_api_token(token: Optional[str]) -> None:
@@ -39,14 +42,15 @@ class TimeTrackerClient:
         self._token = token
         self._timeout = timeout
 
-    def _headers(self, idempotency_key: Optional[str] = None) -> dict[str, str]:
+    def _headers(self, idempotency_key: Optional[str] = None, *, accept: str = "application/json") -> dict[str, str]:
         token = self._token or get_api_token()
         headers = {
             "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-            "Content-Type": "application/json",
+            "Accept": accept,
             "User-Agent": "TimeTracker-MCP/1.0",
         }
+        if accept == "application/json":
+            headers["Content-Type"] = "application/json"
         tool = _tool_var.get()
         if tool:
             headers["X-MCP-Tool"] = tool
@@ -86,6 +90,39 @@ class TimeTrackerClient:
         clean = {k: v for k, v in params.items() if v is not None}
         return self.request("GET", path, params=clean or None)
 
+    def get_bytes(
+        self,
+        path: str,
+        *,
+        params: Optional[dict] = None,
+        accept: str = "application/pdf,*/*",
+    ) -> tuple[bytes, str, Optional[str]]:
+        """Fetch a binary response. Returns (content, content_type, filename)."""
+        url = f"{base_url()}{path if path.startswith('/') else '/' + path}"
+        clean = {k: v for k, v in (params or {}).items() if v is not None} or None
+        with httpx.Client(timeout=self._timeout) as client:
+            resp = client.request(
+                "GET",
+                url,
+                headers=self._headers(accept=accept),
+                params=clean,
+            )
+        if resp.status_code >= 400:
+            try:
+                body: Any = resp.json()
+            except Exception:
+                body = {"raw": resp.text}
+            message = body.get("message") if isinstance(body, dict) else None
+            error = body.get("error") if isinstance(body, dict) else None
+            raise RuntimeError(f"API GET {path} failed ({resp.status_code}): {message or error or body}")
+        content_type = (resp.headers.get("content-type") or "application/octet-stream").split(";")[0].strip()
+        filename: Optional[str] = None
+        disposition = resp.headers.get("content-disposition") or ""
+        match = _FILENAME_RE.search(disposition)
+        if match:
+            filename = match.group(1).strip()
+        return resp.content, content_type, filename
+
     def post(
         self,
         path: str,
@@ -101,8 +138,8 @@ class TimeTrackerClient:
     def patch(self, path: str, json: Any = None) -> dict[str, Any]:
         return self.request("PATCH", path, json=json)
 
-    def delete(self, path: str) -> dict[str, Any]:
-        return self.request("DELETE", path)
+    def delete(self, path: str, json: Any = None) -> dict[str, Any]:
+        return self.request("DELETE", path, json=json)
 
 
 def new_idempotency_key(prefix: str = "mcp") -> str:

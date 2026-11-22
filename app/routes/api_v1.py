@@ -199,6 +199,9 @@ def api_info():
                 },
                 "payroll_export": "/api/v1/exports/payroll",
                 "capacity_report": "/api/v1/reports/capacity",
+                "expenses_report": "/api/v1/reports/expenses",
+                "missing_hours_report": "/api/v1/reports/missing-hours",
+                "expense_categories": "/api/v1/expense-categories",
                 "compliance_reports": {
                     "locked_periods": "/api/v1/reports/compliance/locked-periods",
                     "audit_events": "/api/v1/reports/compliance/audit-events",
@@ -3061,6 +3064,198 @@ def report_unbilled():
         end_dt=end_dt,
     )
     return jsonify(report)
+
+
+@api_v1_bp.route("/reports/expenses", methods=["GET"])
+@require_api_token("read:reports")
+def report_expenses():
+    """Aggregate expenses by project, user, and category for a period."""
+    if not g.api_user.is_admin:
+        return forbidden_response("Admin access required for expenses report")
+
+    start = _parse_date(request.args.get("start_date"))
+    end = _parse_date(request.args.get("end_date"))
+    if not start or not end:
+        return validation_error_response(
+            errors={"start_date": ["required"], "end_date": ["required"]},
+            message="start_date and end_date are required (YYYY-MM-DD)",
+        )
+    if end < start:
+        return validation_error_response(
+            errors={"end_date": ["must be on or after start_date"]},
+            message="end_date must be on or after start_date",
+        )
+
+    project_id = request.args.get("project_id", type=int)
+    user_id = request.args.get("user_id", type=int)
+    category = request.args.get("category")
+    status = request.args.get("status")
+
+    def _apply_filters(query):
+        query = query.filter(Expense.expense_date >= start, Expense.expense_date <= end)
+        if project_id:
+            query = query.filter(Expense.project_id == project_id)
+        if user_id:
+            query = query.filter(Expense.user_id == user_id)
+        if category:
+            query = query.filter(Expense.category == category)
+        if status:
+            query = query.filter(Expense.status == status)
+        return query
+
+    amount_expr = Expense.amount + func.coalesce(Expense.tax_amount, 0)
+
+    by_project_rows = (
+        _apply_filters(
+            db.session.query(
+                Expense.project_id,
+                func.sum(amount_expr).label("total_amount"),
+                func.count(Expense.id).label("count"),
+            )
+        )
+        .group_by(Expense.project_id)
+        .all()
+    )
+    by_user_rows = (
+        _apply_filters(
+            db.session.query(
+                Expense.user_id,
+                func.sum(amount_expr).label("total_amount"),
+                func.count(Expense.id).label("count"),
+            )
+        )
+        .group_by(Expense.user_id)
+        .all()
+    )
+    by_category_rows = (
+        _apply_filters(
+            db.session.query(
+                Expense.category,
+                func.sum(amount_expr).label("total_amount"),
+                func.count(Expense.id).label("count"),
+            )
+        )
+        .group_by(Expense.category)
+        .all()
+    )
+    grand_total = _apply_filters(db.session.query(func.sum(amount_expr), func.count(Expense.id))).first()
+
+    return jsonify(
+        {
+            "filters": {
+                "start_date": start.isoformat(),
+                "end_date": end.isoformat(),
+                "project_id": project_id,
+                "user_id": user_id,
+                "category": category,
+                "status": status,
+            },
+            "total_amount": float(grand_total[0] or 0),
+            "count": int(grand_total[1] or 0),
+            "by_project": [
+                {
+                    "project_id": row.project_id,
+                    "total_amount": float(row.total_amount or 0),
+                    "count": int(row.count or 0),
+                }
+                for row in by_project_rows
+            ],
+            "by_user": [
+                {
+                    "user_id": row.user_id,
+                    "total_amount": float(row.total_amount or 0),
+                    "count": int(row.count or 0),
+                }
+                for row in by_user_rows
+            ],
+            "by_category": [
+                {
+                    "category": row.category,
+                    "total_amount": float(row.total_amount or 0),
+                    "count": int(row.count or 0),
+                }
+                for row in by_category_rows
+            ],
+        }
+    )
+
+
+@api_v1_bp.route("/reports/missing-hours", methods=["GET"])
+@require_api_token("read:reports")
+def report_missing_hours():
+    """Who logged less than their standard hours in a period (weekdays × standard_hours_per_day)."""
+    if not g.api_user.is_admin:
+        return forbidden_response("Admin access required for missing-hours report")
+
+    start = _parse_date(request.args.get("start_date"))
+    end = _parse_date(request.args.get("end_date"))
+    if not start or not end:
+        return validation_error_response(
+            errors={"start_date": ["required"], "end_date": ["required"]},
+            message="start_date and end_date are required (YYYY-MM-DD)",
+        )
+    if end < start:
+        return validation_error_response(
+            errors={"end_date": ["must be on or after start_date"]},
+            message="end_date must be on or after start_date",
+        )
+
+    weekdays = 0
+    cursor = start
+    while cursor <= end:
+        if cursor.weekday() < 5:
+            weekdays += 1
+        cursor += timedelta(days=1)
+
+    users = User.query.filter_by(is_active=True).order_by(User.username).all()
+    start_dt = datetime.combine(start, datetime.min.time())
+    end_dt = datetime.combine(end, datetime.max.time())
+
+    rows = []
+    for u in users:
+        standard = float(getattr(u, "standard_hours_per_day", 8.0) or 8.0)
+        expected_hours = standard * weekdays
+        logged_seconds = (
+            db.session.query(func.coalesce(func.sum(TimeEntry.duration_seconds), 0))
+            .filter(
+                TimeEntry.user_id == u.id,
+                TimeEntry.end_time.isnot(None),
+                TimeEntry.start_time >= start_dt,
+                TimeEntry.start_time <= end_dt,
+            )
+            .scalar()
+        )
+        try:
+            logged_seconds = int(logged_seconds or 0)
+        except (TypeError, ValueError):
+            logged_seconds = 0
+        logged_hours = round(logged_seconds / 3600.0, 2)
+        missing_hours = round(max(0.0, expected_hours - logged_hours), 2)
+        rows.append(
+            {
+                "user_id": u.id,
+                "username": u.username,
+                "full_name": getattr(u, "full_name", None),
+                "standard_hours_per_day": standard,
+                "weekdays": weekdays,
+                "expected_hours": expected_hours,
+                "logged_hours": logged_hours,
+                "missing_hours": missing_hours,
+            }
+        )
+
+    only_missing = (request.args.get("only_missing") or "true").lower() not in ("0", "false", "no")
+    if only_missing:
+        rows = [r for r in rows if r["missing_hours"] > 0]
+
+    return jsonify(
+        {
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "weekdays": weekdays,
+            "users": rows,
+        }
+    )
 
 
 @api_v1_bp.route("/reports/summary", methods=["GET"])
