@@ -3492,3 +3492,116 @@ def bulk_mark_paid():
         redirect_url += "?" + "&".join(f"{k}={v}" for k, v in filters.items())
 
     return redirect(redirect_url)
+
+
+@timer_bp.route("/time-entries/bulk-billable", methods=["POST"])
+@login_required
+def bulk_mark_billable():
+    """Bulk mark time entries as billable or non-billable.
+
+    Entries that are already invoiced (paid) or have a running timer are skipped.
+    """
+    from app.services.time_entry_bulk_service import (
+        SKIP_ALREADY_INVOICED,
+        SKIP_TIMER_RUNNING,
+        apply_bulk_time_entry_actions,
+    )
+
+    entry_ids = request.form.getlist("entry_ids[]")
+    # Not "billable": the form also carries the list filters, and "billable" is one of them
+    billable_status = request.form.get("set_billable", "").strip().lower()
+
+    if not entry_ids:
+        flash(_("No time entries selected"), "warning")
+        return redirect(url_for("timer.time_entries_overview"))
+
+    if billable_status not in ("true", "false"):
+        flash(_("Invalid billable status"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+
+    is_billable = billable_status == "true"
+
+    entry_ids_int = [int(eid) for eid in entry_ids if eid.isdigit()]
+    if not entry_ids_int:
+        flash(_("Invalid entry IDs"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+
+    entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids_int)).all()
+
+    if not entries:
+        flash(_("No time entries found"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+
+    # Same permission rule as bulk mark paid: other users' entries are skipped
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    allowed_ids = [e.id for e in entries if can_view_all or e.user_id == current_user.id]
+    no_permission_count = len(entries) - len(allowed_ids)
+
+    updated_ids = []
+    skipped_reasons = {}
+    if allowed_ids:
+        # Only permitted entries are passed on, so the service ownership check always passes
+        result = apply_bulk_time_entry_actions(
+            allowed_ids, "set_billable", is_billable, user_id=current_user.id, is_admin=can_view_all
+        )
+        if not result.get("success") and not result.get("skipped"):
+            flash(_("Could not update time entries due to a database error. Please check server logs."), "error")
+            return redirect(url_for("timer.time_entries_overview"))
+        updated_ids = result.get("affected_ids", [])
+        skipped_reasons = result.get("skipped_reasons", {})
+
+    entries_by_id = {e.id: e for e in entries}
+    for entry_id in updated_ids:
+        entry = entries_by_id[entry_id]
+        Activity.log(
+            user_id=current_user.id,
+            action="updated",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"Time entry #{entry.id}",
+            description=f"Marked time entry as {'billable' if is_billable else 'non-billable'}",
+            extra_data={"billable": is_billable, "project_id": entry.project_id, "client_id": entry.client_id},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+        )
+
+    status = _("billable") if is_billable else _("non-billable")
+    reasons = []
+    if skipped_reasons.get(SKIP_ALREADY_INVOICED):
+        reasons.append(_("%(count)d already invoiced", count=skipped_reasons[SKIP_ALREADY_INVOICED]))
+    if skipped_reasons.get(SKIP_TIMER_RUNNING):
+        reasons.append(_("%(count)d timer running", count=skipped_reasons[SKIP_TIMER_RUNNING]))
+    if no_permission_count:
+        reasons.append(_("%(count)d no permission", count=no_permission_count))
+    skipped_count = sum(skipped_reasons.values()) + no_permission_count
+
+    if skipped_count:
+        flash(
+            _(
+                "%(count)d entries marked %(status)s, %(skipped)d skipped: %(reasons)s",
+                count=len(updated_ids),
+                status=status,
+                skipped=skipped_count,
+                reasons=", ".join(reasons),
+            ),
+            "success" if updated_ids else "warning",
+        )
+    else:
+        flash(_("%(count)d entries marked %(status)s", count=len(updated_ids), status=status), "success")
+
+    track_event(
+        current_user.id, "time_entries.bulk_mark_billable", {"count": len(updated_ids), "billable": is_billable}
+    )
+
+    # Preserve filters in redirect
+    redirect_url = url_for("timer.time_entries_overview")
+    filters = {}
+    for key in ["user_id", "project_id", "client_id", "start_date", "end_date", "paid", "billable", "search", "page"]:
+        value = request.form.get(key) or request.args.get(key)
+        if value:
+            filters[key] = value
+
+    if filters:
+        redirect_url += "?" + "&".join(f"{k}={v}" for k, v in filters.items())
+
+    return redirect(redirect_url)

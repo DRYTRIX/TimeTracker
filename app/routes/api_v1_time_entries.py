@@ -157,10 +157,12 @@ def bulk_time_entries():
         except (TypeError, ValueError):
             return validation_error_response(errors={"entry_ids": ["All entry ids must be integers"]})
     result = apply_bulk_time_entry_actions(ids, action, value, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
+    skipped = {"skipped": result.get("skipped", 0), "skipped_reasons": result.get("skipped_reasons", {})}
     if not result.get("success"):
         code = result.get("http_status", 400)
-        return error_response(result.get("error", "Bulk operation failed"), status_code=code)
-    return jsonify({"success": True, "affected": result.get("affected", 0)})
+        details = skipped if result.get("skipped") else None
+        return error_response(result.get("error", "Bulk operation failed"), status_code=code, details=details)
+    return jsonify({"success": True, "affected": result.get("affected", 0), **skipped})
 
 
 def _resolve_create_target_user(validated):
