@@ -232,7 +232,12 @@ def create_invoice_from_time_entries():
         due_date=due_dt,
     )
     if not result.get("success"):
-        return error_response(result.get("message", "Could not create invoice"), status_code=400)
+        status = 409 if result.get("error") == "already_invoiced" else 400
+        return error_response(
+            result.get("message", "Could not create invoice"),
+            status_code=status,
+            error_code=result.get("error") if status == 409 else None,
+        )
     detail = _invoice_service().get_invoice_detail(
         result["invoice"].id, user_id=g.api_user.id, is_admin=g.api_user.is_admin
     )
@@ -271,7 +276,13 @@ def generate_invoice_from_time(invoice_id):
         status = 403 if result.get("error") == "forbidden" else 400
         if result.get("error") == "not_found":
             status = 404
-        return error_response(result.get("message", "Could not generate items"), status_code=status)
+        if result.get("error") in ("invalid_status", "already_invoiced"):
+            status = 409
+        return error_response(
+            result.get("message", "Could not generate items"),
+            status_code=status,
+            error_code=result.get("error") if status == 409 else None,
+        )
     detail = _invoice_service().get_invoice_detail(invoice_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     return jsonify(
         {"message": result["message"], "invoice": detail.get("invoice"), "warnings": result.get("warnings", [])}
@@ -299,7 +310,13 @@ def set_invoice_items(invoice_id):
         status = 403 if result.get("error") == "forbidden" else 400
         if result.get("error") == "not_found":
             status = 404
-        return error_response(result.get("message", "Could not update items"), status_code=status)
+        if result.get("error") in ("already_invoiced", "time_entries_not_billable"):
+            status = 409
+        return error_response(
+            result.get("message", "Could not update items"),
+            status_code=status,
+            error_code=result.get("error") if status == 409 else None,
+        )
     detail = _invoice_service().get_invoice_detail(invoice_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     return jsonify({"message": result["message"], "invoice": detail.get("invoice")})
 

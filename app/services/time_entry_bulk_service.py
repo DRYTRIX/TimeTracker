@@ -36,9 +36,10 @@ def apply_bulk_time_entry_actions(
     """
     Apply bulk action to time entries. Same rules as legacy /api/entries/bulk.
 
-    Entries with a running timer are skipped for every action. ``set_billable``,
-    ``set_project``, and ``set_task`` also skip entries that are already invoiced
-    (``paid`` is True).
+    Entries with a running timer and entries on an invoice (an active invoice time link)
+    are skipped for every action. ``set_billable``, ``set_project``, and ``set_task`` also
+    skip entries marked paid outside an invoice (``paid`` is True). Both invoiced cases count
+    as ``already_invoiced``.
 
     Returns dict with keys: success (bool), affected (int), affected_ids (list of int),
     skipped (int), skipped_reasons (dict reason -> count, only reasons that occurred),
@@ -94,9 +95,17 @@ def apply_bulk_time_entry_actions(
             if task is None:
                 return {"success": False, "error": "Task not found", "http_status": 404}
 
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    time_links = InvoiceTimeService()
+
     for e in entries:
         if e.is_active:
             _skip(SKIP_TIMER_RUNNING)
+            continue
+        # An entry an invoice bills is frozen, for admins too
+        if time_links.billing_invoice(e) is not None:
+            _skip(SKIP_ALREADY_INVOICED)
             continue
         if action == "delete":
             db.session.delete(e)

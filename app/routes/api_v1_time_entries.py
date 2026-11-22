@@ -429,10 +429,10 @@ def update_time_entry(entry_id):
     )
 
     if not result.get("success"):
-        if result.get("error") == "conflict":
+        if result.get("error") in ("conflict", "time_entry_invoiced"):
             return error_response(
                 result.get("message", "Conflict"),
-                error_code="conflict",
+                error_code=result.get("error"),
                 status_code=409,
             )
         return error_response(
@@ -496,6 +496,8 @@ def delete_time_entry(entry_id):
         reason=reason,
     )
     if not result.get("success"):
+        if result.get("error") == "time_entry_invoiced":
+            return error_response(result.get("message"), error_code="time_entry_invoiced", status_code=409)
         return error_response(
             result.get("message", "Could not delete time entry"),
             status_code=400,

@@ -84,6 +84,10 @@ def test_ui_api_and_client_unbilled_build_the_same_lines(app, client, user, rate
     assert Decimal(str(preview["estimated_total"])) == Decimal("259.60")
     assert unbilled["warnings"] == []
 
+    # An entry is on one invoice at a time: drop this draft so the next path can bill the same entries
+    db.session.delete(unbilled_invoice)
+    db.session.commit()
+
     _login(client, user)
     ui_invoice = InvoiceFactory(project_id=project.id, client_id=cl.id, created_by=user.id, tax_rate=Decimal("0"))
     db.session.commit()
@@ -94,6 +98,10 @@ def test_ui_api_and_client_unbilled_build_the_same_lines(app, client, user, rate
     assert resp.status_code == 302
     ui_invoice = Invoice.query.get(ui_invoice.id)
     assert _lines(ui_invoice) == EXPECTED
+
+    # An entry is on one invoice at a time: drop this draft so the next path can bill the same entries
+    db.session.delete(ui_invoice)
+    db.session.commit()
 
     headers = _token_headers(user)
     resp = client.post(
@@ -106,6 +114,10 @@ def test_ui_api_and_client_unbilled_build_the_same_lines(app, client, user, rate
     assert body["warnings"] == []
     api_invoice = Invoice.query.get(body["invoice"]["id"])
     assert _lines(api_invoice) == EXPECTED
+
+    # An entry is on one invoice at a time: drop this draft so the next path can bill the same entries
+    db.session.delete(api_invoice)
+    db.session.commit()
 
     api_draft = InvoiceFactory(project_id=project.id, client_id=cl.id, created_by=user.id)
     db.session.commit()
@@ -188,6 +200,10 @@ def test_missing_rate_warns_in_ui_and_api(app, client, user):
     assert ("warning", f"1.50 h were added at 0: no hourly rate for No Rate Project / {who}") in flashes
     (item,) = list(Invoice.query.get(inv.id).items)
     assert Decimal(str(item.unit_price)) == Decimal("0")
+
+    # An entry is on one invoice at a time: drop this draft so the next path can bill the same entries
+    db.session.delete(Invoice.query.get(inv.id))
+    db.session.commit()
 
     resp = client.post(
         "/api/v1/invoices/from-time-entries",

@@ -250,8 +250,10 @@ class Invoice(db.Model):
 
         self.update_payment_status()
 
-        # Update invoice status based on payment
-        if self.payment_status == "fully_paid":
+        # Update invoice status based on payment (a cancelled invoice keeps its status)
+        if self.status == "cancelled":
+            pass
+        elif self.payment_status == "fully_paid":
             self.status = "paid"
         elif self.payment_status in ["partially_paid", "overpaid"]:
             # Keep current status but ensure it's not 'paid' if only partially paid

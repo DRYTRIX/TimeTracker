@@ -93,6 +93,9 @@ class PaymentGatewayService:
             invoice = Invoice.query.get(invoice_id)
             if not invoice:
                 return {"success": False, "message": "Invoice not found."}
+            # A cancelled invoice has let go of its hours; a payment must not bring it back as paid
+            if invoice.status == "cancelled":
+                return {"success": False, "message": "Invoice is cancelled; payments cannot be recorded on it."}
 
             gateway = PaymentGateway.query.get(gateway_id)
             if not gateway or not gateway.is_active:

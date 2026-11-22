@@ -89,29 +89,12 @@ class RecurringInvoiceService:
 
     def _add_time_entry_items(self, recurring_invoice, invoice):
         """Add invoice items from unbilled time entries for the recurring invoice's project."""
-        time_entries = (
-            TimeEntry.query.filter(
-                TimeEntry.project_id == recurring_invoice.project_id,
-                TimeEntry.end_time.isnot(None),
-                TimeEntry.billable == True,
-            )
-            .order_by(TimeEntry.start_time.desc())
-            .all()
-        )
+        from app.services.invoice_time_service import InvoiceTimeService
 
-        unbilled_entries = []
-        for entry in time_entries:
-            already_billed = False
-            for other_invoice in recurring_invoice.project.invoices:
-                if other_invoice.id != invoice.id:
-                    for item in other_invoice.items:
-                        if item.time_entry_ids and str(entry.id) in item.time_entry_ids.split(","):
-                            already_billed = True
-                            break
-                if already_billed:
-                    break
-            if not already_billed:
-                unbilled_entries.append(entry)
+        time_links = InvoiceTimeService()
+        unbilled_entries = (
+            time_links.unbilled_query([recurring_invoice.project_id]).order_by(TimeEntry.start_time.desc()).all()
+        )
 
         if not unbilled_entries:
             return
@@ -129,5 +112,7 @@ class RecurringInvoiceService:
         )
         for item in lines.items:
             db.session.add(item)
+        db.session.flush()
+        time_links.link_items(invoice, lines.items, created_by=recurring_invoice.created_by)
         for message in lines.warnings:
             logger.warning("Recurring invoice %s: %s", recurring_invoice.id, message)

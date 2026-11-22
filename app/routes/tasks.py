@@ -45,6 +45,21 @@ tasks_bp = Blueprint("tasks", __name__)
 ALLOWED_NEXT_PREFIXES = ("/kanban", "/gantt", "/tasks", "/projects")
 
 
+def _move_task_time_entries(task, project_id):
+    """Move the task's time entries to ``project_id``, except those on an invoice.
+
+    Returns how many entries stayed because an invoice bills them.
+    """
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    on_invoice = TimeEntry.id.in_(InvoiceTimeService.active_entry_ids_query())
+    left = TimeEntry.query.filter(TimeEntry.task_id == task.id, on_invoice).count()
+    TimeEntry.query.filter(TimeEntry.task_id == task.id, ~on_invoice).update(
+        {"project_id": project_id}, synchronize_session="fetch"
+    )
+    return left
+
+
 def _task_custom_field_definitions():
     from app.services.custom_field_service import CustomFieldService
 
@@ -609,11 +624,18 @@ def edit_task(task_id):
         if project_id != task.project_id:
             old_project_id = task.project_id
             task.project_id = project_id
-            # Keep related time entries consistent with the task's project
+            # Keep related time entries consistent with the task's project; entries on an
+            # invoice are frozen and stay where they are
             try:
-                TimeEntry.query.filter_by(task_id=task.id).update(
-                    {"project_id": project_id}, synchronize_session="fetch"
-                )
+                invoiced_left = _move_task_time_entries(task, project_id)
+                if invoiced_left:
+                    flash(
+                        _(
+                            "%(count)d time entry/entries of this task are on an invoice and stay on the old project",
+                            count=invoiced_left,
+                        ),
+                        "warning",
+                    )
                 db.session.add(
                     TaskActivity(
                         task_id=task.id,
@@ -1469,6 +1491,7 @@ def bulk_move_project():
 
     updated_count = 0
     skipped_count = 0
+    invoiced_entries_left = 0
 
     for task_id_str in task_ids:
         try:
@@ -1487,10 +1510,8 @@ def bulk_move_project():
             old_project_id = task.project_id
             task.project_id = new_project_id
 
-            # Batch-update related time entries to match the new project
-            TimeEntry.query.filter_by(task_id=task.id).update(
-                {"project_id": new_project_id}, synchronize_session="fetch"
-            )
+            # Batch-update related time entries to match the new project (entries on an invoice stay)
+            invoiced_entries_left += _move_task_time_entries(task, new_project_id)
 
             # Log activity
             db.session.add(
@@ -1519,6 +1540,14 @@ def bulk_move_project():
 
     if skipped_count > 0:
         flash(f'Skipped {skipped_count} task{"s" if skipped_count != 1 else ""} (no permission)', "warning")
+    if invoiced_entries_left > 0:
+        flash(
+            _(
+                "%(count)d time entry/entries of these tasks are on an invoice and stay on their old project",
+                count=invoiced_entries_left,
+            ),
+            "warning",
+        )
 
     return redirect(url_for("tasks.list_tasks"))
 
