@@ -1087,7 +1087,7 @@ Example: `2024-01-15T14:30:00Z`
                     ],
                     "responses": {
                         "200": {
-                            "description": "Invoice created (returns invoice_id, invoice_number, total, item_count)"
+                            "description": "Invoice created (returns invoice_id, invoice_number, total, item_count, warnings)"
                         },
                         "400": {"description": "Cannot create invoice"},
                         "404": {"description": "Client not found"},

@@ -2,6 +2,7 @@
 Service for recurring invoice business logic (generation from template, list, get).
 """
 
+import logging
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -9,6 +10,8 @@ from typing import Any, Dict, List, Optional
 from app import db
 from app.models import Invoice, InvoiceItem, RecurringInvoice, Settings, TimeEntry
 from app.repositories.recurring_invoice_repository import RecurringInvoiceRepository
+
+logger = logging.getLogger(__name__)
 
 
 class RecurringInvoiceService:
@@ -114,18 +117,17 @@ class RecurringInvoiceService:
             return
 
         from app.models import Settings
-        from app.models.rate_override import RateOverride
-        from app.utils.invoice_time_entry_items import build_invoice_items_from_entries
+        from app.utils.invoice_time_entry_items import build_time_entry_lines
 
         settings = Settings.get_settings()
         group_entries = getattr(settings, "invoice_group_time_entries", True) if settings else True
-        hourly_rate = RateOverride.resolve_rate(recurring_invoice.project)
-        items = build_invoice_items_from_entries(
+        lines = build_time_entry_lines(
             invoice.id,
             unbilled_entries,
-            hourly_rate,
             group=group_entries,
             project_name=recurring_invoice.project.name if recurring_invoice.project else None,
         )
-        for item in items:
+        for item in lines.items:
             db.session.add(item)
+        for message in lines.warnings:
+            logger.warning("Recurring invoice %s: %s", recurring_invoice.id, message)

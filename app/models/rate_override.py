@@ -34,40 +34,50 @@ class RateOverride(db.Model):
     @classmethod
     def resolve_rate(cls, project, user_id=None, on_date=None):
         """Resolve effective hourly rate for a project/user at a given date."""
+        rate, _source = cls.resolve_rate_with_source(project, user_id=user_id, on_date=on_date)
+        return rate
+
+    @classmethod
+    def resolve_rate_with_source(cls, project, user_id=None, on_date=None):
+        """Resolve the effective hourly rate and report where it came from.
+
+        Returns ``(rate, source)``. ``source`` is one of ``"user_override"``,
+        ``"project_override"``, ``"project"``, ``"client"``, or ``None`` when no
+        rate is configured anywhere in the chain (``rate`` is then ``Decimal("0")``).
+        """
         if not project:
-            return Decimal("0")
+            return Decimal("0"), None
 
         # Step 1: specific user override
-        q = cls.query.filter_by(project_id=project.id, user_id=user_id)
-        if on_date:
-            q = q.filter(
-                (cls.effective_from.is_(None) | (cls.effective_from <= on_date))
-                & (cls.effective_to.is_(None) | (cls.effective_to >= on_date))
-            )
-        user_ovr = q.order_by(cls.effective_from.desc().nullslast()).first()
-        if user_ovr:
-            return Decimal(user_ovr.hourly_rate)
+        if user_id is not None:
+            user_ovr = cls._override_query(project.id, user_id, on_date).first()
+            if user_ovr:
+                return Decimal(user_ovr.hourly_rate), "user_override"
 
         # Step 2: project-level override
-        q = cls.query.filter_by(project_id=project.id, user_id=None)
-        if on_date:
-            q = q.filter(
-                (cls.effective_from.is_(None) | (cls.effective_from <= on_date))
-                & (cls.effective_to.is_(None) | (cls.effective_to >= on_date))
-            )
-        proj_ovr = q.order_by(cls.effective_from.desc().nullslast()).first()
+        proj_ovr = cls._override_query(project.id, None, on_date).first()
         if proj_ovr:
-            return Decimal(proj_ovr.hourly_rate)
+            return Decimal(proj_ovr.hourly_rate), "project_override"
 
         # Step 3: project rate
         if project.hourly_rate:
-            return Decimal(project.hourly_rate)
+            return Decimal(project.hourly_rate), "project"
 
         # Step 4: client default
         try:
             if project.client_obj and project.client_obj.default_hourly_rate:
-                return Decimal(project.client_obj.default_hourly_rate)
+                return Decimal(project.client_obj.default_hourly_rate), "client"
         except Exception:
             pass
 
-        return Decimal("0")
+        return Decimal("0"), None
+
+    @classmethod
+    def _override_query(cls, project_id, user_id, on_date):
+        q = cls.query.filter_by(project_id=project_id, user_id=user_id)
+        if on_date:
+            q = q.filter(
+                (cls.effective_from.is_(None) | (cls.effective_from <= on_date))
+                & (cls.effective_to.is_(None) | (cls.effective_to >= on_date))
+            )
+        return q.order_by(cls.effective_from.desc().nullslast())
