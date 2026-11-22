@@ -332,3 +332,72 @@ def test_create_client_unbilled_invoice_two_projects(app, test_user, test_client
     r2 = service.create_client_unbilled_invoice(test_client.id, acting_user_id=test_user.id)
     assert r2["success"] is False
     assert r2["error"] == "no_unbilled_entries"
+
+
+@pytest.mark.unit
+def test_client_unbilled_invoice_takes_terms_and_period_from_latest_invoice(app, test_user, test_client, test_project):
+    """Due date and terms as on the client's latest invoice; no notes."""
+    from app.models import Settings
+
+    settings = Settings.get_settings()
+    settings.invoice_notes = "Settings notes"
+    db.session.commit()
+    prior = Invoice(
+        invoice_number="PRIOR-1",
+        project_id=test_project.id,
+        client_id=test_client.id,
+        client_name=test_client.name,
+        due_date=date(2026, 11, 16),
+        created_by=test_user.id,
+        issue_date=date(2026, 11, 1),
+        terms="Net 15",
+    )
+    db.session.add(prior)
+    start = datetime(2025, 1, 10, 9, 0, 0)
+    db.session.add(
+        TimeEntry(
+            user_id=test_user.id,
+            project_id=test_project.id,
+            start_time=start,
+            end_time=start + timedelta(hours=1),
+            duration_seconds=3600,
+            billable=True,
+        )
+    )
+    db.session.commit()
+
+    result = InvoiceService().create_client_unbilled_invoice(test_client.id, acting_user_id=test_user.id)
+    assert result["success"] is True
+    inv = Invoice.query.get(result["invoice_id"])
+    assert inv.due_date == inv.issue_date + timedelta(days=15)
+    assert inv.terms == "Net 15"
+    assert not inv.notes
+
+
+@pytest.mark.unit
+def test_client_unbilled_invoice_for_new_client_uses_30_days_and_settings_terms(
+    app, test_user, test_client, test_project
+):
+    from app.models import Settings
+
+    settings = Settings.get_settings()
+    settings.invoice_terms = "Settings terms"
+    db.session.commit()
+    start = datetime(2025, 1, 10, 9, 0, 0)
+    db.session.add(
+        TimeEntry(
+            user_id=test_user.id,
+            project_id=test_project.id,
+            start_time=start,
+            end_time=start + timedelta(hours=1),
+            duration_seconds=3600,
+            billable=True,
+        )
+    )
+    db.session.commit()
+
+    result = InvoiceService().create_client_unbilled_invoice(test_client.id, acting_user_id=test_user.id)
+    inv = Invoice.query.get(result["invoice_id"])
+    assert inv.due_date == inv.issue_date + timedelta(days=30)
+    assert inv.terms == "Settings terms"
+    assert not inv.notes
