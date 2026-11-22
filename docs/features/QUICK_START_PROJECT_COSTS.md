@@ -39,7 +39,7 @@ docker-compose restart
 3. Click "Add Cost" button
 4. Fill in the form:
    - **Description**: What the cost is for (e.g., "Travel to client site")
-   - **Category**: Select from dropdown (Travel, Materials, Services, Equipment, Software, Other)
+   - **Category**: Select from dropdown (the active categories from **Admin → Expense Categories**)
    - **Amount**: Cost amount
    - **Date**: When the cost occurred
    - **Currency**: Select currency (default: EUR)
@@ -91,7 +91,7 @@ Project page shows:
 
 ## 🎨 Features
 
-- **6 Cost Categories**: Travel, Materials, Services, Equipment, Software, Other
+- **Shared Categories**: Costs use the same Expense Categories as expenses
 - **Multi-currency**: EUR, USD, GBP, CHF
 - **Billable Tracking**: Mark costs as billable or internal
 - **Invoice Integration**: Seamless inclusion in invoices
@@ -185,7 +185,7 @@ For complete details, see:
 
 ## 🌟 Tips
 
-1. **Use Categories Consistently**: Stick to the predefined categories for better reporting
+1. **Use Categories Consistently**: Manage the list in **Admin → Expense Categories**; it is shared with expenses
 2. **Add Notes**: Use the notes field for details that might be needed later
 3. **Check Billable**: Always verify billable status before adding
 4. **Regular Invoicing**: Invoice costs regularly to keep track of what's billed

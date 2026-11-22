@@ -10,7 +10,7 @@ The Project Costs feature allows you to track expenses beyond hourly work on pro
 - **Add Costs**: Add project costs with description, category, amount, and date
 - **Edit Costs**: Modify cost details (admins and cost creators only)
 - **Delete Costs**: Remove costs that haven't been invoiced yet
-- **Categories**: Organize costs by category (Travel, Materials, Services, Equipment, Software, Other)
+- **Categories**: Organize costs by category. Costs use the same list as expenses: **Admin → Expense Categories**. The forms offer the active categories; a cost keeps its category after that category is deactivated
 - **Billable Status**: Mark costs as billable or non-billable to clients
 - **Multiple Currencies**: Support for EUR, USD, GBP, CHF
 
@@ -39,7 +39,8 @@ The `project_costs` table includes:
 - **project_id**: Foreign key to projects table
 - **user_id**: Foreign key to users table (who added the cost)
 - **description**: Brief description of the cost
-- **category**: Category (travel, materials, services, equipment, software, other)
+- **category_id**: Foreign key to expense_categories table (nullable, set to NULL if the category is deleted)
+- **category**: Legacy category string, kept for one release and filled on every write (lowercased category name). Reads use `category_id` and fall back to this string
 - **amount**: Cost amount (Decimal)
 - **currency_code**: Currency code (default: EUR)
 - **billable**: Whether the cost is billable to client
@@ -51,6 +52,18 @@ The `project_costs` table includes:
 - **created_at**: Timestamp when cost was created
 - **updated_at**: Timestamp when cost was last updated
 
+## Categories
+
+Project costs and recurring project costs take their category from **Expense Categories**, the list expenses use. An admin manages it under **Admin → Expense Categories**.
+
+- The add, edit and recurring cost forms offer the active categories.
+- A deactivated category disappears from the forms for new costs. An existing cost keeps it, and its edit form shows it as "(inactive)".
+- The category filter on the costs page and the breakdown by category use the same list.
+
+Before this change, costs had a fixed list (travel, materials, services, equipment, software, other). Migration `218_project_cost_expense_categories` links every category string in use, plus that fixed list, to an expense category by code or name (case-insensitive). A missing category is created with receipts and approval off.
+
+The API (`/api/v1/projects/<id>/costs`, `/api/v1/project-costs/<id>`, recurring costs) accepts `category_id` or `category` (a code or name). A string that matches no category is stored as before, with `category_id` empty. Responses return `category` (the category name) and `category_id`.
+
 ## Usage
 
 ### Adding a Cost
@@ -60,7 +73,7 @@ The `project_costs` table includes:
 3. Click "Add Cost"
 4. Fill in:
    - Description (required)
-   - Category (required)
+   - Category (required, from Expense Categories)
    - Amount (required)
    - Date (required)
    - Currency (default: EUR)
