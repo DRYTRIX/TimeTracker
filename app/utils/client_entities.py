@@ -29,39 +29,38 @@ def active_entities(client_id):
 
 
 def _latest_choices(client_ids):
-    """Latest invoice's Bill to per project and per client: ({project_id: id or None}, {client_id: …})."""
+    """Latest invoice's Bill to per client: {client_id: entity id or None}."""
     from app.models import Invoice
 
     if not client_ids:
-        return {}, {}
+        return {}
     rows = (
-        db.session.query(Invoice.project_id, Invoice.client_id, Invoice.client_entity_id)
+        db.session.query(Invoice.client_id, Invoice.client_entity_id)
         .filter(Invoice.client_id.in_(client_ids))
         .order_by(Invoice.issue_date.asc(), Invoice.id.asc())
         .all()
     )
-    by_project, by_client = {}, {}
-    for project_id, client_id, entity_id in rows:  # later rows win
-        by_project[project_id] = entity_id
+    by_client = {}
+    for client_id, entity_id in rows:  # later rows win
         by_client[client_id] = entity_id
-    return by_project, by_client
+    return by_client
 
 
-def default_entity_id(project_id, client_id, active_ids, by_project=None, by_client=None):
-    """Bill to for a new invoice of this project.
+def default_entity_id(client_id, active_ids, by_client=None):
+    """Bill to for a new invoice of this client.
 
-    The choice of the project's latest invoice, else of the client's latest invoice (an archived
-    entity is skipped), else the client's only active entity, else None ("Client details").
+    An invoice is billed to the client's legal entity, whatever the project: the choice of the
+    client's latest invoice (an archived entity is skipped), else the client's only active entity,
+    else None ("Client details").
     """
-    if by_project is None or by_client is None:
-        by_project, by_client = _latest_choices([client_id])
-    for scope, key in ((by_project, project_id), (by_client, client_id)):
-        if key in scope:
-            entity_id = scope[key]
-            if entity_id is None:
-                return None
-            if entity_id in active_ids:
-                return entity_id
+    if by_client is None:
+        by_client = _latest_choices([client_id])
+    if client_id in by_client:
+        entity_id = by_client[client_id]
+        if entity_id is None:
+            return None
+        if entity_id in active_ids:
+            return entity_id
     if len(active_ids) == 1:
         return next(iter(active_ids))
     return None
@@ -109,13 +108,11 @@ def form_context(projects, invoice=None):
 
     defaults = {}
     if invoice is None and by_client:
-        by_project, by_client_latest = _latest_choices(client_ids)
+        by_client_latest = _latest_choices(client_ids)
         for project_id, client_id in project_clients.items():
             active_ids = {e["id"] for e in by_client.get(str(client_id), []) if e["active"]}
             if active_ids:
-                defaults[project_id] = default_entity_id(
-                    int(project_id), client_id, active_ids, by_project, by_client_latest
-                )
+                defaults[project_id] = default_entity_id(client_id, active_ids, by_client_latest)
     from app.models import Client
 
     client_details = {

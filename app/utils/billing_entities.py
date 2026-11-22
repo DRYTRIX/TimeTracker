@@ -84,13 +84,20 @@ def format_invoice_number(entity, issue_date=None, seq=None):
     return _TOKEN.sub(lambda m: values[m.group(1)], fmt)
 
 
-def _number_taken(number, exclude_invoice_id=None):
+def number_owner(number, exclude_invoice_id=None):
+    """The invoice that already has this number, or None."""
     from app.models import Invoice
 
-    q = db.session.query(Invoice.id).filter(Invoice.invoice_number == number)
+    if not number:
+        return None
+    q = Invoice.query.filter(Invoice.invoice_number == number)
     if exclude_invoice_id:
         q = q.filter(Invoice.id != exclude_invoice_id)
-    return q.first() is not None
+    return q.order_by(Invoice.id.asc()).first()
+
+
+def _number_taken(number, exclude_invoice_id=None):
+    return number_owner(number, exclude_invoice_id) is not None
 
 
 def unique_number(number, exclude_invoice_id=None):
@@ -103,36 +110,162 @@ def unique_number(number, exclude_invoice_id=None):
     return f"{number}-{n}"
 
 
+class NumberTaken(Exception):
+    """The invoice number is already used by another invoice.
+
+    ``owner`` is that invoice, ``next_free`` the number the form offers instead.
+    """
+
+    def __init__(self, number, owner, next_free):
+        super().__init__(number)
+        self.number = number
+        self.owner = owner
+        self.next_free = next_free
+
+
+def _uses_seq(entity):
+    return "{SEQ}" in (entity.number_format or "")
+
+
+def next_free_number(entity, issue_date=None, number=None):
+    """The number to offer when ``number`` (default: the entity's next number) is taken.
+
+    With {SEQ} in the format: the first free number after the entity's counter. Otherwise
+    ``number-2``, ``number-3``, … whichever is free.
+    """
+    if _uses_seq(entity):
+        seq = (entity.number_counter or 0) + 1
+        while _number_taken(format_invoice_number(entity, issue_date, seq=seq)):
+            seq += 1
+        return format_invoice_number(entity, issue_date, seq=seq)
+    base = number or format_invoice_number(entity, issue_date)
+    return unique_number(base) if base else None
+
+
+def _seq_of(entity, number, issue_date=None):
+    """The {SEQ} value if ``number`` is the entity's format filled for this issue date, else None."""
+    if not number or not _uses_seq(entity):
+        return None
+    marker = "\x00"
+    pattern = re.escape(format_invoice_number(entity, issue_date, seq=marker)).replace(re.escape(marker), r"(\d+)")
+    match = re.fullmatch(pattern, number)
+    return int(match.group(1)) if match else None
+
+
+def check_number(entity, number, issue_date=None, exclude_invoice_id=None):
+    """Raise NumberTaken if ``number`` belongs to another invoice."""
+    owner = number_owner(number, exclude_invoice_id)
+    if owner is not None:
+        offer = next_free_number(entity, issue_date, number) if entity else unique_number(number, exclude_invoice_id)
+        raise NumberTaken(number, owner, offer)
+
+
+def claim_number(entity, number, issue_date=None):
+    """Move the entity's {SEQ} counter up to ``number`` if it is the format's number past the counter.
+
+    So a number typed by hand, or picked with "Use next free", is not offered again. The caller commits.
+    """
+    seq = _seq_of(entity, number, issue_date)
+    if seq is not None and seq > (entity.number_counter or 0):
+        entity.number_counter = seq
+
+
 def preview_invoice_number(entity, issue_date=None):
-    number = format_invoice_number(entity, issue_date)
-    return unique_number(number) if number else None
+    """The entity's next number as the form shows it (it may be taken: see ``number_preview``)."""
+    return format_invoice_number(entity, issue_date)
 
 
 def allocate_invoice_number(entity, issue_date=None):
     """Next number for an invoice from ``entity``, or None if the entity has no format.
 
-    Bumps the entity's counter when the format uses {SEQ}. The caller commits.
+    Raises NumberTaken when that number already belongs to another invoice. Bumps the entity's
+    counter when the format uses {SEQ}, so it moves only together with the invoice. The caller commits.
     """
     fmt = (entity.number_format or "").strip()
     if not fmt:
         return None
-    if "{SEQ}" in fmt:
-        entity.number_counter = (entity.number_counter or 0) + 1
-        number = format_invoice_number(entity, issue_date, seq=entity.number_counter)
+    if _uses_seq(entity):
+        seq = (entity.number_counter or 0) + 1
+        number = format_invoice_number(entity, issue_date, seq=seq)
     else:
+        seq = None
         number = format_invoice_number(entity, issue_date)
-    return unique_number(number)
+    check_number(entity, number, issue_date)
+    if seq is not None:
+        entity.number_counter = seq
+    return number
+
+
+def invoice_ref(invoice):
+    """What the form shows about an invoice (or a row with its number, client name, issue date)."""
+    from flask import current_app
+
+    fmt = current_app.jinja_env.filters.get("format_date")
+    issued = invoice.issue_date
+    return {
+        "number": invoice.invoice_number,
+        "client": invoice.client_name or "",
+        "date": (fmt(issued) if fmt else issued.isoformat()) if issued else "",
+    }
+
+
+def number_preview(entity, issue_date=None):
+    """The entity's next number for the form, with the invoice holding it and the next free one."""
+    number = preview_invoice_number(entity, issue_date)
+    owner = number_owner(number) if number else None
+    return {
+        "number": number or "",
+        "taken": invoice_ref(owner) if owner else None,
+        "next_free": next_free_number(entity, issue_date, number) if owner else "",
+    }
+
+
+def _ref_columns(Invoice):
+    return (Invoice.invoice_number, Invoice.client_name, Invoice.issue_date)
+
+
+def latest_invoice_by_entity():
+    """{billing_entity_id: number, client and issue date of its latest invoice}."""
+    from app.models import Invoice
+
+    rows = (
+        db.session.query(Invoice.billing_entity_id, *_ref_columns(Invoice))
+        .filter(Invoice.billing_entity_id.isnot(None))
+        .order_by(Invoice.issue_date.asc(), Invoice.id.asc())
+        .all()
+    )
+    out = {}
+    for row in rows:  # later rows win
+        out[row.billing_entity_id] = row
+    return out
+
+
+def latest_invoice_by_client(client_ids):
+    """{client_id: number, client and issue date of that client's latest invoice}."""
+    from app.models import Invoice
+
+    if not client_ids:
+        return {}
+    rows = (
+        db.session.query(Invoice.client_id, *_ref_columns(Invoice))
+        .filter(Invoice.client_id.in_(client_ids))
+        .order_by(Invoice.issue_date.asc(), Invoice.id.asc())
+        .all()
+    )
+    out = {}
+    for row in rows:  # later rows win
+        out[row.client_id] = row
+    return out
 
 
 def entity_defaults(entity):
-    """Form defaults for a new invoice from this entity."""
+    """Form defaults for a new invoice from this entity (Notes have none: they differ on every invoice)."""
     return {
         "vat_category": entity.default_vat_category or "",
         "tax_rate": str(entity.default_tax_rate) if entity.default_tax_rate is not None else "",
         "vat_exemption_code": entity.default_vat_exemption_code or "",
         "vat_exemption_reason": entity.default_vat_exemption_reason or "",
         "terms": entity.default_terms or "",
-        "notes": entity.default_notes or "",
     }
 
 
@@ -144,11 +277,14 @@ def form_context(projects, settings):
     if not entities:
         return {"billing_enabled": False}
     by_client = default_entity_ids_by_client()
+    latest_by_entity = latest_invoice_by_entity()
     data = {}
     for e in entities:
+        previous = latest_by_entity.get(e.id)
         data[e.id] = {
             "name": e.short_name,
-            "number": preview_invoice_number(e) or "",
+            **number_preview(e),
+            "previous": invoice_ref(previous) if previous else None,
             "defaults": entity_defaults(e),
             "accounts": [
                 {"id": a.id, "currency": a.currency, "label": a.label, "text": a.printed_text}
@@ -156,12 +292,15 @@ def form_context(projects, settings):
             ],
             "seller": e.seller_snapshot(),
         }
+    project_clients = {str(p.id): p.client_id for p in (projects or [])}
+    latest_by_client = latest_invoice_by_client(sorted({c for c in project_clients.values() if c}))
     return {
         "billing_enabled": True,
         "billing_entities": entities,
         "billing_entity_data": data,
         "billing_entity_by_client": {str(k): v for k, v in by_client.items()},
-        "billing_project_clients": {str(p.id): p.client_id for p in (projects or [])},
+        "billing_project_clients": project_clients,
+        "billing_last_by_client": {str(k): invoice_ref(v) for k, v in latest_by_client.items()},
     }
 
 

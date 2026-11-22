@@ -89,10 +89,50 @@ def test_number_uses_billing_period_month(app, entity):
     assert billing.format_invoice_number(entity, date(2027, 1, 5)) == "EC-2026-12"
 
 
-def test_taken_number_gets_suffix(app, entity, invoice):
+def test_taken_number_is_an_error(app, entity, invoice):
     invoice.invoice_number = "EC-2026-10"
     db.session.commit()
-    assert billing.allocate_invoice_number(entity, date(2026, 11, 11)) == "EC-2026-10-2"
+    with pytest.raises(billing.NumberTaken) as taken:
+        billing.allocate_invoice_number(entity, date(2026, 11, 11))
+    assert taken.value.owner == invoice
+    # without {SEQ} the next free number is the old suffix, offered instead of saved silently
+    assert taken.value.next_free == "EC-2026-10-2"
+
+
+def test_taken_seq_number_offers_next_by_counter(app, entity, invoice):
+    entity.number_format = "INV-{YYYY}-{SEQ}"
+    entity.number_counter = 4
+    invoice.invoice_number = "INV-2026-5"
+    db.session.commit()
+    with pytest.raises(billing.NumberTaken) as taken:
+        billing.allocate_invoice_number(entity, date(2026, 12, 1))
+    assert taken.value.next_free == "INV-2026-6"
+    assert entity.number_counter == 4  # not moved
+
+
+def test_claim_number_moves_counter_forward_only(app, entity):
+    entity.number_format = "INV-{YYYY}-{SEQ}"
+    entity.number_counter = 4
+    billing.claim_number(entity, "INV-2026-7", date(2026, 12, 1))
+    assert entity.number_counter == 7
+    billing.claim_number(entity, "INV-2026-3", date(2026, 12, 1))
+    billing.claim_number(entity, "MANUAL-99", date(2026, 12, 1))
+    assert entity.number_counter == 7
+
+
+def test_number_preview_flags_taken_number(app, entity, invoice):
+    assert billing.number_preview(entity, date(2026, 11, 11)) == {
+        "number": "EC-2026-10",
+        "taken": None,
+        "next_free": "",
+    }
+    invoice.invoice_number = "EC-2026-10"
+    db.session.commit()
+    preview = billing.number_preview(entity, date(2026, 11, 11))
+    assert preview["number"] == "EC-2026-10"
+    assert preview["taken"]["number"] == "EC-2026-10"
+    assert preview["taken"]["client"] == invoice.client_name
+    assert preview["next_free"] == "EC-2026-10-2"
 
 
 def test_seq_token_uses_entity_counter(app, entity):
@@ -360,3 +400,146 @@ def test_entity_page_lists_accounts_above_defaults(app, admin_authenticated_clie
     html = admin_authenticated_client.get(f"/admin/legal-entities/{entity.id}").get_data(as_text=True)
     assert html.index("DE89 3704 0044") < html.index("Number format")
     assert html.index("Number format") < html.index("Save changes")
+
+
+# --- taken invoice number on the create form ---------------------------------------------------------
+
+
+def test_create_with_taken_typed_number_is_rejected(app, authenticated_client, project, test_client, entity, invoice):
+    invoice.invoice_number = "EC-2026-11-manual"
+    db.session.commit()
+    before = Invoice.query.count()
+    resp = authenticated_client.post(
+        "/invoices/create",
+        data=_create_form(
+            project,
+            test_client,
+            billing_entity_id=entity.id,
+            invoice_number="EC-2026-11-manual",
+            invoice_number_preview="EC-2026-11",
+            notes="Payment order 123",
+        ),
+    )
+    assert resp.status_code == 409
+    assert Invoice.query.count() == before
+    html = resp.get_data(as_text=True)
+    assert "Number already taken by EC-2026-11-manual · Test Client Corp" in html
+    assert "Use next free: EC-2026-11-manual-2" in html
+    assert "Payment order 123" in html  # the posted form comes back as typed
+
+
+def test_use_next_free_creates_invoice(app, authenticated_client, project, test_client, entity, invoice):
+    invoice.invoice_number = "EC-2026-11-manual"
+    db.session.commit()
+    resp = authenticated_client.post(
+        "/invoices/create",
+        data=_create_form(
+            project,
+            test_client,
+            billing_entity_id=entity.id,
+            invoice_number="EC-2026-11-manual-2",
+            invoice_number_preview="EC-2026-11",
+        ),
+    )
+    assert resp.status_code == 302
+    assert _newest_invoice().invoice_number == "EC-2026-11-manual-2"
+
+
+def test_taken_format_number_is_rejected_and_counter_stays(
+    app, authenticated_client, project, test_client, entity, invoice
+):
+    entity.number_format = "INV-{YYYY}-{SEQ}"
+    entity.number_counter = 0
+    invoice.invoice_number = billing.format_invoice_number(entity, date.today(), seq=1)
+    db.session.commit()
+    before = Invoice.query.count()
+    preview = billing.preview_invoice_number(entity)
+    resp = authenticated_client.post(
+        "/invoices/create",
+        data=_create_form(
+            project,
+            test_client,
+            billing_entity_id=entity.id,
+            invoice_number=preview,
+            invoice_number_preview=preview,
+        ),
+    )
+    assert resp.status_code == 409
+    assert Invoice.query.count() == before
+    db.session.refresh(entity)
+    assert entity.number_counter == 0
+    next_free = billing.format_invoice_number(entity, date.today(), seq=2)
+    assert f"Use next free: {next_free}" in resp.get_data(as_text=True)
+
+    # "Use next free" posts it as typed: saved, and the counter moves up to it
+    resp = authenticated_client.post(
+        "/invoices/create",
+        data=_create_form(
+            project,
+            test_client,
+            billing_entity_id=entity.id,
+            invoice_number=next_free,
+            invoice_number_preview=preview,
+        ),
+    )
+    assert resp.status_code == 302
+    assert _newest_invoice().invoice_number == next_free
+    db.session.refresh(entity)
+    assert entity.number_counter == 2
+
+
+def test_format_number_moves_counter_once_on_save(app, authenticated_client, project, test_client, entity):
+    entity.number_format = "INV-{YYYY}-{SEQ}"
+    entity.number_counter = 3
+    db.session.commit()
+    resp = authenticated_client.post(
+        "/invoices/create", data=_create_form(project, test_client, billing_entity_id=entity.id)
+    )
+    assert resp.status_code == 302
+    db.session.refresh(entity)
+    assert entity.number_counter == 4
+    assert _newest_invoice().invoice_number == billing.format_invoice_number(entity, date.today(), seq=4)
+
+
+def test_module_off_keeps_global_numbering(app, authenticated_client, project, test_client, entity, invoice):
+    """Without the module the author's series numbers the invoice: never a taken number."""
+    _disable_module()
+    authenticated_client.post("/invoices/create", data=_create_form(project, test_client))
+    authenticated_client.post("/invoices/create", data=_create_form(project, test_client))
+    numbers = [i.invoice_number for i in Invoice.query.all()]
+    assert len(numbers) == 3
+    assert len(set(numbers)) == 3
+
+
+def test_form_warns_when_next_number_is_taken(app, authenticated_client, project, entity, invoice):
+    invoice.invoice_number = billing.preview_invoice_number(entity)
+    db.session.commit()
+    data = billing.form_context([project], Settings.get_settings())["billing_entity_data"][entity.id]
+    assert data["taken"]["number"] == invoice.invoice_number
+    assert data["next_free"] == invoice.invoice_number + "-2"
+
+
+def test_form_hints_previous_and_last_for_client(app, project, test_client, entity, invoice):
+    ctx = billing.form_context([project], Settings.get_settings())
+    assert ctx["billing_entity_data"][entity.id]["previous"] is None  # no invoice from this entity yet
+    assert ctx["billing_last_by_client"][str(test_client.id)]["number"] == invoice.invoice_number
+
+    invoice.billing_entity_id = entity.id
+    db.session.commit()
+    previous = billing.form_context([project], Settings.get_settings())["billing_entity_data"][entity.id]["previous"]
+    assert previous["number"] == invoice.invoice_number
+    assert previous["client"] == test_client.name
+
+
+def test_form_hints_absent_without_invoices(app, project, test_client, entity):
+    ctx = billing.form_context([project], Settings.get_settings())
+    assert ctx["billing_entity_data"][entity.id]["previous"] is None
+    assert ctx["billing_last_by_client"] == {}
+
+
+def test_notes_have_no_default(app, authenticated_client, project, entity):
+    entity.default_notes = "Thank you for your business!"
+    db.session.commit()
+    assert "notes" not in billing.entity_defaults(entity)
+    html = authenticated_client.get(f"/invoices/create?project_id={project.id}").get_data(as_text=True)
+    assert "Thank you for your business!" not in html
