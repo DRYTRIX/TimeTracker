@@ -576,16 +576,7 @@ def _saved_filter_to_dict(filter_obj):
 
 def _project_cost_to_dict(cost):
     """Convert project cost to dictionary"""
-    return {
-        "id": cost.id,
-        "project_id": cost.project_id,
-        "user_id": cost.user_id,
-        "amount": float(cost.amount) if cost.amount else None,
-        "description": cost.description,
-        "date": cost.date.isoformat() if cost.date else None,
-        "billable": cost.billable,
-        "created_at": cost.created_at.isoformat() if cost.created_at else None,
-    }
+    return cost.to_dict()
 
 
 def _weekly_goal_to_dict(goal):
