@@ -31,9 +31,16 @@
         {% if mode == 'create' %}
         <div class="min-w-0 md:col-span-6" id="invoiceNumberRow">
             <label for="invoice_number" class="form-label">{{ _('Number') }}</label>
-            <input type="text" name="invoice_number" id="invoice_number" value="" class="form-input text-base min-h-[44px]">
-            <input type="hidden" name="invoice_number_preview" id="invoice_number_preview" value="">
+            <input type="text" name="invoice_number" id="invoice_number" value="{{ posted.number if posted else '' }}" class="form-input text-base min-h-[44px]{% if posted %} border-red-500{% endif %}"{% if posted %} data-touched="1" aria-invalid="true"{% endif %} aria-describedby="numberTaken">
+            <input type="hidden" name="invoice_number_preview" id="invoice_number_preview" value="{{ posted.preview if posted else '' }}">
+            {# A taken number: the error after submit, or a warning as soon as the entity's next number is taken #}
+            <div id="numberTaken" role="alert" class="{% if not posted %}hidden {% endif %}mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+                <span id="numberTakenText">{% if posted %}{{ _('Number already taken by %(invoice)s', invoice=[posted.taken.number, posted.taken.client, posted.taken.date] | select | join(' · ')) }}{% endif %}</span>
+                <button type="button" id="useNextFree" class="font-medium underline{% if not (posted and posted.next_free) %} hidden{% endif %}" data-number="{{ posted.next_free if posted else '' }}">{% if posted and posted.next_free %}{{ _('Use next free: %(number)s', number=posted.next_free) }}{% endif %}</button>
+            </div>
             <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _("From the entity's number format. You can edit it.") }}</p>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 hidden" id="numberPrevious"></p>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 hidden" id="numberLastForClient"></p>
         </div>
         {% endif %}
         <div class="min-w-0 md:col-span-3 md:group-[.has-bill-to]:col-span-2">
@@ -47,13 +54,14 @@
         </div>
     </div>
 </div>
-<script type="application/json" id="billingEntityData" nonce="{{ csp_nonce() }}">{{ {'entities': billing_entity_data, 'byClient': billing_entity_by_client, 'projectClients': billing_project_clients or {}} | tojson }}</script>
+<script type="application/json" id="billingEntityData" nonce="{{ csp_nonce() }}">{{ {'entities': billing_entity_data, 'byClient': billing_entity_by_client, 'projectClients': billing_project_clients or {}, 'lastByClient': billing_last_by_client or {}, 'posted': (posted or None) if mode == 'create' else None} | tojson }}</script>
 <script nonce="{{ csp_nonce() }}">
 document.addEventListener('DOMContentLoaded', function () {
     var block = document.getElementById('billingSellerBlock');
     if (!block) return;
     var mode = block.dataset.mode;
     var data = JSON.parse(document.getElementById('billingEntityData').textContent || '{}');
+    var posted = data.posted || null;  // the form came back with an error: keep what was posted
     var entities = data.entities || {};
     var entitySel = document.getElementById('billing_entity_id');
     var accountSel = document.getElementById('payment_account_id');
@@ -71,13 +79,69 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (currencySlot) {
         currencySlot.remove();
     }
+    // Terms come from the client's latest invoice and are filled by the form's own script; notes have no default
+    var defaultFields = ['vat_category', 'tax_rate', 'vat_exemption_code', 'vat_exemption_reason'];
     var touched = {};
-    ['vat_category', 'tax_rate', 'vat_exemption_code', 'vat_exemption_reason', 'terms', 'notes'].forEach(function (id) {
+    defaultFields.forEach(function (id) {
         var el = document.getElementById(id);
+        if (posted) touched[id] = true;
         if (el) el.addEventListener('input', function () { touched[id] = true; });
         if (el) el.addEventListener('change', function () { touched[id] = true; });
     });
-    if (numberInput) numberInput.addEventListener('input', function () { numberInput.dataset.touched = '1'; });
+    var takenBox = document.getElementById('numberTaken');
+    var takenText = document.getElementById('numberTakenText');
+    var nextFreeBtn = document.getElementById('useNextFree');
+    var previousHint = document.getElementById('numberPrevious');
+    var lastForClientHint = document.getElementById('numberLastForClient');
+    var T = {
+        taken: {{ _('Number already taken by %(invoice)s', invoice='__REF__') | tojson }},
+        nextFree: {{ _('Use next free: %(number)s', number='__NUMBER__') | tojson }},
+        previous: {{ _('Previous from %(entity)s: %(invoice)s', entity='__ENTITY__', invoice='__REF__') | tojson }},
+        lastFor: {{ _('Last for %(client)s: %(invoice)s', client='__CLIENT__', invoice='__REF__') | tojson }}
+    };
+    function ref(parts) { return parts.filter(Boolean).join(' · '); }
+
+    function showTaken(taken, nextFree) {
+        if (!takenBox) return;
+        if (!taken) {
+            takenBox.classList.add('hidden');
+            if (numberInput) { numberInput.classList.remove('border-red-500'); numberInput.removeAttribute('aria-invalid'); }
+            return;
+        }
+        takenText.textContent = T.taken.replace('__REF__', ref([taken.number, taken.client, taken.date]));
+        nextFreeBtn.dataset.number = nextFree || '';
+        nextFreeBtn.textContent = nextFree ? T.nextFree.replace('__NUMBER__', nextFree) : '';
+        nextFreeBtn.classList.toggle('hidden', !nextFree);
+        takenBox.classList.remove('hidden');
+        if (numberInput) { numberInput.classList.add('border-red-500'); numberInput.setAttribute('aria-invalid', 'true'); }
+    }
+
+    function clientId() {
+        return projectSel ? (data.projectClients || {})[projectSel.value] : null;
+    }
+
+    function renderHints(e) {
+        if (!previousHint || !lastForClientHint) return;
+        var p = e && e.previous;
+        previousHint.textContent = p ? T.previous.replace('__ENTITY__', e.name).replace('__REF__', ref([p.number, p.client, p.date])) : '';
+        previousHint.classList.toggle('hidden', !p);
+        var c = clientId();
+        var last = c != null ? (data.lastByClient || {})[String(c)] : null;
+        lastForClientHint.textContent = last ? T.lastFor.replace('__CLIENT__', last.client).replace('__REF__', ref([last.number, last.date])) : '';
+        lastForClientHint.classList.toggle('hidden', !last);
+    }
+
+    if (numberInput) numberInput.addEventListener('input', function () {
+        numberInput.dataset.touched = '1';
+        showTaken(null);
+    });
+    if (nextFreeBtn) nextFreeBtn.addEventListener('click', function () {
+        if (!nextFreeBtn.dataset.number) return;
+        // Saved as typed: the server checks it again and moves the entity's counter up to it
+        numberInput.value = nextFreeBtn.dataset.number;
+        numberInput.dataset.touched = '1';
+        showTaken(null);
+    });
 
     function currentEntity() { return entities[entitySel.value] || null; }
     function currency() { return currencySel ? (currencySel.value || '').toUpperCase() : ''; }
@@ -152,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function applyDefaults(e) {
         if (mode !== 'create' || !e) return;
         var d = e.defaults || {};
-        Object.keys(d).forEach(function (key) {
+        defaultFields.forEach(function (key) {
             var el = document.getElementById(key);
             if (!el || touched[key] || d[key] === '') return;
             el.value = d[key];
@@ -160,6 +224,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (numberInput && !numberInput.dataset.touched) {
             numberInput.value = e.number || '';
             numberPreview.value = e.number || '';
+            showTaken(e.taken, e.next_free);
         }
     }
 
@@ -171,6 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
         renderSeller(e);
         fillAccounts(keepAccount);
         applyDefaults(e);
+        if (mode === 'create') renderHints(e);
     }
 
     function entityForProject() {
@@ -189,6 +255,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (projectSel && mode === 'create') projectSel.addEventListener('change', function () { setTimeout(entityForProject, 0); });
 
     onEntityChange(true);
-    if (mode === 'create') entityForProject();
+    if (mode === 'create' && !posted) entityForProject();
 });
 </script>

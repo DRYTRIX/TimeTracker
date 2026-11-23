@@ -3,7 +3,7 @@ Service for invoice business logic.
 """
 
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional
 
@@ -1145,8 +1145,11 @@ class InvoiceService:
             }
 
         client = Client.query.get(client_id)
+        from app.utils.invoice_defaults import due_date_for, terms_for
+
         issue_date = date.today()
-        due_date = issue_date + timedelta(days=30)
+        # Due date and terms as on the client's latest invoice; notes differ per invoice, so none
+        due_date = due_date_for(client_id, issue_date)
         invoice_number = self.invoice_repo.generate_invoice_number()
 
         client_name = client.name
@@ -1169,8 +1172,8 @@ class InvoiceService:
             )
 
         tax_rate = Decimal("0")
-        notes = settings.invoice_notes if settings and settings.invoice_notes else None
-        terms = settings.invoice_terms if settings and settings.invoice_terms else None
+        notes = None
+        terms = terms_for(client_id, settings=settings)
         template_id = getattr(settings, "default_invoice_template_id", None) if settings else None
 
         invoice = Invoice(

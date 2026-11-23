@@ -2,13 +2,13 @@
    Expects client_entity_data; bill_to_mode = 'create' | 'edit'.
    Shown only for a client that has legal entities. When the Legal entities (billing_entities)
    block is on the page, its #billToSlot / #billToPreviewSlot receive the field and the preview. #}
-<div class="md:col-span-2 min-w-0 rounded-lg border border-border-light dark:border-border-dark p-4 hidden" id="billToBlock" data-mode="{{ bill_to_mode }}">
+<div class="md:col-span-2 min-w-0 rounded-lg border border-border-light dark:border-border-dark p-4 hidden" id="billToBlock" data-mode="{{ bill_to_mode }}"{% if posted %} data-keep="1" data-posted="{{ posted.client_entity_id or '' }}"{% endif %}>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="min-w-0" id="billToField">
             <label for="client_entity_id" class="form-label">{{ _('Bill to') }}</label>
             <select name="client_entity_id" id="client_entity_id" class="form-input text-base min-h-[44px]"></select>
             {% if bill_to_mode == 'create' %}
-            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Same as the last invoice of this project') }}</p>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Same as the last invoice for this client') }}</p>
             {% endif %}
         </div>
         <div class="min-w-0" id="billToPreviewWrap">
@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var block = document.getElementById('billToBlock');
     if (!block) return;
     var mode = block.dataset.mode;
+    var keep = block.dataset.keep === '1';  // the form came back with an error: keep what was posted
     var data = JSON.parse(document.getElementById('billToData').textContent || '{}');
     var field = document.getElementById('billToField');
     var previewWrap = document.getElementById('billToPreviewWrap');
@@ -122,7 +123,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (currentEntity()) fill(currentEntity());
         };
         if (projectSel) projectSel.addEventListener('change', function () { setTimeout(applyProject, 0); });
-        setTimeout(applyProject, 0);
+        if (keep) {
+            data.current = block.dataset.posted || null;
+            setTimeout(function () { rebuild(false); }, 0);
+        } else {
+            setTimeout(applyProject, 0);
+        }
     } else {
         rebuild(false);
     }

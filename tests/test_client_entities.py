@@ -89,22 +89,20 @@ def test_snapshot_and_label(app, entity):
     assert entity.label == "Example Holding S.L. · ES"
 
 
-def test_default_follows_project_then_client_then_only_entity(app, entity, second_entity):
+def test_default_follows_client_then_only_entity(app, entity, second_entity):
     active = {entity.id, second_entity.id}
-    # the project's latest invoice wins over the client's
-    assert bill_to.default_entity_id(1, 7, active, {1: second_entity.id}, {7: entity.id}) == second_entity.id
-    # no invoice for the project: the client's latest
-    assert bill_to.default_entity_id(2, 7, active, {1: second_entity.id}, {7: entity.id}) == entity.id
+    # the client's latest invoice, whatever its project
+    assert bill_to.default_entity_id(7, active, {7: second_entity.id}) == second_entity.id
     # the latest invoice used the client's own details: keep that
-    assert bill_to.default_entity_id(1, 7, active, {1: None}, {7: entity.id}) is None
+    assert bill_to.default_entity_id(7, active, {7: None}) is None
     # an archived entity is skipped
-    assert bill_to.default_entity_id(1, 7, {entity.id}, {1: second_entity.id}, {7: entity.id}) == entity.id
+    assert bill_to.default_entity_id(7, {entity.id}, {7: second_entity.id}) == entity.id
     # no invoices: the only entity, else client details
-    assert bill_to.default_entity_id(1, 7, {entity.id}, {}, {}) == entity.id
-    assert bill_to.default_entity_id(1, 7, active, {}, {}) is None
+    assert bill_to.default_entity_id(7, {entity.id}, {}) == entity.id
+    assert bill_to.default_entity_id(7, active, {}) is None
 
 
-def test_form_context_default_from_latest_project_invoice(app, user, project, test_client, entity, second_entity):
+def test_form_context_default_from_latest_client_invoice(app, user, project, test_client, entity, second_entity):
     _invoice_for(project, test_client, user, entity, issued=date(2026, 9, 30))
     _invoice_for(project, test_client, user, second_entity, issued=date(2026, 10, 31))
     ctx = bill_to.form_context([project])
@@ -112,6 +110,20 @@ def test_form_context_default_from_latest_project_invoice(app, user, project, te
     assert data["defaults"][str(project.id)] == second_entity.id
     assert {e["id"] for e in data["byClient"][str(test_client.id)]} == {entity.id, second_entity.id}
     assert data["clients"][str(test_client.id)]["email"] == test_client.email
+
+
+def test_default_ignores_project_of_latest_invoice(app, user, project, test_client, entity, second_entity):
+    """The project's last invoice went to X, a later one of the client (other project) to Y: Y."""
+    from app.models import Project
+
+    other = Project(name="Other project", client_id=test_client.id, billable=True)
+    db.session.add(other)
+    db.session.commit()
+    _invoice_for(project, test_client, user, entity, issued=date(2026, 9, 30))
+    _invoice_for(other, test_client, user, second_entity, issued=date(2026, 10, 31))
+    data = bill_to.form_context([project, other])["client_entity_data"]
+    assert data["defaults"][str(project.id)] == second_entity.id
+    assert data["defaults"][str(other.id)] == second_entity.id
 
 
 def test_archived_entity_not_offered(app, project, entity, second_entity):

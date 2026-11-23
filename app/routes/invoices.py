@@ -231,15 +231,22 @@ def create_invoice():
                 flash(_(billing_error), "error")
                 return redirect(url_for("invoices.create_invoice"))
 
-        # Generate invoice number: typed by hand, else the entity's format, else the global series
+        # Generate invoice number: typed by hand, else the entity's format, else the global series.
+        # A number another invoice already has is an error on the form, not a silent "-2".
         invoice_number = None
         typed_number = (request.form.get("invoice_number", "") or "").strip()
         preview_number = (request.form.get("invoice_number_preview", "") or "").strip()
         if billing_entity:
-            if typed_number and typed_number != preview_number:
-                invoice_number = billing.unique_number(typed_number)
-            else:
-                invoice_number = billing.allocate_invoice_number(billing_entity)
+            try:
+                if typed_number and typed_number != preview_number:
+                    billing.check_number(billing_entity, typed_number)
+                    billing.claim_number(billing_entity, typed_number)
+                    invoice_number = typed_number
+                else:
+                    invoice_number = billing.allocate_invoice_number(billing_entity)
+            except billing.NumberTaken as taken:
+                db.session.rollback()
+                return _render_create_form(number_error=taken, form_due_date=due_date_str), 409
         if not invoice_number:
             invoice_number = Invoice.generate_invoice_number()
         _invoice_create_t0 = time.monotonic()
@@ -340,7 +347,16 @@ def create_invoice():
         flash(f"Invoice {invoice_number} created successfully", "success")
         return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 
-    # GET request - show form (scoped for subcontractors)
+    # GET request - show form
+    return _render_create_form()
+
+
+def _render_create_form(number_error=None, form_due_date=None):
+    """The create form (projects scoped for subcontractors).
+
+    After a rejected POST (``number_error``: the invoice number is taken) the form shows what was
+    posted, with the error and "Use next free" under the number.
+    """
     from app.utils.scope_filter import apply_project_scope_to_model
 
     projects_query = Project.query.filter_by(status="active", billable=True).order_by(Project.name)
@@ -351,19 +367,44 @@ def create_invoice():
     settings = Settings.get_settings()
     # "New invoice" on a project's Invoices page passes ?project_id= to preselect it
     selected_project_id = request.args.get("project_id", type=int)
-
-    # Set default due date to 30 days from now
-    default_due_date = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
+    if number_error is not None:
+        selected_project_id = request.form.get("project_id", type=int)
 
     from app.utils.billing_entities import form_context as billing_form_context
+    from app.utils.billing_entities import invoice_ref
     from app.utils.client_entities import form_context as bill_to_form_context
     from app.utils.invoice_currency import currency_choices, default_currencies_by_client, settings_currency
+    from app.utils.invoice_defaults import DEFAULT_DUE_DAYS, client_defaults, due_date_for
+
+    # Due date and terms follow the client's latest invoice; the form's script refills them per project
+    defaults = client_defaults(sorted({p.client_id for p in projects if p.client_id}))
+    selected = next((p for p in projects if p.id == selected_project_id), None)
+    default_due_date = form_due_date or due_date_for(selected.client_id if selected else None).strftime("%Y-%m-%d")
+
+    posted = None
+    if number_error is not None:
+        posted = {
+            "number": number_error.number,
+            "preview": (request.form.get("invoice_number_preview", "") or "").strip(),
+            "taken": invoice_ref(number_error.owner),
+            "next_free": number_error.next_free or "",
+            "entity_id": request.form.get("billing_entity_id", type=int),
+            "account_id": request.form.get("payment_account_id", type=int),
+            "client_entity_id": request.form.get("client_entity_id", type=int),
+        }
 
     return render_template(
         "invoices/create.html",
         projects=projects,
         settings=settings,
         default_due_date=default_due_date,
+        invoice_defaults={
+            "byClient": {str(k): v for k, v in defaults.items()},
+            "settingsTerms": settings.invoice_terms or "",
+            "defaultDays": DEFAULT_DUE_DAYS,
+            "today": date.today().isoformat(),
+        },
+        posted=posted,
         currency_choices=currency_choices(settings),
         client_currencies=default_currencies_by_client(settings),
         default_currency=settings_currency(settings),
