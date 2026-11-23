@@ -538,6 +538,146 @@ Example: `2024-01-15T14:30:00Z`
                     },
                 },
             },
+            "/projects/{project_id}/rate-overrides": {
+                "get": {
+                    "tags": ["Projects"],
+                    "summary": "List rate overrides",
+                    "description": (
+                        "List hourly rate overrides for a project. Precedence: person override, "
+                        "then project override, then project hourly rate, then client default."
+                    ),
+                    "parameters": [
+                        {"name": "project_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {
+                        "200": {"description": "List of rate overrides"},
+                        "403": {"description": "Forbidden"},
+                        "404": {"description": "Project not found"},
+                    },
+                },
+                "post": {
+                    "tags": ["Projects"],
+                    "summary": "Create rate override",
+                    "description": (
+                        "Create a project or person rate override with optional effective dates. "
+                        "Overlapping windows for the same project and person are rejected."
+                    ),
+                    "parameters": [
+                        {"name": "project_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": ["hourly_rate"],
+                                    "properties": {
+                                        "user_id": {
+                                            "type": "integer",
+                                            "nullable": True,
+                                            "description": "Omit or null for everyone (project-wide)",
+                                        },
+                                        "hourly_rate": {"type": "number", "minimum": 0},
+                                        "effective_from": {"type": "string", "format": "date", "nullable": True},
+                                        "effective_to": {"type": "string", "format": "date", "nullable": True},
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    "responses": {
+                        "201": {"description": "Rate override created"},
+                        "400": {"description": "Validation failed"},
+                        "403": {"description": "Forbidden"},
+                        "404": {"description": "Project not found"},
+                    },
+                },
+            },
+            "/rate-overrides/{override_id}": {
+                "get": {
+                    "tags": ["Projects"],
+                    "summary": "Get rate override",
+                    "parameters": [
+                        {"name": "override_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {
+                        "200": {"description": "Rate override details"},
+                        "403": {"description": "Forbidden"},
+                        "404": {"description": "Not found"},
+                    },
+                },
+                "patch": {
+                    "tags": ["Projects"],
+                    "summary": "Update rate override",
+                    "parameters": [
+                        {"name": "override_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "user_id": {"type": "integer", "nullable": True},
+                                        "hourly_rate": {"type": "number", "minimum": 0},
+                                        "effective_from": {"type": "string", "format": "date", "nullable": True},
+                                        "effective_to": {"type": "string", "format": "date", "nullable": True},
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    "responses": {
+                        "200": {"description": "Rate override updated"},
+                        "400": {"description": "Validation failed"},
+                        "403": {"description": "Forbidden"},
+                        "404": {"description": "Not found"},
+                    },
+                },
+                "put": {
+                    "tags": ["Projects"],
+                    "summary": "Replace rate override",
+                    "parameters": [
+                        {"name": "override_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "requestBody": {
+                        "required": True,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "user_id": {"type": "integer", "nullable": True},
+                                        "hourly_rate": {"type": "number", "minimum": 0},
+                                        "effective_from": {"type": "string", "format": "date", "nullable": True},
+                                        "effective_to": {"type": "string", "format": "date", "nullable": True},
+                                    },
+                                }
+                            }
+                        },
+                    },
+                    "responses": {
+                        "200": {"description": "Rate override updated"},
+                        "400": {"description": "Validation failed"},
+                        "403": {"description": "Forbidden"},
+                        "404": {"description": "Not found"},
+                    },
+                },
+                "delete": {
+                    "tags": ["Projects"],
+                    "summary": "Delete rate override",
+                    "parameters": [
+                        {"name": "override_id", "in": "path", "required": True, "schema": {"type": "integer"}}
+                    ],
+                    "responses": {
+                        "200": {"description": "Rate override deleted"},
+                        "403": {"description": "Forbidden"},
+                        "404": {"description": "Not found"},
+                    },
+                },
+            },
             "/time-entries": {
                 "get": {
                     "tags": ["Time Entries"],
