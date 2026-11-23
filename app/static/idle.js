@@ -632,7 +632,18 @@
           style: 'primary',
           onClick: async function(){
             try {
-              await fetch('/timer/pause', { method: 'POST', redirect: 'manual', credentials: 'same-origin' });
+              const csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+              const res = await fetch('/timer/pause', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'X-CSRFToken': csrf,
+                  'Accept': 'application/json',
+                },
+                body: 'csrf_token=' + encodeURIComponent(csrf),
+                credentials: 'same-origin',
+              });
+              if (!res.ok) return;
               await refreshTimerUiAfterStop();
             } catch(e){}
           }
