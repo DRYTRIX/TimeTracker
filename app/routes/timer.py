@@ -1104,6 +1104,19 @@ def edit_timer(timer_id):
         flash(_("You can only edit your own timers"), "error")
         return redirect(url_for("main.dashboard"))
 
+    # An entry an invoice bills is frozen, for admins too
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    locked = InvoiceTimeService().edit_lock(timer)
+    if locked:
+        if request.method == "POST":
+            flash(_(locked["message"]), "error")
+            return render_template(
+                "timer/edit_timer.html",
+                **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
+            )
+        flash(_(locked["message"]), "warning")
+
     if request.method == "POST":
         from app.utils.validation import sanitize_input
 
@@ -1409,6 +1422,14 @@ def delete_timer(timer_id):
         flash(_("Cannot delete an active timer"), "error")
         return redirect(url_for("main.dashboard"))
 
+    # An entry an invoice bills cannot be deleted, by admins either
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    locked = InvoiceTimeService().edit_lock(timer)
+    if locked:
+        flash(_(locked["message"]), "error")
+        return redirect(url_for("timer.edit_timer", timer_id=timer.id))
+
     # Get the name for the success message (project or client)
     if timer.project:
         target_name = timer.project.name
@@ -1533,6 +1554,7 @@ def bulk_delete_time_entries():
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     deleted_count = 0
     skipped_count = 0
+    invoiced_skipped = []
 
     # Use service layer for proper audit logging
     service = TimeTrackingService()
@@ -1558,6 +1580,8 @@ def bulk_delete_time_entries():
 
         if result.get("success"):
             deleted_count += 1
+        elif result.get("error") == "time_entry_invoiced":
+            invoiced_skipped.append(f"#{entry.id} ({result.get('invoice_number')})")
         else:
             skipped_count += 1
 
@@ -1566,6 +1590,15 @@ def bulk_delete_time_entries():
 
     if skipped_count > 0:
         flash(_("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count), "warning")
+    if invoiced_skipped:
+        flash(
+            _(
+                "Skipped %(count)d time entry/entries that are on an invoice: %(entries)s",
+                count=len(invoiced_skipped),
+                entries=", ".join(invoiced_skipped),
+            ),
+            "warning",
+        )
 
     # Track event
     track_event(current_user.id, "time_entries.bulk_delete", {"count": deleted_count})
@@ -2749,10 +2782,12 @@ def time_entries_overview():
             current_app.logger.debug("Ignoring invalid end_date filter %r", end_date, exc_info=True)
 
     # Filter by paid status
-    if paid_filter == "true":
-        query = query.filter(TimeEntry.paid == True)
-    elif paid_filter == "false":
-        query = query.filter(TimeEntry.paid == False)
+    # "Paid" here means billed: on an invoice that is no longer a draft, or marked paid outside one
+    if paid_filter in ("true", "false"):
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        billed_clause = InvoiceTimeService.billed_clause()
+        query = query.filter(billed_clause if paid_filter == "true" else ~billed_clause)
 
     # Filter by billable status
     if billable_filter == "true":
@@ -3095,10 +3130,12 @@ def export_time_entries_csv():
             current_app.logger.debug("Ignoring invalid end_date filter %r", end_date, exc_info=True)
 
     # Paid/billable
-    if paid_filter == "true":
-        query = query.filter(TimeEntry.paid == True)
-    elif paid_filter == "false":
-        query = query.filter(TimeEntry.paid == False)
+    # "Paid" here means billed: on an invoice that is no longer a draft, or marked paid outside one
+    if paid_filter in ("true", "false"):
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        billed_clause = InvoiceTimeService.billed_clause()
+        query = query.filter(billed_clause if paid_filter == "true" else ~billed_clause)
 
     if billable_filter == "true":
         query = query.filter(TimeEntry.billable == True)
@@ -3309,10 +3346,12 @@ def export_time_entries_pdf():
             current_app.logger.debug("Ignoring invalid end_date filter %r", end_date, exc_info=True)
 
     # Paid/billable
-    if paid_filter == "true":
-        query = query.filter(TimeEntry.paid == True)
-    elif paid_filter == "false":
-        query = query.filter(TimeEntry.paid == False)
+    # "Paid" here means billed: on an invoice that is no longer a draft, or marked paid outside one
+    if paid_filter in ("true", "false"):
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        billed_clause = InvoiceTimeService.billed_clause()
+        query = query.filter(billed_clause if paid_filter == "true" else ~billed_clause)
 
     if billable_filter == "true":
         query = query.filter(TimeEntry.billable == True)
@@ -3428,6 +3467,11 @@ def bulk_mark_paid():
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     updated_count = 0
     skipped_count = 0
+    invoiced_skipped = []
+
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    time_links = InvoiceTimeService()
 
     for entry in entries:
         # Check permissions
@@ -3438,6 +3482,12 @@ def bulk_mark_paid():
         # Skip active timers
         if entry.is_active:
             skipped_count += 1
+            continue
+
+        # Entries an invoice bills are frozen
+        billing_invoice = time_links.billing_invoice(entry)
+        if billing_invoice is not None:
+            invoiced_skipped.append(f"#{entry.id} ({billing_invoice.invoice_number})")
             continue
 
         # Update paid status with invoice reference if provided
@@ -3476,6 +3526,15 @@ def bulk_mark_paid():
 
     if skipped_count > 0:
         flash(_("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count), "warning")
+    if invoiced_skipped:
+        flash(
+            _(
+                "Skipped %(count)d time entry/entries that are on an invoice: %(entries)s",
+                count=len(invoiced_skipped),
+                entries=", ".join(invoiced_skipped),
+            ),
+            "warning",
+        )
 
     # Track event
     track_event(current_user.id, "time_entries.bulk_mark_paid", {"count": updated_count, "paid": is_paid})

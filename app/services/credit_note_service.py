@@ -88,7 +88,11 @@ class CreditNoteService:
             cls.issue_credit_note(cn)
             # Full credit → cancel the invoice
             if hasattr(invoice, "status"):
+                previous_status = invoice.status
                 invoice.status = "cancelled"
+                from app.services.invoice_time_service import InvoiceTimeService
+
+                InvoiceTimeService().on_status_change(invoice, previous_status)
 
         db.session.commit()
         cls._emit_created(cn)

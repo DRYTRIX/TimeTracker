@@ -61,6 +61,7 @@ from .invoice_pdf_template import InvoicePDFTemplate
 from .invoice_peppol import InvoicePeppolTransmission, PeppolInboundDocument
 from .invoice_sdi import InvoiceSdiTransmission
 from .invoice_template import InvoiceTemplate
+from .invoice_time_link import InvoiceTimeLink
 from .issue import Issue
 from .kanban_board_template import KanbanBoardTemplate
 from .kanban_column import KanbanColumn
@@ -145,6 +146,7 @@ __all__ = [
     "Settings",
     "Invoice",
     "InvoiceItem",
+    "InvoiceTimeLink",
     "Client",
     "ClientEntity",
     "TaskActivity",

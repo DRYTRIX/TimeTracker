@@ -831,10 +831,11 @@ def _time_entries_report_query(request, require_dates=True, return_query=False):
         query = query.filter(TimeEntry.project_id == project_id)
     if task_id:
         query = query.filter(TimeEntry.task_id == task_id)
-    if billed == "yes":
-        query = query.filter(TimeEntry.paid == True)
-    elif billed == "no":
-        query = query.filter(TimeEntry.paid == False)
+    if billed in ("yes", "no"):
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        billed_clause = InvoiceTimeService.billed_clause()
+        query = query.filter(billed_clause if billed == "yes" else ~billed_clause)
 
     if client_id:
         project_ids_for_client = db.session.query(Project.id).filter(Project.client_id == client_id)
@@ -1804,7 +1805,11 @@ def export_unpaid_hours_excel():
     if not can_view_all:
         query = query.filter(TimeEntry.user_id == current_user.id)
 
-    all_entries = query.all()
+    # Leave out entries billed by fully paid invoices
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    on_fully_paid = InvoiceTimeService.active_entry_ids_query(Invoice.payment_status == "fully_paid")
+    all_entries = query.filter(~TimeEntry.id.in_(on_fully_paid)).all()
 
     # Filter by client if specified (check both entry.client_id and project.client_id)
     if client_id:
@@ -1812,28 +1817,8 @@ def export_unpaid_hours_excel():
             e for e in all_entries if (e.client_id == client_id) or (e.project and e.project.client_id == client_id)
         ]
 
-    # Get all invoice items to check which time entries are already invoiced
-    from app.models.invoice import InvoiceItem
-
-    all_invoice_items = (
-        InvoiceItem.query.join(Invoice)
-        .filter(InvoiceItem.time_entry_ids.isnot(None), InvoiceItem.time_entry_ids != "")
-        .all()
-    )
-
-    # Build a set of time entry IDs that are in fully paid invoices
-    billed_entry_ids = set()
-
-    for item in all_invoice_items:
-        if not item.time_entry_ids:
-            continue
-        entry_ids = [int(eid.strip()) for eid in item.time_entry_ids.split(",") if eid.strip().isdigit()]
-        invoice = item.invoice
-        if invoice and invoice.payment_status == "fully_paid":
-            billed_entry_ids.update(entry_ids)
-
-    # Filter entries: only include those that are NOT in fully paid invoices
-    unpaid_entries = [e for e in all_entries if e.id not in billed_entry_ids]
+    # Only entries that are NOT on fully paid invoices are left
+    unpaid_entries = all_entries
 
     # Debug: Check if we have any entries
     if not unpaid_entries:

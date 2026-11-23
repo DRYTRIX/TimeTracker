@@ -889,13 +889,17 @@ def test_unbilled_excludes_entries_on_current_invoice(app, client, user, project
     )
     db.session.commit()
 
-    InvoiceItemFactory(
+    item = InvoiceItemFactory(
         invoice_id=inv.id,
         description="Existing hours",
         quantity=Decimal("2.00"),
         unit_price=Decimal("50.00"),
         time_entry_ids=str(entry_on_invoice.id),
     )
+    # The entry is billed through its link to the line; time_entry_ids is only a cache
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    InvoiceTimeService().link_items(inv, [item])
     db.session.commit()
 
     data = InvoiceService().get_unbilled_data_for_invoice(inv)

@@ -171,6 +171,18 @@ def create_payment():
             flash(_("You do not have permission to add payments to this invoice"), "error")
             return redirect(url_for("payments.list_payments"))
 
+        # A cancelled invoice has let go of its hours; a payment must not bring it back as paid
+        if invoice.status == "cancelled":
+            flash(
+                _(
+                    "Invoice %(number)s is cancelled; payments cannot be recorded on it",
+                    number=invoice.invoice_number,
+                ),
+                "error",
+            )
+            invoices = get_user_invoices()
+            return render_template("payments/create.html", invoices=invoices)
+
         # Validate and parse amount
         try:
             amount = Decimal(amount_str)
@@ -416,8 +428,10 @@ def edit_payment(payment_id):
 
         invoice.update_payment_status()
 
-        # Update invoice status
-        if invoice.payment_status == "fully_paid":
+        # Update invoice status (a cancelled invoice keeps its status)
+        if invoice.status == "cancelled":
+            pass
+        elif invoice.payment_status == "fully_paid":
             invoice.status = "paid"
         elif invoice.status == "paid" and invoice.payment_status != "fully_paid":
             invoice.status = "sent"

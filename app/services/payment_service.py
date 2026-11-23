@@ -46,6 +46,14 @@ class PaymentService:
         if not invoice:
             return {"success": False, "message": "Invoice not found", "error": "invalid_invoice"}
 
+        # A cancelled invoice has let go of its hours; a payment must not bring it back as paid
+        if invoice.status == "cancelled":
+            return {
+                "success": False,
+                "message": f"Invoice {invoice.invoice_number} is cancelled; payments cannot be recorded on it",
+                "error": "invoice_cancelled",
+            }
+
         # Validate amount
         if amount <= 0:
             return {"success": False, "message": "Amount must be greater than zero", "error": "invalid_amount"}
@@ -88,7 +96,7 @@ class PaymentService:
             total_payments = self.payment_repo.get_total_for_invoice(invoice_id)
             invoice.amount_paid = total_payments
             invoice.update_payment_status()
-            if invoice.payment_status in ("fully_paid", "overpaid"):
+            if invoice.payment_status in ("fully_paid", "overpaid") and invoice.status != "cancelled":
                 invoice.status = "paid"
 
         if not safe_commit("create_payment", {"invoice_id": invoice_id, "received_by": received_by}):
@@ -217,7 +225,9 @@ class PaymentService:
             total_payments = self.payment_repo.get_total_for_invoice(payment.invoice_id)
             payment.invoice.amount_paid = total_payments
             payment.invoice.update_payment_status()
-            if payment.invoice.payment_status in ("fully_paid", "overpaid"):
+            if payment.invoice.status == "cancelled":
+                pass  # a cancelled invoice keeps its status
+            elif payment.invoice.payment_status in ("fully_paid", "overpaid"):
                 payment.invoice.status = "paid"
                 became_fully_paid = True
             elif payment.invoice.status == "paid" and payment.invoice.payment_status == "partially_paid":
@@ -268,7 +278,9 @@ class PaymentService:
             total_payments = self.payment_repo.get_total_for_invoice(invoice_id)
             invoice.amount_paid = total_payments
             invoice.update_payment_status()
-            if invoice.payment_status in ("fully_paid", "overpaid"):
+            if invoice.status == "cancelled":
+                pass  # a cancelled invoice keeps its status
+            elif invoice.payment_status in ("fully_paid", "overpaid"):
                 invoice.status = "paid"
             elif invoice.status == "paid" and invoice.payment_status != "fully_paid":
                 invoice.status = "sent"

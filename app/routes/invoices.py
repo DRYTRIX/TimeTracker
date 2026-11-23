@@ -697,8 +697,32 @@ def edit_invoice(invoice_id):
         item_discount_amounts = request.form.getlist("item_discount_amount[]")
         item_positions = request.form.getlist("item_position[]")
 
-        # Remove existing items
+        # Remove existing items. Their time links go with them and come back below for the
+        # time entries the submitted lines still list.
+        from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService, line_entry_ids
+
+        time_links = InvoiceTimeService()
+        # Every listed time entry must be one this invoice may bill (as in the picker), on one line only
+        submitted_lines = [
+            line_entry_ids(item_time_entry_ids_list[i])
+            for i in range(len(descriptions))
+            if descriptions[i].strip()
+            and i < len(quantities)
+            and quantities[i]
+            and i < len(unit_prices)
+            and unit_prices[i]
+            and i < len(item_time_entry_ids_list)
+        ]
+        try:
+            time_links.check_line_entries(invoice, submitted_lines)
+        except InvoiceTimeError as exc:
+            db.session.rollback()
+            flash(_("Could not save the invoice: %(error)s", error=str(exc)), "error")
+            return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
+
+        previous_hours = time_links.detach_lines(invoice)
         invoice.items.delete()
+        new_items = []
 
         # Add new items
         for i in range(len(descriptions)):
@@ -791,9 +815,17 @@ def edit_invoice(invoice_id):
                         position=_position,
                     )
                     db.session.add(item)
+                    new_items.append(item)
                 except ValueError:
                     flash(f"Invalid quantity or price for item {i+1}", "error")
                     continue
+
+        try:
+            time_links.link_items(invoice, new_items, hours_by_entry=previous_hours, created_by=current_user.id)
+        except InvoiceTimeError as exc:
+            db.session.rollback()
+            flash(_("Could not save the invoice: %(error)s", error=str(exc)), "error")
+            return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 
         # Update expenses (only when the expenses section was submitted)
         if request.form.get("expenses_sync"):
@@ -996,19 +1028,13 @@ def update_invoice_status(invoice_id):
     if new_status == "void":
         new_status = "cancelled"
 
-    # State machine enforcement (production-grade invariants)
-    allowed = {
-        "draft": {"issued", "sent", "cancelled"},
-        "issued": {"sent", "cancelled"},
-        "sent": {"paid", "overdue", "cancelled"},
-        "overdue": {"paid", "cancelled"},
-        "paid": set(),
-        "cancelled": set(),
-    }
+    # State machine enforcement (production-grade invariants); the bulk status change uses the same table
+    from app.services.invoice_time_service import status_change_allowed
+
     prev = previous_status or "draft"
     if new_status == prev:
         return jsonify({"success": True, "status": new_status})
-    if new_status not in allowed.get(prev, set()):
+    if not status_change_allowed(prev, new_status):
         return jsonify({"error": "Invalid status transition"}), 400
 
     # Once sent/paid/cancelled, the invoice should be treated as immutable (no reverting).
@@ -1016,6 +1042,11 @@ def update_invoice_status(invoice_id):
         return jsonify({"error": "Cannot revert finalized invoice"}), 400
 
     invoice.status = new_status
+
+    # A cancelled invoice lets go of its time entries, costs and expenses
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    InvoiceTimeService().on_status_change(invoice, previous_status)
 
     # Auto-update payment status if marking as paid
     if new_status == "paid" and invoice.payment_status != "fully_paid":
@@ -1300,8 +1331,11 @@ def bulk_update_status():
         flash(_("Invalid status value"), "error")
         return _back_to_invoice_list()
 
+    from app.services.invoice_time_service import InvoiceTimeService, status_change_allowed
+
     updated_count = 0
     skipped_count = 0
+    not_allowed_count = 0
 
     for invoice_id_str in invoice_ids:
         try:
@@ -1316,7 +1350,13 @@ def bulk_update_status():
                 skipped_count += 1
                 continue
 
+            # Same transitions as a single status change: a cancelled or paid invoice stays as it is
+            previous_status = invoice.status
+            if not status_change_allowed(previous_status, new_status):
+                not_allowed_count += 1
+                continue
             invoice.status = new_status
+            InvoiceTimeService().on_status_change(invoice, previous_status)
 
             # Auto-update payment status if marking as paid
             if new_status == "paid" and invoice.payment_status != "fully_paid":
@@ -1350,6 +1390,16 @@ def bulk_update_status():
 
     if skipped_count > 0:
         flash(f'Skipped {skipped_count} invoice{"s" if skipped_count != 1 else ""} (no permission)', "warning")
+    if not_allowed_count > 0:
+        flash(
+            _(
+                "Skipped %(count)d invoice(s): their status cannot change to %(status)s "
+                "(a cancelled or paid invoice keeps its status)",
+                count=not_allowed_count,
+                status=new_status,
+            ),
+            "warning",
+        )
 
     return _back_to_invoice_list()
 
@@ -1365,6 +1415,18 @@ def generate_from_time(invoice_id):
         flash(_("You do not have permission to edit this invoice"), "error")
         return redirect(url_for("invoices.list_invoices"))
 
+    # Hours, costs and goods go onto draft invoices only; a sent invoice keeps its lines
+    if invoice.status != "draft":
+        flash(
+            _(
+                "Invoice %(number)s is %(status)s: time and costs can only be added to a draft invoice.",
+                number=invoice.invoice_number,
+                status=invoice.status,
+            ),
+            "error",
+        )
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+
     if request.method == "POST":
         # Get selected time entries, costs, expenses, and extra goods
         selected_entries = request.form.getlist("time_entries[]")
@@ -1378,18 +1440,33 @@ def generate_from_time(invoice_id):
 
         # The picker hides what is already on this invoice, so keep it: manual and cost
         # lines stay, and time lines are rebuilt from their entries plus the new selection.
-        entry_ids = set(selected_entries)
-        if selected_entries:
-            from app.models import ClientPrepaidConsumption
+        from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService
 
+        time_links = InvoiceTimeService()
+        entry_ids = set()
+        for raw_id in selected_entries:
+            try:
+                entry_ids.add(int(raw_id))
+            except (TypeError, ValueError):
+                continue
+        eligible_ids = set()
+        if selected_entries:
+            # Same set the picker offers, decided before this invoice's own links are dropped:
+            # running entries and entries marked paid outside an invoice are not taken
+            eligible_ids = time_links.eligible_entry_ids(
+                invoice, entry_ids | set(time_links.invoice_entry_ids(invoice)), include_prepaid_only=True
+            )
+            # Entries this invoice already bills, including those fully covered by prepaid hours,
+            # which have no line
+            line_ids = {
+                link.invoice_item_id
+                for link in invoice.time_links.filter_by(released_at=None).all()
+                if link.invoice_item_id
+            }
+            entry_ids.update(time_links.unlink_invoice(invoice))
             for item in invoice.items.all():
-                item_entry_ids = [p.strip() for p in (item.time_entry_ids or "").split(",") if p.strip().isdigit()]
-                if item_entry_ids:
-                    entry_ids.update(item_entry_ids)
+                if item.id in line_ids:
                     db.session.delete(item)
-            # Entries fully covered by prepaid hours have no line, only a ledger row
-            for row in ClientPrepaidConsumption.query.filter_by(invoice_id=invoice.id).all():
-                entry_ids.add(str(row.time_entry_id))
 
         total_prepaid_allocated = Decimal("0")
         prepaid_allocator = None
@@ -1401,6 +1478,31 @@ def generate_from_time(invoice_id):
             from app.utils.invoice_time_entry_items import build_time_entry_lines, resolve_group_time_entries_from_form
 
             time_entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids)).all()
+            conflicts = time_links.find_conflicts(time_entries, invoice)
+            if conflicts:
+                db.session.rollback()
+                flash(
+                    _(
+                        "Some time entries are already on another invoice: %(entries)s",
+                        entries=", ".join(f"{entry.id} ({other.invoice_number})" for entry, other in conflicts),
+                    ),
+                    "error",
+                )
+                return redirect(url_for("invoices.generate_from_time", invoice_id=invoice.id))
+
+            left_out = [entry for entry in time_entries if entry.id not in eligible_ids]
+            if left_out:
+                flash(
+                    _(
+                        "%(count)d selected time entry/entries were not added: %(entries)s",
+                        count=len(left_out),
+                        entries=", ".join(
+                            f"{entry.id} ({time_links.ineligible_reason(entry, invoice)})" for entry in left_out
+                        ),
+                    ),
+                    "warning",
+                )
+                time_entries = [entry for entry in time_entries if entry.id in eligible_ids]
 
             prepaid_allocator = PrepaidHoursAllocator(client=invoice.client, invoice=invoice)
             processed_entries = prepaid_allocator.process(time_entries)
@@ -1421,6 +1523,29 @@ def generate_from_time(invoice_id):
             for item in lines.items:
                 db.session.add(item)
             missing_rate_warnings = lines.missing_rates
+            db.session.flush()
+            try:
+                time_links.link_items(
+                    invoice,
+                    lines.items,
+                    hours_by_entry={p.entry.id: p.billable_hours for p in processed_entries},
+                    created_by=current_user.id,
+                )
+                # Entries fully covered by prepaid hours get no line, only a link to the invoice
+                time_links.link_entries(
+                    invoice,
+                    None,
+                    [
+                        (p.entry, p.prepaid_hours)
+                        for p in processed_entries
+                        if p.prepaid_hours > 0 and p.billable_hours <= 0
+                    ],
+                    created_by=current_user.id,
+                )
+            except InvoiceTimeError as exc:
+                db.session.rollback()
+                flash(_("Could not add the time entries: %(error)s", error=str(exc)), "error")
+                return redirect(url_for("invoices.generate_from_time", invoice_id=invoice.id))
 
         # Process project costs
         if selected_costs:
@@ -1475,15 +1600,6 @@ def generate_from_time(invoice_id):
             return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 
         db.session.refresh(invoice)
-
-        # If invoice is already sent (not draft), mark time entries as paid
-        if invoice.status != "draft":
-            from app.services import InvoiceService
-
-            invoice_service = InvoiceService()
-            marked_count = invoice_service.mark_time_entries_as_paid(invoice)
-            if marked_count > 0:
-                safe_commit("mark_time_entries_paid_from_invoice", {"invoice_id": invoice.id})
 
         added_parts = []
         if selected_entries or selected_costs:

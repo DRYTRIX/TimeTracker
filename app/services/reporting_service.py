@@ -24,7 +24,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from app import db
-from app.models import Expense, Invoice, InvoiceItem, Payment, Project, ProjectCost, TimeEntry, User
+from app.models import Expense, Invoice, Payment, Project, ProjectCost, TimeEntry, User
 from app.repositories import ExpenseRepository, InvoiceRepository, ProjectRepository, TimeEntryRepository
 
 
@@ -548,22 +548,12 @@ class ReportingService:
             query = query.filter(TimeEntry.user_id == current_user_id)
         if client_id:
             query = query.filter(TimeEntry.client_id == client_id)
-        all_entries = query.all()
 
-        all_invoice_items = (
-            InvoiceItem.query.join(Invoice)
-            .filter(InvoiceItem.time_entry_ids.isnot(None), InvoiceItem.time_entry_ids != "")
-            .all()
-        )
-        billed_entry_ids = set()
-        for item in all_invoice_items:
-            if not item.time_entry_ids:
-                continue
-            entry_ids = [int(eid.strip()) for eid in item.time_entry_ids.split(",") if eid.strip().isdigit()]
-            inv = item.invoice
-            if inv and getattr(inv, "payment_status", None) == "fully_paid":
-                billed_entry_ids.update(entry_ids)
-        unpaid_entries = [e for e in all_entries if e.id not in billed_entry_ids]
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        # Leave out entries billed by fully paid invoices
+        on_fully_paid = InvoiceTimeService.active_entry_ids_query(Invoice.payment_status == "fully_paid")
+        unpaid_entries = query.filter(~TimeEntry.id.in_(on_fully_paid)).all()
 
         client_totals = {}
         for entry in unpaid_entries:

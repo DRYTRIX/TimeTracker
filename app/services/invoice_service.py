@@ -107,6 +107,21 @@ class InvoiceService:
         if not entries:
             return {"success": False, "message": "No billable time entries found", "error": "no_entries"}
 
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        time_links = InvoiceTimeService()
+        conflict = self._already_invoiced_result(time_links.find_conflicts(entries))
+        if conflict:
+            return conflict
+
+        # Same set the picker offers: running entries and entries marked paid outside an invoice are left out
+        eligible = time_links.eligible_entry_ids(
+            None, [e.id for e in entries], project_id=project_id, client_id=project.client_id
+        )
+        entries = [e for e in entries if e.id in eligible]
+        if not entries:
+            return {"success": False, "message": "No billable time entries found", "error": "no_entries"}
+
         # Generate invoice number
         invoice_number = self.invoice_repo.generate_invoice_number()
 
@@ -157,6 +172,8 @@ class InvoiceService:
         )
         for item in lines.items:
             db.session.add(item)
+        db.session.flush()
+        time_links.link_items(invoice, lines.items, created_by=created_by)
 
         grouped_entries = lines.items  # for telemetry line_item_count
 
@@ -440,14 +457,10 @@ class InvoiceService:
         Returns:
             Number of time entries marked as paid
         """
-        time_entry_ids = set()
+        from app.services.invoice_time_service import InvoiceTimeService
 
-        # Collect all time entry IDs from invoice items
-        for item in InvoiceItem.query.filter_by(invoice_id=invoice.id).all():
-            if item.time_entry_ids:
-                # Parse comma-separated IDs
-                ids = [int(id_str.strip()) for id_str in item.time_entry_ids.split(",") if id_str.strip().isdigit()]
-                time_entry_ids.update(ids)
+        # Entries on the invoice's lines (entries fully covered by prepaid hours have no line)
+        time_entry_ids = set(InvoiceTimeService.invoice_entry_ids(invoice, with_line_only=True))
 
         if not time_entry_ids:
             return 0
@@ -496,6 +509,13 @@ class InvoiceService:
         previous_status = invoice.status
         if "status" in kwargs and kwargs.get("_allow_status"):
             invoice.status = kwargs["status"]
+            from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService
+
+            try:
+                InvoiceTimeService().on_status_change(invoice, previous_status)
+            except InvoiceTimeError as exc:
+                db.session.rollback()
+                return {"success": False, "message": str(exc), "error": exc.code}
 
         if not safe_commit("update_invoice", {"invoice_id": invoice_id, "user_id": user_id}):
             return {
@@ -674,15 +694,11 @@ class InvoiceService:
         project_id = invoice.project_id
         client_id = invoice.client_id
 
-        billed_on_client = self._billed_time_entry_ids_for_client(client_id) if client_id else set()
-        on_this_invoice: set = set()
-        for item in invoice.items.all():
-            if not item.time_entry_ids:
-                continue
-            for part in item.time_entry_ids.split(","):
-                part = part.strip()
-                if part.isdigit():
-                    on_this_invoice.add(int(part))
+        from app.models import InvoiceTimeLink
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        time_links = InvoiceTimeService()
+        on_this_invoice = set(time_links.invoice_entry_ids(invoice))
 
         from sqlalchemy.orm import joinedload
 
@@ -697,11 +713,24 @@ class InvoiceService:
         not_billable = [e for e in all_project_entries if e.end_time is not None and not e.billable]
         billable_completed = [e for e in all_project_entries if e.end_time is not None and e.billable]
 
+        # Entries of this project billed by any invoice: one query, limited to the project
+        billed_anywhere = {
+            row[0]
+            for row in time_links.active_entry_ids_query()
+            .join(TimeEntry, TimeEntry.id == InvoiceTimeLink.time_entry_id)
+            .filter(TimeEntry.project_id == project_id)
+            .all()
+        }
         already_on_this_invoice = [e for e in billable_completed if e.id in on_this_invoice]
         already_on_other_invoice = [
-            e for e in billable_completed if e.id in billed_on_client and e.id not in on_this_invoice
+            e for e in billable_completed if e.id in billed_anywhere and e.id not in on_this_invoice
         ]
-        unbilled_entries = [e for e in billable_completed if e.id not in billed_on_client]
+        unbilled_entries = (
+            time_links.unbilled_query([project_id])
+            .options(joinedload(TimeEntry.user), joinedload(TimeEntry.task))
+            .order_by(TimeEntry.start_time.asc())
+            .all()
+        )
 
         unbilled_costs = ProjectCost.get_uninvoiced_costs(invoice.project_id)
         unbilled_expenses = Expense.get_uninvoiced_expenses(project_id=invoice.project_id)
@@ -738,12 +767,7 @@ class InvoiceService:
         if client_id and project_id:
             other_projects = Project.query.filter(Project.client_id == client_id, Project.id != project_id).all()
             for other_project in other_projects:
-                other_entries = TimeEntry.query.filter(
-                    TimeEntry.project_id == other_project.id,
-                    TimeEntry.end_time.isnot(None),
-                    TimeEntry.billable == True,
-                ).all()
-                unbilled_other = [e for e in other_entries if e.id not in billed_on_client]
+                unbilled_other = time_links.billable_unbilled([other_project.id])
                 if unbilled_other:
                     other_project_unbilled_hours += sum(float(e.duration_hours or 0) for e in unbilled_other)
                     other_project_names.append(other_project.name)
@@ -832,25 +856,18 @@ class InvoiceService:
             return Decimal("0")
         return Decimal(str(entry.duration_seconds)) / Decimal("3600")
 
-    def _billed_time_entry_ids_for_client(self, client_id: int) -> set:
-        """IDs of time entries already linked to any invoice line for this client."""
-        from app.models import InvoiceItem
-
-        billed: set = set()
-        rows = (
-            db.session.query(InvoiceItem.time_entry_ids)
-            .join(Invoice, Invoice.id == InvoiceItem.invoice_id)
-            .filter(Invoice.client_id == client_id, InvoiceItem.time_entry_ids.isnot(None))
-            .all()
-        )
-        for (tids,) in rows:
-            if not tids:
-                continue
-            for part in tids.split(","):
-                p = part.strip()
-                if p.isdigit():
-                    billed.add(int(p))
-        return billed
+    @staticmethod
+    def _already_invoiced_result(conflicts) -> Optional[Dict[str, Any]]:
+        """Error result for time entries that another invoice already bills, or None."""
+        if not conflicts:
+            return None
+        parts = [f"{entry.id} (invoice {other.invoice_number})" for entry, other in conflicts]
+        return {
+            "success": False,
+            "message": "Time entries already invoiced: " + ", ".join(parts),
+            "error": "already_invoiced",
+            "time_entry_ids": [entry.id for entry, _other in conflicts],
+        }
 
     def _client_unbilled_invoice_state(self, client_id: int) -> Dict[str, Any]:
         """
@@ -859,8 +876,6 @@ class InvoiceService:
         Returns keys: ok (bool), error (optional str), blocked_reason (optional str),
         unbilled_entries (list), groups (dict project_id -> entries), projects_by_id, currency.
         """
-        from sqlalchemy import or_
-
         from app.models import Client, Project, Settings
 
         client = Client.query.get(client_id)
@@ -871,22 +886,9 @@ class InvoiceService:
         projects_by_id = {p.id: p for p in projects}
         project_ids = list(projects_by_id.keys())
 
-        conditions = [TimeEntry.client_id == client_id]
-        if project_ids:
-            conditions.append(TimeEntry.project_id.in_(project_ids))
+        from app.services.invoice_time_service import InvoiceTimeService
 
-        candidates = (
-            TimeEntry.query.filter(
-                or_(*conditions),
-                TimeEntry.end_time.isnot(None),
-                TimeEntry.billable == True,
-            )
-            .order_by(TimeEntry.start_time.asc())
-            .all()
-        )
-
-        billed_ids = self._billed_time_entry_ids_for_client(client_id)
-        unbilled = [e for e in candidates if e.id not in billed_ids]
+        unbilled = InvoiceTimeService().billable_unbilled(project_ids, client_id=client_id)
 
         orphans = [e for e in unbilled if e.project_id is None]
         if orphans:
@@ -1003,11 +1005,12 @@ class InvoiceService:
         from sqlalchemy.orm import joinedload
 
         from app.models import Project, RateOverride, Settings
+        from app.services.invoice_time_service import InvoiceTimeService
 
-        query = TimeEntry.query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.user)).filter(
-            TimeEntry.end_time.isnot(None),
-            TimeEntry.billable == True,  # noqa: E712
-            TimeEntry.project_id.isnot(None),
+        query = (
+            InvoiceTimeService.unbilled_query()
+            .options(joinedload(TimeEntry.project), joinedload(TimeEntry.user))
+            .filter(TimeEntry.project_id.isnot(None))
         )
         if project_id:
             query = query.filter(TimeEntry.project_id == project_id)
@@ -1037,18 +1040,7 @@ class InvoiceService:
                 "warning": None,
             }
 
-        # Group by client for billed-id lookup, then filter unbilled
-        by_client: Dict[Optional[int], List[TimeEntry]] = {}
-        for entry in entries:
-            cid = entry.client_id
-            if cid is None and entry.project is not None:
-                cid = entry.project.client_id
-            by_client.setdefault(cid, []).append(entry)
-
-        unbilled: List[TimeEntry] = []
-        for cid, client_entries in by_client.items():
-            billed = self._billed_time_entry_ids_for_client(cid) if cid else set()
-            unbilled.extend(e for e in client_entries if e.id not in billed)
+        unbilled: List[TimeEntry] = entries
 
         projects_by_id: Dict[int, Any] = {}
         for entry in unbilled:
@@ -1200,6 +1192,7 @@ class InvoiceService:
 
         item_count = 0
         warnings: List[str] = []
+        new_items: List[InvoiceItem] = []
         for pid in sorted(groups.keys()):
             elist = groups[pid]
             proj = projects_by_id.get(pid)
@@ -1209,8 +1202,17 @@ class InvoiceService:
             lines = build_time_entry_lines(invoice.id, elist, group=True, group_by_task=False, project_name=proj.name)
             for item in lines.items:
                 db.session.add(item)
+                new_items.append(item)
                 item_count += 1
             warnings.extend(lines.warnings)
+
+        from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService
+
+        try:
+            InvoiceTimeService().link_items(invoice, new_items, created_by=acting_user_id)
+        except InvoiceTimeError as exc:
+            db.session.rollback()
+            return {"success": False, "error": exc.code, "message": str(exc)}
 
         invoice.calculate_totals()
 
@@ -1287,7 +1289,22 @@ class InvoiceService:
                 "error": "invalid_status",
             }
 
+        from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService, line_entry_ids
+
+        time_links = InvoiceTimeService()
+        # Every listed time entry must be one this invoice may bill (as in the picker), on one line only
+        try:
+            time_links.check_line_entries(
+                invoice,
+                [line_entry_ids(row.get("time_entry_ids")) for row in items if (row.get("description") or "").strip()],
+            )
+        except InvoiceTimeError as exc:
+            return {"success": False, "message": str(exc), "error": exc.code}
+
+        # The lines are replaced: their links go, and come back for the time entries the new lines list
+        previous_hours = time_links.detach_lines(invoice)
         invoice.items.delete()
+        new_items: List[InvoiceItem] = []
         for idx, row in enumerate(items):
             description = (row.get("description") or "").strip()
             if not description:
@@ -1324,7 +1341,7 @@ class InvoiceService:
                 description=description,
                 quantity=quantity,
                 unit_price=unit_price,
-                time_entry_ids=row.get("time_entry_ids"),
+                time_entry_ids=",".join(str(i) for i in line_entry_ids(row.get("time_entry_ids"))) or None,
                 tax_rate=_tax_rate,
                 vat_category=_vat_category,
                 discount_percent=_disc_pct,
@@ -1332,6 +1349,13 @@ class InvoiceService:
                 position=_position,
             )
             db.session.add(item)
+            new_items.append(item)
+
+        try:
+            time_links.link_items(invoice, new_items, hours_by_entry=previous_hours, created_by=user_id)
+        except InvoiceTimeError as exc:
+            db.session.rollback()
+            return {"success": False, "message": str(exc), "error": exc.code}
 
         invoice.calculate_totals()
         if not safe_commit("set_invoice_items", {"invoice_id": invoice_id, "user_id": user_id}):
@@ -1360,6 +1384,12 @@ class InvoiceService:
             return {"success": False, "message": "Invoice not found", "error": "not_found"}
         if not self.user_can_access_invoice(invoice, user_id, is_admin):
             return {"success": False, "message": "Permission denied", "error": "forbidden"}
+        if invoice.status not in (InvoiceStatus.DRAFT.value, "draft"):
+            return {
+                "success": False,
+                "message": "Time can only be added to draft invoices",
+                "error": "invalid_status",
+            }
         if not time_entry_ids:
             return {"success": False, "message": "No time entries provided", "error": "no_entries"}
 
@@ -1375,8 +1405,30 @@ class InvoiceService:
         if not project:
             return {"success": False, "message": "Invalid project", "error": "invalid_project"}
 
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        time_links = InvoiceTimeService()
+        # Same set the picker offers (decided before this invoice's own links are dropped)
+        eligible = time_links.eligible_entry_ids(invoice, [e.id for e in entries])
+        previous_hours: Dict[int, Decimal] = {}
         if replace_existing:
+            # Only the lines go: entries covered by prepaid hours keep their link without a line,
+            # in step with the prepaid ledger
+            previous_hours = time_links.detach_lines(invoice)
             invoice.items.delete()
+
+        # Entries on another invoice, or (when adding) already on a line of this one, are refused:
+        # the same hours are never billed twice
+        conflict = self._already_invoiced_result(time_links.find_conflicts(entries, invoice))
+        if conflict:
+            db.session.rollback()
+            return conflict
+
+        # Running entries and entries marked paid outside an invoice are left out
+        entries = [e for e in entries if e.id in eligible]
+        if not entries:
+            db.session.rollback()
+            return {"success": False, "message": "No billable time entries found", "error": "no_entries"}
 
         settings = Settings.get_settings()
         group_entries = (
@@ -1390,6 +1442,8 @@ class InvoiceService:
         )
         for item in lines.items:
             db.session.add(item)
+        db.session.flush()
+        time_links.link_items(invoice, lines.items, hours_by_entry=previous_hours, created_by=user_id)
 
         invoice.calculate_totals()
         if not safe_commit("add_time_entries_to_invoice", {"invoice_id": invoice_id, "user_id": user_id}):
