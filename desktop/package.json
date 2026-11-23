@@ -34,7 +34,7 @@
   "license": "MIT",
   "devDependencies": {
     "@vitejs/plugin-react": "^6.3.0",
-    "electron": "^45.3.1",
+    "electron": "^45.4.1",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "sprintf-js": "file:vendor/sprintf-js",
