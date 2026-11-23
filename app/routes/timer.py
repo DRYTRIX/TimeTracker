@@ -160,11 +160,15 @@ def _edit_timer_form_projects_tasks(timer, can_edit_schedule):
 
 def _edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown):
     from app.services.custom_field_service import CustomFieldService
+    from app.services.invoice_time_service import InvoiceTimeService
     from app.utils.scope_filter import get_active_clients_for_user
 
     projects, tasks = _edit_timer_form_projects_tasks(timer, can_edit_schedule)
     clients = get_active_clients_for_user(current_user) if can_edit_schedule else []
+    billing_state, billing_invoice = InvoiceTimeService().billing_states([timer]).get(timer.id, (None, None))
     return {
+        "billing_state": billing_state,
+        "billing_invoice": billing_invoice,
         "timer": timer,
         "projects": projects,
         "tasks": tasks,
@@ -1165,7 +1169,7 @@ def edit_timer(timer_id):
                 "timer/edit_timer.html",
                 **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
             )
-        flash(_(locked["message"]), "warning")
+        # A GET shows the "on invoice" notice in the form itself
 
     if request.method == "POST":
         from app.utils.validation import sanitize_input
@@ -3024,6 +3028,11 @@ def time_entries_overview():
                 current_app.logger.debug("Rollback after pending-approvals query failure also failed", exc_info=True)
             entry_ids_with_pending_approval = set()
 
+    # Which invoice bills each entry on the page: one query for the page, not one per entry
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    billing_states = InvoiceTimeService().billing_states(time_entries)
+
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the time entries list HTML for AJAX requests
@@ -3041,6 +3050,7 @@ def time_entries_overview():
                 link_templates_by_field=link_templates_by_field,
                 time_approvals_enabled=time_approvals_enabled,
                 entry_ids_with_pending_approval=entry_ids_with_pending_approval,
+                billing_states=billing_states,
             )
         )
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -3062,6 +3072,7 @@ def time_entries_overview():
         link_templates_by_field=link_templates_by_field,
         time_approvals_enabled=time_approvals_enabled,
         entry_ids_with_pending_approval=entry_ids_with_pending_approval,
+        billing_states=billing_states,
         totals={
             "total_hours": round(total_hours, 2),
             "total_billable_hours": round(total_billable_hours, 2),

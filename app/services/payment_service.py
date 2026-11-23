@@ -14,6 +14,19 @@ from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
 
 
+def _mark_paid_by_payments(invoice, actor_id=None) -> None:
+    """Payments cover the invoice in full: it becomes paid through ``transition_status``.
+
+    That bills its time entries (a draft paid in full included). ``force`` because the status map has no
+    draft or issued -> paid step for a manual change; a cancelled invoice keeps its status.
+    """
+    if invoice.status in ("paid", "cancelled"):
+        return
+    from app.services import InvoiceService
+
+    InvoiceService().transition_status(invoice, "paid", actor_id=actor_id, force=True)
+
+
 class PaymentService:
     """Service for payment operations"""
 
@@ -96,8 +109,9 @@ class PaymentService:
             total_payments = self.payment_repo.get_total_for_invoice(invoice_id)
             invoice.amount_paid = total_payments
             invoice.update_payment_status()
-            if invoice.payment_status in ("fully_paid", "overpaid") and invoice.status != "cancelled":
-                invoice.status = "paid"
+            if invoice.payment_status in ("fully_paid", "overpaid"):
+                # Through the status hook: a draft paid in full gets its time entries billed
+                _mark_paid_by_payments(invoice)
 
         if not safe_commit("create_payment", {"invoice_id": invoice_id, "received_by": received_by}):
             return {
@@ -228,7 +242,7 @@ class PaymentService:
             if payment.invoice.status == "cancelled":
                 pass  # a cancelled invoice keeps its status
             elif payment.invoice.payment_status in ("fully_paid", "overpaid"):
-                payment.invoice.status = "paid"
+                _mark_paid_by_payments(payment.invoice)
                 became_fully_paid = True
             elif payment.invoice.status == "paid" and payment.invoice.payment_status == "partially_paid":
                 payment.invoice.status = "sent"
@@ -281,7 +295,7 @@ class PaymentService:
             if invoice.status == "cancelled":
                 pass  # a cancelled invoice keeps its status
             elif invoice.payment_status in ("fully_paid", "overpaid"):
-                invoice.status = "paid"
+                _mark_paid_by_payments(invoice)
             elif invoice.status == "paid" and invoice.payment_status != "fully_paid":
                 invoice.status = "sent"
 

@@ -237,6 +237,19 @@ class PeppolService:
     def send_invoice(
         self, invoice, triggered_by_user_id: Optional[int] = None
     ) -> Tuple[bool, Optional[InvoicePeppolTransmission], str]:
+        """Send the invoice via Peppol. Once sent, a draft or issued invoice becomes ``sent``; on failure it stays as it was."""
+        success, tx, message = self._transmit(invoice, triggered_by_user_id)
+        if success and (invoice.status or "draft") in ("draft", "issued"):
+            from app.services import InvoiceService
+
+            result = InvoiceService().transition_status(invoice, "sent", actor_id=triggered_by_user_id)
+            if result.get("success"):
+                safe_commit("peppol_mark_invoice_sent", {"invoice_id": invoice.id})
+        return success, tx, message
+
+    def _transmit(
+        self, invoice, triggered_by_user_id: Optional[int] = None
+    ) -> Tuple[bool, Optional[InvoicePeppolTransmission], str]:
         self.last_pdf_status = "not_attempted"
         self.last_attachment_filenames = []
         if not peppol_enabled():

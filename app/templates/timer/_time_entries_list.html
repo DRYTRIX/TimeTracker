@@ -1,4 +1,5 @@
 {% from "components/ui.html" import empty_state_compact %}
+{% from "timer/_billing_badge.html" import billing_badge %}
 <div id="timeEntriesListContainer">
     <div class="p-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
         <div class="flex items-center gap-4">
@@ -161,15 +162,8 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap" data-label="{{ _('Status') }}">
-                            {% if entry.paid %}
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                    <i class="fas fa-check-circle mr-1"></i>{{ _('Paid') }}
-                                </span>
-                            {% else %}
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                                    <i class="fas fa-clock mr-1"></i>{{ _('Unpaid') }}
-                                </span>
-                            {% endif %}
+                            {% set billing = (billing_states|default({})).get(entry.id) %}
+                            {% if billing %}{{ billing_badge(billing[0], billing[1], entry) }}{% endif %}
                             {% if entry.billable %}
                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 ml-1">
                                     <i class="fas fa-dollar-sign mr-1"></i>{{ _('Billable') }}
