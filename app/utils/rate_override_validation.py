@@ -40,9 +40,7 @@ def parse_hourly_rate(value: Any) -> Tuple[Optional[Decimal], Optional[str]]:
     return rate, None
 
 
-def validate_date_window(
-    effective_from: Optional[date], effective_to: Optional[date]
-) -> Optional[str]:
+def validate_date_window(effective_from: Optional[date], effective_to: Optional[date]) -> Optional[str]:
     """Return an error message if effective_to is before effective_from."""
     if effective_from is not None and effective_to is not None and effective_to < effective_from:
         return "effective_to must not be before effective_from"
@@ -90,9 +88,7 @@ def validate_rate_override_fields(
         effective_to=to_date,
         exclude_id=exclude_id,
     ):
-        errors["effective_from"] = [
-            "An override for this project and person already overlaps this date range"
-        ]
+        errors["effective_from"] = ["An override for this project and person already overlaps this date range"]
 
     if errors:
         return None, errors

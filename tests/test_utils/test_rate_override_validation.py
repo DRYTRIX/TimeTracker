@@ -15,15 +15,11 @@ pytestmark = [pytest.mark.unit]
 def test_ranges_overlap_open_ended():
     assert RateOverride._ranges_overlap(None, None, date(2024, 1, 1), date(2024, 2, 1))
     assert RateOverride._ranges_overlap(date(2024, 1, 1), None, None, date(2024, 6, 1))
-    assert not RateOverride._ranges_overlap(
-        date(2024, 1, 1), date(2024, 3, 31), date(2024, 4, 1), date(2024, 6, 30)
-    )
+    assert not RateOverride._ranges_overlap(date(2024, 1, 1), date(2024, 3, 31), date(2024, 4, 1), date(2024, 6, 30))
 
 
 def test_validate_rejects_negative_rate():
-    parsed, errors = validate_rate_override_fields(
-        hourly_rate=-1, project_id=1, user_id=None
-    )
+    parsed, errors = validate_rate_override_fields(hourly_rate=-1, project_id=1, user_id=None)
     assert parsed is None
     assert "hourly_rate" in errors
 
@@ -83,8 +79,6 @@ def test_validate_detects_overlap(app, project, user):
     )
     db.session.commit()
 
-    parsed, errors = validate_rate_override_fields(
-        hourly_rate=90, project_id=project.id, user_id=None
-    )
+    parsed, errors = validate_rate_override_fields(hourly_rate=90, project_id=project.id, user_id=None)
     assert parsed is None
     assert "effective_from" in errors

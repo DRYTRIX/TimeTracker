@@ -1977,15 +1977,11 @@ def edit_rate(project_id, override_id):
         user_id = _parse_rate_user_id(request.form.get("user_id"))
         if user_id is False:
             flash(_("Invalid person selected"), "error")
-            return render_template(
-                "projects/edit_rate.html", project=project, override=override, users=users
-            )
+            return render_template("projects/edit_rate.html", project=project, override=override, users=users)
 
         if user_id is not None and not User.query.filter_by(id=user_id, is_active=True).first():
             flash(_("Selected person was not found"), "error")
-            return render_template(
-                "projects/edit_rate.html", project=project, override=override, users=users
-            )
+            return render_template("projects/edit_rate.html", project=project, override=override, users=users)
 
         parsed, errors = validate_rate_override_fields(
             hourly_rate=request.form.get("hourly_rate"),
@@ -1998,9 +1994,7 @@ def edit_rate(project_id, override_id):
         if errors:
             first = next(iter(errors.values()))[0]
             flash(first, "error")
-            return render_template(
-                "projects/edit_rate.html", project=project, override=override, users=users
-            )
+            return render_template("projects/edit_rate.html", project=project, override=override, users=users)
 
         override.user_id = parsed["user_id"]
         override.hourly_rate = parsed["hourly_rate"]
@@ -2008,9 +2002,7 @@ def edit_rate(project_id, override_id):
         override.effective_to = parsed["effective_to"]
         if not safe_commit("edit_rate_override", {"override_id": override.id}):
             flash(_("Could not update rate override due to a database error."), "error")
-            return render_template(
-                "projects/edit_rate.html", project=project, override=override, users=users
-            )
+            return render_template("projects/edit_rate.html", project=project, override=override, users=users)
 
         flash(_("Rate override updated successfully"), "success")
         return redirect(url_for("projects.list_rates", project_id=project.id))
