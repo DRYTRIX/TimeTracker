@@ -401,3 +401,105 @@ def test_client_unbilled_invoice_for_new_client_uses_30_days_and_settings_terms(
     assert inv.due_date == inv.issue_date + timedelta(days=30)
     assert inv.terms == "Settings terms"
     assert not inv.notes
+
+
+@pytest.mark.unit
+def test_transition_status_draft_to_sent_marks_time_entries_paid(app, test_project, test_user):
+    """transition_status(sent) marks linked time entries paid."""
+    service = InvoiceService()
+    entry = TimeEntry(
+        user_id=test_user.id,
+        project_id=test_project.id,
+        start_time=datetime.utcnow() - timedelta(hours=2),
+        end_time=datetime.utcnow(),
+        duration_seconds=7200,
+        billable=True,
+    )
+    db.session.add(entry)
+    test_project.hourly_rate = Decimal("50.00")
+    db.session.commit()
+
+    result = service.create_invoice_from_time_entries(
+        project_id=test_project.id, time_entry_ids=[entry.id], created_by=test_user.id
+    )
+    assert result["success"] is True
+    invoice = result["invoice"]
+
+    transition = service.transition_status(invoice, "sent", actor_id=test_user.id)
+    assert transition["success"] is True
+    assert transition["status"] == "sent"
+    assert transition["marked_count"] >= 1
+    db.session.commit()
+
+    db.session.refresh(entry)
+    assert entry.paid is True
+    assert entry.invoice_number == invoice.invoice_number
+
+
+@pytest.mark.unit
+def test_transition_status_sent_to_cancelled_releases_entries(app, test_project, test_user):
+    """transition_status(cancelled) releases billed time entries."""
+    service = InvoiceService()
+    entry = TimeEntry(
+        user_id=test_user.id,
+        project_id=test_project.id,
+        start_time=datetime.utcnow() - timedelta(hours=1),
+        end_time=datetime.utcnow(),
+        duration_seconds=3600,
+        billable=True,
+    )
+    db.session.add(entry)
+    test_project.hourly_rate = Decimal("50.00")
+    db.session.commit()
+
+    result = service.create_invoice_from_time_entries(
+        project_id=test_project.id, time_entry_ids=[entry.id], created_by=test_user.id
+    )
+    invoice = result["invoice"]
+    assert service.transition_status(invoice, "sent", actor_id=test_user.id)["success"]
+    db.session.commit()
+
+    transition = service.transition_status(invoice, "cancelled", actor_id=test_user.id)
+    assert transition["success"] is True
+    assert transition["status"] == "cancelled"
+    db.session.commit()
+
+    db.session.refresh(entry)
+    assert entry.paid is False
+    assert entry.invoice_number is None
+
+
+@pytest.mark.unit
+def test_transition_status_rejects_disallowed_and_is_idempotent(app, test_project, test_user):
+    """Same status is a no-op; cancelled/paid cannot move to draft; paid is terminal."""
+    service = InvoiceService()
+    invoice = Invoice(
+        invoice_number="INV-TRANS-1",
+        project_id=test_project.id,
+        client_id=test_project.client_id,
+        client_name="Test Client",
+        issue_date=date.today(),
+        due_date=date.today(),
+        total_amount=100.00,
+        created_by=test_user.id,
+        status="draft",
+    )
+    db.session.add(invoice)
+    db.session.commit()
+
+    same = service.transition_status(invoice, "draft")
+    assert same["success"] is True
+    assert same["marked_count"] == 0
+
+    assert service.transition_status(invoice, "sent")["success"]
+    assert service.transition_status(invoice, "cancelled")["success"]
+    rejected = service.transition_status(invoice, "draft")
+    assert rejected["success"] is False
+    assert rejected["error"] in ("invalid_transition", "cannot_revert")
+    assert invoice.status == "cancelled"
+
+    invoice.status = "paid"
+    db.session.flush()
+    paid_block = service.transition_status(invoice, "sent")
+    assert paid_block["success"] is False
+    assert invoice.status == "paid"

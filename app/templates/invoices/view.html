@@ -62,6 +62,11 @@
     <i class="fas fa-undo mr-1"></i>{{ _('Create credit note') }}
 </button>
 {% endif %}
+{% if invoice.status in ['draft', 'issued', 'sent', 'overdue'] %}
+<button type="button" onclick="cancelInvoice({{ invoice.id }})" class="btn bg-rose-600 text-white hover:bg-rose-700">
+    <i class="fas fa-ban mr-1"></i>{{ _('Cancel invoice') }}
+</button>
+{% endif %}
 <a href="{{ url_for('payments.create_payment', invoice_id=invoice.id) }}" class="btn bg-green-500 text-white hover:bg-green-600">{{ _('Record Payment') }}</a>
 <button type="button" onclick="showDeleteModal('{{ invoice.id }}', '{{ invoice.invoice_number }}')" class="btn btn-danger">
     <i class="fas fa-trash mr-1"></i>Delete
@@ -833,6 +838,43 @@ function showDeleteModal(invoiceId, invoiceNumber) {
   if (formEl) formEl.action = "{{ url_for('invoices.delete_invoice', invoice_id=0) }}".replace('0', invoiceId);
   const modal = document.getElementById('deleteInvoiceModal');
   if (modal) modal.classList.remove('hidden');
+}
+
+async function cancelInvoice(invoiceId) {
+  if (!(await ttConfirm({{ _('Cancel this invoice? Time entries will be released and the invoice cannot be edited again.')|tojson }}, { confirmText: {{ _('Cancel invoice')|tojson }} }))) {
+    return;
+  }
+  const body = new FormData();
+  body.append('csrf_token', "{{ csrf_token() }}");
+  body.append('new_status', 'cancelled');
+  try {
+    const response = await fetch("{{ url_for('invoices.update_invoice_status', invoice_id=invoice.id) }}", {
+      method: 'POST',
+      body: body,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      const errorMsg = data.error || {{ _('Could not cancel invoice')|tojson }};
+      if (window.toastManager) {
+        window.toastManager.error(errorMsg);
+      } else {
+        ttAlert(errorMsg);
+      }
+      return;
+    }
+    if (window.toastManager) {
+      window.toastManager.success({{ _('Invoice cancelled')|tojson }});
+    }
+    setTimeout(() => window.location.reload(), 500);
+  } catch (err) {
+    const errorMsg = {{ _('Could not cancel invoice')|tojson }};
+    if (window.toastManager) {
+      window.toastManager.error(errorMsg);
+    } else {
+      ttAlert(errorMsg);
+    }
+  }
 }
 
 function hideDeleteModal() {
