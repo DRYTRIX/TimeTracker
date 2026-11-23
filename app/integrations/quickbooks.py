@@ -944,8 +944,13 @@ class QuickBooksConnector(BaseConnector):
         if not result.get("success"):
             return result
         invoice = result["invoice"]
-        invoice.status = "sent"
-        from app import db
+        transition = invoice_service.transition_status(invoice, "sent", actor_id=created_by)
+        if not transition.get("success"):
+            return {
+                "success": False,
+                "message": transition.get("message") or "Could not mark invoice as sent",
+                "error": transition.get("error") or "invalid_transition",
+            }
         from app.utils.db import safe_commit
 
         safe_commit("export_time_entries_qb", {"invoice_id": invoice.id})

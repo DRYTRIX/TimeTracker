@@ -1019,147 +1019,25 @@ def update_invoice_status(invoice_id):
     if not current_user.is_admin and invoice.created_by != current_user.id:
         return jsonify({"error": "Permission denied"}), 403
 
-    previous_status = invoice.status
     new_status = request.form.get("new_status")
     if new_status not in ["draft", "issued", "sent", "paid", "overdue", "cancelled", "void"]:
         return jsonify({"error": "Invalid status"}), 400
 
-    # Normalize legacy naming: treat "void" and "cancelled" as the same terminal state.
-    if new_status == "void":
-        new_status = "cancelled"
+    from app.services import InvoiceService
 
-    # State machine enforcement (production-grade invariants); the bulk status change uses the same table
-    from app.services.invoice_time_service import status_change_allowed
+    result = InvoiceService().transition_status(invoice, new_status, actor_id=current_user.id)
+    if not result.get("success"):
+        return jsonify({"error": result.get("message") or "Invalid status transition"}), 400
 
-    prev = previous_status or "draft"
-    if new_status == prev:
-        return jsonify({"success": True, "status": new_status})
-    if not status_change_allowed(prev, new_status):
-        return jsonify({"error": "Invalid status transition"}), 400
-
-    # Once sent/paid/cancelled, the invoice should be treated as immutable (no reverting).
-    if prev in {"sent", "paid", "overdue", "cancelled"} and new_status in {"draft", "issued"}:
-        return jsonify({"error": "Cannot revert finalized invoice"}), 400
-
-    invoice.status = new_status
-
-    # A cancelled invoice lets go of its time entries, costs and expenses
-    from app.services.invoice_time_service import InvoiceTimeService
-
-    InvoiceTimeService().on_status_change(invoice, previous_status)
-
-    # Auto-update payment status if marking as paid
-    if new_status == "paid" and invoice.payment_status != "fully_paid":
-        invoice.amount_paid = invoice.total_amount
-        invoice.payment_status = "fully_paid"
-        if not invoice.payment_date:
-            invoice.payment_date = datetime.utcnow().date()
-
-    # Mark time entries as paid when invoice is sent (non-external invoices)
-    if new_status == "sent":
-        from app.services import InvoiceService
-
-        invoice_service = InvoiceService()
-        marked_count = invoice_service.mark_time_entries_as_paid(invoice)
-        if marked_count > 0:
-            current_app.logger.info(
-                f"Marked {marked_count} time entr{'y' if marked_count == 1 else 'ies'} as paid for invoice {invoice.invoice_number}"
-            )
-
-    # Reduce stock when invoice is sent or paid (if configured)
-    import os
-
-    from app.models import StockMovement, StockReservation
-
-    reduce_on_sent = os.getenv("INVENTORY_REDUCE_ON_INVOICE_SENT", "true").lower() == "true"
-    reduce_on_paid = os.getenv("INVENTORY_REDUCE_ON_INVOICE_PAID", "false").lower() == "true"
-
-    should_reduce_stock = (new_status == "sent" and reduce_on_sent and previous_status != "sent") or (
-        new_status == "paid" and reduce_on_paid and previous_status != "paid"
-    )
-    if should_reduce_stock:
-        for item in invoice.items:
-            if item.is_stock_item and item.stock_item_id and item.warehouse_id:
-                try:
-                    # Fulfill any existing reservations
-                    reservation = StockReservation.query.filter_by(
-                        stock_item_id=item.stock_item_id,
-                        warehouse_id=item.warehouse_id,
-                        reservation_type="invoice",
-                        reservation_id=invoice.id,
-                        status="reserved",
-                    ).first()
-
-                    if reservation:
-                        reservation.fulfill()
-
-                    # Create stock movement (sale)
-                    StockMovement.record_movement(
-                        movement_type="sale",
-                        stock_item_id=item.stock_item_id,
-                        warehouse_id=item.warehouse_id,
-                        quantity=-item.quantity,  # Negative for removal
-                        moved_by=current_user.id,
-                        reference_type="invoice",
-                        reference_id=invoice.id,
-                        unit_cost=item.stock_item.default_cost if item.stock_item else None,
-                        reason=f"Invoice {invoice.invoice_number}",
-                        update_stock=True,
-                    )
-                except Exception as e:
-                    flash(
-                        _(
-                            "Warning: Could not reduce stock for item %(item)s: %(error)s",
-                            item=item.description,
-                            error=str(e),
-                        ),
-                        "warning",
-                    )
-
-        # Also deplete stock linked from ExtraGoods on this invoice
-        for good in invoice.extra_goods:
-            if not getattr(good, "stock_item_id", None):
-                continue
-            try:
-                from app.models import Warehouse, WarehouseStock
-
-                warehouse_id = None
-                # Prefer first active warehouse with available stock for this item
-                stock_row = (
-                    WarehouseStock.query.filter_by(stock_item_id=good.stock_item_id)
-                    .join(Warehouse)
-                    .filter(Warehouse.is_active == True)  # noqa: E712
-                    .order_by(WarehouseStock.quantity_on_hand.desc())
-                    .first()
-                )
-                if stock_row:
-                    warehouse_id = stock_row.warehouse_id
-                else:
-                    first_wh = Warehouse.query.filter_by(is_active=True).first()
-                    warehouse_id = first_wh.id if first_wh else None
-                if not warehouse_id:
-                    continue
-                StockMovement.record_movement(
-                    movement_type="sale",
-                    stock_item_id=good.stock_item_id,
-                    warehouse_id=warehouse_id,
-                    quantity=-Decimal(str(good.quantity or 0)),
-                    moved_by=current_user.id,
-                    reference_type="invoice_extra_good",
-                    reference_id=invoice.id,
-                    unit_cost=good.stock_item.default_cost if good.stock_item else None,
-                    reason=f"Invoice {invoice.invoice_number} extra good: {good.name}",
-                    update_stock=True,
-                )
-            except Exception as e:
-                flash(
-                    _(
-                        "Warning: Could not reduce stock for extra good %(item)s: %(error)s",
-                        item=good.name,
-                        error=str(e),
-                    ),
-                    "warning",
-                )
+    previous_status = result.get("previous_status")
+    new_status = result.get("status") or new_status
+    marked_count = result.get("marked_count") or 0
+    if marked_count > 0:
+        current_app.logger.info(
+            f"Marked {marked_count} time entr{'y' if marked_count == 1 else 'ies'} as paid for invoice {invoice.invoice_number}"
+        )
+    for warning in result.get("warnings") or []:
+        flash(_("Warning: %(msg)s", msg=warning), "warning")
 
     if not safe_commit("update_invoice_status", {"invoice_id": invoice.id, "status": new_status}):
         return jsonify({"error": "Database error while updating status"}), 500
@@ -1331,8 +1209,9 @@ def bulk_update_status():
         flash(_("Invalid status value"), "error")
         return _back_to_invoice_list()
 
-    from app.services.invoice_time_service import InvoiceTimeService, status_change_allowed
+    from app.services import InvoiceService
 
+    invoice_service = InvoiceService()
     updated_count = 0
     skipped_count = 0
     not_allowed_count = 0
@@ -1350,25 +1229,21 @@ def bulk_update_status():
                 skipped_count += 1
                 continue
 
-            # Same transitions as a single status change: a cancelled or paid invoice stays as it is
-            previous_status = invoice.status
-            if not status_change_allowed(previous_status, new_status):
+            result = invoice_service.transition_status(
+                invoice,
+                new_status,
+                actor_id=current_user.id,
+                payment_reference=invoice_reference or None,
+            )
+            if not result.get("success"):
                 not_allowed_count += 1
                 continue
-            invoice.status = new_status
-            InvoiceTimeService().on_status_change(invoice, previous_status)
 
-            # Auto-update payment status if marking as paid
-            if new_status == "paid" and invoice.payment_status != "fully_paid":
-                invoice.amount_paid = invoice.total_amount
-                invoice.payment_status = "fully_paid"
-                if not invoice.payment_date:
-                    invoice.payment_date = datetime.utcnow().date()
-                # Set invoice reference if provided
-                if invoice_reference:
-                    invoice.payment_reference = invoice_reference
-
-            updated_count += 1
+            # Same-status is a no-op success; only count real changes
+            if result.get("previous_status") != result.get("status"):
+                updated_count += 1
+            for warning in result.get("warnings") or []:
+                flash(_("Warning: %(msg)s", msg=warning), "warning")
 
         except Exception:
             current_app.logger.warning("Skipping invoice %s during bulk status update", invoice_id_str, exc_info=True)

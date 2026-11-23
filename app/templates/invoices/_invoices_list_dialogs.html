@@ -50,9 +50,11 @@
             <select id="bulkStatusSelect" class="form-input w-full mb-4" onchange="toggleInvoiceReferenceField()">
                 <option value="">-- {{ _('Select Status') }} --</option>
                 <option value="draft">{{ _('Draft') }}</option>
+                <option value="issued">{{ _('Issued') }}</option>
                 <option value="sent">{{ _('Sent') }}</option>
                 <option value="paid">{{ _('Paid') }}</option>
                 <option value="overdue">{{ _('Overdue') }}</option>
+                <option value="cancelled">{{ _('Cancelled') }}</option>
             </select>
             <div id="invoiceReferenceField" class="hidden mb-4">
                 <label for="bulkInvoiceReference" class="form-label">{{ _('Invoice Reference') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional') }})</span></label>

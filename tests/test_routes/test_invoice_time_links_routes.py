@@ -543,6 +543,47 @@ def test_bulk_status_does_not_bring_back_a_cancelled_invoice(client, user, billi
     assert InvoiceTimeService().billing_state(entry) == UNBILLED
 
 
+def test_bulk_status_sent_marks_time_entries_paid(client, user, billing):
+    _login(client, user)
+    inv = _bill(billing, user, "INV-LINK-BULK-SENT")
+    resp = client.post(
+        "/invoices/bulk-status",
+        data={"invoice_ids[]": [str(inv.id)], "status": "sent"},
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+    db.session.expire_all()
+    assert Invoice.query.get(inv.id).status == "sent"
+    entries = TimeEntry.query.filter(TimeEntry.id.in_([e.id for e in billing["entries"]])).all()
+    assert all(e.paid and e.invoice_number == "INV-LINK-BULK-SENT" for e in entries)
+
+
+def test_bulk_status_cancelled_releases_a_sent_invoice(client, user, billing):
+    _login(client, user)
+    inv = _bill(billing, user, "INV-LINK-BULK-CANCEL")
+    assert (
+        client.post(
+            "/invoices/bulk-status",
+            data={"invoice_ids[]": [str(inv.id)], "status": "sent"},
+            follow_redirects=True,
+        ).status_code
+        == 200
+    )
+
+    resp = client.post(
+        "/invoices/bulk-status",
+        data={"invoice_ids[]": [str(inv.id)], "status": "cancelled"},
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+    db.session.expire_all()
+    assert Invoice.query.get(inv.id).status == "cancelled"
+    assert InvoiceTimeLink.query.filter_by(invoice_id=inv.id, released_at=None).count() == 0
+    entry = TimeEntry.query.get(billing["entries"][0].id)
+    assert InvoiceTimeService().billing_state(entry) == UNBILLED
+    assert not entry.paid
+
+
 def test_on_status_change_refuses_to_leave_cancelled(app, user, billing):
     from app.services.invoice_time_service import InvoiceStatusChangeError
 
