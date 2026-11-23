@@ -32,8 +32,11 @@ updates:
       - dependencies
       - javascript
     # Tailwind v4 drops the CLI binary and requires a CSS/config rewrite; stay on v3.
+    # CodeMirror 6 is a different package layout; invoice HTML templates use CM5 paths/API.
     ignore:
       - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
+      - dependency-name: codemirror
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
