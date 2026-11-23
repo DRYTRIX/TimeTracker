@@ -29,9 +29,11 @@ from app.models import (
     Project,
     ProjectAttachment,
     ProjectCost,
+    RateOverride,
     RecurringProjectCost,
     Task,
     TimeEntry,
+    User,
     UserFavoriteProject,
 )
 from app.services import ProjectService
@@ -1849,6 +1851,197 @@ def delete_cost(project_id, cost_id):
 
     flash(_(f'Cost "{cost_description}" deleted successfully'), "success")
     return redirect(url_for("projects.view_project", project_id=project.id))
+
+
+def _rate_form_users():
+    """Active users for the rate-override person picker."""
+    return User.query.filter_by(is_active=True).order_by(User.username).limit(500).all()
+
+
+def _parse_rate_user_id(raw):
+    """Parse optional user_id from form/API; empty means project-wide (None)."""
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return False
+
+
+@projects_bp.route("/projects/<int:project_id>/rates")
+@login_required
+def list_rates(project_id):
+    """List hourly rate overrides for a project."""
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get_or_404(project_id)
+    if not user_can_access_project(current_user, project_id):
+        from flask import abort
+
+        abort(403)
+
+    overrides = (
+        RateOverride.query.filter_by(project_id=project_id)
+        .order_by(RateOverride.user_id.asc().nullsfirst(), RateOverride.effective_from.asc().nullsfirst())
+        .all()
+    )
+    can_edit = user_can_edit_project(current_user, project)
+    return render_template(
+        "projects/rates.html",
+        project=project,
+        overrides=overrides,
+        can_edit=can_edit,
+    )
+
+
+@projects_bp.route("/projects/<int:project_id>/rates/add", methods=["GET", "POST"])
+@login_required
+@admin_or_permission_required("edit_projects", "edit_all_projects", "edit_own_projects")
+def add_rate(project_id):
+    """Add a rate override to a project."""
+    from flask import abort
+
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.rate_override_validation import validate_rate_override_fields
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get_or_404(project_id)
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_edit_project(current_user, project):
+        abort(403)
+
+    users = _rate_form_users()
+    if request.method == "POST":
+        user_id = _parse_rate_user_id(request.form.get("user_id"))
+        if user_id is False:
+            flash(_("Invalid person selected"), "error")
+            return render_template("projects/add_rate.html", project=project, users=users)
+
+        if user_id is not None and not User.query.filter_by(id=user_id, is_active=True).first():
+            flash(_("Selected person was not found"), "error")
+            return render_template("projects/add_rate.html", project=project, users=users)
+
+        parsed, errors = validate_rate_override_fields(
+            hourly_rate=request.form.get("hourly_rate"),
+            effective_from=request.form.get("effective_from") or None,
+            effective_to=request.form.get("effective_to") or None,
+            project_id=project.id,
+            user_id=user_id,
+        )
+        if errors:
+            first = next(iter(errors.values()))[0]
+            flash(first, "error")
+            return render_template("projects/add_rate.html", project=project, users=users)
+
+        override = RateOverride(
+            project_id=project.id,
+            user_id=parsed["user_id"],
+            hourly_rate=parsed["hourly_rate"],
+            effective_from=parsed["effective_from"],
+            effective_to=parsed["effective_to"],
+        )
+        db.session.add(override)
+        if not safe_commit("add_rate_override", {"project_id": project.id}):
+            flash(_("Could not save rate override due to a database error."), "error")
+            return render_template("projects/add_rate.html", project=project, users=users)
+
+        flash(_("Rate override added successfully"), "success")
+        return redirect(url_for("projects.list_rates", project_id=project.id))
+
+    return render_template("projects/add_rate.html", project=project, users=users)
+
+
+@projects_bp.route("/projects/<int:project_id>/rates/<int:override_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_or_permission_required("edit_projects", "edit_all_projects", "edit_own_projects")
+def edit_rate(project_id, override_id):
+    """Edit a rate override."""
+    from flask import abort
+
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.rate_override_validation import validate_rate_override_fields
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get_or_404(project_id)
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_edit_project(current_user, project):
+        abort(403)
+
+    override = RateOverride.query.filter_by(id=override_id, project_id=project_id).first_or_404()
+    users = _rate_form_users()
+
+    if request.method == "POST":
+        user_id = _parse_rate_user_id(request.form.get("user_id"))
+        if user_id is False:
+            flash(_("Invalid person selected"), "error")
+            return render_template(
+                "projects/edit_rate.html", project=project, override=override, users=users
+            )
+
+        if user_id is not None and not User.query.filter_by(id=user_id, is_active=True).first():
+            flash(_("Selected person was not found"), "error")
+            return render_template(
+                "projects/edit_rate.html", project=project, override=override, users=users
+            )
+
+        parsed, errors = validate_rate_override_fields(
+            hourly_rate=request.form.get("hourly_rate"),
+            effective_from=request.form.get("effective_from") or None,
+            effective_to=request.form.get("effective_to") or None,
+            project_id=project.id,
+            user_id=user_id,
+            exclude_id=override.id,
+        )
+        if errors:
+            first = next(iter(errors.values()))[0]
+            flash(first, "error")
+            return render_template(
+                "projects/edit_rate.html", project=project, override=override, users=users
+            )
+
+        override.user_id = parsed["user_id"]
+        override.hourly_rate = parsed["hourly_rate"]
+        override.effective_from = parsed["effective_from"]
+        override.effective_to = parsed["effective_to"]
+        if not safe_commit("edit_rate_override", {"override_id": override.id}):
+            flash(_("Could not update rate override due to a database error."), "error")
+            return render_template(
+                "projects/edit_rate.html", project=project, override=override, users=users
+            )
+
+        flash(_("Rate override updated successfully"), "success")
+        return redirect(url_for("projects.list_rates", project_id=project.id))
+
+    return render_template("projects/edit_rate.html", project=project, override=override, users=users)
+
+
+@projects_bp.route("/projects/<int:project_id>/rates/<int:override_id>/delete", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_projects", "edit_all_projects", "edit_own_projects")
+def delete_rate(project_id, override_id):
+    """Delete a rate override."""
+    from flask import abort
+
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get_or_404(project_id)
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_edit_project(current_user, project):
+        abort(403)
+
+    override = RateOverride.query.filter_by(id=override_id, project_id=project_id).first_or_404()
+    db.session.delete(override)
+    if not safe_commit("delete_rate_override", {"override_id": override_id}):
+        flash(_("Could not delete rate override due to a database error."), "error")
+        return redirect(url_for("projects.list_rates", project_id=project.id))
+
+    flash(_("Rate override deleted successfully"), "success")
+    return redirect(url_for("projects.list_rates", project_id=project.id))
 
 
 # API endpoint for getting project costs as JSON

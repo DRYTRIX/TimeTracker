@@ -17,7 +17,6 @@ from app.models import (
     Client,
     FocusSession,
     Project,
-    RateOverride,
     RecurringBlock,
     SavedFilter,
     Settings,

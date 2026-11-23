@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Add Rate Override') }} - {{ project.name }} - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 col-lg-8 offset-lg-2">
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.list_projects') }}">{{ _('Projects') }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.view_project', project_id=project.id) }}">{{ project.name }}</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects.list_rates', project_id=project.id) }}">{{ _('Rates') }}</a></li>
+                    <li class="breadcrumb-item active">{{ _('Add Override') }}</li>
+                </ol>
+            </nav>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-percentage me-2"></i>{{ _('Add Rate Override') }}
+                    </h5>
+                </div>
+                <div class="p-6">
+                    <form method="POST" action="{{ url_for('projects.add_rate', project_id=project.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="mb-4">
+                            <label for="user_id" class="form-label">{{ _('Person') }}</label>
+                            <select class="form-input" id="user_id" name="user_id">
+                                <option value="">{{ _('Everyone') }}</option>
+                                {% for u in users %}
+                                <option value="{{ u.id }}">{{ u.display_name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 block">{{ _('Leave as Everyone for a project-wide override. A person-specific override wins over that.') }}</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="hourly_rate" class="form-label">{{ _('Hourly Rate') }} <span class="text-danger">*</span></label>
+                            <input type="number" class="form-input" id="hourly_rate" name="hourly_rate" step="0.01" min="0" required
+                                   placeholder="0.00">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="effective_from" class="form-label">{{ _('From') }}</label>
+                                <input type="date" class="form-input user-date-input" id="effective_from" name="effective_from">
+                            </div>
+                            <div>
+                                <label for="effective_to" class="form-label">{{ _('To') }}</label>
+                                <input type="date" class="form-input user-date-input" id="effective_to" name="effective_to">
+                            </div>
+                        </div>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Leave dates empty for an open-ended window. Overlapping windows for the same person are not allowed.') }}</p>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{{ url_for('projects.list_rates', project_id=project.id) }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> {{ _('Cancel') }}
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> {{ _('Add Override') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -228,3 +228,165 @@ def create_project_milestone(project_id):
     if not safe_commit("api_create_milestone", {"project_id": project.id}):
         return error_response("Could not create milestone", status_code=500)
     return jsonify({"milestone": milestone.to_dict()}), 201
+
+
+def _parse_optional_user_id(data):
+    """Parse optional user_id from JSON; empty/null means project-wide override."""
+    if "user_id" not in data or data.get("user_id") is None or data.get("user_id") == "":
+        return None, None
+    try:
+        return int(data["user_id"]), None
+    except (TypeError, ValueError):
+        return None, {"user_id": ["user_id must be an integer or null"]}
+
+
+@api_v1_projects_bp.route("/projects/<int:project_id>/rate-overrides", methods=["GET"])
+@require_api_token("read:projects")
+def list_project_rate_overrides(project_id):
+    """List rate overrides for a project."""
+    from app.models import Project, RateOverride
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get(project_id)
+    if not project:
+        return not_found_response("Project", project_id)
+    if not user_can_access_project(g.api_user, project_id):
+        return forbidden_response("You do not have access to this project")
+
+    overrides = (
+        RateOverride.query.filter_by(project_id=project_id)
+        .order_by(RateOverride.user_id.asc().nullsfirst(), RateOverride.effective_from.asc().nullsfirst())
+        .all()
+    )
+    return jsonify({"rate_overrides": [o.to_dict() for o in overrides]})
+
+
+@api_v1_projects_bp.route("/projects/<int:project_id>/rate-overrides", methods=["POST"])
+@require_api_token("write:projects")
+def create_project_rate_override(project_id):
+    """Create a rate override for a project."""
+    from app import db
+    from app.models import Project, RateOverride, User
+    from app.utils.db import safe_commit
+    from app.utils.rate_override_validation import validate_rate_override_fields
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get(project_id)
+    if not project:
+        return not_found_response("Project", project_id)
+    if not user_can_access_project(g.api_user, project_id):
+        return forbidden_response("You do not have access to this project")
+
+    data = request.get_json() or {}
+    user_id, user_err = _parse_optional_user_id(data)
+    if user_err:
+        return validation_error_response(errors=user_err, message="Validation failed")
+    if user_id is not None and not User.query.get(user_id):
+        return validation_error_response(errors={"user_id": ["User not found"]}, message="Validation failed")
+
+    parsed, errors = validate_rate_override_fields(
+        hourly_rate=data.get("hourly_rate"),
+        effective_from=data.get("effective_from"),
+        effective_to=data.get("effective_to"),
+        project_id=project.id,
+        user_id=user_id,
+    )
+    if errors:
+        return validation_error_response(errors=errors, message="Validation failed")
+
+    override = RateOverride(
+        project_id=project.id,
+        user_id=parsed["user_id"],
+        hourly_rate=parsed["hourly_rate"],
+        effective_from=parsed["effective_from"],
+        effective_to=parsed["effective_to"],
+    )
+    db.session.add(override)
+    if not safe_commit("api_create_rate_override", {"project_id": project.id}):
+        return error_response("Could not create rate override", status_code=500)
+    return jsonify({"rate_override": override.to_dict()}), 201
+
+
+@api_v1_projects_bp.route("/rate-overrides/<int:override_id>", methods=["GET"])
+@require_api_token("read:projects")
+def get_rate_override(override_id):
+    """Get a single rate override."""
+    from app.models import RateOverride
+    from app.utils.scope_filter import user_can_access_project
+
+    override = RateOverride.query.get(override_id)
+    if not override:
+        return not_found_response("RateOverride", override_id)
+    if not user_can_access_project(g.api_user, override.project_id):
+        return forbidden_response("You do not have access to this project")
+    return jsonify({"rate_override": override.to_dict()})
+
+
+@api_v1_projects_bp.route("/rate-overrides/<int:override_id>", methods=["PUT", "PATCH"])
+@require_api_token("write:projects")
+def update_rate_override(override_id):
+    """Update a rate override."""
+    from app.models import RateOverride, User
+    from app.utils.db import safe_commit
+    from app.utils.rate_override_validation import validate_rate_override_fields
+    from app.utils.scope_filter import user_can_access_project
+
+    override = RateOverride.query.get(override_id)
+    if not override:
+        return not_found_response("RateOverride", override_id)
+    if not user_can_access_project(g.api_user, override.project_id):
+        return forbidden_response("You do not have access to this project")
+
+    data = request.get_json() or {}
+    if "user_id" in data:
+        user_id, user_err = _parse_optional_user_id(data)
+        if user_err:
+            return validation_error_response(errors=user_err, message="Validation failed")
+        if user_id is not None and not User.query.get(user_id):
+            return validation_error_response(errors={"user_id": ["User not found"]}, message="Validation failed")
+    else:
+        user_id = override.user_id
+
+    hourly_rate = data["hourly_rate"] if "hourly_rate" in data else override.hourly_rate
+    effective_from = data["effective_from"] if "effective_from" in data else override.effective_from
+    effective_to = data["effective_to"] if "effective_to" in data else override.effective_to
+
+    parsed, errors = validate_rate_override_fields(
+        hourly_rate=hourly_rate,
+        effective_from=effective_from,
+        effective_to=effective_to,
+        project_id=override.project_id,
+        user_id=user_id,
+        exclude_id=override.id,
+    )
+    if errors:
+        return validation_error_response(errors=errors, message="Validation failed")
+
+    override.user_id = parsed["user_id"]
+    override.hourly_rate = parsed["hourly_rate"]
+    override.effective_from = parsed["effective_from"]
+    override.effective_to = parsed["effective_to"]
+    if not safe_commit("api_update_rate_override", {"override_id": override.id}):
+        return error_response("Could not update rate override", status_code=500)
+    return jsonify({"rate_override": override.to_dict()})
+
+
+@api_v1_projects_bp.route("/rate-overrides/<int:override_id>", methods=["DELETE"])
+@require_api_token("write:projects")
+def delete_rate_override(override_id):
+    """Delete a rate override."""
+    from app import db
+    from app.models import RateOverride
+    from app.utils.db import safe_commit
+    from app.utils.scope_filter import user_can_access_project
+
+    override = RateOverride.query.get(override_id)
+    if not override:
+        return not_found_response("RateOverride", override_id)
+    if not user_can_access_project(g.api_user, override.project_id):
+        return forbidden_response("You do not have access to this project")
+
+    db.session.delete(override)
+    if not safe_commit("api_delete_rate_override", {"override_id": override_id}):
+        return error_response("Could not delete rate override", status_code=500)
+    return jsonify({"message": "Rate override deleted successfully"})

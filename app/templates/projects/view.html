@@ -47,6 +47,10 @@
         <i class="fas fa-receipt"></i>
         {{ _('Costs') }}
     </a>
+    <a href="{{ url_for('projects.list_rates', project_id=project.id) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition">
+        <i class="fas fa-percentage"></i>
+        {{ _('Rates') }}
+    </a>
     {% if is_module_enabled('invoices') %}
     <a href="{{ url_for('invoices.project_invoices', project_id=project.id) }}" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition">
         <i class="fas fa-file-invoice-dollar"></i>
@@ -165,6 +169,9 @@
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Billing</h3>
                     <p>{{ 'Billable' if project.billable else 'Not Billable' }} {% if project.hourly_rate %}({{ "%.2f"|format(project.hourly_rate) }}/hr){% endif %}</p>
+                    {% if current_user.is_admin or has_any_permission('edit_projects', 'edit_all_projects', 'edit_own_projects') %}
+                    <a href="{{ url_for('projects.list_rates', project_id=project.id) }}" class="text-sm text-primary hover:underline">{{ _('Manage rate overrides') }}</a>
+                    {% endif %}
                 </div>
                 {% if project.is_archived and project.archived_at %}
                 <div class="pt-4 border-t border-border-light dark:border-border-dark">
