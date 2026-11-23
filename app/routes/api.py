@@ -13,17 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 
 from app import db, limiter, socketio
-from app.models import (
-    Client,
-    FocusSession,
-    Project,
-    RecurringBlock,
-    SavedFilter,
-    Settings,
-    Task,
-    TimeEntry,
-    User,
-)
+from app.models import Client, FocusSession, Project, RecurringBlock, SavedFilter, Settings, Task, TimeEntry, User
 from app.models.time_entry import local_now
 from app.services.ai_suggestion_service import AISuggestionService
 from app.services.global_search_service import run_global_search
