@@ -99,20 +99,15 @@ class RecurringInvoiceService:
         if not unbilled_entries:
             return
 
-        from app.models import Settings
-        from app.utils.invoice_time_entry_items import build_time_entry_lines
-
-        settings = Settings.get_settings()
-        group_entries = getattr(settings, "invoice_group_time_entries", True) if settings else True
-        lines = build_time_entry_lines(
-            invoice.id,
+        # A recurring invoice has no layout of its own: lines follow the global grouping setting, and
+        # the generated invoice does not change the project's default
+        lines = time_links.add_entries(
+            invoice,
             unbilled_entries,
-            group=group_entries,
-            project_name=recurring_invoice.project.name if recurring_invoice.project else None,
+            time_links.settings_layout(),
+            created_by=recurring_invoice.created_by,
+            project=recurring_invoice.project,
+            remember=False,
         )
-        for item in lines.items:
-            db.session.add(item)
-        db.session.flush()
-        time_links.link_items(invoice, lines.items, created_by=recurring_invoice.created_by)
         for message in lines.warnings:
             logger.warning("Recurring invoice %s: %s", recurring_invoice.id, message)

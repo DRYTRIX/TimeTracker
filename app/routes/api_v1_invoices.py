@@ -205,6 +205,24 @@ def delete_invoice(invoice_id):
     return jsonify({"message": "Invoice cancelled successfully"})
 
 
+def _hours_layout_args(data):
+    """``hours_layout`` and ``line_template`` from a request body, or a validation error response."""
+    from app.utils.invoice_time_entry_items import HOURS_LAYOUTS, LAYOUT_NONE, TEMPLATE_MAX_LENGTH
+
+    layout = data.get("hours_layout")
+    template = data.get("line_template")
+    errors = {}
+    # "none" would add no lines: these calls exist to bill the listed entries
+    allowed = [name for name in HOURS_LAYOUTS if name != LAYOUT_NONE]
+    if layout is not None and layout not in allowed:
+        errors["hours_layout"] = [f"hours_layout must be one of: {', '.join(allowed)}"]
+    if template is not None and (not isinstance(template, str) or len(template) > TEMPLATE_MAX_LENGTH):
+        errors["line_template"] = [f"line_template must be a string of at most {TEMPLATE_MAX_LENGTH} characters"]
+    if errors:
+        return None, None, validation_error_response(errors=errors, message="Invalid hours layout")
+    return layout, template, None
+
+
 @api_v1_invoices_bp.route("/invoices/from-time-entries", methods=["POST"])
 @require_api_token("write:invoices")
 def create_invoice_from_time_entries():
@@ -222,6 +240,9 @@ def create_invoice_from_time_entries():
             errors={"project_id": ["project_id is required"]},
             message="project_id is required",
         )
+    hours_layout, line_template, layout_error = _hours_layout_args(data)
+    if layout_error:
+        return layout_error
     issue_dt = _parse_date(data.get("issue_date")) if data.get("issue_date") else None
     due_dt = _parse_date(data.get("due_date")) if data.get("due_date") else None
     result = _invoice_service().create_invoice_from_time_entries(
@@ -230,6 +251,8 @@ def create_invoice_from_time_entries():
         created_by=g.api_user.id,
         issue_date=issue_dt,
         due_date=due_dt,
+        hours_layout=hours_layout,
+        line_template=line_template,
     )
     if not result.get("success"):
         status = 409 if result.get("error") == "already_invoiced" else 400
@@ -264,6 +287,9 @@ def generate_invoice_from_time(invoice_id):
             errors={"time_entry_ids": ["time_entry_ids must be a non-empty list"]},
             message="time_entry_ids is required",
         )
+    hours_layout, line_template, layout_error = _hours_layout_args(data)
+    if layout_error:
+        return layout_error
     replace_existing = data.get("replace_existing", True)
     result = _invoice_service().add_time_entries_to_invoice(
         invoice_id=invoice_id,
@@ -271,6 +297,8 @@ def generate_invoice_from_time(invoice_id):
         time_entry_ids=[int(x) for x in time_entry_ids],
         is_admin=g.api_user.is_admin,
         replace_existing=bool(replace_existing),
+        hours_layout=hours_layout,
+        line_template=line_template,
     )
     if not result.get("success"):
         status = 403 if result.get("error") == "forbidden" else 400

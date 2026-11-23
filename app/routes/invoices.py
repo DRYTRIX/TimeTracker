@@ -720,9 +720,12 @@ def edit_invoice(invoice_id):
             flash(_("Could not save the invoice: %(error)s", error=str(exc)), "error")
             return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
 
+        # A time line whose description, quantity or price changes is marked as edited by hand
+        previous_lines = time_links.snapshot_lines(invoice)
         previous_hours = time_links.detach_lines(invoice)
         invoice.items.delete()
         new_items = []
+        new_item_ids = []
 
         # Add new items
         for i in range(len(descriptions)):
@@ -731,24 +734,12 @@ def edit_invoice(invoice_id):
                     quantity = Decimal(quantities[i])
                     unit_price = Decimal(unit_prices[i])
 
-                    # Get time entry ids if provided (for time-based items)
+                    # Get time entry ids if provided (for time-based items). The quantity of a time line
+                    # follows its linked hours unless it was changed by hand (see carry_line_state).
                     time_entry_ids_val = None
+                    row_item_id = item_ids[i] if i < len(item_ids) else None
                     if i < len(item_time_entry_ids_list) and item_time_entry_ids_list[i].strip():
                         time_entry_ids_val = item_time_entry_ids_list[i].strip()
-                        # Recalculate quantity from time entries (defense in depth)
-                        try:
-                            entry_ids = [int(x.strip()) for x in time_entry_ids_val.split(",") if x.strip()]
-                            if entry_ids:
-                                entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids)).all()
-                                total_seconds = sum(e.duration_seconds or 0 for e in entries)
-                                quantity = Decimal(str(round(total_seconds / 3600, 2)))
-                        except (ValueError, TypeError):
-                            # Malformed time_entry_ids CSV — keep submitted quantity.
-                            current_app.logger.debug(
-                                "Could not recalculate quantity from time_entry_ids %r",
-                                time_entry_ids_val,
-                                exc_info=True,
-                            )
 
                     # Get stock item info if provided
                     stock_item_id = request.form.getlist("item_stock_item_id[]")
@@ -802,7 +793,7 @@ def edit_invoice(invoice_id):
 
                     item = InvoiceItem(
                         invoice_id=invoice.id,
-                        description=descriptions[i].strip(),
+                        description=time_links.normalize_description(descriptions[i]),
                         quantity=quantity,
                         unit_price=unit_price,
                         time_entry_ids=time_entry_ids_val,
@@ -816,6 +807,7 @@ def edit_invoice(invoice_id):
                     )
                     db.session.add(item)
                     new_items.append(item)
+                    new_item_ids.append(row_item_id)
                 except ValueError:
                     flash(f"Invalid quantity or price for item {i+1}", "error")
                     continue
@@ -826,6 +818,8 @@ def edit_invoice(invoice_id):
             db.session.rollback()
             flash(_("Could not save the invoice: %(error)s", error=str(exc)), "error")
             return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
+        for item, row_item_id in zip(new_items, new_item_ids):
+            time_links.carry_line_state(previous_lines, item, row_item_id)
 
         # Update expenses (only when the expenses section was submitted)
         if request.form.get("expenses_sync"):
@@ -1315,9 +1309,20 @@ def generate_from_time(invoice_id):
 
         # The picker hides what is already on this invoice, so keep it: manual and cost
         # lines stay, and time lines are rebuilt from their entries plus the new selection.
+        # A time line edited by hand (description, quantity or price) stays as it is, with its entries.
         from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService
+        from app.utils.invoice_time_entry_items import LAYOUT_NONE, normalize_template, resolve_hours_layout_from_form
 
         time_links = InvoiceTimeService()
+        hours_layout = resolve_hours_layout_from_form(request.form)
+        line_template = normalize_template(request.form.get("line_template"))
+        if hours_layout == LAYOUT_NONE:
+            # "Don't add any hours": the invoice's hours stay as they are. The project's default is not
+            # changed (it stays the last layout that added hours).
+            selected_entries = []
+            if not any(item.kind == "time" for item in invoice.items.all()):
+                invoice.hours_layout = LAYOUT_NONE
+                invoice.line_template = None
         entry_ids = set()
         for raw_id in selected_entries:
             try:
@@ -1325,20 +1330,24 @@ def generate_from_time(invoice_id):
             except (TypeError, ValueError):
                 continue
         eligible_ids = set()
+        kept_entry_ids = set()
         if selected_entries:
             # Same set the picker offers, decided before this invoice's own links are dropped:
             # running entries and entries marked paid outside an invoice are not taken
             eligible_ids = time_links.eligible_entry_ids(
                 invoice, entry_ids | set(time_links.invoice_entry_ids(invoice)), include_prepaid_only=True
             )
+            active_links = invoice.time_links.filter_by(released_at=None).all()
+            kept_line_ids = {item.id for item in invoice.items.all() if item.kind == "time" and item.is_edited}
+            kept_entry_ids = {link.time_entry_id for link in active_links if link.invoice_item_id in kept_line_ids}
             # Entries this invoice already bills, including those fully covered by prepaid hours,
             # which have no line
-            line_ids = {
-                link.invoice_item_id
-                for link in invoice.time_links.filter_by(released_at=None).all()
-                if link.invoice_item_id
-            }
-            entry_ids.update(time_links.unlink_invoice(invoice))
+            line_ids = {link.invoice_item_id for link in active_links if link.invoice_item_id} - kept_line_ids
+            for link in active_links:
+                if link.time_entry_id not in kept_entry_ids:
+                    entry_ids.add(link.time_entry_id)
+                    db.session.delete(link)
+            db.session.flush()
             for item in invoice.items.all():
                 if item.id in line_ids:
                     db.session.delete(item)
@@ -1349,10 +1358,7 @@ def generate_from_time(invoice_id):
 
         # Process time entries
         if selected_entries:
-            from app.models import Settings
-            from app.utils.invoice_time_entry_items import build_time_entry_lines, resolve_group_time_entries_from_form
-
-            time_entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids)).all()
+            time_entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids - kept_entry_ids)).all()
             conflicts = time_links.find_conflicts(time_entries, invoice)
             if conflicts:
                 db.session.rollback()
@@ -1379,33 +1385,19 @@ def generate_from_time(invoice_id):
                 )
                 time_entries = [entry for entry in time_entries if entry.id in eligible_ids]
 
-            prepaid_allocator = PrepaidHoursAllocator(client=invoice.client, invoice=invoice)
+            # Entries of kept (edited) lines stay out of the prepaid allocation: their ledger rows and
+            # link hours are left as they are, and the hours they used count as used
+            prepaid_allocator = PrepaidHoursAllocator(
+                client=invoice.client, invoice=invoice, keep_entry_ids=kept_entry_ids
+            )
             processed_entries = prepaid_allocator.process(time_entries)
             total_prepaid_allocated = prepaid_allocator.total_prepaid_hours_assigned
 
-            settings = Settings.get_settings()
-            default_group = getattr(settings, "invoice_group_time_entries", True) if settings else True
-            group_entries = resolve_group_time_entries_from_form(
-                request.form.get("per_entry_lines") == "on",
-                default_group,
-            )
-            lines = build_time_entry_lines(
-                invoice.id,
-                processed_entries,
-                group=group_entries,
-                project_name=invoice.project.name if invoice.project else None,
-            )
-            for item in lines.items:
-                db.session.add(item)
-            missing_rate_warnings = lines.missing_rates
-            db.session.flush()
             try:
-                time_links.link_items(
-                    invoice,
-                    lines.items,
-                    hours_by_entry={p.entry.id: p.billable_hours for p in processed_entries},
-                    created_by=current_user.id,
+                lines = time_links.add_entries(
+                    invoice, processed_entries, hours_layout, line_template, created_by=current_user.id
                 )
+                missing_rate_warnings = lines.missing_rates
                 # Entries fully covered by prepaid hours get no line, only a link to the invoice
                 time_links.link_entries(
                     invoice,
@@ -1512,10 +1504,19 @@ def generate_from_time(invoice_id):
 
     # GET request - show time entry and cost selection
     from app.services import InvoiceService
+    from app.services.invoice_time_service import InvoiceTimeService
+    from app.utils.invoice_time_entry_items import DEFAULT_LINE_TEMPLATES, HOURS_LAYOUT_LABELS, HOURS_LAYOUTS
 
     data = InvoiceService().get_unbilled_data_for_invoice(invoice)
     focus = request.args.get("focus", "").strip()
     resolved_hourly_rate = RateOverride.resolve_rate(invoice.project)
+    # The invoice's own layout once it has hours, else the project's last one, else the global setting
+    own_layout = invoice.hours_layout if invoice.hours_layout not in (None, "none") else None
+    hours_layout, line_template = InvoiceTimeService().resolve_layout(
+        invoice.project,
+        own_layout,
+        invoice.line_template if own_layout else None,
+    )
     return render_template(
         "invoices/generate_from_time.html",
         invoice=invoice,
@@ -1534,9 +1535,58 @@ def generate_from_time(invoice_id):
         prepaid_reset_day=data.get("prepaid_reset_day"),
         focus=focus,
         diagnostics=data.get("diagnostics", {}),
-        invoice_group_time_entries=data.get("invoice_group_time_entries", True),
         resolved_hourly_rate=resolved_hourly_rate,
+        hours_layouts=[(layout, HOURS_LAYOUT_LABELS[layout]) for layout in HOURS_LAYOUTS],
+        default_line_templates=DEFAULT_LINE_TEMPLATES,
+        hours_layout=hours_layout,
+        line_template=line_template,
     )
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/hours-layout-preview", methods=["POST"])
+@login_required
+def hours_layout_preview(invoice_id):
+    """Example line for each hours layout, from the time entries selected on generate-from-time.
+
+    JSON body: ``time_entry_ids`` and ``line_template`` (omit it to use each layout's default).
+    Only entries the picker offers are used (unbilled entries of the invoice's project); a user limited
+    to assigned clients gets nothing for a project outside them. Prepaid hours are not applied.
+    """
+    from app.services.invoice_time_service import InvoiceTimeService
+    from app.utils.invoice_time_entry_items import layout_examples, normalize_template
+    from app.utils.scope_filter import user_can_access_project
+
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        return jsonify({"error": "forbidden"}), 403
+    # A user limited to assigned clients (subcontractor) sees nothing outside them
+    if getattr(current_user, "is_scope_restricted", False) and not user_can_access_project(
+        current_user, invoice.project_id
+    ):
+        return jsonify({"error": "forbidden"}), 403
+
+    data = request.get_json(silent=True) or {}
+    raw_ids = data.get("time_entry_ids") or []
+    ids = []
+    for raw in raw_ids if isinstance(raw_ids, list) else []:
+        try:
+            ids.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    # Same set as the picker: unbilled entries of the invoice's project
+    entries = (
+        InvoiceTimeService().unbilled_query([invoice.project_id]).filter(TimeEntry.id.in_(ids[:1000])).all()
+        if ids
+        else []
+    )
+    template = data.get("line_template")
+    examples = layout_examples(
+        entries,
+        template=normalize_template(template if isinstance(template, str) else None),
+        currency=invoice.currency_code,
+        project_name=invoice.project.name if invoice.project else None,
+    )
+    return jsonify({"entry_count": len(entries), "layouts": examples})
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/export/csv")

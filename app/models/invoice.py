@@ -100,6 +100,12 @@ class Invoice(db.Model):
     seller_snapshot = db.Column(db.JSON, nullable=True)  # copy of the entity's details when issued
     payment_details_text = db.Column(db.Text, nullable=True)  # copy of the payment text, {IBAN} filled in
 
+    # How hours become lines (see app.utils.invoice_time_entry_items) and the period billed
+    period_start = db.Column(db.Date, nullable=True)
+    period_end = db.Column(db.Date, nullable=True)
+    hours_layout = db.Column(db.String(20), nullable=True)
+    line_template = db.Column(db.String(255), nullable=True)
+
     # Relationships
     project = db.relationship("Project", backref="invoices")
     client = db.relationship("Client", backref="invoices")
@@ -552,6 +558,13 @@ class InvoiceItem(db.Model):
     # Time entry reference (optional)
     time_entry_ids = db.Column(db.Text, nullable=True)  # Comma-separated IDs
 
+    # "time": built from time entries; "manual": typed in. A rebuild leaves manual lines alone and
+    # keeps a time line whose description, quantity or price was changed by hand.
+    kind = db.Column(db.String(20), nullable=False, default="manual", server_default="manual")
+    description_edited = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    quantity_edited = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    price_edited = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+
     # Inventory integration
     stock_item_id = db.Column(db.Integer, db.ForeignKey("stock_items.id"), nullable=True, index=True)
     warehouse_id = db.Column(db.Integer, db.ForeignKey("warehouses.id"), nullable=True)
@@ -615,6 +628,11 @@ class InvoiceItem(db.Model):
         """Net line amount after discount (qty × unit_price − line_discount_total)."""
         gross = Decimal(str(self.quantity or 0)) * Decimal(str(self.unit_price or 0))
         return gross - self.line_discount_total
+
+    @property
+    def is_edited(self) -> bool:
+        """True when the description, quantity or price was changed by hand."""
+        return bool(self.description_edited or self.quantity_edited or self.price_edited)
 
     def effective_tax_rate(self, invoice) -> Decimal:
         """Return this item's tax rate, falling back to the invoice-level rate."""

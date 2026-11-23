@@ -39,6 +39,9 @@ def rate_change(app, user):
     """Project at 100, the user's own rate 120 from the 15th; entries on the 10th, 20th and a 20-minute one."""
     cl = ClientFactory(name="Rate Client", default_hourly_rate=Decimal("80.00"))
     project = ProjectFactory(name="Rate Project", client_id=cl.id, hourly_rate=Decimal("100.00"))
+    # Every path uses the project's last layout: one line per project (and rate)
+    project.last_hours_layout = "project"
+    project.last_line_template = "{project}"
     db.session.add(
         RateOverride(
             project_id=project.id, user_id=user.id, hourly_rate=Decimal("120.00"), effective_from=date(2026, 3, 15)
@@ -67,8 +70,8 @@ def rate_change(app, user):
 
 
 EXPECTED = [
-    ("Project: Rate Project", Decimal("1.00"), Decimal("100.00"), Decimal("100.00")),
-    ("Project: Rate Project", Decimal("1.33"), Decimal("120.00"), Decimal("159.60")),
+    ("Rate Project \u2013 100.00 EUR/h", Decimal("1.00"), Decimal("100.00"), Decimal("100.00")),
+    ("Rate Project \u2013 120.00 EUR/h", Decimal("1.33"), Decimal("120.00"), Decimal("159.60")),
 ]
 
 

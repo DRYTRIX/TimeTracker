@@ -86,9 +86,14 @@ class InvoiceService:
         issue_date: Optional[date] = None,
         due_date: Optional[date] = None,
         include_expenses: bool = False,
+        hours_layout: Optional[str] = None,
+        line_template: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create an invoice from time entries.
+
+        ``hours_layout`` and ``line_template`` say how the hours become lines; by default the
+        project's last ones, else the global grouping setting.
 
         Returns:
             dict with 'success', 'message', and 'invoice' keys
@@ -159,21 +164,9 @@ class InvoiceService:
         db.session.flush()
 
         # Create invoice items from time entries
-        from app.models import Settings
-        from app.utils.invoice_time_entry_items import build_time_entry_lines
-
-        settings = Settings.get_settings()
-        group_entries = getattr(settings, "invoice_group_time_entries", True) if settings else True
-        lines = build_time_entry_lines(
-            invoice.id,
-            entries,
-            group=group_entries,
-            project_name=project.name,
+        lines = time_links.add_entries(
+            invoice, entries, hours_layout, line_template, created_by=created_by, project=project
         )
-        for item in lines.items:
-            db.session.add(item)
-        db.session.flush()
-        time_links.link_items(invoice, lines.items, created_by=created_by)
 
         grouped_entries = lines.items  # for telemetry line_item_count
 
@@ -1133,8 +1126,10 @@ class InvoiceService:
                 "blocked_reason": br,
             }
 
-        from app.utils.invoice_time_entry_items import build_time_entry_lines
+        from app.services.invoice_time_service import InvoiceTimeService
+        from app.utils.invoice_time_entry_items import LAYOUT_PROJECT, build_time_entry_lines
 
+        time_links = InvoiceTimeService()
         entries: List[TimeEntry] = state["unbilled_entries"]
         groups: Dict[int, List[TimeEntry]] = state["groups"]
         projects_by_id = state["projects_by_id"]
@@ -1147,7 +1142,8 @@ class InvoiceService:
             if not proj:
                 continue
             # Same lines create_client_unbilled_invoice builds; nothing is added to the session
-            lines = build_time_entry_lines(None, elist, group=True, group_by_task=False, project_name=proj.name)
+            layout, template = time_links.resolve_layout(proj, fallback_layout=LAYOUT_PROJECT)
+            lines = build_time_entry_lines(None, elist, layout=layout, template=template, project_name=proj.name)
             estimated += sum((item.line_net for item in lines.items), Decimal("0"))
             rate_warnings.extend(lines.warnings)
 
@@ -1279,7 +1275,7 @@ class InvoiceService:
             success + invoice_id, invoice_number, total, item_count; or success False + error/message.
         """
         from app.models import Client, Settings
-        from app.utils.invoice_time_entry_items import build_time_entry_lines
+        from app.utils.invoice_time_entry_items import LAYOUT_PROJECT
 
         state = self._client_unbilled_invoice_state(client_id)
         if state.get("error") == "not_found":
@@ -1370,24 +1366,26 @@ class InvoiceService:
 
         item_count = 0
         warnings: List[str] = []
-        new_items: List[InvoiceItem] = []
-        for pid in sorted(groups.keys()):
-            elist = groups[pid]
-            proj = projects_by_id.get(pid)
-            if not proj:
-                continue
-            # One line per project and rate: entries with different rates get separate lines
-            lines = build_time_entry_lines(invoice.id, elist, group=True, group_by_task=False, project_name=proj.name)
-            for item in lines.items:
-                db.session.add(item)
-                new_items.append(item)
-                item_count += 1
-            warnings.extend(lines.warnings)
-
         from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService
 
+        time_links = InvoiceTimeService()
         try:
-            InvoiceTimeService().link_items(invoice, new_items, created_by=acting_user_id)
+            for pid in sorted(groups.keys()):
+                proj = projects_by_id.get(pid)
+                if not proj:
+                    continue
+                # Each project's hours as on its last invoice, else one line per project (split by rate).
+                # A one-click invoice does not change the project's default.
+                lines = time_links.add_entries(
+                    invoice,
+                    groups[pid],
+                    created_by=acting_user_id,
+                    project=proj,
+                    remember=False,
+                    fallback_layout=LAYOUT_PROJECT,
+                )
+                item_count += len(lines.items)
+                warnings.extend(lines.warnings)
         except InvoiceTimeError as exc:
             db.session.rollback()
             return {"success": False, "error": exc.code, "message": str(exc)}
@@ -1479,12 +1477,16 @@ class InvoiceService:
         except InvoiceTimeError as exc:
             return {"success": False, "message": str(exc), "error": exc.code}
 
-        # The lines are replaced: their links go, and come back for the time entries the new lines list
+        # The lines are replaced: their links go, and come back for the time entries the new lines list.
+        # A row may carry the id of the line it replaces; a time line whose description, quantity or
+        # price changes is marked as edited by hand.
+        previous_lines = time_links.snapshot_lines(invoice)
         previous_hours = time_links.detach_lines(invoice)
         invoice.items.delete()
         new_items: List[InvoiceItem] = []
+        row_ids: List[Any] = []
         for idx, row in enumerate(items):
-            description = (row.get("description") or "").strip()
+            description = time_links.normalize_description(row.get("description"))
             if not description:
                 continue
             try:
@@ -1528,12 +1530,15 @@ class InvoiceService:
             )
             db.session.add(item)
             new_items.append(item)
+            row_ids.append(row.get("id"))
 
         try:
             time_links.link_items(invoice, new_items, hours_by_entry=previous_hours, created_by=user_id)
         except InvoiceTimeError as exc:
             db.session.rollback()
             return {"success": False, "message": str(exc), "error": exc.code}
+        for item, row_id in zip(new_items, row_ids):
+            time_links.carry_line_state(previous_lines, item, row_id)
 
         invoice.calculate_totals()
         if not safe_commit("set_invoice_items", {"invoice_id": invoice_id, "user_id": user_id}):
@@ -1552,10 +1557,15 @@ class InvoiceService:
         is_admin: bool = False,
         replace_existing: bool = True,
         group: Optional[bool] = None,
+        hours_layout: Optional[str] = None,
+        line_template: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Add grouped line items from billable time entries to an existing invoice."""
-        from app.models import Settings
-        from app.utils.invoice_time_entry_items import build_time_entry_lines
+        """Add line items from billable time entries to an existing invoice.
+
+        ``hours_layout`` and ``line_template`` say how the hours become lines; by default the
+        project's last ones (``group`` is the older switch: False means one line per entry).
+        """
+        from app.utils.invoice_time_entry_items import legacy_layout
 
         invoice = self.invoice_repo.get_by_id(invoice_id)
         if not invoice:
@@ -1608,20 +1618,17 @@ class InvoiceService:
             db.session.rollback()
             return {"success": False, "message": "No billable time entries found", "error": "no_entries"}
 
-        settings = Settings.get_settings()
-        group_entries = (
-            group if group is not None else getattr(settings, "invoice_group_time_entries", True) if settings else True
-        )
-        lines = build_time_entry_lines(
-            invoice.id,
+        if hours_layout is None and group is not None:
+            hours_layout = legacy_layout(group)
+        lines = time_links.add_entries(
+            invoice,
             entries,
-            group=group_entries,
-            project_name=project.name,
+            hours_layout,
+            line_template,
+            hours_by_entry=previous_hours,
+            created_by=user_id,
+            project=project,
         )
-        for item in lines.items:
-            db.session.add(item)
-        db.session.flush()
-        time_links.link_items(invoice, lines.items, hours_by_entry=previous_hours, created_by=user_id)
 
         invoice.calculate_totals()
         if not safe_commit("add_time_entries_to_invoice", {"invoice_id": invoice_id, "user_id": user_id}):
