@@ -26,6 +26,11 @@
                 <i class="fas fa-list"></i>
                 {{ _('Entries Overview') }}
             </a>
+            <a href="{{ url_for('projects.list_costs', project_id=project.id) }}"
+               class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                <i class="fas fa-receipt"></i>
+                {{ _('Costs') }}
+            </a>
             {% if project.budget_amount %}
             <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}"
                class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-lg">
@@ -45,7 +50,7 @@
 </div>
 
 <!-- Key Metrics Overview -->
-<div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mb-6">
     <!-- Total Hours -->
     <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
         <div class="flex items-center justify-between">
@@ -111,7 +116,47 @@
             </div>
         </div>
     </div>
+
+    <!-- Total Costs -->
+    <div class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-text-muted-light dark:text-text-muted-dark text-xs sm:text-sm">{{ _('Total Costs') }}</p>
+                <p class="text-xl sm:text-3xl font-bold mt-1 sm:mt-2">{{ cost_data.total_costs|format_currency }}</p>
+                <a href="{{ url_for('projects.list_costs', project_id=project.id) }}"
+                   class="text-xs text-primary hover:underline mt-1 inline-block">
+                    {{ _('View costs') }}
+                </a>
+            </div>
+            <div class="text-2xl sm:text-4xl text-rose-500">
+                <i class="fas fa-receipt"></i>
+            </div>
+        </div>
+    </div>
 </div>
+
+{% if cost_data.by_category %}
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg sm:text-xl font-semibold flex items-center gap-2">
+            <i class="fas fa-receipt text-rose-500"></i>
+            {{ _('Costs by Category') }}
+        </h2>
+        <a href="{{ url_for('projects.list_costs', project_id=project.id) }}" class="text-sm text-primary hover:underline">
+            {{ _('View all') }}
+        </a>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {% for item in cost_data.by_category %}
+        <div class="p-4 rounded-lg border border-border-light dark:border-border-dark">
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ item.category or _('Other') }}</div>
+            <div class="text-xl font-bold mt-1">{{ item.total_amount|format_currency }}</div>
+            <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ item.count }} {{ _('item(s)') }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
 <!-- Charts Row 1 -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
