@@ -32,7 +32,7 @@ safety==3.8.1  # Dependency vulnerability scanning (3.0.x breaks on typer>=0.17)
 
 # Test data generation
 factory-boy==3.3.3  # Test fixtures
-faker==40.54.0  # Fake data generation
+faker==40.55.0  # Fake data generation
 
 # API testing
 requests-mock==1.12.1  # Mock HTTP requests

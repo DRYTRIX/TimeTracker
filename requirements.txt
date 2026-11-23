@@ -101,7 +101,7 @@ stripe==17.1.0
 google-api-python-client==2.202.0
 google-auth-httplib2==0.4.4
 google-auth-oauthlib==1.5.0
-icalendar==7.3.0
+icalendar==7.3.2
 
 # Redis for caching
 redis==8.1.0
