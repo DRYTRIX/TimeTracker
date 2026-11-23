@@ -6,7 +6,7 @@ Flask-Login==0.6.3
 Flask-SocketIO==5.7.2
 
 # OAuth / OIDC
-Authlib==1.9.5
+Authlib==1.9.10
 PyJWT==2.15.1
 
 # SAML 2.0 SSO (requires xmlsec system libs — see Dockerfile / docs/design/SAML_SCIM.md)
@@ -16,7 +16,7 @@ python3-saml==1.16.0
 ldap3==2.9.1
 
 # Database
-SQLAlchemy==2.1.8
+SQLAlchemy==2.1.9
 alembic==1.20.1
 psycopg2-binary==2.9.13
 psycogreen==1.0.2
@@ -50,7 +50,7 @@ WeasyPrint==70.0
 pydyf==0.13.0
 Pillow==13.0.0
 reportlab==5.1.0
-pikepdf>=10.18.1
+pikepdf>=10.18.2
 
 # Background tasks
 APScheduler==3.11.3
@@ -70,7 +70,7 @@ cryptography==50.0.2
 defusedxml==0.7.1
 markdown==3.11.3
 bleach==6.4.0
-pyotp==2.10.0
+pyotp==2.12.1
 
 # Analytics and Monitoring
 python-json-logger==4.2.0
@@ -87,7 +87,7 @@ opentelemetry-instrumentation-sqlalchemy==0.66b2
 opentelemetry-semantic-conventions==0.66b2
 
 # API Documentation
-flask-swagger-ui==5.34.1
+flask-swagger-ui==5.35.0
 apispec==6.10.1
 marshmallow==4.4.0
 
@@ -95,7 +95,7 @@ marshmallow==4.4.0
 pytesseract==0.3.13
 
 # Payment Gateway Integration
-stripe==17.0.0
+stripe==17.1.0
 
 # Calendar Integration
 google-api-python-client==2.202.0
