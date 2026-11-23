@@ -14,8 +14,11 @@ updates:
       - dependencies
       - python
     # Gunicorn 26 removed the eventlet worker used by docker/start-fixed.py.
+    # MCP SDK 2.x renames FastMCP to MCPServer; mcp_server still imports mcp.server.fastmcp.
     ignore:
       - dependency-name: gunicorn
+        update-types: ["version-update:semver-major"]
+      - dependency-name: mcp
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
