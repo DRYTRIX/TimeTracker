@@ -188,3 +188,61 @@ def test_get_categories_over_budget(client, category, user):
 
     assert len(over_budget) > 0
     assert any(item["category"].id == category.id for item in over_budget)
+
+
+def test_spent_amount_matches_lowercase_expense_category(client, user):
+    """Expenses store lowercase form values; spent must still count against the category."""
+    today = date.today()
+    category = ExpenseCategoryFactory(
+        name="Travel",
+        code="travel",
+        monthly_budget=100,
+        budget_threshold_percent=80,
+        is_active=True,
+    )
+    expense = ExpenseFactory(
+        user_id=user.id,
+        title="Train ticket",
+        category="travel",
+        amount=90,
+        expense_date=today,
+        status="approved",
+    )
+    db.session.add_all([category, expense])
+    db.session.commit()
+
+    start_of_month = date(today.year, today.month, 1)
+    assert category.get_spent_amount(start_of_month, today) == 90.0
+
+    util = category.get_budget_utilization("monthly")
+    assert util is not None
+    assert util["spent"] == 90.0
+    assert util["utilization_percent"] == 90.0
+    assert util["over_threshold"] is True
+
+    over_budget = ExpenseCategory.get_categories_over_budget("monthly")
+    assert any(item["category"].id == category.id for item in over_budget)
+
+
+def test_spent_amount_matches_legacy_key_when_code_differs(client, user):
+    """When code is a short code, lowercase name (legacy_key) still matches form values."""
+    today = date.today()
+    category = ExpenseCategoryFactory(
+        name="Travel",
+        code="TRV",
+        monthly_budget=100,
+        is_active=True,
+    )
+    expense = ExpenseFactory(
+        user_id=user.id,
+        title="Flight",
+        category="travel",
+        amount=50,
+        expense_date=today,
+        status="approved",
+    )
+    db.session.add_all([category, expense])
+    db.session.commit()
+
+    start_of_month = date(today.year, today.month, 1)
+    assert category.get_spent_amount(start_of_month, today) == 50.0

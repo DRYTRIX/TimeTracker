@@ -39,7 +39,7 @@ requests-mock==1.12.1  # Mock HTTP requests
 responses==0.26.3  # Mock HTTP responses
 
 # MCP sidecar unit tests (tests/test_mcp_server.py)
-mcp==2.3.0
+mcp==1.30.0
 httpx>=0.28.1,<1
 
 # Optional Factur-X XSD validation (Akretion factur-x)

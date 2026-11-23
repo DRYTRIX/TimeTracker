@@ -105,7 +105,8 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="Utilization">
-                            {% set util = category.monthly_utilization if category.monthly_utilization is not none else None %}
+                            {% set util_data = category.monthly_utilization if category.monthly_utilization is not none else None %}
+                            {% set util = util_data.utilization_percent if util_data is mapping else util_data %}
                             {% if util is not none %}
                                 <div class="flex items-center">
                                     <div class="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">

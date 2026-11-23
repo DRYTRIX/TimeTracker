@@ -56,8 +56,19 @@ class ExpenseCategory(db.Model):
         """Get total amount spent in this category for date range"""
         from app.models.expense import Expense
 
+        # Expenses store lowercase form values ("travel"); categories use display
+        # names ("Travel") and optional codes. Match all known keys case-insensitively.
+        match_keys = {self.legacy_key}
+        if self.name:
+            match_keys.add(self.name.strip().lower())
+        if self.code:
+            match_keys.add(self.code.strip().lower())
+        match_keys.discard("")
+
+        category_match = db.func.lower(Expense.category).in_(list(match_keys)) if match_keys else False
+
         query = db.session.query(db.func.sum(Expense.amount + db.func.coalesce(Expense.tax_amount, 0))).filter(
-            Expense.category == self.name,
+            category_match,
             Expense.status.in_(["approved", "reimbursed"]),
             Expense.expense_date >= start_date,
             Expense.expense_date <= end_date,

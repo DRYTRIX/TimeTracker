@@ -35,7 +35,7 @@
     "animejs": "4.5.0",
     "chart.js": "4.6.1",
     "cmdk": "^1.1.1",
-    "codemirror": "6.0.2",
+    "codemirror": "5.65.21",
     "flatpickr": "4.6.13",
     "frappe-gantt": "1.2.2",
     "fullcalendar": "7.1.5",
