@@ -8,7 +8,7 @@ import time
 from contextlib import contextmanager
 from typing import Any, Dict, Optional
 
-from flask import current_app, g
+from flask import current_app, g, has_request_context
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
@@ -53,10 +53,13 @@ def enable_query_logging(app, slow_query_threshold: float = 0.1):
             if total > slow_query_threshold:
                 logger.warning(f"SLOW QUERY ({total:.4f}s): {statement_str[:200]}...")
 
-                # Track in request context for reporting
-                if not hasattr(g, "slow_queries"):
-                    g.slow_queries = []
-                g.slow_queries.append({"query": statement_str[:200], "duration": total, "parameters": params_str[:100]})
+                # Track in request context for reporting (skip standalone engines / migrations)
+                if has_request_context():
+                    if not hasattr(g, "slow_queries"):
+                        g.slow_queries = []
+                    g.slow_queries.append(
+                        {"query": statement_str[:200], "duration": total, "parameters": params_str[:100]}
+                    )
 
 
 @contextmanager
