@@ -213,7 +213,7 @@ def test_draft_save_takes_current_entity_details(app, admin_authenticated_client
 
 
 def test_create_form_shows_from_and_pay_to(app, authenticated_client, project, entity, account):
-    html = authenticated_client.get("/invoices/create").get_data(as_text=True)
+    html = authenticated_client.get("/invoices/new").get_data(as_text=True)
     assert 'name="billing_entity_id"' in html
     assert 'name="payment_account_id"' in html
     assert "Example Consulting" in html
@@ -221,7 +221,7 @@ def test_create_form_shows_from_and_pay_to(app, authenticated_client, project, e
 
 def test_create_form_hidden_when_module_off(app, authenticated_client, project, entity, account):
     _disable_module()
-    html = authenticated_client.get("/invoices/create").get_data(as_text=True)
+    html = authenticated_client.get("/invoices/new").get_data(as_text=True)
     assert 'name="billing_entity_id"' not in html
 
 
@@ -541,5 +541,5 @@ def test_notes_have_no_default(app, authenticated_client, project, entity):
     entity.default_notes = "Thank you for your business!"
     db.session.commit()
     assert "notes" not in billing.entity_defaults(entity)
-    html = authenticated_client.get(f"/invoices/create?project_id={project.id}").get_data(as_text=True)
+    html = authenticated_client.get(f"/invoices/new?project_id={project.id}").get_data(as_text=True)
     assert "Thank you for your business!" not in html

@@ -48,12 +48,18 @@ def resolve_entry_rate(entry: TimeEntry) -> EntryRate:
     """Hourly rate for a time entry: person and date first, then project, then client.
 
     Uses ``RateOverride.resolve_rate_with_source`` with the entry's project, user and
-    start date. Returns ``EntryRate(Decimal("0"), found=False)`` when nothing in the
+    start date. An entry logged on the client without a project takes the client's
+    default rate. Returns ``EntryRate(Decimal("0"), found=False)`` when nothing in the
     chain has a rate, so callers can bill at 0 and warn.
     """
     from app.models import RateOverride
 
     project = getattr(entry, "project", None)
+    if project is None:
+        client = getattr(entry, "client", None)
+        if client is not None and client.default_hourly_rate:
+            return EntryRate(rate=Decimal(str(client.default_hourly_rate)), found=True)
+        return EntryRate(rate=Decimal("0"), found=False)
     on_date = entry.start_time.date() if getattr(entry, "start_time", None) else None
     rate, source = RateOverride.resolve_rate_with_source(project, user_id=entry.user_id, on_date=on_date)
     return EntryRate(rate=Decimal(str(rate)), found=source is not None)
@@ -384,6 +390,7 @@ def build_time_entry_lines(
     project_name: Optional[str] = None,
     currency: Optional[str] = None,
     date_format: Optional[str] = None,
+    rate_resolver: Optional[Callable[[TimeEntry], EntryRate]] = None,
 ) -> TimeEntryLines:
     """Create InvoiceItem instances (``kind="time"``) from time entries, rate resolved per entry.
 
@@ -392,7 +399,8 @@ def build_time_entry_lines(
     by rate, so quantity x unit price always equals the line amount; the lines of a split group
     end with their rate (``format_rate_suffix``). Quantity is rounded to 2 places before it is
     multiplied by the rate. ``group`` / ``group_by_task`` are the older switches, used when no
-    layout is given. Caller adds items to the session.
+    layout is given. ``rate_resolver`` stands in for ``resolve_entry_rate`` with the same answer (for
+    example from rates loaded once for many entries). Caller adds items to the session.
     """
     layout = normalize_layout(layout) or legacy_layout(group, group_by_task)
     template = normalize_template(template) or default_line_template(layout)
@@ -405,7 +413,7 @@ def build_time_entry_lines(
     missing: Dict[Tuple[Optional[int], Optional[int]], MissingRate] = {}
     for bte in billable:
         entry = bte.entry
-        entry_rate = resolve_entry_rate(entry)
+        entry_rate = (rate_resolver or resolve_entry_rate)(entry)
         rated.append((bte, entry_rate.rate))
         if not entry_rate.found:
             key = (entry.project_id, entry.user_id)
@@ -522,16 +530,23 @@ def layout_examples(
     template: Optional[str] = None,
     currency: Optional[str] = None,
     project_name: Optional[str] = None,
+    rate_resolver: Optional[Callable[[TimeEntry], EntryRate]] = None,
 ) -> Dict[str, Dict[str, object]]:
     """For each layout: how many lines ``entries`` make and the first line's description.
 
     ``template`` applies to every layout; without it each layout uses its default.
-    Nothing is added to the session.
+    ``rate_resolver`` as in ``build_time_entry_lines``. Nothing is added to the session.
     """
     examples: Dict[str, Dict[str, object]] = {}
     for layout in HOURS_LAYOUTS:
         lines = build_time_entry_lines(
-            None, entries, layout=layout, template=template, currency=currency, project_name=project_name
+            None,
+            entries,
+            layout=layout,
+            template=template,
+            currency=currency,
+            project_name=project_name,
+            rate_resolver=rate_resolver,
         )
         examples[layout] = {
             "lines": len(lines.items),

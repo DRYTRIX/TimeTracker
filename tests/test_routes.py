@@ -622,8 +622,11 @@ def test_invoice_detail_page(authenticated_client, invoice, app):
 @pytest.mark.integration
 @pytest.mark.routes
 def test_invoice_create_page(authenticated_client):
-    """Test invoice creation page."""
+    """Test invoice creation page (step 1 of a new invoice; the old address redirects there)."""
     response = authenticated_client.get("/invoices/create")
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/invoices/new")
+    response = authenticated_client.get("/invoices/new")
     assert response.status_code == 200
 
 

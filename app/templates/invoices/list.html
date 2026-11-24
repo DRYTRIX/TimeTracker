@@ -14,7 +14,7 @@
     breadcrumbs=breadcrumbs,
     actions_html=''
         + '<div class="flex flex-wrap gap-2 items-center">'
-        +   '<a href="' + url_for("invoices.create_invoice") + '" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Create Invoice</a>'
+        +   '<a href="' + url_for("invoices.new_invoice") + '" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Create Invoice</a>'
         +   '<a href="' + url_for("recurring_invoices.list_recurring_invoices") + '" class="btn btn-secondary"><i class="fas fa-sync-alt mr-2"></i>Recurring</a>'
         +   '<a href="' + url_for("invoices.export_invoices_excel") + '" class="btn btn-ghost"><i class="fas fa-file-excel mr-2"></i>Export</a>'
         + '</div>'
