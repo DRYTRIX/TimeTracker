@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from app import db
 from app.models import Invoice, InvoiceItem, RecurringInvoice, Settings, TimeEntry
 from app.repositories.recurring_invoice_repository import RecurringInvoiceRepository
+from app.utils.timezone import now_in_app_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class RecurringInvoiceService:
         settings = Settings.get_settings()
         currency_code = recurring_invoice.currency_code or (settings.currency if settings else "EUR")
 
-        issue_date = datetime.utcnow().date()
+        issue_date = now_in_app_timezone().date()
         due_date = issue_date + timedelta(days=recurring_invoice.due_date_days)
 
         invoice_number = Invoice.generate_invoice_number()
