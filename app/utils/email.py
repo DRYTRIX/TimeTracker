@@ -1002,7 +1002,8 @@ def send_invoice_email(
             if invoice_row is None:
                 invoice_row = db.session.merge(invoice)
             was_first_send = invoice_row.status == "draft"
-            if was_first_send:
+            # A draft or issued invoice becomes sent (an issued one was already billed)
+            if invoice_row.status in ("draft", "issued"):
                 from app.services import InvoiceService
 
                 result = InvoiceService().transition_status(invoice_row, "sent", actor_id=sender_id)

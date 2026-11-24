@@ -64,8 +64,11 @@ class EmailService:
                 attachments=[],  # PDF attachment would be added here
             )
 
-            # Mark invoice as sent
-            self.invoice_repo.mark_as_sent(invoice_id)
+            # A draft or issued invoice becomes sent; transition_status bills its time entries
+            if (invoice.status or "draft") in ("draft", "issued"):
+                from app.services import InvoiceService
+
+                InvoiceService().transition_status(invoice, "sent")
 
             return {"success": True, "message": "Invoice email sent successfully"}
 

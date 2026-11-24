@@ -43,6 +43,19 @@ class SdiService:
     def send_invoice(
         self, invoice, triggered_by_user_id: Optional[int] = None
     ) -> Tuple[bool, Optional[InvoiceSdiTransmission], str]:
+        """Send the invoice via SDI. Once sent, a draft or issued invoice becomes ``sent``; on failure it stays as it was."""
+        success, tx, message = self._transmit(invoice, triggered_by_user_id)
+        if success and (invoice.status or "draft") in ("draft", "issued"):
+            from app.services import InvoiceService
+
+            result = InvoiceService().transition_status(invoice, "sent", actor_id=triggered_by_user_id)
+            if result.get("success"):
+                safe_commit("sdi_mark_invoice_sent", {"invoice_id": invoice.id})
+        return success, tx, message
+
+    def _transmit(
+        self, invoice, triggered_by_user_id: Optional[int] = None
+    ) -> Tuple[bool, Optional[InvoiceSdiTransmission], str]:
         settings = Settings.get_settings()
         if not bool(getattr(settings, "sdi_enabled", False)):
             return False, None, "SDI is not enabled"

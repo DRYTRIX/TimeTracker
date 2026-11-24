@@ -25,6 +25,10 @@ BILLED_OUTSIDE = "billed_outside"
 
 HOURS_PLACES = Decimal("0.0001")
 
+# Statuses of an invoice that has left draft and was not cancelled: its lines are locked and its time
+# entries are billed (``paid`` with the invoice's number, set by ``InvoiceService.transition_status``).
+ISSUED_STATUSES = ("issued", "sent", "overdue", "paid")
+
 # Allowed invoice status changes. A cancelled or paid invoice does not change status again.
 ALLOWED_STATUS_TRANSITIONS = {
     "draft": {"issued", "sent", "cancelled"},
@@ -182,7 +186,10 @@ class InvoiceTimeService:
 
     def billing_state(self, entry: TimeEntry) -> str:
         """``unbilled`` / ``on_draft`` / ``billed`` / ``non_billable`` / ``billed_outside``."""
-        invoice = self.billing_invoice(entry)
+        return self._state_for(entry, self.billing_invoice(entry))
+
+    @staticmethod
+    def _state_for(entry: TimeEntry, invoice: Optional[Invoice]) -> str:
         if invoice is not None:
             return ON_DRAFT if invoice.status == "draft" else BILLED
         if entry.paid:
@@ -190,6 +197,27 @@ class InvoiceTimeService:
         if not entry.billable:
             return NON_BILLABLE
         return UNBILLED
+
+    def billing_states(self, entries: Iterable[TimeEntry]) -> Dict[int, Tuple[str, Optional[Invoice]]]:
+        """``{entry_id: (billing_state, invoice)}`` for many entries, in one query per 500 entries.
+
+        Same answer as ``billing_state`` and ``billing_invoice`` for each entry; use it for lists.
+        """
+        entries = [e for e in entries if e is not None and e.id is not None]
+        invoices: Dict[int, Invoice] = {}
+        ids = sorted({e.id for e in entries})
+        for start in range(0, len(ids), 500):
+            chunk = ids[start : start + 500]
+            rows = (
+                db.session.query(InvoiceTimeLink.time_entry_id, Invoice)
+                .join(Invoice, Invoice.id == InvoiceTimeLink.invoice_id)
+                .filter(InvoiceTimeLink.time_entry_id.in_(chunk), InvoiceTimeLink.released_at.is_(None))
+                .order_by(InvoiceTimeLink.id.asc())
+                .all()
+            )
+            for entry_id, invoice in rows:
+                invoices.setdefault(entry_id, invoice)
+        return {e.id: (self._state_for(e, invoices.get(e.id)), invoices.get(e.id)) for e in entries}
 
     @staticmethod
     def locked_message(invoice: Invoice) -> str:
@@ -368,6 +396,70 @@ class InvoiceTimeService:
             if link.time_entry_id not in seen:
                 seen.append(link.time_entry_id)
         return seen
+
+    def invoice_summary(self, invoice: Invoice) -> Dict:
+        """What an invoice bills, for the issue and cancel dialogs and the "locked" notice.
+
+        ``entries``: time entries it bills; ``tracked_hours``: their hours; ``billed_hours``: the
+        quantity of the lines that bill time; ``expenses`` and ``costs``: how many it bills;
+        ``prepaid``: ``[(allocation month, hours)]`` of the client's prepaid hours it uses.
+        """
+        from app.models import ClientPrepaidConsumption, ProjectCost
+
+        entry_ids = self.invoice_entry_ids(invoice) if invoice.id is not None else []
+        tracked = Decimal("0")
+        for start in range(0, len(entry_ids), 500):
+            chunk = entry_ids[start : start + 500]
+            seconds = (
+                db.session.query(db.func.coalesce(db.func.sum(TimeEntry.duration_seconds), 0))
+                .filter(TimeEntry.id.in_(chunk))
+                .scalar()
+            )
+            tracked += Decimal(int(seconds or 0)) / Decimal(3600)
+
+        billed = Decimal("0")
+        if invoice.id is not None:
+            line_ids = (
+                db.session.query(InvoiceTimeLink.invoice_item_id)
+                .filter(
+                    InvoiceTimeLink.invoice_id == invoice.id,
+                    InvoiceTimeLink.released_at.is_(None),
+                    InvoiceTimeLink.invoice_item_id.isnot(None),
+                )
+                .distinct()
+            )
+            billed = Decimal(
+                str(
+                    db.session.query(db.func.coalesce(db.func.sum(InvoiceItem.quantity), 0))
+                    .filter(InvoiceItem.id.in_(line_ids))
+                    .scalar()
+                    or 0
+                )
+            )
+
+        prepaid: Dict = {}
+        expenses = costs = 0
+        if invoice.id is not None:
+            for month, seconds in (
+                db.session.query(ClientPrepaidConsumption.allocation_month, ClientPrepaidConsumption.seconds_consumed)
+                .filter(ClientPrepaidConsumption.invoice_id == invoice.id)
+                .all()
+            ):
+                prepaid[month] = prepaid.get(month, 0) + int(seconds or 0)
+            expenses = invoice.expenses.count()
+            costs = ProjectCost.query.filter(ProjectCost.invoice_id == invoice.id).count()
+
+        return {
+            "entries": len(entry_ids),
+            "tracked_hours": tracked.quantize(Decimal("0.01")),
+            "billed_hours": billed.quantize(Decimal("0.01")),
+            "expenses": expenses,
+            "costs": costs,
+            "prepaid": [
+                (month, (Decimal(seconds) / Decimal(3600)).quantize(Decimal("0.01")))
+                for month, seconds in sorted(prepaid.items())
+            ],
+        }
 
     # ------------------------------------------------------------------
     # Writers

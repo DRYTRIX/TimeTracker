@@ -1,0 +1,21 @@
+{# Billing state of a time entry: which invoice bills it, if any. `state` and `invoice` come from
+   InvoiceTimeService.billing_states(). Unbilled entries get no badge. #}
+{% macro billing_badge(state, invoice, entry) %}
+{% if state == 'billed' and invoice %}
+<a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 hover:underline" data-billing-state="billed">
+    <i class="fas fa-file-invoice mr-1"></i>{{ _('Billed %(number)s', number=invoice.invoice_number) }}
+</a>
+{% elif state == 'on_draft' and invoice %}
+<a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) }}" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 hover:underline" data-billing-state="on_draft">
+    <i class="fas fa-file-alt mr-1"></i>{{ _('On draft %(number)s', number=invoice.invoice_number) }}
+</a>
+{% elif state == 'non_billable' %}
+<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200" data-billing-state="non_billable">
+    <i class="fas fa-ban mr-1"></i>{{ _('Non-billable') }}
+</span>
+{% elif state == 'billed_outside' %}
+<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-800 dark:bg-green-900/40 dark:text-green-200" data-billing-state="billed_outside" title="{{ _('Marked paid outside an invoice') }}">
+    <i class="fas fa-check-circle mr-1"></i>{% if entry and entry.invoice_number %}{{ _('Marked paid %(number)s', number=entry.invoice_number) }}{% else %}{{ _('Marked paid') }}{% endif %}
+</span>
+{% endif %}
+{% endmacro %}

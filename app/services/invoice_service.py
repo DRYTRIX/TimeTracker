@@ -392,7 +392,12 @@ class InvoiceService:
         """
         import os
 
-        from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService, status_change_allowed
+        from app.services.invoice_time_service import (
+            ISSUED_STATUSES,
+            InvoiceTimeError,
+            InvoiceTimeService,
+            status_change_allowed,
+        )
 
         if new_status == "void":
             new_status = "cancelled"
@@ -443,11 +448,14 @@ class InvoiceService:
                 "status": previous_status,
             }
 
+        # Leaving draft bills the time entries: issued, sent, overdue, or paid (also by a payment that
+        # covers a draft). Idempotent, so a later step (issued -> sent -> paid) changes nothing more.
         marked_count = 0
-        if new_status == "sent":
+        if new_status in ISSUED_STATUSES:
             marked_count = self.mark_time_entries_as_paid(invoice)
 
-        if new_status == "paid" and invoice.payment_status != "fully_paid":
+        # Marking paid by hand settles the balance; a payment that got here already set it (maybe overpaid)
+        if new_status == "paid" and invoice.payment_status not in ("fully_paid", "overpaid"):
             invoice.amount_paid = invoice.total_amount
             invoice.payment_status = "fully_paid"
             if not invoice.payment_date:

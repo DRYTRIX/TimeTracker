@@ -62,6 +62,10 @@
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                             <i class="fas fa-file-alt mr-1"></i>Draft
                         </span>
+                    {% elif s == 'issued' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">
+                            <i class="fas fa-lock mr-1"></i>Issued
+                        </span>
                     {% elif s == 'sent' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
                             <i class="fas fa-paper-plane mr-1"></i>Sent

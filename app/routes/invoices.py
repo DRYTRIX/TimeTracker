@@ -584,7 +584,191 @@ def view_invoice(invoice_id):
         sdi_recipient_ready=sdi_recipient_ready,
         approval=approval,
         link_templates_by_field=link_templates_by_field,
+        **_issue_and_correct_context(invoice),
     )
+
+
+def _hours_text(value):
+    """Hours as the invoice page shows them: 47, 58.5, 0.25."""
+    hours = Decimal(str(value or 0)).quantize(Decimal("0.01")).normalize()
+    return format(hours, "f")
+
+
+def _prepaid_months_text(months):
+    from flask_babel import format_date
+
+    with_year = len({m.year for m in months}) > 1
+    names = []
+    for month in months:
+        try:
+            names.append(format_date(month, "LLLL yyyy" if with_year else "LLLL"))
+        except Exception:
+            names.append(month.strftime("%B %Y" if with_year else "%B"))
+    if len(names) <= 1:
+        return "".join(names)
+    return _("%(first)s and %(last)s", first=", ".join(names[:-1]), last=names[-1])
+
+
+def _billing_texts(summary):
+    """Sentences about what an invoice bills, for the issue and cancel dialogs and the locked notice."""
+    from flask_babel import ngettext
+
+    entries = ngettext("%(num)d time entry", "%(num)d time entries", summary["entries"])
+    expenses = ngettext("%(num)d expense", "%(num)d expenses", summary["expenses"])
+    project_costs = ngettext("%(num)d project cost", "%(num)d project costs", summary["costs"])
+    costs = ngettext("%(num)d cost", "%(num)d costs", summary["costs"])
+    tracked = _hours_text(summary["tracked_hours"])
+    billed = _hours_text(summary["billed_hours"])
+    if summary["entries"]:
+        billed_entries = _(
+            "%(entries)s (%(tracked)s h tracked, %(billed)s h billed)", entries=entries, tracked=tracked, billed=billed
+        )
+    else:
+        billed_entries = entries
+
+    cancel_effect = _(
+        "%(tracked)s h tracked, %(expenses)s and %(costs)s go back to Unbilled",
+        tracked=tracked,
+        expenses=expenses,
+        costs=costs,
+    )
+    prepaid = summary.get("prepaid") or []
+    if prepaid:
+        prepaid_hours = _hours_text(sum((hours for _month, hours in prepaid), Decimal("0")))
+        months = _prepaid_months_text([month for month, _hours in prepaid])
+        if len(prepaid) == 1:
+            prepaid_text = _("%(hours)s h go back to the %(months)s prepaid plan", hours=prepaid_hours, months=months)
+        else:
+            prepaid_text = _("%(hours)s h go back to the %(months)s prepaid plans", hours=prepaid_hours, months=months)
+        cancel_effect = cancel_effect + "; " + prepaid_text
+
+    return {
+        "issue_confirm": _(
+            "Lines and amounts will be locked. %(entries)s, %(expenses)s and %(costs)s will be marked as billed.",
+            entries=entries,
+            expenses=expenses,
+            costs=project_costs,
+        ),
+        "locked": _(
+            "Lines and amounts are locked. %(entries)s, %(expenses)s and %(costs)s are billed on this invoice.",
+            entries=billed_entries,
+            expenses=expenses,
+            costs=project_costs,
+        ),
+        "cancel_effect": cancel_effect + ".",
+    }
+
+
+def _issue_and_correct_context(invoice):
+    """What the invoice page shows about issuing, the locked lines and Cancel and reissue."""
+    from app.services.invoice_correction_service import InvoiceCorrectionService
+    from app.services.invoice_time_service import ISSUED_STATUSES, InvoiceTimeService
+
+    summary = InvoiceTimeService().invoice_summary(invoice)
+    reissue_of = cancellation = None
+    try:
+        if invoice.status == "draft":
+            reissue_of = InvoiceCorrectionService.reissue_of(invoice)
+        elif invoice.status == "cancelled":
+            cancellation = InvoiceCorrectionService.cancellation(invoice)
+    except Exception:
+        # The audit trail may be unavailable (migration pending); the page works without these notes
+        current_app.logger.debug("Invoice correction notes unavailable for %s", invoice.id, exc_info=True)
+        db.session.rollback()
+    return {
+        "billing_summary": summary,
+        "billing_texts": _billing_texts(summary),
+        "lines_locked": invoice.status in ISSUED_STATUSES,
+        "can_correct": InvoiceCorrectionService.can_correct(invoice),
+        "has_payments": InvoiceCorrectionService.can_correct(invoice)
+        and InvoiceCorrectionService.has_payments(invoice),
+        "reissue_of": reissue_of,
+        "cancellation": cancellation,
+    }
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/correct", methods=["POST"])
+@login_required
+def correct_invoice(invoice_id):
+    """Cancel an issued invoice with a reason, and optionally reissue it as a new draft."""
+    from app.services.invoice_correction_service import (
+        CancelReasonRequiredError,
+        InvoiceCorrectionError,
+        InvoiceCorrectionService,
+        InvoiceHasPaymentsError,
+    )
+    from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService
+
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        flash(_("You do not have permission to change this invoice"), "error")
+        return redirect(url_for("invoices.list_invoices"))
+
+    action = (request.form.get("action") or "reissue").strip()
+    if action not in ("reissue", "cancel"):
+        flash(_("Invalid action"), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+
+    previous_status = invoice.status
+    cancel_effect = _billing_texts(InvoiceTimeService().invoice_summary(invoice))["cancel_effect"]
+    service = InvoiceCorrectionService()
+    draft = None
+    try:
+        if action == "reissue":
+            draft = service.reissue(invoice, request.form.get("reason"), current_user.id)
+        else:
+            service.cancel(invoice, request.form.get("reason"), current_user.id)
+    except CancelReasonRequiredError:
+        db.session.rollback()
+        flash(_("Enter a reason to cancel the invoice."), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+    except InvoiceHasPaymentsError:
+        db.session.rollback()
+        flash(_("This invoice has payments; use a credit note"), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+    except (InvoiceCorrectionError, InvoiceTimeError) as exc:
+        db.session.rollback()
+        flash(_("Could not cancel the invoice: %(error)s", error=str(exc)), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+
+    if not safe_commit("correct_invoice", {"invoice_id": invoice.id, "action": action}):
+        flash(_("Could not cancel the invoice due to a database error. Please check server logs."), "error")
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+
+    try:
+        from app.constants import WebhookEvent
+        from app.utils.invoice_events import emit_invoice_event
+
+        emit_invoice_event(
+            WebhookEvent.INVOICE_UPDATED.value, invoice, previous_status=previous_status, new_status="cancelled"
+        )
+        if draft is not None:
+            emit_invoice_event(WebhookEvent.INVOICE_CREATED.value, draft)
+    except Exception:
+        current_app.logger.debug("Failed to emit invoice correction webhooks for %s", invoice.id, exc_info=True)
+    try:
+        log_event(
+            "invoice.status_changed",
+            user_id=current_user.id,
+            invoice_id=invoice.id,
+            previous_status=previous_status,
+            new_status="cancelled",
+        )
+    except Exception:
+        current_app.logger.warning("Failed to log invoice.status_changed for invoice %s", invoice.id, exc_info=True)
+
+    if draft is not None:
+        flash(
+            _(
+                "Invoice %(old)s cancelled. Its lines are on the new draft %(new)s.",
+                old=invoice.invoice_number,
+                new=draft.invoice_number,
+            ),
+            "success",
+        )
+        return redirect(url_for("invoices.view_invoice", invoice_id=draft.id))
+    flash(_("Invoice %(number)s cancelled: %(effect)s", number=invoice.invoice_number, effect=cancel_effect), "success")
+    return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/edit", methods=["GET", "POST"])

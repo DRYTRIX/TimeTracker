@@ -22,6 +22,12 @@
     {% endif %}
     <a id="export-pdf-link" href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" class="btn bg-secondary text-white hover:bg-secondary-dark">{{ _('Export PDF') }}</a>
 </div>
+{% if invoice.status == 'draft' %}
+<button type="button" id="markIssuedButton" onclick="markInvoiceIssued()" class="btn bg-teal-600 text-white hover:bg-teal-700"
+        title="{{ _('The invoice is ready: lines and amounts are locked, its time entries are billed') }}">
+    <i class="fas fa-lock mr-1"></i>{{ _('Mark as issued') }}
+</button>
+{% endif %}
 <button type="button" onclick="showSendEmailModal()" class="btn bg-blue-500 text-white hover:bg-blue-600">
     <i class="fas fa-envelope mr-1"></i>Send Email
 </button>
@@ -57,12 +63,39 @@
     <i class="fas fa-credit-card mr-1"></i>{{ _('Pay Online') }}
 </a>
 {% endif %}
-{% if invoice.status != 'draft' %}
+{% if can_correct %}
+<details class="relative" id="correctMenu">
+    <summary class="btn bg-amber-600 text-white hover:bg-amber-700 cursor-pointer list-none">
+        <i class="fas fa-undo mr-1"></i>{{ _('Correct') }} <i class="fas fa-chevron-down ml-1 text-xs"></i>
+    </summary>
+    <div class="absolute right-0 mt-2 w-64 z-30 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-lg shadow-lg py-1">
+        <button type="button" class="w-full text-left px-4 py-2 hover:bg-background-light dark:hover:bg-background-dark"
+                onclick="document.getElementById('correctMenu').removeAttribute('open'); document.getElementById('creditNoteModal').classList.remove('hidden')">
+            <span class="font-medium">{{ _('Credit note') }}</span>
+            <span class="block text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Credit all or part of the amount') }}</span>
+        </button>
+        {% if has_payments %}
+        <button type="button" class="w-full text-left px-4 py-2 opacity-50 cursor-not-allowed" disabled aria-disabled="true"
+                id="cancelReissueDisabled" title="{{ _('This invoice has payments; use a credit note') }}">
+            <span class="font-medium">{{ _('Cancel and reissue') }}</span>
+            <span class="block text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('This invoice has payments; use a credit note') }}</span>
+        </button>
+        {% else %}
+        <button type="button" class="w-full text-left px-4 py-2 hover:bg-background-light dark:hover:bg-background-dark"
+                onclick="document.getElementById('correctMenu').removeAttribute('open'); document.getElementById('cancelReissueModal').classList.remove('hidden')">
+            <span class="font-medium">{{ _('Cancel and reissue') }}</span>
+            <span class="block text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Cancel this invoice and fix the lines on a new draft') }}</span>
+        </button>
+        {% endif %}
+    </div>
+</details>
+{% elif invoice.status != 'draft' %}
 <button type="button" onclick="document.getElementById('creditNoteModal').classList.remove('hidden')" class="btn bg-amber-600 text-white hover:bg-amber-700">
     <i class="fas fa-undo mr-1"></i>{{ _('Create credit note') }}
 </button>
 {% endif %}
-{% if invoice.status in ['draft', 'issued', 'sent', 'overdue'] %}
+{# Issued, sent and overdue invoices are cancelled from Correct -> Cancel and reissue, with a reason #}
+{% if invoice.status == 'draft' %}
 <button type="button" onclick="cancelInvoice({{ invoice.id }})" class="btn bg-rose-600 text-white hover:bg-rose-700">
     <i class="fas fa-ban mr-1"></i>{{ _('Cancel invoice') }}
 </button>
@@ -93,6 +126,24 @@
     });
 </script>
 
+{% if reissue_of %}
+<div class="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-blue-900 dark:text-blue-100" id="reissueNotice">
+    <i class="fas fa-redo mr-1"></i>
+    {{ _('Reissue of') }}
+    {% if reissue_of.invoice %}<a href="{{ url_for('invoices.view_invoice', invoice_id=reissue_of.invoice.id) }}" class="font-semibold underline">{{ reissue_of.number }}</a>{% else %}<strong>{{ reissue_of.number }}</strong>{% endif %}
+    ({{ _('cancelled: %(reason)s', reason=reissue_of.reason) }})
+</div>
+{% endif %}
+{% if cancellation %}
+<div class="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-900 dark:text-red-100" id="cancellationNotice">
+    <i class="fas fa-ban mr-1"></i>
+    {{ _('Cancelled: %(reason)s', reason=cancellation.reason) }}
+    {% if cancellation.reissued_as %}
+    &middot; {{ _('Reissued as') }}
+    <a href="{{ url_for('invoices.view_invoice', invoice_id=cancellation.reissued_as.id) }}" class="font-semibold underline">{{ cancellation.reissued_as.invoice_number }}</a>
+    {% endif %}
+</div>
+{% endif %}
 <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
@@ -152,6 +203,17 @@
             {% endif %}
         </div>
     </div>
+
+    {% if lines_locked %}
+    <div class="mt-4 bg-gray-50 dark:bg-gray-800/40 border border-border-light dark:border-border-dark rounded-lg p-4" id="lockedNotice">
+        <p class="text-sm"><i class="fas fa-lock mr-1 text-text-muted-light dark:text-text-muted-dark"></i>{{ billing_texts.locked }}</p>
+        <p class="text-sm mt-2">
+            <strong>{{ _('Still editable after issuing:') }}</strong>
+            {{ _('Notes, Terms, Due date') }} &middot;
+            <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="text-primary hover:underline">{{ _('Edit') }}</a>
+        </p>
+    </div>
+    {% endif %}
 
     {% if peppol_compliance_warnings %}
     <div class="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
@@ -642,6 +704,71 @@
       });
     }
   })();
+</script>
+{% endif %}
+
+{% if can_correct and not has_payments %}
+<!-- Cancel and reissue modal -->
+<div id="cancelReissueModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="cancelReissueTitle">
+  <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-xl max-w-lg w-full p-6 border border-border-light dark:border-border-dark">
+    <h3 id="cancelReissueTitle" class="text-lg font-semibold mb-4">{{ _('Cancel invoice %(number)s', number=invoice.invoice_number) }}</h3>
+    <form method="POST" action="{{ url_for('invoices.correct_invoice', invoice_id=invoice.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="form-label" for="cancelReason">{{ _('Reason') }} <span class="text-red-600">*</span></label>
+      <textarea id="cancelReason" name="reason" rows="2" class="form-input mb-4" required maxlength="1000" placeholder="{{ _('e.g. wrong rate on line 2') }}"></textarea>
+      <div class="space-y-3 mb-4">
+        <label class="flex items-start gap-2">
+          <input type="radio" name="action" value="reissue" checked class="mt-1">
+          <span>
+            <span class="font-medium">{{ _('Reissue as a new draft') }}</span>
+            <span class="block text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('A new draft with the next number gets the same lines, expenses, costs and time entries. Fix it there and issue it again.') }}</span>
+          </span>
+        </label>
+        <label class="flex items-start gap-2">
+          <input type="radio" name="action" value="cancel" class="mt-1">
+          <span>
+            <span class="font-medium">{{ _('Only cancel') }}</span>
+            <span class="block text-sm text-text-muted-light dark:text-text-muted-dark" id="onlyCancelEffect">{{ billing_texts.cancel_effect }}</span>
+          </span>
+        </label>
+      </div>
+      <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('The cancelled invoice stays in the list and keeps its number.') }}</p>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('cancelReissueModal').classList.add('hidden')">{{ _('Back') }}</button>
+        <button type="submit" class="btn btn-danger">{{ _('Cancel invoice') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if invoice.status == 'draft' %}
+<script nonce="{{ csp_nonce() }}">
+async function markInvoiceIssued() {
+  const message = {{ billing_texts.issue_confirm|tojson }};
+  if (!(await ttConfirm(message, { confirmText: {{ _('Mark as issued')|tojson }} }))) {
+    return;
+  }
+  const body = new FormData();
+  body.append('csrf_token', "{{ csrf_token() }}");
+  body.append('new_status', 'issued');
+  fetch("{{ url_for('invoices.update_invoice_status', invoice_id=invoice.id) }}", { method: 'POST', body })
+    .then(async response => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }
+      window.location.reload();
+    })
+    .catch(err => {
+      const msg = err && err.message ? err.message : {{ _('Could not mark the invoice as issued')|tojson }};
+      if (window.toastManager) {
+        window.toastManager.error(msg);
+      } else {
+        ttAlert(msg);
+      }
+    });
+}
 </script>
 {% endif %}
 

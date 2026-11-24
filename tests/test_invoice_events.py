@@ -61,6 +61,8 @@ def test_emit_invoice_paid_via_payment_service_path():
         patch("app.services.payment_service.db.session.flush"),
         patch("app.services.payment_service.emit_event"),
         patch("app.utils.workflow_bridge.fire_invoice_paid_workflow"),
+        # The invoice is a mock: skip the status transition, which reads the database
+        patch("app.services.invoice_service.InvoiceService.transition_status", return_value={"success": True}),
         patch("app.utils.invoice_events.emit_event") as mock_emit,
     ):
         from datetime import date
