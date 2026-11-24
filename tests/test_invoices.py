@@ -258,14 +258,14 @@ def test_create_invoice_template_has_client_data_attributes(app, client, user, p
 
     db.session.commit()
 
-    resp = client.get("/invoices/create")
+    resp = client.get("/invoices/new")
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
 
-    # The option should include data-client-name/email/address
-    assert f'data-client-name="{cl.name}"' in html
-    assert 'data-client-email="client@example.com"' in html
-    assert 'data-client-address="123 Test St' in html
+    # Step 1 carries each client's name, email and address to fill the client fields
+    assert f'"name": "{cl.name}"' in html
+    assert '"email": "client@example.com"' in html
+    assert '"address": "123 Test St' in html
 
 
 def test_invoice_to_dict(app, sample_invoice):

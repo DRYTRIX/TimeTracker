@@ -1,0 +1,24 @@
+{# Step 1: hours of the selected projects in the period, and the client's prepaid plan (read only). #}
+<div id="stepOneHoursTotal">
+    <p class="text-sm">
+        {% if summary.tracked_hours > 0 %}
+        <span class="text-2xl font-semibold tabular-nums">{{ hours_label(summary.tracked_hours) }} h</span>
+        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('to bill on the selected projects') }}</span>
+        {% else %}
+        <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('No unbilled hours on the selected projects in this period.') }}</span>
+        {% endif %}
+    </p>
+    {% if summary.prepaid %}
+    <div class="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-sm text-blue-800 dark:text-blue-200" id="stepOnePrepaid">
+        <i class="fas fa-hourglass-half mr-1" aria-hidden="true"></i>
+        {% if summary.prepaid.reset_day == 1 %}
+        {{ _('%(hours)s h per month, resets on the 1st.', hours=hours_label(summary.prepaid.plan_hours)) }}
+        {% else %}
+        {{ _('%(hours)s h per month, resets on day %(day)s.', hours=hours_label(summary.prepaid.plan_hours), day=summary.prepaid.reset_day) }}
+        {% endif %}
+        {% for month in summary.prepaid.months %}
+        <span class="whitespace-nowrap">{{ _('%(month)s: %(left)s of %(plan)s left', month=prepaid_month(month.month), left=hours_label(month.left), plan=hours_label(summary.prepaid.plan_hours)) }}{% if not loop.last %};{% else %}.{% endif %}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

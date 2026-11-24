@@ -138,7 +138,9 @@ def project_invoices(project_id):
 @invoices_bp.route("/invoices/create", methods=["GET", "POST"])
 @login_required
 def create_invoice():
-    """Create a new invoice"""
+    """Create a new invoice. The page moved to step 1 (``/invoices/new``); posting here still works."""
+    if request.method == "GET":
+        return redirect(url_for("invoices.new_invoice", **request.args.to_dict()))
     if request.method == "POST":
         # Get form data
         project_id = request.form.get("project_id", type=int)
@@ -412,6 +414,829 @@ def _render_create_form(number_error=None, form_due_date=None):
         **billing_form_context(projects, settings),
         **bill_to_form_context(projects),
     )
+
+
+# ----------------------------------------------------------------------
+# New invoice, step 1: who bills whom, number, period, projects, how hours become lines
+# ----------------------------------------------------------------------
+_STEP_ONE_VAT_CATEGORIES = ("S", "Z", "E", "AE", "K", "G", "O", "L", "M")
+
+
+class _StepOneInput:
+    """Step 1 values from the posted form or from the page's JSON request, read the same way."""
+
+    def __init__(self, source):
+        self.source = source or {}
+
+    def get(self, name, default=""):
+        value = self.source.get(name, default)
+        if isinstance(value, list):
+            value = value[0] if value else default
+        return default if value is None else value
+
+    def get_int(self, name):
+        try:
+            return int(str(self.get(name, "")).strip())
+        except (TypeError, ValueError):
+            return None
+
+    def get_ids(self, name):
+        raw = self.source.getlist(name) if hasattr(self.source, "getlist") else self.source.get(name)
+        if raw is None:
+            return []
+        if not isinstance(raw, (list, tuple)):
+            raw = [raw]
+        ids = []
+        for value in raw:
+            try:
+                number = int(str(value).strip())
+            except (TypeError, ValueError):
+                continue
+            if number not in ids:
+                ids.append(number)
+        return ids
+
+    def flag(self, name):
+        return str(self.get(name, "")).strip().lower() in ("1", "true", "on", "yes")
+
+
+def _step_one_projects_query():
+    """Projects the user may invoice, as on the old create form (subcontractors: assigned ones only)."""
+    from app.utils.scope_filter import apply_project_scope_to_model
+
+    query = Project.query.filter(Project.client_id.isnot(None), Project.billable == True)  # noqa: E712
+    scope = apply_project_scope_to_model(Project, current_user)
+    return query.filter(scope) if scope is not None else query
+
+
+def _step_one_clients():
+    """Clients the user may invoice from step 1: those with at least one project the user can see."""
+    from app.models import Client
+
+    client_ids = _step_one_projects_query().with_entities(Project.client_id).distinct()
+    return Client.query.filter(Client.id.in_(client_ids)).order_by(Client.name.asc()).all()
+
+
+def _step_one_client(client_id):
+    """The client, if the user may invoice it (sees at least one of its projects); else None."""
+    from app.models import Client
+
+    if not client_id:
+        return None
+    if _step_one_projects_query().filter(Project.client_id == client_id).first() is None:
+        return None
+    return Client.query.get(client_id)
+
+
+def _step_one_selection(data, client, projects, invoice=None):
+    """Hours part of step 1 as posted. Raises StepOneError for a wrong period.
+
+    Projects the client does not have, or the user may not see, are dropped. Without the
+    ``projects_touched`` flag (the page's first request for a client) the projects with hours in
+    the period are selected, or only the one step 1 was opened from.
+    """
+    from app.services.invoice_step_one_service import InvoiceStepOneService, StepOneSelection, resolve_period
+    from app.utils.invoice_currency import normalize_currency_code
+    from app.utils.invoice_time_entry_items import normalize_layout
+
+    period = resolve_period(data.get("period"), data.get("period_start"), data.get("period_end"))
+    offered = [p.id for p in projects]
+    from_project_id = data.get_int("from_project_id")
+    allowed = _step_one_client_entries_allowed()
+    if data.flag("projects_touched") or invoice is not None:
+        project_ids = [pid for pid in data.get_ids("project_ids") if pid in offered]
+        client_entries = data.flag("client_entries")
+    else:
+        by_project = InvoiceStepOneService().hours_by_project(client, offered, period, invoice, allowed)
+        if from_project_id in offered:
+            project_ids = [from_project_id]
+        else:
+            project_ids = [pid for pid in offered if by_project.get(pid, (0, 0))[1]] or offered[:1]
+        client_entries = from_project_id not in offered and bool(by_project.get(None, (0, 0))[1])
+    return StepOneSelection(
+        client=client,
+        project_ids=[pid for pid in offered if pid in project_ids],
+        period=period,
+        layout=normalize_layout(data.get("hours_layout")),
+        template=(data.get("line_template") or None),
+        client_entries=client_entries,
+        currency=normalize_currency_code(data.get("currency_code")) or (invoice.currency_code if invoice else None),
+        invoice=invoice,
+        primary_project_id=from_project_id if invoice is None else invoice.project_id,
+        client_entries_allowed=allowed,
+    )
+
+
+def _step_one_client_entries_allowed():
+    """Whether the user may bill time logged on a client without a project.
+
+    Not for a user limited to their own or assigned projects: that time is not theirs to see.
+    """
+    from app.utils.scope_filter import apply_project_scope_to_model
+
+    return apply_project_scope_to_model(Project, current_user) is None
+
+
+def _step_one_numbers(selection, issue_date):
+    """{entity id: next number} for the selection's period and issue date (Legal entities module on)."""
+    from app.services.invoice_step_one_service import InvoiceStepOneService
+    from app.utils import billing_entities as billing
+
+    if not billing.module_on():
+        return {}
+    period = InvoiceStepOneService().number_period(selection)
+    return {str(e.id): billing.number_preview(e, issue_date, period=period) for e in billing.active_entities()}
+
+
+def _step_one_header(data, client, period):
+    """Invoice fields of step 1 as posted (all but the number, From and Bill to). Raises StepOneError."""
+    from app.services.invoice_step_one_service import StepOneError
+    from app.utils.invoice_currency import normalize_currency_code
+    from app.utils.invoice_defaults import due_date_for
+
+    def text(name):
+        return (data.get(name) or "").strip()
+
+    def day(name):
+        value = text(name)
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, "%Y-%m-%d").date()
+        except ValueError:
+            raise StepOneError(_("Invalid date: %(value)s", value=value))
+
+    try:
+        tax_rate = Decimal(text("tax_rate") or "0")
+    except (InvalidOperation, ValueError):
+        raise StepOneError(_("Invalid tax rate format"))
+    vat_category = text("vat_category").upper() or None
+    if vat_category not in _STEP_ONE_VAT_CATEGORIES:
+        vat_category = None
+    issue_date = day("issue_date") or period.issue_date()
+    due_date = day("due_date") or due_date_for(client.id, issue_date)
+    if due_date < issue_date:
+        raise StepOneError(_("The due date is before the issue date"))
+    return {
+        "client_name": text("client_name") or client.name,
+        "client_email": text("client_email") or None,
+        "client_address": text("client_address") or None,
+        "buyer_reference": text("buyer_reference") or None,
+        "vat_category": vat_category,
+        "vat_exemption_reason": text("vat_exemption_reason") or None,
+        "vat_exemption_code": text("vat_exemption_code") or None,
+        "cig": text("cig") or None,
+        "cup": text("cup") or None,
+        "tax_rate": tax_rate,
+        "notes": text("notes") or None,
+        "terms": text("terms") or None,
+        "issue_date": issue_date,
+        "due_date": due_date,
+        "currency_code": normalize_currency_code(data.get("currency_code")),
+    }
+
+
+def _parse_iso_day(value):
+    try:
+        return datetime.strptime((value or "").strip(), "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _hours_label(value):
+    return "%.2f" % Decimal(str(value or 0))
+
+
+def _step_one_warning_texts(summary, currency):
+    """Each warning of Before you create as a sentence, with its link or action."""
+    from flask_babel import format_date, ngettext
+
+    def day(value):
+        try:
+            return format_date(value, "medium")
+        except Exception:
+            return value.isoformat()
+
+    out = []
+    for w in summary.warnings:
+        kind = w["kind"]
+        item = {"kind": kind}
+        if kind == "no_rate":
+            if w.get("project_id"):
+                target = " / ".join(part for part in (w.get("project"), w.get("person")) if part)
+                item["link"] = {
+                    "label": _("Set rate"),
+                    "url": url_for("projects.list_rates", project_id=w["project_id"]),
+                }
+            else:
+                # Logged on the client without a project: the client's default rate applies
+                target = _("time logged on the client")
+                if w.get("client_id"):
+                    item["link"] = {
+                        "label": _("Set client rate"),
+                        "url": url_for("clients.edit_client", client_id=w["client_id"]),
+                    }
+            item["text"] = _(
+                "No hourly rate for %(target)s: %(hours)s h will be billed at 0.", target=target, hours=w["hours"]
+            )
+        elif kind == "prepaid_used_up":
+            item["text"] = _(
+                "%(month)s plan used up on %(invoice)s: these hours are billed at the rate.",
+                month=_prepaid_months_text([w["month"]]),
+                invoice=w["used_on"],
+            )
+        elif kind == "prepaid_left":
+            item["text"] = _(
+                "%(month)s plan: %(left)s h left; %(covers)s h of these hours go to it first.",
+                month=_prepaid_months_text([w["month"]]),
+                left=_hours_label(w["left"]),
+                covers=_hours_label(w["covers"]),
+            )
+        elif kind == "timer_running":
+            item["text"] = ngettext(
+                "A timer is running (%(people)s): that entry is not included.",
+                "%(num)d timers are running (%(people)s): those entries are not included.",
+                w["entries"],
+                people=", ".join(w["people"]),
+            )
+        elif kind == "before_period":
+            item["text"] = _(
+                "%(hours)s h unbilled before the period, since %(since)s.",
+                hours=_hours_label(w["hours"]),
+                since=day(w["since"]),
+            )
+            item["action"] = {"label": _("Include them"), "start": w["since"].isoformat()}
+        elif kind == "other_projects":
+            names = [p["name"] or _("time logged on the client") for p in w["projects"]]
+            item["text"] = _(
+                "%(hours)s h in this period on what is not selected: %(names)s.",
+                hours=_hours_label(w["hours"]),
+                names=", ".join(names),
+            )
+        elif kind == "after_period":
+            item["text"] = ngettext(
+                "%(num)d entry (%(hours)s h) after the period, until %(until)s.",
+                "%(num)d entries (%(hours)s h) after the period, until %(until)s.",
+                w["entries"],
+                hours=_hours_label(w["hours"]),
+                until=day(w["until"]),
+            )
+        elif kind == "non_billable":
+            item["text"] = ngettext(
+                "%(num)d non-billable entry (%(hours)s h) in this period stays off the invoice.",
+                "%(num)d non-billable entries (%(hours)s h) in this period stay off the invoice.",
+                w["entries"],
+                hours=_hours_label(w["hours"]),
+            )
+        elif kind == "manual_lines":
+            item["text"] = ngettext(
+                "%(num)d line added by hand. Saving step 1 keeps it unless you remove it.",
+                "%(num)d lines added by hand. Saving step 1 keeps them unless you remove them.",
+                len(w["lines"]),
+            )
+            item["lines"] = [
+                {
+                    "id": line["id"],
+                    "text": "%s – %s %s" % (line["description"], "%.2f" % line["amount"], currency or ""),
+                }
+                for line in w["lines"]
+            ]
+        else:
+            continue
+        out.append(item)
+    return out
+
+
+def _step_one_parts(selection, projects, summary, remove_line_ids=()):
+    """The step 1 blocks that follow the selection, rendered: projects, hours, warnings, summary."""
+    from app.services.invoice_step_one_service import InvoiceStepOneService
+
+    primary = InvoiceStepOneService.primary_project(selection, projects)
+    remove = set(remove_line_ids or ())
+    context = {
+        "remove_line_ids": remove,
+        "invoice": selection.invoice,
+        "primary_id": primary.id if primary is not None else "",
+        "selection": selection,
+        "summary": summary,
+        "projects": projects,
+        "warnings": _step_one_warning_texts(summary, selection.currency),
+        "currency": selection.currency or "",
+        "hours_label": _hours_label,
+        "prepaid_month": lambda month: _prepaid_months_text([month]),
+    }
+    return {
+        "projects": render_template("invoices/_step1_projects.html", **context),
+        "hours": render_template("invoices/_step1_hours.html", **context),
+        "warnings": render_template("invoices/_step1_warnings.html", **context),
+        "summary": render_template("invoices/_step1_summary.html", **context),
+    }
+
+
+def _step_one_payload(selection, projects, summary, remove_line_ids=()):
+    period = summary.period
+    examples = {}
+    for layout, info in summary.examples.items():
+        if layout == "none":
+            examples[layout] = _("No hours lines")
+        elif info["lines"]:
+            examples[layout] = info["example"] + (
+                "\n" + _("%(count)s lines in all", count=info["lines"]) if info["lines"] > 1 else ""
+            )
+        else:
+            examples[layout] = ""
+    return {
+        "html": _step_one_parts(selection, projects, summary, remove_line_ids),
+        "project_ids": selection.project_ids,
+        "client_entries": selection.client_entries,
+        "period": {
+            "kind": period.kind,
+            "start": period.start.isoformat() if period.start else "",
+            "end": period.end.isoformat() if period.end else "",
+            "issue_date": period.issue_date().isoformat(),
+        },
+        "layout": summary.layout,
+        "template": summary.template,
+        "examples": examples,
+        "lines": summary.lines,
+        "hours": _hours_label(summary.tracked_hours),
+    }
+
+
+def _step_one_values(form=None, invoice=None):
+    """Field values the step 1 page starts with: as posted, else from the draft, else empty."""
+    names = (
+        "client_name",
+        "client_email",
+        "client_address",
+        "buyer_reference",
+        "vat_category",
+        "vat_exemption_reason",
+        "vat_exemption_code",
+        "cig",
+        "cup",
+        "tax_rate",
+        "notes",
+        "terms",
+        "issue_date",
+        "due_date",
+        "currency_code",
+        "invoice_number",
+    )
+    if form is not None:
+        return {name: (form.get(name) or "") for name in names}
+    if invoice is None:
+        return {name: "" for name in names}
+    values = {name: "" if getattr(invoice, name, None) is None else str(getattr(invoice, name)) for name in names}
+    values["issue_date"] = invoice.issue_date.isoformat() if invoice.issue_date else ""
+    values["due_date"] = invoice.due_date.isoformat() if invoice.due_date else ""
+    values["tax_rate"] = str(invoice.tax_rate if invoice.tax_rate is not None else "")
+    return values
+
+
+def _step_one_projects_by_client(clients):
+    """{client_id: [projects the user can see]}, in one query."""
+    ids = [c.id for c in clients]
+    if not ids:
+        return {}
+    out = {}
+    query = _step_one_projects_query().filter(Project.client_id.in_(ids))
+    for project in query.order_by(Project.name.asc(), Project.id.asc()).all():
+        out.setdefault(project.client_id, []).append(project)
+    return out
+
+
+def _render_step_one(invoice=None, selection=None, form=None, number_error=None, status=200):
+    """The step 1 page, for a new invoice or for a draft (``invoice``).
+
+    ``form``: what was posted, shown again after an error; ``number_error``: the number is taken.
+    """
+    from app.services.invoice_step_one_service import InvoiceStepOneService, StepOneError, resolve_period
+    from app.utils.billing_entities import form_context as billing_form_context
+    from app.utils.billing_entities import invoice_ref
+    from app.utils.client_entities import form_context as bill_to_form_context
+    from app.utils.invoice_currency import currency_choices, default_currencies_by_client, settings_currency
+    from app.utils.invoice_defaults import DEFAULT_DUE_DAYS, client_defaults, due_date_for
+    from app.utils.invoice_time_entry_items import DEFAULT_LINE_TEMPLATES, HOURS_LAYOUT_LABELS, HOURS_LAYOUTS
+
+    service = InvoiceStepOneService()
+    settings = Settings.get_settings()
+    data = _StepOneInput(form if form is not None else request.args)
+    if invoice is not None:
+        client = invoice.client
+        clients = [client]
+        if selection is None:
+            selection = service.draft_selection(invoice)
+    else:
+        clients = _step_one_clients()
+        from_project_id = data.get_int("from_project_id") or data.get_int("project_id")
+        from_project = Project.query.get(from_project_id) if from_project_id else None
+        client_id = data.get_int("client_id") or (from_project.client_id if from_project else None)
+        client = next((c for c in clients if c.id == client_id), None)
+    projects_by_client = _step_one_projects_by_client(clients)
+    projects = service.client_projects(client, current_user, invoice) if client is not None else []
+
+    if client is not None and selection is None:
+        source = {key: data.source.getlist(key) for key in data.source} if hasattr(data.source, "getlist") else {}
+        if invoice is None and from_project is not None and from_project.client_id == client.id:
+            source["from_project_id"] = [str(from_project.id)]
+        try:
+            selection = _step_one_selection(_StepOneInput(source), client, projects)
+        except StepOneError:
+            selection = _step_one_selection(_StepOneInput({}), client, projects)
+    remove_line_ids = data.get_ids("remove_line_ids") if form is not None else []
+    parts = (
+        _step_one_parts(selection, projects, service.summary(selection, projects, remove_line_ids), remove_line_ids)
+        if selection
+        else None
+    )
+
+    posted = None
+    if number_error is not None:
+        posted = {
+            "number": number_error.number,
+            "preview": (form.get("invoice_number_preview", "") or "").strip(),
+            "taken": invoice_ref(number_error.owner),
+            "next_free": number_error.next_free or "",
+            "entity_id": form.get("billing_entity_id", type=int),
+            "account_id": form.get("payment_account_id", type=int),
+            "client_entity_id": form.get("client_entity_id", type=int),
+        }
+    primary = service.primary_project(selection, projects) if selection is not None else None
+    # The From / Pay to and Bill to blocks follow #project_id (the invoice's own project), which the
+    # page's script keeps in step with the client and the selected projects
+    form_projects = [invoice.project] if invoice is not None else [p for ps in projects_by_client.values() for p in ps]
+    defaults = client_defaults([c.id for c in clients])
+    values = _step_one_values(form, invoice)
+    # Dates typed or saved stay; the page's script moves the others with the period
+    dates_touched = {name: invoice is not None or bool(values[name]) for name in ("issue_date", "due_date")}
+    if client is not None and selection is not None:
+        # Issue date: the last day of the period; due date: as many days later as on the client's last invoice
+        issued = _parse_iso_day(values["issue_date"]) or selection.period.issue_date()
+        values["issue_date"] = values["issue_date"] or issued.isoformat()
+        values["due_date"] = values["due_date"] or due_date_for(client.id, issued).isoformat()
+    number_issue = _parse_iso_day(values["issue_date"])
+    number_period = service.number_period(selection) if selection is not None else None
+    return (
+        render_template(
+            "invoices/new.html",
+            invoice=invoice,
+            clients=clients,
+            client=client,
+            projects=projects,
+            selection=selection,
+            period=selection.period if selection is not None else resolve_period(None),
+            primary_project=primary,
+            parts=parts,
+            values=values,
+            dates_touched=dates_touched,
+            posted=posted,
+            settings=settings,
+            currency_choices=currency_choices(settings, extra=[invoice.currency_code] if invoice else ()),
+            client_currencies={str(k): v for k, v in default_currencies_by_client(settings).items()},
+            default_currency=settings_currency(settings),
+            client_details={
+                str(c.id): {
+                    "name": c.name or "",
+                    "email": c.email or "",
+                    "address": c.address or "",
+                    "project": (projects_by_client.get(c.id) or [None])[0].id if projects_by_client.get(c.id) else None,
+                }
+                for c in clients
+            },
+            invoice_defaults={
+                "byClient": {str(k): v for k, v in defaults.items()},
+                "settingsTerms": settings.invoice_terms or "",
+                "defaultDays": DEFAULT_DUE_DAYS,
+                "today": date.today().isoformat(),
+            },
+            hours_layouts=[(layout, HOURS_LAYOUT_LABELS[layout]) for layout in HOURS_LAYOUTS],
+            default_line_templates=DEFAULT_LINE_TEMPLATES,
+            **billing_form_context(form_projects, settings, issue_date=number_issue, period=number_period),
+            **bill_to_form_context(form_projects, invoice=invoice),
+        ),
+        status,
+    )
+
+
+@invoices_bp.route("/invoices/new", methods=["GET", "POST"])
+@login_required
+def new_invoice():
+    """Step 1 of a new invoice: who bills whom, number, period, projects and how hours become lines.
+
+    Creating it makes a draft with its hours lines in one transaction; the draft page is next.
+    ``?client_id=`` preselects a client, ``?project_id=`` a client and only that project.
+    """
+    if request.method == "GET":
+        return _render_step_one()
+
+    from app.services.invoice_step_one_service import InvoiceStepOneService, StepOneError
+    from app.services.invoice_time_service import InvoiceTimeError
+    from app.utils import billing_entities as billing
+    from app.utils import client_entities as bill_to
+
+    form = request.form
+    data = _StepOneInput(form)
+    service = InvoiceStepOneService()
+    client = _step_one_client(data.get_int("client_id"))
+    if client is None:
+        flash(_("Choose a client"), "error")
+        return _render_step_one(form=form, status=400)
+    projects = service.client_projects(client, current_user)
+    try:
+        selection = _step_one_selection(data, client, projects)
+        header = _step_one_header(data, client, selection.period)
+    except StepOneError as exc:
+        flash(str(exc), "error")
+        return _render_step_one(form=form, status=400)
+    primary = service.primary_project(selection, projects)
+    if primary is None:
+        flash(_("Select at least one project: the invoice needs one"), "error")
+        return _render_step_one(form=form, selection=selection, status=400)
+
+    settings = Settings.get_settings()
+    from app.utils.invoice_currency import default_currency_for_client
+
+    currency_code = header.pop("currency_code") or default_currency_for_client(client.id, settings)
+    selection.currency = currency_code
+    _t0 = time.monotonic()
+
+    billing_entity = payment_account = None
+    if billing.module_on():
+        billing_entity, payment_account, billing_error = billing.resolve_from_form(form, currency_code)
+        if billing_error:
+            flash(_(billing_error), "error")
+            return _render_step_one(form=form, selection=selection, status=400)
+
+    # The number: typed by hand, else the entity's format, else the global series. A number another
+    # invoice already has is an error here, never a silent "-2".
+    # {YYYY} and {MM} are the month the invoice bills, {DD} its issue day
+    invoice_number = None
+    typed_number = (form.get("invoice_number", "") or "").strip()
+    preview_number = (form.get("invoice_number_preview", "") or "").strip()
+    issue_date = header["issue_date"]
+    number_period = service.number_period(selection)
+    try:
+        if billing_entity:
+            if typed_number and typed_number != preview_number:
+                billing.check_number(billing_entity, typed_number, issue_date, period=number_period)
+                billing.claim_number(billing_entity, typed_number, issue_date, period=number_period)
+                invoice_number = typed_number
+            else:
+                invoice_number = billing.allocate_invoice_number(billing_entity, issue_date, period=number_period)
+    except billing.NumberTaken as taken:
+        db.session.rollback()
+        return _render_step_one(form=form, selection=selection, number_error=taken, status=409)
+    if not invoice_number:
+        invoice_number = Invoice.generate_invoice_number()
+
+    invoice = Invoice(
+        invoice_number=invoice_number,
+        project_id=primary.id,
+        client_name=header.pop("client_name"),
+        due_date=header.pop("due_date"),
+        created_by=current_user.id,
+        client_id=client.id,
+        quote_id=getattr(primary, "quote_id", None),
+        currency_code=currency_code,
+        **header,
+    )
+    invoice.period_start = selection.period.start
+    invoice.period_end = selection.period.end
+    if billing_entity:
+        billing.apply_to_invoice(invoice, billing_entity, payment_account)
+    if bill_to.module_on():
+        bill_to_entity, bill_to_error = bill_to.resolve_from_form(form, client.id)
+        if bill_to_error:
+            db.session.rollback()
+            flash(_(bill_to_error), "error")
+            return _render_step_one(form=form, selection=selection, status=400)
+        bill_to.apply_to_invoice(invoice, bill_to_entity)
+
+    db.session.add(invoice)
+    try:
+        db.session.flush()
+        lines = service.add_hours(invoice, selection, projects, current_user.id)
+    except InvoiceTimeError as exc:
+        db.session.rollback()
+        flash(_("Could not add the time entries: %(error)s", error=str(exc)), "error")
+        return _render_step_one(form=form, selection=selection, status=409)
+    invoice.calculate_totals()
+    if not safe_commit("new_invoice_step_one", {"invoice_number": invoice_number, "client_id": client.id}):
+        flash(_("Could not create invoice due to a database error. Please check server logs."), "error")
+        return _render_step_one(form=form, selection=selection, status=500)
+
+    _announce_new_invoice(invoice, _t0)
+    count = len(lines.items) if lines is not None else 0
+    flash(_("Draft %(number)s created with %(count)s lines", number=invoice.invoice_number, count=count), "success")
+    return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+
+
+def _announce_new_invoice(invoice, started):
+    """What creating an invoice also does: metrics, analytics, workflows and the client's notification."""
+    from app.telemetry.otel_setup import business_span, record_invoice_created, record_invoice_duration_seconds
+    from app.utils.workflow_bridge import fire_invoice_created_workflow
+
+    has_tax = float(invoice.tax_rate or 0) > 0
+    with business_span(
+        "invoice.create", user_id=current_user.id, source="web", has_tax=has_tax, has_notes=bool(invoice.notes)
+    ):
+        pass
+    record_invoice_created()
+    record_invoice_duration_seconds(time.monotonic() - started, "create")
+    track_invoice_generated(
+        current_user.id,
+        {
+            "invoice_id": invoice.id,
+            "invoice_number": invoice.invoice_number,
+            "has_tax": has_tax,
+            "has_notes": bool(invoice.notes),
+        },
+    )
+    fire_invoice_created_workflow(invoice, current_user.id)
+    if invoice.client_id:
+        try:
+            from app.services.client_notification_service import ClientNotificationService
+
+            ClientNotificationService().notify_invoice_created(invoice.id, invoice.client_id)
+        except Exception as e:
+            logger.error(f"Failed to send client notification for invoice {invoice.id}: {e}", exc_info=True)
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/step-1", methods=["GET", "POST"])
+@login_required
+def edit_step_one(invoice_id):
+    """Step 1 of a draft, every field filled from the invoice.
+
+    Saving with another period, other projects, another layout or template lets go of the draft's
+    hours and collects them again (hours lines are rebuilt, lines added by hand stay, non-billable
+    marks stay). Saving with only the header changed leaves the lines as they are.
+    """
+    from flask_babel import ngettext
+
+    from app.services.invoice_step_one_service import InvoiceStepOneService, StepOneError
+    from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService
+    from app.utils import billing_entities as billing
+    from app.utils import client_entities as bill_to
+
+    invoice = Invoice.query.get_or_404(invoice_id)
+    if not current_user.is_admin and invoice.created_by != current_user.id:
+        flash(_("You do not have permission to edit this invoice"), "error")
+        return redirect(url_for("invoices.list_invoices"))
+    if invoice.status != "draft":
+        flash(
+            _(
+                "Invoice %(number)s is %(status)s: only a draft goes back to step 1.",
+                number=invoice.invoice_number,
+                status=invoice.status,
+            ),
+            "error",
+        )
+        return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+    if request.method == "GET":
+        return _render_step_one(invoice)
+
+    form = request.form
+    data = _StepOneInput(form)
+    service = InvoiceStepOneService()
+    client = invoice.client
+    projects = service.client_projects(client, current_user, invoice)
+    try:
+        selection = _step_one_selection(data, client, projects, invoice)
+        header = _step_one_header(data, client, selection.period)
+    except StepOneError as exc:
+        flash(str(exc), "error")
+        return _render_step_one(invoice, form=form, status=400)
+    primary = service.primary_project(selection, projects)
+    if primary is None:
+        flash(_("Select at least one project: the invoice needs one"), "error")
+        return _render_step_one(invoice, selection=selection, form=form, status=400)
+    before = service.draft_selection(invoice)
+
+    # The number may change on a draft; another invoice's number is refused. {YYYY} and {MM} are
+    # the month the invoice bills and {DD} its issue day, as for a new invoice
+    typed_number = (form.get("invoice_number", "") or "").strip()
+    if typed_number and typed_number != invoice.invoice_number:
+        entity = invoice.billing_entity if invoice.billing_entity_id else None
+        posted_entity_id = form.get("billing_entity_id", type=int)
+        if billing.module_on() and posted_entity_id and posted_entity_id != invoice.billing_entity_id:
+            from app.models import BillingEntity
+
+            entity = BillingEntity.query.get(posted_entity_id) or entity
+        issue_date = header["issue_date"]
+        number_period = service.number_period(selection)
+        owner = billing.number_owner(typed_number, exclude_invoice_id=invoice.id)
+        if owner is not None:
+            offer = (
+                billing.next_free_number(entity, issue_date, typed_number, period=number_period)
+                if entity is not None
+                else billing.unique_number(typed_number, invoice.id)
+            )
+            return _render_step_one(
+                invoice,
+                selection=selection,
+                form=form,
+                number_error=billing.NumberTaken(typed_number, owner, offer),
+                status=409,
+            )
+        if entity is not None:
+            billing.claim_number(entity, typed_number, issue_date, period=number_period)
+        invoice.invoice_number = typed_number
+
+    currency_code = header.pop("currency_code") or invoice.currency_code
+    currency_changed = currency_code != invoice.currency_code
+    selection.currency = currency_code
+    invoice.currency_code = currency_code
+    for name, value in header.items():
+        setattr(invoice, name, value)
+    if billing.module_on() and "billing_entity_id" in form:
+        billing_entity, payment_account, billing_error = billing.resolve_from_form(form, currency_code)
+        if billing_error:
+            db.session.rollback()
+            flash(_(billing_error), "error")
+            return _render_step_one(invoice, selection=selection, form=form, status=400)
+        billing.apply_to_invoice(invoice, billing_entity, payment_account)
+    if bill_to.module_on() and "client_entity_id" in form:
+        bill_to_entity, bill_to_error = bill_to.resolve_from_form(form, invoice.client_id, invoice.client_entity_id)
+        if bill_to_error:
+            db.session.rollback()
+            flash(_(bill_to_error), "error")
+            return _render_step_one(invoice, selection=selection, form=form, status=400)
+        bill_to.apply_to_invoice(invoice, bill_to_entity)
+
+    invoice.project_id = primary.id
+    collected = service.hours_changed(before, selection)
+    try:
+        removed = service.remove_manual_lines(invoice, data.get_ids("remove_line_ids"))
+        if collected:
+            lines = service.recollect(invoice, selection, projects, current_user.id)
+        else:
+            # Same hours: the lines stay; a draft made before step 1 keeps the period it was shown
+            invoice.period_start = selection.period.start
+            invoice.period_end = selection.period.end
+            if currency_changed:
+                # Hours lines name their rate with the currency ("- 40.00 EUR/h"): write them again
+                InvoiceTimeService().apply_template(invoice, invoice.line_template, keep_edited=True)
+            invoice.calculate_totals()
+    except InvoiceTimeError as exc:
+        db.session.rollback()
+        flash(_("Could not add the time entries: %(error)s", error=str(exc)), "error")
+        return _render_step_one(invoice, selection=selection, form=form, status=409)
+    if not safe_commit("edit_step_one", {"invoice_id": invoice.id}):
+        flash(_("Could not update invoice due to a database error. Please check server logs."), "error")
+        return _render_step_one(invoice, selection=selection, form=form, status=500)
+
+    if collected:
+        count = len(lines.items) if lines is not None else 0
+        flash(_("Hours collected again: %(count)s lines", count=count), "success")
+    elif removed:
+        flash(_("Invoice details saved; the hours lines did not change"), "success")
+    else:
+        flash(_("Invoice details saved; the lines did not change"), "success")
+    if removed:
+        flash(ngettext("%(num)d line added by hand removed", "%(num)d lines added by hand removed", removed), "success")
+    return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
+
+
+@invoices_bp.route("/invoices/step-1/summary", methods=["POST"])
+@login_required
+def step_one_summary():
+    """What step 1 shows below the period, for the page's choices (JSON in, JSON with HTML parts out).
+
+    Body: ``client_id`` (or ``invoice_id`` for a draft's step 1), ``period``, ``period_start``,
+    ``period_end``, ``project_ids``, ``projects_touched``, ``client_entries``, ``from_project_id``,
+    ``hours_layout``, ``line_template``, ``currency_code``. Nothing is written.
+    """
+    from app.services.invoice_step_one_service import InvoiceStepOneService, StepOneError
+
+    data = _StepOneInput(request.get_json(silent=True) or {})
+    service = InvoiceStepOneService()
+    invoice = None
+    invoice_id = data.get_int("invoice_id")
+    if invoice_id:
+        invoice = Invoice.query.get_or_404(invoice_id)
+        if not current_user.is_admin and invoice.created_by != current_user.id:
+            return jsonify({"error": "forbidden"}), 403
+        if invoice.status != "draft":
+            return jsonify({"error": "invalid_status"}), 409
+        client = invoice.client
+    else:
+        client = _step_one_client(data.get_int("client_id"))
+        if client is None:
+            return jsonify({"error": "forbidden"}), 403
+    projects = service.client_projects(client, current_user, invoice)
+    try:
+        selection = _step_one_selection(data, client, projects, invoice)
+    except StepOneError as exc:
+        return jsonify({"error": "invalid_period", "message": str(exc)}), 400
+    remove_line_ids = data.get_ids("remove_line_ids")
+    summary = service.summary(selection, projects, remove_line_ids)
+    payload = _step_one_payload(selection, projects, summary, remove_line_ids)
+    if invoice is None:
+        payload["numbers"] = _step_one_numbers(
+            selection, _parse_iso_day(data.get("issue_date")) or selection.period.issue_date()
+        )
+    return jsonify(payload)
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>")

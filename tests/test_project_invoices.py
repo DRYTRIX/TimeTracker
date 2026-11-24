@@ -88,14 +88,14 @@ class TestProjectInvoicesPage:
 
         html = _page(admin_authenticated_client, project).get_data(as_text=True)
 
-        assert f"/invoices/create?project_id={project.id}" in html
+        assert f"/invoices/new?project_id={project.id}" in html
         assert f"/invoices/export/excel?project_id={project.id}" in html
 
     def test_empty_project_offers_to_create_the_first_invoice(self, admin_authenticated_client, project):
         html = _page(admin_authenticated_client, project).get_data(as_text=True)
 
         assert "This project has no invoices yet" in html
-        assert f"/invoices/create?project_id={project.id}" in html
+        assert f"/invoices/new?project_id={project.id}" in html
 
     def test_unknown_project_is_404(self, admin_authenticated_client):
         assert admin_authenticated_client.get("/projects/999999/invoices").status_code == 404
@@ -134,26 +134,26 @@ class TestProjectPageLink:
 
 class TestCreateFormPreselect:
     def test_project_from_query_is_selected(self, admin_authenticated_client, project, other_project):
-        html = admin_authenticated_client.get(f"/invoices/create?project_id={project.id}").get_data(as_text=True)
+        html = admin_authenticated_client.get(f"/invoices/new?project_id={project.id}").get_data(as_text=True)
 
-        assert f'<option value="{project.id}" selected' in html
-        assert f'<option value="{other_project.id}" selected' not in html
-        assert 'data-preselected="1"' in html
+        assert f'<option value="{project.client_id}" selected' in html
+        assert f'name="project_ids" value="{project.id}" checked' in html
+        assert f'id="project_id" value="{project.id}"' in html
 
     def test_without_query_nothing_is_selected(self, admin_authenticated_client, project):
-        html = admin_authenticated_client.get("/invoices/create").get_data(as_text=True)
+        html = admin_authenticated_client.get("/invoices/new").get_data(as_text=True)
 
-        assert f'<option value="{project.id}" selected' not in html
-        assert 'data-preselected="1"' not in html
+        assert f'<option value="{project.client_id}" selected' not in html
+        assert 'name="project_ids"' not in html
 
     def test_project_not_in_the_list_leaves_form_empty(self, admin_authenticated_client, project):
         project.billable = False
         db.session.commit()
 
-        resp = admin_authenticated_client.get(f"/invoices/create?project_id={project.id}")
+        resp = admin_authenticated_client.get(f"/invoices/new?project_id={project.id}")
 
         assert resp.status_code == 200
-        assert f'<option value="{project.id}"' not in resp.get_data(as_text=True)
+        assert f'name="project_ids" value="{project.id}"' not in resp.get_data(as_text=True)
 
 
 class TestReturnToProjectPage:

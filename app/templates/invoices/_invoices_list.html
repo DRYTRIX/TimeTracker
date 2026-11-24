@@ -153,7 +153,7 @@
     {% if not invoices %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
-        <a href="{{ url_for('invoices.create_invoice', project_id=_list_project_id) }}" class="btn btn-primary">
+        <a href="{{ url_for('invoices.new_invoice', project_id=_list_project_id) }}" class="btn btn-primary">
             <i class="fas fa-plus mr-2"></i>Create Your First Invoice
         </a>
         <a href="{{ url_for('main.help') }}" class="btn btn-secondary">

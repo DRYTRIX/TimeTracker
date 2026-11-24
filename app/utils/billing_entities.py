@@ -67,13 +67,17 @@ def billing_period(issue_date=None):
     return d.year, d.month - 1
 
 
-def format_invoice_number(entity, issue_date=None, seq=None):
-    """Fill an entity's number format. {YYYY}/{YY}/{MM} are the billing period, {DD} the issue day."""
+def format_invoice_number(entity, issue_date=None, seq=None, period=None):
+    """Fill an entity's number format. {YYYY}/{YY}/{MM} are the billing period, {DD} the issue day.
+
+    ``period``: a day in the month the invoice bills (e.g. the end of its period); without it the
+    billing period is the month before the issue date.
+    """
     fmt = (entity.number_format or "").strip()
     if not fmt:
         return None
     d = issue_date or date.today()
-    year, month = billing_period(d)
+    year, month = (period.year, period.month) if period else billing_period(d)
     values = {
         "YYYY": f"{year:04d}",
         "YY": f"{year % 100:02d}",
@@ -127,7 +131,7 @@ def _uses_seq(entity):
     return "{SEQ}" in (entity.number_format or "")
 
 
-def next_free_number(entity, issue_date=None, number=None):
+def next_free_number(entity, issue_date=None, number=None, period=None):
     """The number to offer when ``number`` (default: the entity's next number) is taken.
 
     With {SEQ} in the format: the first free number after the entity's counter. Otherwise
@@ -135,47 +139,53 @@ def next_free_number(entity, issue_date=None, number=None):
     """
     if _uses_seq(entity):
         seq = (entity.number_counter or 0) + 1
-        while _number_taken(format_invoice_number(entity, issue_date, seq=seq)):
+        while _number_taken(format_invoice_number(entity, issue_date, seq=seq, period=period)):
             seq += 1
-        return format_invoice_number(entity, issue_date, seq=seq)
-    base = number or format_invoice_number(entity, issue_date)
+        return format_invoice_number(entity, issue_date, seq=seq, period=period)
+    base = number or format_invoice_number(entity, issue_date, period=period)
     return unique_number(base) if base else None
 
 
-def _seq_of(entity, number, issue_date=None):
+def _seq_of(entity, number, issue_date=None, period=None):
     """The {SEQ} value if ``number`` is the entity's format filled for this issue date, else None."""
     if not number or not _uses_seq(entity):
         return None
     marker = "\x00"
-    pattern = re.escape(format_invoice_number(entity, issue_date, seq=marker)).replace(re.escape(marker), r"(\d+)")
+    pattern = re.escape(format_invoice_number(entity, issue_date, seq=marker, period=period)).replace(
+        re.escape(marker), r"(\d+)"
+    )
     match = re.fullmatch(pattern, number)
     return int(match.group(1)) if match else None
 
 
-def check_number(entity, number, issue_date=None, exclude_invoice_id=None):
+def check_number(entity, number, issue_date=None, exclude_invoice_id=None, period=None):
     """Raise NumberTaken if ``number`` belongs to another invoice."""
     owner = number_owner(number, exclude_invoice_id)
     if owner is not None:
-        offer = next_free_number(entity, issue_date, number) if entity else unique_number(number, exclude_invoice_id)
+        offer = (
+            next_free_number(entity, issue_date, number, period=period)
+            if entity
+            else unique_number(number, exclude_invoice_id)
+        )
         raise NumberTaken(number, owner, offer)
 
 
-def claim_number(entity, number, issue_date=None):
+def claim_number(entity, number, issue_date=None, period=None):
     """Move the entity's {SEQ} counter up to ``number`` if it is the format's number past the counter.
 
     So a number typed by hand, or picked with "Use next free", is not offered again. The caller commits.
     """
-    seq = _seq_of(entity, number, issue_date)
+    seq = _seq_of(entity, number, issue_date, period=period)
     if seq is not None and seq > (entity.number_counter or 0):
         entity.number_counter = seq
 
 
-def preview_invoice_number(entity, issue_date=None):
+def preview_invoice_number(entity, issue_date=None, period=None):
     """The entity's next number as the form shows it (it may be taken: see ``number_preview``)."""
-    return format_invoice_number(entity, issue_date)
+    return format_invoice_number(entity, issue_date, period=period)
 
 
-def allocate_invoice_number(entity, issue_date=None):
+def allocate_invoice_number(entity, issue_date=None, period=None):
     """Next number for an invoice from ``entity``, or None if the entity has no format.
 
     Raises NumberTaken when that number already belongs to another invoice. Bumps the entity's
@@ -186,11 +196,11 @@ def allocate_invoice_number(entity, issue_date=None):
         return None
     if _uses_seq(entity):
         seq = (entity.number_counter or 0) + 1
-        number = format_invoice_number(entity, issue_date, seq=seq)
+        number = format_invoice_number(entity, issue_date, seq=seq, period=period)
     else:
         seq = None
-        number = format_invoice_number(entity, issue_date)
-    check_number(entity, number, issue_date)
+        number = format_invoice_number(entity, issue_date, period=period)
+    check_number(entity, number, issue_date, period=period)
     if seq is not None:
         entity.number_counter = seq
     return number
@@ -209,14 +219,14 @@ def invoice_ref(invoice):
     }
 
 
-def number_preview(entity, issue_date=None):
+def number_preview(entity, issue_date=None, period=None):
     """The entity's next number for the form, with the invoice holding it and the next free one."""
-    number = preview_invoice_number(entity, issue_date)
+    number = preview_invoice_number(entity, issue_date, period=period)
     owner = number_owner(number) if number else None
     return {
         "number": number or "",
         "taken": invoice_ref(owner) if owner else None,
-        "next_free": next_free_number(entity, issue_date, number) if owner else "",
+        "next_free": next_free_number(entity, issue_date, number, period=period) if owner else "",
     }
 
 
@@ -269,8 +279,11 @@ def entity_defaults(entity):
     }
 
 
-def form_context(projects, settings):
-    """Data the invoice create form needs for From / Pay to (empty when the module is off)."""
+def form_context(projects, settings, issue_date=None, period=None):
+    """Data the invoice create form needs for From / Pay to (empty when the module is off).
+
+    ``issue_date`` / ``period``: the dates the number previews are for (see ``format_invoice_number``).
+    """
     if not module_on():
         return {"billing_enabled": False}
     entities = active_entities()
@@ -283,7 +296,7 @@ def form_context(projects, settings):
         previous = latest_by_entity.get(e.id)
         data[e.id] = {
             "name": e.short_name,
-            **number_preview(e),
+            **number_preview(e, issue_date, period=period),
             "previous": invoice_ref(previous) if previous else None,
             "defaults": entity_defaults(e),
             "accounts": [

@@ -160,7 +160,7 @@ def test_pdf_html_unchanged_without_entity(app, invoice):
 
 
 def test_create_form_has_bill_to(app, authenticated_client, project, entity):
-    html = authenticated_client.get("/invoices/create").get_data(as_text=True)
+    html = authenticated_client.get("/invoices/new").get_data(as_text=True)
     assert 'id="billToBlock"' in html
     assert 'name="client_entity_id"' in html
     assert "Example Holding S.L." in html
@@ -168,7 +168,7 @@ def test_create_form_has_bill_to(app, authenticated_client, project, entity):
 
 def test_create_form_without_module(app, authenticated_client, project, entity):
     _disable_module()
-    html = authenticated_client.get("/invoices/create").get_data(as_text=True)
+    html = authenticated_client.get("/invoices/new").get_data(as_text=True)
     assert 'name="client_entity_id"' not in html
 
 
@@ -413,7 +413,7 @@ def test_form_per_module_combination(
     app, authenticated_client, project, seller, entity, off, has_seller_block, has_bill_to
 ):
     _modules_off(*off)
-    html = authenticated_client.get("/invoices/create").get_data(as_text=True)
+    html = authenticated_client.get("/invoices/new").get_data(as_text=True)
     assert ('id="billingSellerBlock"' in html) is has_seller_block
     assert ('id="billToBlock"' in html) is has_bill_to
     if has_seller_block:

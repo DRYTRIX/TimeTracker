@@ -76,14 +76,16 @@ def test_client_defaults_only_for_clients_with_invoices(app, user, project, test
 
 def test_create_form_due_date_and_hint_data(app, authenticated_client, user, project, test_client):
     _invoice(project, test_client, user, "F-1", date(2026, 11, 1), date(2026, 11, 16), terms="Net 15")
-    html = authenticated_client.get(f"/invoices/create?project_id={project.id}").get_data(as_text=True)
-    expected_due = (date.today() + timedelta(days=15)).strftime("%Y-%m-%d")
-    assert f'name="due_date" id="due_date" value="{expected_due}"' in html
+    html = authenticated_client.get(f"/invoices/new?project_id={project.id}").get_data(as_text=True)
+    # Issue date: the last day of last month; due 15 days later, as on the client's last invoice
+    issue = date.today().replace(day=1) - timedelta(days=1)
+    assert f'name="issue_date" id="issue_date" value="{issue.isoformat()}"' in html
+    assert f'name="due_date" id="due_date" value="{(issue + timedelta(days=15)).isoformat()}"' in html
     assert '"terms": "Net 15"' in html or '"terms":"Net 15"' in html
-    assert f'data-client-id="{test_client.id}"' in html
+    assert f'<option value="{test_client.id}" selected>' in html
 
 
 def test_create_form_without_invoices_is_30_days(app, authenticated_client, project):
-    html = authenticated_client.get(f"/invoices/create?project_id={project.id}").get_data(as_text=True)
-    expected_due = (date.today() + timedelta(days=30)).strftime("%Y-%m-%d")
-    assert f'name="due_date" id="due_date" value="{expected_due}"' in html
+    html = authenticated_client.get(f"/invoices/new?project_id={project.id}").get_data(as_text=True)
+    issue = date.today().replace(day=1) - timedelta(days=1)
+    assert f'name="due_date" id="due_date" value="{(issue + timedelta(days=30)).isoformat()}"' in html

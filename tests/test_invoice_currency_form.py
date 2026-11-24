@@ -40,11 +40,11 @@ def _newest_invoice():
 
 def test_create_form_offers_currency_select(app, authenticated_client, project):
     _usd_settings()
-    resp = authenticated_client.get("/invoices/create")
+    resp = authenticated_client.get(f"/invoices/new?project_id={project.id}")
     html = resp.get_data(as_text=True)
     assert resp.status_code == 200
     assert 'name="currency_code"' in html
-    assert 'data-currency="USD"' in html  # project option carries its client's default currency
+    assert '<option value="USD" selected>' in html  # the client's default currency
 
 
 def test_create_uses_chosen_currency(app, authenticated_client, project, test_client):
