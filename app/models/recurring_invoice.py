@@ -85,7 +85,9 @@ class RecurringInvoice(db.Model):
     def calculate_next_run_date(self, from_date=None):
         """Calculate the next run date based on frequency and interval"""
         if from_date is None:
-            from_date = datetime.utcnow().date()
+            from app.utils.timezone import now_in_app_timezone
+
+            from_date = now_in_app_timezone().date()
 
         if self.frequency == "daily":
             return from_date + timedelta(days=self.interval)
@@ -99,11 +101,13 @@ class RecurringInvoice(db.Model):
             raise ValueError(f"Invalid frequency: {self.frequency}")
 
     def should_generate_today(self):
-        """Check if invoice should be generated today"""
+        """Check if invoice should be generated today (app timezone calendar day)."""
         if not self.is_active:
             return False
 
-        today = datetime.utcnow().date()
+        from app.utils.timezone import now_in_app_timezone
+
+        today = now_in_app_timezone().date()
 
         # Check if we've reached the end date
         if self.end_date and today > self.end_date:

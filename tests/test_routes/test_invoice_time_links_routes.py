@@ -342,11 +342,10 @@ def test_bulk_skips_invoiced_entries_and_changes_the_rest(client, user, billing)
 
 
 def test_recurring_and_client_unbilled_invoices_link_only_unbilled_entries(app, user, billing):
-    from datetime import date
-
     from factories import RecurringInvoiceFactory
 
     from app.services.recurring_invoice_service import RecurringInvoiceService
+    from app.utils.timezone import now_in_app_timezone
 
     billed, free = billing["entries"]
     first = _invoice(billing, user, "INV-LINK-EARLIER")
@@ -357,7 +356,7 @@ def test_recurring_and_client_unbilled_invoices_link_only_unbilled_entries(app, 
         client_id=billing["client"].id,
         client_name=billing["client"].name,
         created_by=user.id,
-        next_run_date=date.today(),
+        next_run_date=now_in_app_timezone().date(),
         auto_include_time_entries=True,
     )
     db.session.commit()

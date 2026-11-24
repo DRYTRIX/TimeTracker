@@ -275,8 +275,10 @@ def generate_invoice_now(recurring_id):
 
     try:
         # Temporarily set next_run_date to today to allow generation
+        from app.utils.timezone import now_in_app_timezone
+
         original_next_run_date = recurring.next_run_date
-        recurring.next_run_date = datetime.utcnow().date()
+        recurring.next_run_date = now_in_app_timezone().date()
 
         invoice = recurring.generate_invoice()
         if invoice:
