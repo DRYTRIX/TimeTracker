@@ -1,0 +1,79 @@
+{# Hours: line template and Regroup, the hours lines with their entries, + Add hours line #}
+<section id="hours" class="space-y-2">
+    <h2 class="text-lg font-semibold">{{ _('Hours') }} <span class="text-sm font-normal text-text-muted-light dark:text-text-muted-dark">{{ _('lines from time entries') }}</span></h2>
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        {% if has_time_lines %}
+        <form method="POST" action="{{ url_for('invoices.draft_regroup', invoice_id=invoice.id) }}" class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4" data-draft-form id="hoursLayoutForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="md:col-span-2">
+                <label for="lineTemplate" class="block text-sm font-medium mb-1">{{ _('Line description') }}</label>
+                <div class="flex gap-2 items-start">
+                    <textarea id="lineTemplate" name="line_template" rows="2" maxlength="255" class="form-input w-full font-mono text-sm">{{ line_template }}</textarea>
+                    <button type="submit" formaction="{{ url_for('invoices.draft_apply_template', invoice_id=invoice.id) }}" class="btn btn-secondary whitespace-nowrap" id="applyTemplate">{{ _('Apply to lines') }}</button>
+                </div>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ _('Fields {date} {project} {task} {person} {note}. Several entries on a line: {date} is the period, names are comma-separated, each note on its own line. Lines you edited are kept unless you choose to rebuild them.') }}
+                </p>
+            </div>
+            <div>
+                <label for="hoursLayout" class="block text-sm font-medium mb-1">{{ _('Regroup hours') }}</label>
+                <div class="flex gap-2">
+                    <select id="hoursLayout" name="hours_layout" class="form-input w-full">
+                        {% for key, label in hours_layouts %}
+                        <option value="{{ key }}" {% if key == hours_layout %}selected{% endif %}>{{ _(label) }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-secondary" id="regroupHours">{{ _('Regroup') }}</button>
+                </div>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Every entry stays on the invoice; only the lines are rebuilt.') }}</p>
+            </div>
+            {% if edited_lines %}
+            <fieldset class="md:col-span-3 text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3" id="keepEdited">
+                <legend class="sr-only">{{ _('Lines edited by hand') }}</legend>
+                <p class="mb-1">{{ ngettext('%(num)d line was edited by hand: keep it or rebuild it?', '%(num)d lines were edited by hand: keep them or rebuild them?', edited_lines|length) }}</p>
+                <label class="mr-4"><input type="radio" name="keep_edited" value="keep" checked> {{ _('Keep my edits') }}</label>
+                <label><input type="radio" name="keep_edited" value="rebuild"> {{ _('Rebuild them too') }}</label>
+            </fieldset>
+            {% endif %}
+        </form>
+        {% endif %}
+
+        <div class="hidden md:grid grid-cols-12 gap-3 px-4 py-2 text-xs uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark border-t border-border-light dark:border-border-dark">
+            <div class="col-span-6">{{ _('Description') }}</div>
+            <div class="col-span-2 text-right">{{ _('Quantity') }}</div>
+            <div class="col-span-2 text-right">{{ _('Unit price') }}</div>
+            <div class="col-span-2 text-right pr-10">{{ _('Amount') }}</div>
+        </div>
+        {% for line in hours_lines %}
+            {% include 'invoices/_draft_line.html' %}
+        {% else %}
+        <p class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark border-t border-border-light dark:border-border-dark">{{ _('No hours on this draft yet.') }}</p>
+        {% endfor %}
+
+        <div class="border-t border-border-light dark:border-border-dark p-4 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex flex-wrap items-center gap-4">
+                <button type="button" class="btn btn-secondary" data-toggle="addHoursLine" aria-controls="addHoursLine" id="addHoursLineButton">+ {{ _('Add hours line') }}</button>
+                <span class="text-sm">{{ _('Total hours') }} <strong id="hoursBilled">{{ hours_billed_text }} h</strong>
+                    <span class="text-text-muted-light dark:text-text-muted-dark">· {{ _('tracked %(hours)s h', hours=tracked_text) }}</span></span>
+            </div>
+            <span class="text-lg">{{ _('Hours') }} <strong id="hoursTotal">{{ money(hours_total) }} {{ invoice.currency_code }}</strong></span>
+        </div>
+        <form method="POST" action="{{ url_for('invoices.draft_add_line', invoice_id=invoice.id) }}" id="addHoursLine" class="hidden border-t border-border-light dark:border-border-dark p-4 grid grid-cols-12 gap-3" data-draft-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="line_type" value="hours">
+            <label class="col-span-12 md:col-span-6 text-sm">{{ _('Description') }}
+                <textarea name="description" rows="2" maxlength="500" required class="form-input w-full" placeholder="{{ _('e.g. Support, December') }}"></textarea>
+            </label>
+            <label class="col-span-4 md:col-span-2 text-sm">{{ _('Hours') }}
+                <input type="text" inputmode="decimal" name="quantity" required class="form-input w-full text-right">
+            </label>
+            <label class="col-span-4 md:col-span-2 text-sm">{{ _('Rate') }}
+                <input type="text" inputmode="decimal" name="unit_price" value="{{ money(default_hours_rate) }}" class="form-input w-full text-right">
+            </label>
+            <div class="col-span-4 md:col-span-2 flex items-end">
+                <button type="submit" class="btn btn-primary w-full">{{ _('Add line') }}</button>
+            </div>
+            <p class="col-span-12 text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('A line without time entries, at the project rate by default. Regrouping keeps it.') }}</p>
+        </form>
+    </div>
+</section>
