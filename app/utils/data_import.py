@@ -560,42 +560,6 @@ def import_from_harvest(user_id, account_id, api_token, start_date, end_date, im
     return summary
 
 
-def restore_from_backup(user_id, backup_file_path):
-    """
-    Restore data from a backup file
-
-    Args:
-        user_id: ID of the admin user performing restore
-        backup_file_path: Path to backup JSON file
-
-    Returns:
-        Dictionary with restore statistics
-    """
-    user = User.query.get(user_id)
-    if not user or not user.is_admin:
-        raise ImportError("Only admin users can restore from backup")
-
-    # Load backup file
-    try:
-        with open(backup_file_path, "r", encoding="utf-8") as f:
-            backup_data = json.load(f)
-    except Exception as e:
-        raise ImportError(f"Failed to load backup file: {str(e)}")
-
-    # Validate backup format
-    if "backup_info" not in backup_data:
-        raise ImportError("Invalid backup file format")
-
-    statistics = {"users": 0, "clients": 0, "projects": 0, "time_entries": 0, "tasks": 0, "expenses": 0, "errors": []}
-
-    # Note: This is a simplified restore. In production, you'd want more sophisticated
-    # handling of conflicts, relationships, and potentially a transaction-based approach
-
-    current_app.logger.info(f"Starting restore from backup by user {user.username}")
-
-    return statistics
-
-
 def _parse_datetime(datetime_str):
     """
     Parse datetime string in various formats
