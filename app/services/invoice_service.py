@@ -15,6 +15,9 @@ from app.utils.db import safe_commit
 from app.utils.event_bus import emit_event
 from app.utils.transactions import transactional
 
+# Why a status change to Cancelled is refused for an invoice with payments
+HAS_PAYMENTS_MESSAGE = "This invoice has payments. Use Correct → Credit note, or remove the payments first."
+
 
 class InvoiceService:
     """Service for invoice operations"""
@@ -425,6 +428,20 @@ class InvoiceService:
                 "previous_status": previous_status,
                 "status": previous_status,
             }
+
+        # Money was received: cancelling would leave the payments with no invoice. A full credit note
+        # (force) cancels it on purpose; anything else goes through Correct or removes the payments first.
+        if not force and new_status == "cancelled":
+            from app.services.invoice_correction_service import InvoiceCorrectionService
+
+            if InvoiceCorrectionService.has_payments(invoice):
+                return {
+                    "success": False,
+                    "error": "has_payments",
+                    "message": HAS_PAYMENTS_MESSAGE,
+                    "previous_status": previous_status,
+                    "status": previous_status,
+                }
 
         invoice.status = new_status
 

@@ -647,6 +647,95 @@ def test_an_invoice_with_payments_can_only_be_credited(client, user, billing, pa
     assert len(_active_links(inv)) == 3
 
 
+HAS_PAYMENTS = "This invoice has payments. Use Correct → Credit note, or remove the payments first."
+
+
+def _add_payment(inv, paid_by):
+    from app.models import Payment
+
+    if paid_by == "amount_paid":
+        inv.amount_paid = Decimal("50")
+    else:
+        db.session.add(
+            Payment(invoice_id=inv.id, amount=Decimal("50"), payment_date=date(2026, 11, 1), status="completed")
+        )
+    db.session.commit()
+
+
+@pytest.mark.parametrize("paid_by", ["amount_paid", "payment"])
+def test_status_change_cannot_cancel_an_invoice_with_payments(client, user, billing, paid_by):
+    inv = _issue(client, _draft(client, user, billing, number=f"INV-STATUS-PAY-{paid_by}"))
+    _add_payment(inv, paid_by)
+
+    # The status menu and the Cancel invoice button
+    resp = client.post(f"/invoices/{inv.id}/status", data={"new_status": "cancelled"})
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == HAS_PAYMENTS
+
+    # The API (DELETE cancels)
+    resp = client.delete(f"/api/v1/invoices/{inv.id}", headers=_token(user))
+    assert resp.status_code == 400
+    assert resp.get_json()["message"] == HAS_PAYMENTS
+
+    db.session.expire_all()
+    assert Invoice.query.get(inv.id).status == "issued"
+    assert len(_active_links(inv)) == 3
+    assert _entries_state(billing) == {(True, inv.invoice_number)}
+
+
+def test_bulk_cancel_skips_invoices_with_payments_and_cancels_the_rest(client, user, billing):
+    with_payment = _issue(client, _draft(client, user, billing, number="INV-BULK-PAY"))
+    _add_payment(with_payment, "payment")
+    other = InvoiceFactory(
+        invoice_number="INV-BULK-NOPAY",
+        project_id=billing["project"].id,
+        client_id=billing["client"].id,
+        client_name=billing["client"].name,
+        created_by=user.id,
+    )
+    other.status = "sent"
+    db.session.commit()
+
+    resp = client.post(
+        "/invoices/bulk-status",
+        data={"invoice_ids[]": [str(with_payment.id), str(other.id)], "status": "cancelled"},
+        follow_redirects=True,
+    )
+
+    assert resp.status_code == 200
+    page = resp.get_data(as_text=True)
+    assert "Skipped 1 invoice(s) with payments: use Correct → Credit note, or remove the payments first" in page
+    db.session.expire_all()
+    assert Invoice.query.get(with_payment.id).status == "issued"
+    assert len(_active_links(with_payment)) == 3
+    assert Invoice.query.get(other.id).status == "cancelled"
+
+
+def test_invoice_without_payments_is_still_cancelled_from_the_status_menu(client, user, billing):
+    inv = _draft(client, user, billing, number="INV-STATUS-NOPAY")
+
+    resp = client.post(f"/invoices/{inv.id}/status", data={"new_status": "cancelled"})
+
+    assert resp.status_code == 200 and resp.get_json()["success"] is True
+    db.session.expire_all()
+    assert Invoice.query.get(inv.id).status == "cancelled"
+    assert _active_links(inv) == []
+
+
+def test_full_credit_note_still_cancels_an_invoice_with_payments(client, user, billing):
+    from app.models import CreditNote
+
+    inv = _issue(client, _draft(client, user, billing, number="INV-CN-PAY"))
+    _add_payment(inv, "payment")
+
+    resp = client.post(f"/credit-notes/create-from-invoice/{inv.id}", data={"mode": "full", "reason": "Refund"})
+
+    assert resp.status_code in (200, 302)
+    db.session.expire_all()
+    assert CreditNote.query.filter_by(invoice_id=inv.id).count() == 1
+    assert Invoice.query.get(inv.id).status == "cancelled"
+
+
 def test_one_place_to_cancel_an_issued_invoice(client, user, billing):
     inv = _draft(client, user, billing, number="INV-ONE-CANCEL")
 
