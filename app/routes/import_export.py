@@ -15,12 +15,7 @@ from app.models import DataExport, DataImport, User
 from app.utils.backup import restore_backup as restore_backup_archive
 from app.utils.data_export import create_backup, export_filtered_data, export_user_data_gdpr
 from app.utils.data_import import ImportError as DataImportError
-from app.utils.data_import import (
-    import_csv_clients,
-    import_csv_time_entries,
-    import_from_harvest,
-    import_from_toggl,
-)
+from app.utils.data_import import import_csv_clients, import_csv_time_entries, import_from_harvest, import_from_toggl
 from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_helpers import module_enabled
 
