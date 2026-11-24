@@ -17,6 +17,9 @@ class Project(db.Model):
     billable = db.Column(db.Boolean, default=True, nullable=False)
     hourly_rate = db.Column(db.Numeric(9, 2), nullable=True)
     billing_ref = db.Column(db.String(100), nullable=True)
+    # How hours became lines on the project's last invoice: the default for the next one
+    last_hours_layout = db.Column(db.String(20), nullable=True)
+    last_line_template = db.Column(db.String(255), nullable=True)
     # Short project code for compact display (e.g., on Kanban cards)
     code = db.Column(db.String(20), nullable=True, unique=True, index=True)
     status = db.Column(db.String(20), default="active", nullable=False)  # 'active', 'inactive', or 'archived'

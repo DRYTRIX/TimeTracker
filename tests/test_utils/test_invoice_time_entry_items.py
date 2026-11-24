@@ -151,6 +151,6 @@ def test_project_grouping_keeps_one_line_per_project_and_rate(app, rated_project
     e1 = _entry(user, project, datetime(2026, 3, 10, 9, 0), task=task_a)
     e2 = _entry(user, project, datetime(2026, 3, 11, 9, 0), task=task_b)
 
-    (item,) = build_time_entry_lines(1, [e1, e2], group=True, group_by_task=False).items
-    assert item.description == f"Project: {project.name}"
+    (item,) = build_time_entry_lines(1, [e1, e2], group=True, group_by_task=False, date_format="%Y-%m-%d").items
+    assert item.description == f"{project.name} (2026-03-10-2026-03-11)"
     assert item.quantity == Decimal("2.00")

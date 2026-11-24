@@ -193,14 +193,29 @@
                     {% endif %}
                 </div>
 
-                <div class="mb-6 p-4 rounded-lg border border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-gray-900/30">
-                    <label class="flex items-start gap-3 cursor-pointer text-sm">
-                        <input type="checkbox" class="mt-1" name="per_entry_lines" value="on" {% if not invoice_group_time_entries %}checked{% endif %}>
-                        <span>
-                            <span class="font-medium text-text-light dark:text-text-dark">{{ _('Create one invoice line per time entry') }}</span>
-                            <span class="block text-text-muted-light dark:text-text-muted-dark mt-0.5">{{ _('Preserves individual descriptions instead of grouping by task or project.') }}</span>
-                        </span>
-                    </label>
+                <div class="mb-6 p-4 rounded-lg border border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-gray-900/30" id="hours-layout-section">
+                    <h2 class="text-sm font-semibold mb-2">{{ _('Show hours as') }}</h2>
+                    <div class="space-y-2" role="radiogroup" aria-label="{{ _('Show hours as') }}">
+                        {% for layout, label in hours_layouts %}
+                        <label class="flex items-start gap-3 cursor-pointer text-sm">
+                            <input type="radio" class="mt-1 js-hours-layout" name="hours_layout" value="{{ layout }}" {% if layout == hours_layout %}checked{% endif %}>
+                            <span class="min-w-0">
+                                <span class="font-medium text-text-light dark:text-text-dark">{{ _(label) }}</span>
+                                <span class="block text-text-muted-light dark:text-text-muted-dark mt-0.5 whitespace-pre-line break-words js-layout-example" data-layout="{{ layout }}"></span>
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4" id="line-template-field">
+                        <label for="line_template" class="block text-sm font-medium mb-1">{{ _('Line description') }}</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="line_template" name="line_template" maxlength="255" value="{{ line_template or '' }}" class="form-input flex-1 text-sm">
+                            <button type="button" class="btn btn-secondary text-sm" id="line-template-reset">{{ _('Reset') }}</button>
+                        </div>
+                        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ _('Placeholders: {date}, {project}, {task}, {person}, {note}. A line with several entries shows the period, the names comma-separated and each note on its own line. Lines that differ only by rate end with the rate.') }}
+                        </p>
+                    </div>
                 </div>
 
                 <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-border-light dark:border-border-dark pt-4">
@@ -246,7 +261,7 @@
             <ul class="list-disc pl-5 text-sm text-text-muted-light dark:text-text-muted-dark space-y-2">
                 <li>{{ _('Time entries are not expenses — they become Invoice Items (hourly work).') }}</li>
                 <li>{{ _('You can select multiple time entries, costs, expenses, and extra goods.') }}</li>
-                <li>{{ _('By default, time entries are grouped by task or project; enable one line per entry to keep each description.') }}</li>
+                <li>{{ _('Choose how hours become lines under Show hours as; the choice is remembered for the project. Lines you edited by hand stay as they are.') }}</li>
                 <li>{{ _('Costs and extra goods are added as individual invoice items.') }}</li>
                 <li>{{ _('Expense-module records are linked to the invoice and appear in the Expenses section.') }}</li>
             </ul>
@@ -351,7 +366,91 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Show hours as: an example line per layout, from the selected entries
+    const layoutDefaults = {{ default_line_templates|tojson }};
+    const previewUrl = {{ url_for('invoices.hours_layout_preview', invoice_id=invoice.id)|tojson }};
+    const templateInput = document.getElementById('line_template');
+    const templateField = document.getElementById('line-template-field');
+    const templateReset = document.getElementById('line-template-reset');
+    const csrfInput = form.querySelector('input[name="csrf_token"]');
+    let currentLayout = (form.querySelector('.js-hours-layout:checked') || {}).value || 'task';
+    let previewTimer = null;
+    let previewSeq = 0;
+
+    function templateIsCustom() {
+        if (!templateInput) return false;
+        const value = templateInput.value.trim();
+        return value !== '' && value !== (layoutDefaults[currentLayout] || '');
+    }
+
+    function setExamples(texts) {
+        form.querySelectorAll('.js-layout-example').forEach(function(el) {
+            el.textContent = texts[el.getAttribute('data-layout')] || '';
+        });
+    }
+
+    function refreshExamples() {
+        const ids = timeEntries().filter(function(cb) { return cb.checked; }).map(function(cb) { return cb.value; });
+        if (!ids.length) {
+            setExamples({});
+            return;
+        }
+        const seq = ++previewSeq;
+        const body = { time_entry_ids: ids };
+        if (templateIsCustom()) body.line_template = templateInput.value;
+        fetch(previewUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfInput ? csrfInput.value : '' },
+            body: JSON.stringify(body),
+        }).then(function(r) { return r.ok ? r.json() : null; }).then(function(data) {
+            if (!data || seq !== previewSeq) return;
+            const texts = {};
+            Object.keys(data.layouts || {}).forEach(function(layout) {
+                const info = data.layouts[layout];
+                if (layout === 'none') {
+                    texts[layout] = {{ _('No hours lines')|tojson }};
+                } else if (info.lines) {
+                    texts[layout] = info.example + (info.lines > 1 ? '\n' + {{ _('%(count)s lines in all', count='__N__')|tojson }}.replace('__N__', info.lines) : '');
+                }
+            });
+            setExamples(texts);
+        }).catch(function() {});
+    }
+
+    function scheduleExamples() {
+        clearTimeout(previewTimer);
+        previewTimer = setTimeout(refreshExamples, 250);
+    }
+
+    function syncTemplateField() {
+        if (templateField) templateField.style.display = currentLayout === 'none' ? 'none' : '';
+    }
+
+    form.querySelectorAll('.js-hours-layout').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            if (!radio.checked) return;
+            const custom = templateIsCustom();
+            currentLayout = radio.value;
+            if (templateInput && !custom) templateInput.value = layoutDefaults[currentLayout] || '';
+            syncTemplateField();
+        });
+    });
+    if (templateInput) templateInput.addEventListener('input', scheduleExamples);
+    if (templateReset) {
+        templateReset.addEventListener('click', function() {
+            templateInput.value = layoutDefaults[currentLayout] || '';
+            scheduleExamples();
+        });
+    }
+    form.addEventListener('change', function(e) {
+        if (e.target && e.target.classList && (e.target.classList.contains('js-time-entry') || e.target.classList.contains('js-select-day') || e.target.classList.contains('js-select-all-time'))) {
+            scheduleExamples();
+        }
+    });
+    syncTemplateField();
+
     refreshSelectionUi();
+    scheduleExamples();
 
     form.addEventListener('submit', function(e) {
         const anyChecked = form.querySelector('input[name="time_entries[]"]:checked, input[name="project_costs[]"]:checked, input[name="expenses[]"]:checked, input[name="extra_goods[]"]:checked');

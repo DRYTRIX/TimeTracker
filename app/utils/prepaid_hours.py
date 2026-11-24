@@ -35,9 +35,12 @@ class PrepaidMonthSummary:
 class PrepaidHoursAllocator:
     """Encapsulates prepaid hour allocation logic for a client."""
 
-    def __init__(self, client: Client, invoice: Optional[Invoice] = None):
+    def __init__(self, client: Client, invoice: Optional[Invoice] = None, keep_entry_ids: Iterable[int] = ()):
+        """``keep_entry_ids``: entries already on ``invoice`` whose allocation stays as it is (their ledger
+        rows are neither removed nor recalculated, and count as used)."""
         self.client = client
         self.invoice = invoice
+        self.keep_entry_ids: Set[int] = set(keep_entry_ids or ())
         self.plan_hours = client.prepaid_hours_decimal if client else Decimal("0")
         self.total_prepaid_hours_assigned = Decimal("0")
         self._consumed_by_period: dict[date, Decimal] = {}
@@ -147,7 +150,11 @@ class PrepaidHoursAllocator:
         if not self.invoice:
             return
 
-        existing_allocations = ClientPrepaidConsumption.query.filter_by(invoice_id=self.invoice.id).all()
+        existing_allocations = [
+            allocation
+            for allocation in ClientPrepaidConsumption.query.filter_by(invoice_id=self.invoice.id).all()
+            if allocation.time_entry_id not in self.keep_entry_ids
+        ]
         if not existing_allocations:
             return
 
@@ -157,7 +164,8 @@ class PrepaidHoursAllocator:
             for entry in entries:
                 entry.billable = True
 
-        ClientPrepaidConsumption.query.filter_by(invoice_id=self.invoice.id).delete(synchronize_session=False)
+        for allocation in existing_allocations:
+            db.session.delete(allocation)
         db.session.flush()
 
     def _collect_months(self, entries: Iterable[TimeEntry]) -> Set[date]:
@@ -177,7 +185,11 @@ class PrepaidHoursAllocator:
         )
 
         if self.invoice:
-            query = query.filter(ClientPrepaidConsumption.invoice_id != self.invoice.id)
+            own_kept = db.and_(
+                ClientPrepaidConsumption.invoice_id == self.invoice.id,
+                ClientPrepaidConsumption.time_entry_id.in_(self.keep_entry_ids or [-1]),
+            )
+            query = query.filter(db.or_(ClientPrepaidConsumption.invoice_id != self.invoice.id, own_kept))
 
         for row in query:
             hours = Decimal(row.seconds_consumed or 0) / SECONDS_IN_HOUR

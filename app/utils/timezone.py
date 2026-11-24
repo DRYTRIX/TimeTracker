@@ -103,6 +103,11 @@ def get_resolved_week_start_day(user=None):
     return 1
 
 
+def get_system_date_format():
+    """Return the strftime date format string of the system setting (no user preference)."""
+    return USER_DATE_FORMATS[_get_system_date_format_key()]
+
+
 def get_user_date_format(user=None):
     """Return the strftime date format string for the user's preference.
 

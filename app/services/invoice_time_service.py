@@ -16,6 +16,20 @@ from sqlalchemy import and_, exists, or_
 
 from app import db
 from app.models import Invoice, InvoiceItem, InvoiceTimeLink, TimeEntry
+from app.utils.invoice_time_entry_items import (
+    LAYOUT_DETAILED,
+    LAYOUT_NONE,
+    LAYOUT_TASK,
+    BillableTimeEntry,
+    TimeEntryLines,
+    build_time_entry_lines,
+    default_line_template,
+    describe_lines,
+    normalize_billable_entries,
+    normalize_layout,
+    normalize_template,
+    round_quantity,
+)
 
 UNBILLED = "unbilled"
 ON_DRAFT = "on_draft"
@@ -90,6 +104,16 @@ class InvoiceStatusChangeError(InvoiceTimeError):
     def __init__(self, invoice: Invoice, previous_status: Optional[str]):
         self.invoice = invoice
         super().__init__(f"Invoice {invoice.invoice_number} cannot change from {previous_status} to {invoice.status}")
+
+
+class InvalidHoursLayoutError(InvoiceTimeError):
+    """Lines cannot be rebuilt with this layout (``none`` would drop the hours instead)."""
+
+    code = "invalid_hours_layout"
+
+    def __init__(self, layout: Optional[str]):
+        self.layout = layout
+        super().__init__(f"Hours cannot be regrouped as {layout!r}")
 
 
 class InvoiceNotDraftError(InvoiceTimeError):
@@ -637,24 +661,339 @@ class InvoiceTimeService:
             self.refresh_item_cache(affected)
         return len(links)
 
-    def detach_lines(self, invoice: Invoice) -> Dict[int, Decimal]:
+    def detach_lines(self, invoice: Invoice, items: Optional[Iterable[InvoiceItem]] = None) -> Dict[int, Decimal]:
         """Remove the links of a draft invoice's lines before the lines are replaced.
 
         Returns hours per entry so the new lines can keep them. Links of entries with no line
-        (fully prepaid) stay.
+        (fully prepaid) stay. ``items`` limits this to these lines.
         """
         self._require_draft(invoice)
         hours: Dict[int, Decimal] = {}
-        links = InvoiceTimeLink.query.filter(
+        query = InvoiceTimeLink.query.filter(
             InvoiceTimeLink.invoice_id == invoice.id,
             InvoiceTimeLink.invoice_item_id.isnot(None),
             InvoiceTimeLink.released_at.is_(None),
-        ).all()
+        )
+        if items is not None:
+            item_ids = [item.id for item in items if item.id is not None]
+            if not item_ids:
+                return hours
+            query = query.filter(InvoiceTimeLink.invoice_item_id.in_(item_ids))
+        links = query.all()
         for link in links:
             hours[link.time_entry_id] = hours.get(link.time_entry_id, Decimal("0")) + Decimal(link.hours or 0)
             db.session.delete(link)
         db.session.flush()
         return hours
+
+    # ------------------------------------------------------------------
+    # Lines from hours: layout and description template
+    # ------------------------------------------------------------------
+    @staticmethod
+    def settings_layout() -> str:
+        """Layout from the global "group time entries" setting: by task, or one line per entry."""
+        from app.models import Settings
+
+        settings = Settings.get_settings()
+        group = getattr(settings, "invoice_group_time_entries", True) if settings else True
+        return LAYOUT_TASK if group else LAYOUT_DETAILED
+
+    def resolve_layout(
+        self,
+        project=None,
+        layout: Optional[str] = None,
+        template: Optional[str] = None,
+        fallback_layout: Optional[str] = None,
+    ) -> Tuple[str, str]:
+        """Layout and template to use: the ones given, else the project's last ones, else defaults.
+
+        Without a layout and without a project default, ``fallback_layout`` (if given) or the global
+        setting decides. Without a template, the project's last template is used when it was
+        written for the same layout, else the layout's default.
+        """
+        # "Don't add any hours" is a choice for one invoice, never the default for the next one
+        last_layout = normalize_layout(getattr(project, "last_hours_layout", None))
+        if last_layout == LAYOUT_NONE:
+            last_layout = None
+        layout = normalize_layout(layout) or last_layout or normalize_layout(fallback_layout) or self.settings_layout()
+        resolved = normalize_template(template)
+        if resolved is None and last_layout == layout:
+            resolved = normalize_template(getattr(project, "last_line_template", None))
+        return layout, resolved or default_line_template(layout)
+
+    @staticmethod
+    def remember_layout(invoice: Invoice, project, layout: str, template: Optional[str]) -> None:
+        """Store the layout and template on the invoice and, when ``project`` is given, on the project.
+
+        ``none`` is stored on the invoice only: the project keeps its last layout with hours.
+        """
+        template = normalize_template(template)
+        invoice.hours_layout = layout
+        invoice.line_template = template
+        if project is not None and layout != LAYOUT_NONE:
+            project.last_hours_layout = layout
+            project.last_line_template = template
+
+    @staticmethod
+    def _next_position(invoice: Invoice) -> int:
+        if invoice.id is None:
+            return 0
+        positions = [item.position or 0 for item in invoice.items.all()]
+        return max(positions) + 1 if positions else 0
+
+    def add_entries(
+        self,
+        invoice: Invoice,
+        entries,
+        layout: Optional[str] = None,
+        template: Optional[str] = None,
+        *,
+        hours_by_entry: Optional[Dict[int, Decimal]] = None,
+        created_by: Optional[int] = None,
+        project=None,
+        remember: bool = True,
+        fallback_layout: Optional[str] = None,
+    ) -> TimeEntryLines:
+        """Build lines for time entries on a draft invoice and link the entries to them.
+
+        ``entries`` are time entries, or entries with their billable hours (``ProcessedTimeEntry``
+        after prepaid hours, ``BillableTimeEntry``); each link gets those hours unless
+        ``hours_by_entry`` says otherwise. Layout and template come from ``resolve_layout``. New lines
+        go after the invoice's other lines. The layout and template are stored on the invoice and,
+        with ``remember``, on the project as the default for its next invoice. Returns the lines
+        (with warnings for hours that had no rate). The caller commits.
+        """
+        self._require_draft(invoice)
+        entries = list(entries or [])
+        project = project if project is not None else invoice.project
+        layout, template = self.resolve_layout(project, layout, template, fallback_layout)
+        if invoice.id is None:
+            db.session.flush()
+
+        lines = build_time_entry_lines(
+            invoice.id,
+            entries,
+            layout=layout,
+            template=template,
+            project_name=project.name if project is not None else None,
+            currency=invoice.currency_code,
+        )
+        position = self._next_position(invoice)
+        for offset, item in enumerate(lines.items):
+            item.position = position + offset
+            db.session.add(item)
+        db.session.flush()
+
+        hours = {b.entry.id: b.billable_hours for b in normalize_billable_entries(entries)}
+        hours.update(hours_by_entry or {})
+        self.link_items(invoice, lines.items, hours_by_entry=hours, created_by=created_by)
+        self.remember_layout(invoice, project if remember else None, layout, template)
+        return lines
+
+    def _line_entries(self, item: InvoiceItem) -> List[Tuple[TimeEntry, Decimal]]:
+        """(entry, hours) of a line's active links, oldest link first."""
+        result: List[Tuple[TimeEntry, Decimal]] = []
+        for link in (
+            InvoiceTimeLink.query.filter(
+                InvoiceTimeLink.invoice_item_id == item.id, InvoiceTimeLink.released_at.is_(None)
+            )
+            .order_by(InvoiceTimeLink.id.asc())
+            .all()
+        ):
+            result.append((link.time_entry, Decimal(link.hours or 0)))
+        return result
+
+    @staticmethod
+    def _ordered_items(invoice: Invoice) -> List[InvoiceItem]:
+        return sorted(invoice.items.all(), key=lambda item: (item.position or 0, item.id or 0))
+
+    def rebuild_lines(
+        self,
+        invoice: Invoice,
+        layout: Optional[str] = None,
+        template: Optional[str] = None,
+        keep_edited: bool = True,
+        created_by: Optional[int] = None,
+    ) -> TimeEntryLines:
+        """Regroup a draft's hours: its time lines are built again from the same entries and hours.
+
+        Links stay with the same entries, so the hours and the total do not change (unless a
+        rebuilt line had a hand-edited quantity or price). Manual lines are never touched. With
+        ``keep_edited`` a time line whose description, quantity or price was edited stays as it is,
+        with its entries; without it, edited lines are rebuilt too. Kept and manual lines keep their
+        place; the new lines take the place of the first rebuilt line. Without ``layout`` the
+        invoice's own layout is kept. The caller commits.
+        """
+        self._require_draft(invoice)
+        project = invoice.project
+        layout = normalize_layout(layout) or normalize_layout(invoice.hours_layout)
+        if layout == LAYOUT_NONE:
+            raise InvalidHoursLayoutError(layout)
+        if template is None and layout is not None and layout == normalize_layout(invoice.hours_layout):
+            template = invoice.line_template
+        layout, template = self.resolve_layout(project, layout, template)
+
+        items = self._ordered_items(invoice)
+        rebuilt = [i for i in items if i.kind == "time" and not (keep_edited and i.is_edited)]
+        billable: List[BillableTimeEntry] = []
+        for item in rebuilt:
+            for entry, hours in self._line_entries(item):
+                billable.append(BillableTimeEntry(entry=entry, billable_hours=hours))
+
+        hours = self.detach_lines(invoice, rebuilt)
+        lines = build_time_entry_lines(
+            invoice.id,
+            billable,
+            layout=layout,
+            template=template,
+            project_name=project.name if project is not None else None,
+            currency=invoice.currency_code,
+        )
+        rebuilt_ids = {item.id for item in rebuilt}
+        order: List[InvoiceItem] = []
+        placed = False
+        for item in items:
+            if item.id in rebuilt_ids:
+                if not placed:
+                    order.extend(lines.items)
+                    placed = True
+                continue
+            order.append(item)
+        if not placed:
+            order.extend(lines.items)
+        for item in rebuilt:
+            db.session.delete(item)
+        db.session.flush()
+        for position, item in enumerate(order):
+            item.position = position
+            if item.id is None:
+                db.session.add(item)
+        db.session.flush()
+        self.link_items(invoice, lines.items, hours_by_entry=hours, created_by=created_by)
+        self.remember_layout(invoice, project, layout, template)
+        invoice.calculate_totals()
+        return lines
+
+    def apply_template(self, invoice: Invoice, template: Optional[str], keep_edited: bool = True) -> int:
+        """Rewrite the descriptions of a draft's time lines from their entries, lines unchanged.
+
+        With ``keep_edited`` a line whose description was edited by hand keeps it; without it, the
+        line is rewritten and no longer counts as edited. Returns the number of lines rewritten.
+        The caller commits.
+        """
+        self._require_draft(invoice)
+        project = invoice.project
+        layout = normalize_layout(invoice.hours_layout)
+        if layout in (None, LAYOUT_NONE):
+            layout, _template = self.resolve_layout(project)
+            layout = LAYOUT_TASK if layout == LAYOUT_NONE else layout
+        template = normalize_template(template) or default_line_template(layout)
+
+        time_items = [i for i in self._ordered_items(invoice) if i.kind == "time"]
+        lines = [(item, [entry for entry, _hours in self._line_entries(item)]) for item in time_items]
+        descriptions = describe_lines(
+            lines,
+            layout=layout,
+            template=template,
+            currency=invoice.currency_code,
+            project_name=project.name if project is not None else None,
+        )
+        rewritten = 0
+        for index, (item, _entries) in enumerate(lines):
+            if index not in descriptions or (keep_edited and item.description_edited):
+                continue
+            item.description = descriptions[index]
+            item.description_edited = False
+            rewritten += 1
+        self.remember_layout(invoice, project, layout, template)
+        db.session.flush()
+        return rewritten
+
+    @staticmethod
+    def snapshot_lines(invoice: Invoice) -> Dict[str, Dict]:
+        """What a draft's lines look like before a form or the API replaces them (see ``carry_line_state``)."""
+        by_id: Dict[int, Dict] = {}
+        by_entries: Dict[frozenset, Dict] = {}
+        for item in invoice.items.all():
+            state = {
+                "kind": item.kind,
+                "description": item.description,
+                "quantity": Decimal(str(item.quantity or 0)),
+                "unit_price": Decimal(str(item.unit_price or 0)),
+                "description_edited": bool(item.description_edited),
+                "quantity_edited": bool(item.quantity_edited),
+                "price_edited": bool(item.price_edited),
+            }
+            by_id[item.id] = state
+            ids = frozenset(_parse_ids(item.time_entry_ids))
+            if ids:
+                by_entries.setdefault(ids, state)
+        return {"by_id": by_id, "by_entries": by_entries}
+
+    @staticmethod
+    def previous_line_state(snapshot: Dict[str, Dict], time_entry_ids=None, item_id=None) -> Optional[Dict]:
+        """The line a new line replaces: by its former id, else by the same time entries."""
+        try:
+            previous = snapshot["by_id"].get(int(item_id)) if item_id not in (None, "") else None
+        except (TypeError, ValueError):
+            previous = None
+        if previous is None:
+            previous = snapshot["by_entries"].get(frozenset(line_entry_ids(time_entry_ids)))
+        return previous
+
+    @staticmethod
+    def normalize_description(text: Optional[str]) -> str:
+        """Description as stored: line breaks as ``\\n``, no spaces at line ends or around the text."""
+        lines = (text or "").replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        return "\n".join(line.rstrip() for line in lines).strip()
+
+    @staticmethod
+    def tracked_quantity(item: InvoiceItem) -> Optional[Decimal]:
+        """Quantity from a line's links: the sum of each link's hours rounded to 2 places."""
+        links = InvoiceTimeLink.query.filter(
+            InvoiceTimeLink.invoice_item_id == item.id, InvoiceTimeLink.released_at.is_(None)
+        ).all()
+        if not links:
+            return None
+        return sum((round_quantity(Decimal(link.hours or 0)) for link in links), Decimal("0"))
+
+    @classmethod
+    def carry_line_state(cls, snapshot: Dict[str, Dict], item: InvoiceItem, item_id=None) -> None:
+        """Set the kind of a replaced line, its quantity, and what was changed by hand.
+
+        Call after the line's entries are linked. A line with time entries is a time line, and its
+        quantity is the tracked one (from its links) unless it was changed by hand: a submitted
+        quantity that differs from the tracked one and from the line's previous quantity, or one
+        already marked as edited, is kept and marks the line. The description and price are marked
+        when they differ from the previous line's (line breaks and spaces at the ends do not count).
+        A flag once set stays.
+        """
+        item.kind = "time" if item.time_entry_ids else "manual"
+        if item.kind != "time":
+            return
+        previous = cls.previous_line_state(snapshot, item.time_entry_ids, item_id)
+        if previous is not None and previous["kind"] != "time":
+            previous = None
+
+        quantity = Decimal(str(item.quantity or 0)).quantize(Decimal("0.01"))
+        tracked = cls.tracked_quantity(item)
+        if tracked is not None and quantity != tracked:
+            untouched = previous is not None and quantity == previous["quantity"].quantize(Decimal("0.01"))
+            if (previous is None or untouched) and not (previous or {}).get("quantity_edited"):
+                # Not changed by hand: follow the entries
+                item.quantity = tracked
+                item.total_amount = item.line_net
+            else:
+                item.quantity_edited = True
+        if previous is None:
+            return
+
+        unit_price = Decimal(str(item.unit_price or 0)).quantize(Decimal("0.01"))
+        item.description_edited = previous["description_edited"] or (
+            cls.normalize_description(item.description) != cls.normalize_description(previous["description"])
+        )
+        item.quantity_edited = bool(previous["quantity_edited"] or item.quantity_edited)
+        item.price_edited = previous["price_edited"] or unit_price != previous["unit_price"].quantize(Decimal("0.01"))
 
     def unlink_invoice(self, invoice: Invoice) -> List[int]:
         """Remove every link of a draft invoice. Returns the entry IDs it billed, in link order."""
