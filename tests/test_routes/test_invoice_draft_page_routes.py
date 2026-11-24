@@ -896,6 +896,94 @@ def test_dropping_a_partly_prepaid_line_elsewhere_frees_its_prepaid_hours(client
     assert Decimal(str(_line_of(other.id, b).quantity)) == Decimal("2.00")
 
 
+def _plan_of_three(prepaid):
+    """3 prepaid hours at 40/h: A (2 h) is fully covered, B (3 h) takes 1 and bills 2, C (2 h) is new."""
+    prepaid["client"].prepaid_hours_monthly = Decimal("3")
+    a, b, c = prepaid["entry"](3, 2), prepaid["entry"](4, 3), prepaid["entry"](5, 2)
+    a.project.hourly_rate = Decimal("40.00")
+    db.session.commit()
+    invoice = prepaid["draft_with"]([a, b])
+    assert Decimal(str(_line_of(invoice.id, b).quantity)) == Decimal("2.00")
+    return invoice, a, b, c
+
+
+def _generate(client, user, invoice, entries, path):
+    """Rebuild the draft's hours from ``entries`` one line per entry: by the API (replace) or the page."""
+    if path == "api":
+        resp = client.post(
+            f"/api/v1/invoices/{invoice.id}/generate-from-time",
+            json={"time_entry_ids": [e.id for e in entries], "replace_existing": True, "hours_layout": "detailed"},
+            headers=_api_token(user),
+        )
+        assert resp.status_code == 200, resp.get_data(as_text=True)
+    else:
+        _login(client, user)
+        resp = client.post(
+            f"/invoices/{invoice.id}/generate-from-time",
+            data={"time_entries[]": [str(e.id) for e in entries], "hours_layout": "detailed"},
+        )
+        assert resp.status_code == 302
+    db.session.expire_all()
+
+
+def _link_hours(invoice_id, entry):
+    from app.models import InvoiceTimeLink
+
+    return sorted(
+        (link.invoice_item_id is None, Decimal(link.hours))
+        for link in InvoiceTimeLink.query.filter_by(invoice_id=invoice_id, time_entry_id=entry.id, released_at=None)
+    )
+
+
+@pytest.mark.parametrize("listed", ["b_c", "a_b_c"])
+@pytest.mark.parametrize("path", ["api", "page"])
+def test_replacing_lines_bills_only_the_hours_prepaid_did_not_cover(client, user, prepaid, path, listed):
+    invoice, a, b, c = _plan_of_three(prepaid)
+
+    _generate(client, user, invoice, [b, c] if listed == "b_c" else [a, b, c], path)
+
+    # B bills the 2 hours left after its prepaid hour, and its link says the same
+    line_b = _line_of(invoice.id, b)
+    assert (Decimal(str(line_b.quantity)), Decimal(str(line_b.total_amount))) == (Decimal("2.00"), Decimal("80.00"))
+    assert _link_hours(invoice.id, b) == [(False, Decimal("2.00"))]
+    assert [row.hours_consumed for row in _ledger(b.id, invoice.id)] == [Decimal("1.00")]
+    # A stays fully covered: a link without a line
+    assert _line_of(invoice.id, a) is None
+    assert _link_hours(invoice.id, a) == [(True, Decimal("2.00"))]
+    assert [row.hours_consumed for row in _ledger(a.id, invoice.id)] == [Decimal("2.00")]
+    # C has no prepaid hours left and bills all of them
+    assert Decimal(str(_line_of(invoice.id, c).quantity)) == Decimal("2.00")
+    assert _ledger(c.id) == []
+    assert _total(invoice.id) == Decimal("160.00")
+
+
+def test_replacing_lines_without_the_entry_gives_back_its_prepaid_hours(client, user, prepaid):
+    invoice, a, b, c = _plan_of_three(prepaid)
+
+    _generate(client, user, invoice, [c], "api")
+
+    entry = TimeEntry.query.get(b.id)
+    assert _line_of(invoice.id, b) is None
+    assert InvoiceTimeService().billing_invoice(entry) is None
+    assert _ledger(b.id) == []
+    assert entry.billable is True
+    assert [row.hours_consumed for row in _ledger(a.id, invoice.id)] == [Decimal("2.00")]
+
+
+def test_replacing_lines_of_a_client_without_prepaid_hours_bills_every_hour(client, user, prepaid):
+    prepaid["client"].prepaid_hours_monthly = Decimal("0")
+    db.session.commit()
+    b, c = prepaid["entry"](4, 3), prepaid["entry"](5, 2)
+    invoice = prepaid["draft_with"]([b])
+
+    _generate(client, user, invoice, [b, c], "api")
+
+    assert Decimal(str(_line_of(invoice.id, b).quantity)) == Decimal("3.00")
+    assert _link_hours(invoice.id, b) == [(False, Decimal("3.00"))]
+    assert Decimal(str(_line_of(invoice.id, c).quantity)) == Decimal("2.00")
+    assert _total(invoice.id) == Decimal("150.00")
+
+
 def test_add_new_entries_leaves_out_an_entry_prepaid_on_another_invoice(client, user, prepaid):
     from app.models import ClientPrepaidConsumption
 
