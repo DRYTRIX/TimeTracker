@@ -26,8 +26,13 @@ class RecurringProjectCost(ExpenseCategoryLinkMixin, db.Model):
     frequency = db.Column(db.String(20), nullable=False)  # daily, weekly, monthly, yearly
     interval = db.Column(db.Integer, nullable=False, default=1)
     next_run_date = db.Column(db.Date, nullable=False, index=True)
+    # The first day it was due: a recurring cost that asks for its amount counts its days from here
+    start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    # The amount changes every time: the generator makes no cost; each draft of a period it falls in
+    # asks for the amount (Not logged yet). ``amount`` keeps the last amount, as a hint.
+    ask_amount = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     last_generated_at = db.Column(db.DateTime, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -55,11 +60,13 @@ class RecurringProjectCost(ExpenseCategoryLinkMixin, db.Model):
         self.amount = Decimal(str(amount))
         self.frequency = frequency
         self.next_run_date = next_run_date
+        self.start_date = kwargs.get("start_date") or next_run_date
         self.interval = kwargs.get("interval", 1)
         self.end_date = kwargs.get("end_date")
         self.billable = kwargs.get("billable", True)
         self.currency_code = kwargs.get("currency_code", "EUR")
         self.is_active = kwargs.get("is_active", True)
+        self.ask_amount = bool(kwargs.get("ask_amount", False))
 
     def __repr__(self):
         return f"<RecurringProjectCost {self.description} ({self.frequency})>"
@@ -79,7 +86,7 @@ class RecurringProjectCost(ExpenseCategoryLinkMixin, db.Model):
         raise ValueError(f"Invalid frequency: {self.frequency}")
 
     def should_generate_today(self):
-        if not self.is_active:
+        if not self.is_active or self.ask_amount:
             return False
 
         today = datetime.utcnow().date()
@@ -109,6 +116,8 @@ class RecurringProjectCost(ExpenseCategoryLinkMixin, db.Model):
             "next_run_date": self.next_run_date.isoformat() if self.next_run_date else None,
             "end_date": self.end_date.isoformat() if self.end_date else None,
             "is_active": self.is_active,
+            "ask_amount": bool(self.ask_amount),
+            "start_date": self.start_date.isoformat() if self.start_date else None,
             "last_generated_at": self.last_generated_at.isoformat() if self.last_generated_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

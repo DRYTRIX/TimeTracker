@@ -1029,3 +1029,692 @@ def test_receipt_errors_answer_with_fixed_texts(client, user, setup, app, tmp_pa
     )
     assert resp.status_code == 400
     assert resp.get_json() == {"success": False, "error": "receipt_not_saved", "message": message}
+
+
+# --- Not logged yet -----------------------------------------------------------------------------
+
+
+def _month_back(n):
+    """First day of the month ``n`` months before last month."""
+    return LAST.start - relativedelta(months=n)
+
+
+def _earlier_invoice(setup, user, start, costs, status="issued", number=None):
+    """An earlier invoice of Analytics for the month from ``start``, billing ``costs`` [(description, amount, category)]."""
+    end = start + relativedelta(months=1) - timedelta(days=1)
+    invoice = Invoice(
+        invoice_number=number or f"INV-EARLIER-{start:%Y%m}-{status}",
+        project_id=setup["analytics"].id,
+        client_name=setup["client"].name,
+        due_date=end + timedelta(days=30),
+        created_by=user.id,
+        client_id=setup["client"].id,
+        issue_date=end,
+    )
+    invoice.period_start, invoice.period_end = start, end
+    db.session.add(invoice)
+    db.session.commit()
+    made = [setup["cost"](d, a, c, day=start + timedelta(days=10)) for d, a, c in costs]
+    InvoiceCostsService().add_cost_lines(invoice, made)
+    invoice.calculate_totals()
+    invoice.status = status
+    db.session.commit()
+    return invoice
+
+
+@pytest.fixture
+def earlier(setup, user):
+    """BigQuery on the last three invoices, Ancient on a fourth before them, one cancelled invoice."""
+    sw = setup["software"]
+    for n in (1, 2, 3):
+        _earlier_invoice(setup, user, _month_back(n), [("BigQuery", str(100 + n * 10), sw), ("Looker", "200", sw)])
+    _earlier_invoice(setup, user, _month_back(4), [("Ancient tool", "5", sw)])
+    _earlier_invoice(setup, user, _month_back(1), [("Cancelled tool", "7", sw)], status="cancelled", number="INV-CXL")
+    return setup
+
+
+def test_not_logged_yet_lists_costs_of_the_last_three_invoices_missing_this_period(client, user, earlier):
+    _login(client, user)
+    invoice = _create(client, earlier, expenses=(), costs=("looker",))
+    html = client.get(f"/invoices/{invoice.id}").get_data(as_text=True)
+    block = html.split('id="notLoggedYet"', 1)[1].split("</section>", 1)[0]
+    assert "BigQuery" in block and "last time 110.00" in block  # the most recent invoice's amount
+    for absent in ("Looker", "Ancient tool", "Cancelled tool"):
+        assert absent not in block
+    assert 'data-warning="not-logged"' in html
+
+
+def test_plus_logs_the_cost_on_the_periods_last_day_and_bills_it(client, user, earlier):
+    _login(client, user)
+    invoice = _create(client, earlier, expenses=(), costs=())
+    resp = client.post(
+        f"/invoices/{invoice.id}/costs/not-logged",
+        data={
+            "description": "BigQuery",
+            "project_id": earlier["analytics"].id,
+            "category_id": earlier["software"].id,
+            "amount": "120",
+        },
+        headers=JSON,
+    )
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    cost = ProjectCost.query.filter_by(description="BigQuery", cost_date=LAST.end).one()
+    assert (cost.invoice_id, Decimal(cost.amount)) == (invoice.id, Decimal("120.00"))
+    assert InvoiceItem.query.get(cost.invoice_item_id).kind == LINE_KIND_COST
+    html = client.get(f"/invoices/{invoice.id}").get_data(as_text=True)
+    assert 'id="notLoggedYet"' not in html
+
+
+def test_make_it_recurring_repeats_it_from_the_next_period(client, user, earlier):
+    _login(client, user)
+    invoice = _create(client, earlier, expenses=(), costs=())
+    resp = client.post(
+        f"/invoices/{invoice.id}/costs/not-logged/recurring",
+        data={
+            "description": "BigQuery",
+            "project_id": earlier["analytics"].id,
+            "category_id": earlier["software"].id,
+            "amount": "",
+            "last_amount": "110.00",
+        },
+        headers=JSON,
+    )
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    recurring = RecurringProjectCost.query.filter_by(description="BigQuery").one()
+    assert (recurring.frequency, Decimal(recurring.amount), recurring.ask_amount) == (
+        "monthly",
+        Decimal("110.00"),
+        False,
+    )
+    assert recurring.next_run_date == LAST.end + relativedelta(months=1)
+
+
+def test_not_logged_yet_refuses_a_project_the_draft_does_not_bill(client, user, earlier):
+    _login(client, user)
+    invoice = _create(client, earlier, expenses=(), costs=())
+    resp = client.post(
+        f"/invoices/{invoice.id}/costs/not-logged",
+        data={
+            "description": "X",
+            "project_id": earlier["other"].id,
+            "category_id": earlier["software"].id,
+            "amount": "5",
+        },
+        headers=JSON,
+    )
+    assert resp.status_code == 400
+    assert resp.get_json()["message"] == "This cost belongs to a project the invoice does not bill."
+    assert resp.get_json()["error"] == "project_not_on_invoice"
+    assert ProjectCost.query.filter_by(description="X").first() is None
+
+
+def test_not_logged_yet_errors_answer_with_fixed_texts(client, user, earlier):
+    _login(client, user)
+    invoice = _create(client, earlier, expenses=(), costs=())
+    row = {"project_id": earlier["analytics"].id, "category_id": earlier["software"].id}
+    resp = client.post(
+        f"/invoices/{invoice.id}/costs/not-logged/recurring", data=dict(row, description="", amount="5"), headers=JSON
+    )
+    assert resp.get_json()["message"] == "Description is required."
+    resp = client.post(
+        f"/invoices/{invoice.id}/costs/not-logged", data=dict(row, description="BigQuery", amount="-3"), headers=JSON
+    )
+    assert resp.get_json()["message"] == "Amount must be above 0."
+    invoice = _reload(invoice)
+    invoice.period_start = invoice.period_end = None
+    db.session.commit()
+    resp = client.post(
+        f"/invoices/{invoice.id}/costs/not-logged", data=dict(row, description="BigQuery", amount="3"), headers=JSON
+    )
+    assert (resp.status_code, resp.get_json()["error"]) == (400, "no_period")
+    assert resp.get_json()["message"] == "The invoice has no period: set one in step 1 first."
+
+
+def test_a_cost_that_asks_for_its_amount_is_never_generated_and_each_draft_asks(client, user, setup):
+    from app.services.recurring_project_cost_service import RecurringProjectCostService
+
+    _login(client, user)
+    # Logged two months back with Repeat every month, ask for the amount
+    earlier = _earlier_invoice(setup, user, _month_back(2), [])
+    earlier.status = "draft"
+    db.session.commit()
+    resp = client.post(
+        f"/invoices/{earlier.id}/costs",
+        data={
+            "cost_date": (_month_back(2) + timedelta(days=4)).isoformat(),
+            "description": "Cloud",
+            "category_id": setup["software"].id,
+            "amount": "80",
+            "repeat": "monthly_ask",
+        },
+        headers=JSON,
+    )
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    recurring = RecurringProjectCost.query.filter_by(description="Cloud").one()
+    assert recurring.ask_amount and recurring.next_run_date == _month_back(2) + timedelta(days=4) + relativedelta(
+        months=1
+    )
+
+    # The generator makes nothing for it, even when it is due
+    recurring.next_run_date = date.today() - timedelta(days=1)
+    db.session.commit()
+    assert RecurringProjectCostService().generate_due_recurring_costs() == 0
+    assert RecurringProjectCostService().generate_cost(recurring) is None
+    assert ProjectCost.query.filter_by(recurring_cost_id=recurring.id).count() == 1
+
+    # Last month's draft asks for it, with the last amount as a hint
+    recurring.next_run_date = _month_back(1) + timedelta(days=4)
+    db.session.commit()
+    invoice = _create(client, setup, expenses=(), costs=())
+    block = client.get(f"/invoices/{invoice.id}").get_data(as_text=True).split('id="notLoggedYet"', 1)[1]
+    assert "Cloud" in block and "asks for the amount" in block and "last time 80.00" in block
+    client.post(
+        f"/invoices/{invoice.id}/costs/not-logged",
+        data={
+            "description": "Cloud",
+            "project_id": setup["analytics"].id,
+            "category_id": setup["software"].id,
+            "recurring_cost_id": recurring.id,
+            "amount": "95",
+        },
+        headers=JSON,
+    )
+    cost = ProjectCost.query.filter_by(description="Cloud", invoice_id=invoice.id).one()
+    assert cost.recurring_cost_id == recurring.id
+    assert Decimal(_reload(recurring).amount) == Decimal("95.00")
+    # It next asks after this period
+    assert _reload(recurring).next_run_date == LAST.start + timedelta(days=4) + relativedelta(months=1)
+    assert 'id="notLoggedYet"' not in client.get(f"/invoices/{invoice.id}").get_data(as_text=True)
+
+
+# --- receipts and bills in the PDF --------------------------------------------------------------
+
+
+def _pages(data):
+    import io
+
+    import pikepdf
+
+    with pikepdf.open(io.BytesIO(data)) as pdf:
+        return len(pdf.pages)
+
+
+def _receipt_pdf(pages=1):
+    import io
+
+    import pikepdf
+
+    pdf = pikepdf.new()
+    for _ in range(pages):
+        pdf.add_blank_page()
+    out = io.BytesIO()
+    pdf.save(out)
+    return out.getvalue()
+
+
+def _png():
+    import io
+
+    from PIL import Image
+
+    out = io.BytesIO()
+    Image.new("RGB", (40, 60), "white").save(out, format="PNG")
+    return out.getvalue()
+
+
+def test_pdf_is_followed_by_receipts_and_bills_when_asked(client, user, setup, app, tmp_path):
+    import io
+
+    app.config["UPLOAD_FOLDER"] = str(tmp_path)
+    _login(client, user)
+    invoice = _create(client, setup, expenses=("train", "hotel"), costs=("looker",))
+    train, looker = setup["expenses"]["train"], setup["costs"]["looker"]
+    client.post(
+        f"/invoices/{invoice.id}/expenses/{train.id}/receipt",
+        data={"receipt_file": (io.BytesIO(_receipt_pdf(2)), "train.pdf")},
+        content_type="multipart/form-data",
+        headers=JSON,
+    )
+    client.post(
+        f"/invoices/{invoice.id}/costs/{looker.id}/bill",
+        data={"receipt_file": (io.BytesIO(_png()), "bill.png")},
+        content_type="multipart/form-data",
+        headers=JSON,
+    )
+    plain = client.get(f"/invoices/{invoice.id}/export/pdf")
+    assert plain.status_code == 200 and plain.mimetype == "application/pdf"
+    base = _pages(plain.data)
+
+    for field in ("attach_receipts", "attach_bills"):
+        resp = client.post(f"/invoices/{invoice.id}/attachments", data={"field": field, "value": "1"}, headers=JSON)
+        assert resp.status_code == 200
+    invoice = _reload(invoice)
+    assert invoice.attach_receipts and invoice.attach_bills
+    html = client.get(f"/invoices/{invoice.id}").get_data(as_text=True)
+    # Hotel has no receipt: Before you issue says so
+    assert 'data-warning="no-receipt"' in html and "Hotel" in html.split('data-warning="no-receipt"', 1)[1][:300]
+
+    attached = client.get(f"/invoices/{invoice.id}/export/pdf")
+    assert attached.status_code == 200
+    assert _pages(attached.data) == base + 2 + 1  # the receipt's two pages, the bill image on one
+
+    client.post(f"/invoices/{invoice.id}/attachments", data={"field": "attach_receipts"}, headers=JSON)
+    assert _reload(invoice).attach_receipts is False
+
+
+# --- issued invoices lock their expenses and costs ----------------------------------------------
+
+
+def test_an_issued_invoice_locks_its_expenses_and_costs(client, user, setup):
+    from factories import ApiTokenFactory
+
+    _login(client, user)
+    invoice = _create(client, setup, expenses=("train",), costs=("looker",))
+    train, looker = setup["expenses"]["train"], setup["costs"]["looker"]
+
+    # On the draft they can still change
+    assert InvoiceCostsService().edit_lock(_reload(train), amount=Decimal("1")) is None
+    _issue(client, invoice)
+
+    form = {
+        "title": "Train, renamed",
+        "category": "travel",
+        "amount": "55",
+        "currency_code": "EUR",
+        "expense_date": train.expense_date.isoformat(),
+        "project_id": setup["analytics"].id,
+        "billable": "on",
+    }
+    client.post(f"/expenses/{train.id}/edit", data=form)
+    train = _reload(train)
+    assert (Decimal(train.amount), train.title) == (Decimal("50.00"), "Train")
+    with client.session_transaction() as sess:
+        flashes = [m for _c, m in sess.get("_flashes", [])]
+    assert any(m.startswith(f"This expense is on invoice {invoice.invoice_number}, which was issued") for m in flashes)
+    # What the invoice does not bill on may change: the title
+    client.post(f"/expenses/{train.id}/edit", data=dict(form, amount="50.00"))
+    assert _reload(train).title == "Train, renamed"
+    client.post(f"/expenses/{train.id}/delete")
+    assert _reload(train) is not None
+
+    resp = client.post(
+        f"/projects/{setup['analytics'].id}/costs/{looker.id}/edit",
+        data={
+            "description": "Looker",
+            "category_id": setup["software"].id,
+            "amount": "999",
+            "cost_date": looker.cost_date.isoformat(),
+            "billable": "on",
+        },
+    )
+    assert resp.status_code == 200
+    assert Decimal(_reload(looker).amount) == Decimal("200.00")
+
+    _token, plain = ApiTokenFactory.create(
+        user_id=user.id, scopes="read:projects,write:projects,read:expenses,write:expenses"
+    )
+    db.session.commit()
+    headers = {"Authorization": f"Bearer {plain}", "Content-Type": "application/json"}
+    refused = client.patch(f"/api/v1/project-costs/{looker.id}", json={"amount": 1}, headers=headers)
+    assert refused.status_code == 409
+    assert f"invoice {invoice.invoice_number}, which was issued" in refused.get_data(as_text=True)
+    assert client.patch(f"/api/v1/project-costs/{looker.id}", json={"notes": "ok"}, headers=headers).status_code == 200
+    assert client.delete(f"/api/v1/project-costs/{looker.id}", headers=headers).status_code == 409
+    assert client.patch(f"/api/v1/expenses/{train.id}", json={"amount": 1}, headers=headers).status_code == 409
+    assert client.patch(f"/api/v1/expenses/{train.id}", json={"billable": False}, headers=headers).status_code == 409
+    assert client.delete(f"/api/v1/expenses/{train.id}", headers=headers).status_code == 409
+    assert (Decimal(_reload(looker).amount), _reload(train).status) == (Decimal("200.00"), "approved")
+
+
+# --- review, round 2 ----------------------------------------------------------------------------
+
+
+def _bigquery(earlier, amount="120"):
+    return {
+        "description": "BigQuery",
+        "project_id": earlier["analytics"].id,
+        "category_id": earlier["software"].id,
+        "amount": amount,
+    }
+
+
+def test_a_second_plus_on_the_same_row_is_refused(client, user, earlier):
+    _login(client, user)
+    invoice = _create(client, earlier, expenses=(), costs=())
+    before = Decimal(_reload(invoice).subtotal)
+    html = client.get(f"/invoices/{invoice.id}").get_data(as_text=True)
+    assert re.search(r"<form[^>]*data-once[^>]*data-not-logged", html)
+    first = client.post(f"/invoices/{invoice.id}/costs/not-logged", data=_bigquery(earlier), headers=JSON)
+    second = client.post(f"/invoices/{invoice.id}/costs/not-logged", data=_bigquery(earlier), headers=JSON)
+    assert first.status_code == 200
+    assert second.status_code == 400
+    assert second.get_json() == {
+        "success": False,
+        "error": "already_logged",
+        "message": "This cost is already logged for this period.",
+    }
+    assert ProjectCost.query.filter_by(description="BigQuery", cost_date=LAST.end).count() == 1
+    assert Decimal(_reload(invoice).subtotal) == before + 120
+
+
+def test_make_it_recurring_twice_is_refused(client, user, earlier):
+    _login(client, user)
+    invoice = _create(client, earlier, expenses=(), costs=())
+    url = f"/invoices/{invoice.id}/costs/not-logged/recurring"
+    assert client.post(url, data=_bigquery(earlier), headers=JSON).status_code == 200
+    second = client.post(url, data=_bigquery(earlier, amount="130"), headers=JSON)
+    assert second.status_code == 400 and second.get_json()["error"] == "already_recurring"
+    assert RecurringProjectCost.query.filter_by(description="BigQuery").count() == 1
+    # The same with other letter case
+    third = client.post(url, data=dict(_bigquery(earlier), description="bigquery"), headers=JSON)
+    assert third.status_code == 400
+
+
+def _issued_with_hotel(client, setup):
+    invoice = _create(client, setup, expenses=("train", "hotel"), costs=("looker",))
+    _issue(client, invoice)
+    hotel = _reload(setup["expenses"]["hotel"])
+    assert (hotel.status, hotel.invoice_id) == ("pending", invoice.id)
+    return invoice, hotel
+
+
+def _api_headers(user, scopes):
+    from factories import ApiTokenFactory
+
+    _token, plain = ApiTokenFactory.create(user_id=user.id, scopes=scopes)
+    db.session.commit()
+    return {"Authorization": f"Bearer {plain}", "Content-Type": "application/json"}
+
+
+def test_an_issued_invoice_keeps_its_expense_from_being_rejected(client, user, setup):
+    _login(client, user)
+    invoice, hotel = _issued_with_hotel(client, setup)
+
+    headers = _api_headers(user, "read:expenses,write:expenses")
+    resp = client.post(f"/api/v1/expenses/{hotel.id}/reject", json={"reason": "No"}, headers=headers)
+    assert resp.status_code == 409 and resp.get_json()["error_code"] == "expense_invoiced"
+    assert _reload(hotel).status == "pending"
+
+    client.post(f"/expenses/{hotel.id}/reject", data={"rejection_reason": "No"})
+    assert _reload(hotel).status == "pending"
+    with client.session_transaction() as sess:
+        flashes = [m for _c, m in sess.get("_flashes", [])]
+    assert any(m.startswith(f"This expense is on invoice {invoice.invoice_number}, which was issued") for m in flashes)
+
+    other = setup["expense"]("Unbilled taxi", "9", status="pending")
+    client.post("/expenses/bulk-status", data={"expense_ids[]": [hotel.id, other.id], "status": "rejected"})
+    assert _reload(hotel).status == "pending"
+    assert _reload(other).status == "rejected"
+    with client.session_transaction() as sess:
+        flashes = [m for _c, m in sess.get("_flashes", [])]
+    assert any("On an issued invoice" in m for m in flashes)
+
+
+def test_an_issued_invoice_keeps_the_currency_of_its_expenses_and_costs(client, user, setup):
+    _login(client, user)
+    invoice, _hotel = _issued_with_hotel(client, setup)
+    train, looker = _reload(setup["expenses"]["train"]), _reload(setup["costs"]["looker"])
+    headers = _api_headers(user, "read:projects,write:projects,read:expenses,write:expenses")
+
+    resp = client.put(f"/api/v1/expenses/{train.id}", json={"currency_code": "USD"}, headers=headers)
+    assert resp.status_code == 409
+    resp = client.patch(f"/api/v1/project-costs/{looker.id}", json={"currency_code": "USD"}, headers=headers)
+    assert resp.status_code == 409
+    # The same currency, another letter case: no change, not refused
+    assert (
+        client.patch(f"/api/v1/project-costs/{looker.id}", json={"currency_code": "eur"}, headers=headers).status_code
+        == 200
+    )
+
+    client.post(
+        f"/expenses/{train.id}/edit",
+        data={
+            "title": "Train",
+            "category": "travel",
+            "amount": "50.00",
+            "currency_code": "USD",
+            "expense_date": train.expense_date.isoformat(),
+            "project_id": setup["analytics"].id,
+            "billable": "on",
+        },
+    )
+    client.post(
+        f"/projects/{setup['analytics'].id}/costs/{looker.id}/edit",
+        data={
+            "description": "Looker",
+            "category_id": setup["software"].id,
+            "amount": "200.00",
+            "currency_code": "USD",
+            "cost_date": looker.cost_date.isoformat(),
+            "billable": "on",
+        },
+    )
+    assert (_reload(train).currency_code, _reload(looker).currency_code.upper()) == ("EUR", "EUR")
+
+
+def _with_files(client, setup, app, tmp_path):
+    import io
+
+    app.config["UPLOAD_FOLDER"] = str(tmp_path)
+    invoice = _create(client, setup, expenses=("train",), costs=("looker",))
+    train, looker = setup["expenses"]["train"], setup["costs"]["looker"]
+    client.post(
+        f"/invoices/{invoice.id}/expenses/{train.id}/receipt",
+        data={"receipt_file": (io.BytesIO(_receipt_pdf(2)), "train.pdf")},
+        content_type="multipart/form-data",
+        headers=JSON,
+    )
+    client.post(
+        f"/invoices/{invoice.id}/costs/{looker.id}/bill",
+        data={"receipt_file": (io.BytesIO(_png()), "bill.png")},
+        content_type="multipart/form-data",
+        headers=JSON,
+    )
+    return invoice
+
+
+def test_email_and_api_pdfs_carry_the_receipts_and_bills_too(client, user, setup, app, tmp_path):
+    from app.utils.email import _build_invoice_email_payload
+
+    _login(client, user)
+    invoice = _with_files(client, setup, app, tmp_path)
+    headers = _api_headers(user, "read:invoices")
+    plain_api = client.get(f"/api/v1/invoices/{invoice.id}/pdf", headers=headers)
+    assert plain_api.status_code == 200
+    base = _pages(plain_api.data)
+    base_email = _pages(_build_invoice_email_payload(_reload(invoice))[0])
+
+    for field in ("attach_receipts", "attach_bills"):
+        client.post(f"/invoices/{invoice.id}/attachments", data={"field": field, "value": "1"}, headers=JSON)
+    api = client.get(f"/api/v1/invoices/{invoice.id}/pdf", headers=headers)
+    assert api.status_code == 200 and _pages(api.data) == base + 3
+    email_pdf = _build_invoice_email_payload(_reload(invoice))[0]
+    assert _pages(email_pdf) == base_email + 3
+
+
+def test_a_broken_or_huge_file_is_named_as_unreadable(client, user, setup, app, tmp_path):
+    import io
+
+    from PIL import Image
+
+    _login(client, user)
+    invoice = _with_files(client, setup, app, tmp_path)
+    # A file named .pdf that is not one, and an image of more than 50 million pixels
+    client.post(
+        f"/invoices/{invoice.id}/expenses/{setup['expenses']['train'].id}/receipt",
+        data={"receipt_file": (io.BytesIO(b"not a pdf at all"), "broken.pdf")},
+        content_type="multipart/form-data",
+        headers=JSON,
+    )
+    huge = io.BytesIO()
+    Image.new("1", (8000, 7000)).save(huge, format="PNG")
+    client.post(
+        f"/invoices/{invoice.id}/costs/{setup['costs']['looker'].id}/bill",
+        data={"receipt_file": (io.BytesIO(huge.getvalue()), "huge.png")},
+        content_type="multipart/form-data",
+        headers=JSON,
+    )
+    for field in ("attach_receipts", "attach_bills"):
+        client.post(f"/invoices/{invoice.id}/attachments", data={"field": field, "value": "1"}, headers=JSON)
+    resp = client.get(f"/invoices/{invoice.id}/export/pdf")
+    assert resp.status_code == 200
+    with client.session_transaction() as sess:
+        flashes = [m for _c, m in sess.get("_flashes", [])]
+    assert "Not attached, the file could not be read: Train, Looker" in flashes
+    assert not any(m.startswith("Not attached, no file") for m in flashes)
+
+
+def test_a_recurring_cost_is_asked_for_only_in_the_period_it_falls_in(client, user, setup):
+    _login(client, user)
+    yearly = RecurringProjectCost(
+        project_id=setup["analytics"].id,
+        user_id=user.id,
+        description="Domain",
+        category="software",
+        amount=Decimal("15"),
+        frequency="yearly",
+        next_run_date=LAST.start + timedelta(days=9) - relativedelta(months=3),
+        ask_amount=True,
+    )
+    db.session.add(yearly)
+    db.session.commit()
+    invoice = _create(client, setup, expenses=(), costs=())
+    html = client.get(f"/invoices/{invoice.id}").get_data(as_text=True)
+    # Due three months before last month, next a year later: last month does not ask
+    assert "Domain" not in html.split('id="costs"', 1)[1]
+
+    yearly = _reload(yearly)
+    yearly.start_date = yearly.next_run_date = LAST.start + timedelta(days=9) - relativedelta(years=1)
+    db.session.commit()
+    block = client.get(f"/invoices/{invoice.id}").get_data(as_text=True).split('id="notLoggedYet"', 1)[1]
+    assert "Domain" in block
+    resp = client.post(
+        f"/invoices/{invoice.id}/costs/not-logged",
+        data={
+            "description": "Domain",
+            "project_id": setup["analytics"].id,
+            "category": "software",
+            "recurring_cost_id": yearly.id,
+            "amount": "18",
+        },
+        headers=JSON,
+    )
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    assert _reload(yearly).next_run_date == LAST.start + timedelta(days=9) + relativedelta(years=1)
+
+
+# --- review of H2, round 2 ----------------------------------------------------------------------
+
+
+def _asking(setup, user, description, start, **kw):
+    recurring = RecurringProjectCost(
+        project_id=setup["analytics"].id,
+        user_id=user.id,
+        description=description,
+        category="software",
+        amount=Decimal("80"),
+        frequency=kw.pop("frequency", "monthly"),
+        next_run_date=start,
+        ask_amount=True,
+        **kw,
+    )
+    db.session.add(recurring)
+    db.session.commit()
+    return recurring
+
+
+def _log_missing(client, invoice, setup, recurring, amount):
+    return client.post(
+        f"/invoices/{invoice.id}/costs/not-logged",
+        data={
+            "description": recurring.description,
+            "project_id": setup["analytics"].id,
+            "category": "software",
+            "recurring_cost_id": recurring.id,
+            "amount": amount,
+        },
+        headers=JSON,
+    )
+
+
+def test_a_draft_of_an_earlier_month_still_asks_after_a_later_one_was_logged(client, user, setup):
+    _login(client, user)
+    start = _month_back(1) + timedelta(days=3)  # due on the 4th, from the month before last
+    recurring = _asking(setup, user, "Cloud", start)
+    # Last month's draft first
+    october = _create(client, setup, expenses=(), costs=())
+    assert "Cloud" in client.get(f"/invoices/{october.id}").get_data(as_text=True).split('id="notLoggedYet"', 1)[1]
+    assert _log_missing(client, october, setup, recurring, "95").status_code == 200
+    moved = _reload(recurring).next_run_date
+    assert moved == LAST.start + timedelta(days=3) + relativedelta(months=1)
+
+    # Then the month before: it still asks, and logging it does not move the date back
+    september = _earlier_invoice(setup, user, _month_back(1), [])
+    september.status = "draft"
+    db.session.commit()
+    block = client.get(f"/invoices/{september.id}").get_data(as_text=True).split('id="notLoggedYet"', 1)[1]
+    assert "Cloud" in block
+    assert _log_missing(client, september, setup, recurring, "90").status_code == 200
+    assert _reload(recurring).next_run_date == moved
+    assert ProjectCost.query.filter_by(recurring_cost_id=recurring.id).count() == 2
+    # Each month asked once: a second "+" in September is refused
+    assert _log_missing(client, september, setup, recurring, "90").status_code == 400
+
+
+def test_a_recurring_cost_that_ended_or_was_switched_off_is_not_missing(client, user, setup):
+    _login(client, user)
+    sw = setup["software"]
+    ended = RecurringProjectCost(
+        project_id=setup["analytics"].id,
+        user_id=user.id,
+        description="Old CRM",
+        category="software",
+        amount=Decimal("30"),
+        frequency="monthly",
+        next_run_date=LAST.start + timedelta(days=1),
+        end_date=LAST.start - timedelta(days=1),
+    )
+    off = RecurringProjectCost(
+        project_id=setup["analytics"].id,
+        user_id=user.id,
+        description="Old chat",
+        category="software",
+        amount=Decimal("20"),
+        frequency="monthly",
+        next_run_date=LAST.start + timedelta(days=1),
+        is_active=False,
+    )
+    asking_ended = RecurringProjectCost(
+        project_id=setup["analytics"].id,
+        user_id=user.id,
+        description="Old calls",
+        category="software",
+        amount=Decimal("10"),
+        frequency="monthly",
+        next_run_date=_month_back(2),
+        end_date=LAST.start - timedelta(days=1),
+        ask_amount=True,
+    )
+    db.session.add_all([ended, off, asking_ended])
+    db.session.commit()
+    for n in (1, 2, 3):
+        earlier_invoice = _earlier_invoice(
+            setup, user, _month_back(n), [("Old CRM", "30", sw), ("Old chat", "20", sw), ("Old calls", "10", sw)]
+        )
+        for cost in ProjectCost.query.filter_by(invoice_id=earlier_invoice.id).all():
+            cost.recurring_cost_id = {"Old CRM": ended.id, "Old chat": off.id, "Old calls": asking_ended.id}[
+                cost.description
+            ]
+        db.session.commit()
+    invoice = _create(client, setup, expenses=(), costs=())
+    costs_block = client.get(f"/invoices/{invoice.id}").get_data(as_text=True).split('id="costs"', 1)[1]
+    for gone in ("Old CRM", "Old chat", "Old calls"):
+        assert gone not in costs_block
+
+
+def test_log_forms_send_one_request_at_a_time(client, user, setup):
+    _login(client, user)
+    invoice = _create(client, setup, expenses=(), costs=())
+    html = client.get(f"/invoices/{invoice.id}").get_data(as_text=True)
+    assert re.search(r'<form[^>]*id="logExpense"[^>]*data-once', html)
+    assert re.search(r'<form[^>]*id="logCost"[^>]*data-once', html)

@@ -607,6 +607,29 @@ def edit_expense(expense_id):
             flash(_("Invalid amount format"), "error")
             return redirect(url_for("expenses.edit_expense", expense_id=expense_id))
 
+        # An issued invoice bills this expense: its amount, date, project and billable flag stay
+        from app.services.invoice_costs_service import InvoiceCostsService
+
+        locked = InvoiceCostsService().edit_lock(
+            expense,
+            amount=amount_decimal,
+            tax_amount=tax_amount_decimal,
+            date=expense_date_obj,
+            project_id=request.form.get("project_id", type=int),
+            billable=request.form.get("billable") == "on",
+            currency_code=currency_code,
+        )
+        if locked:
+            flash(
+                _(
+                    "This expense is on invoice %(number)s, which was issued: its amount, currency, date, project and "
+                    "billable flag cannot change, and it cannot be deleted or rejected. Cancel the invoice first.",
+                    number=locked.invoice_number,
+                ),
+                "error",
+            )
+            return redirect(url_for("expenses.view_expense", expense_id=expense_id))
+
         # Update expense fields
         expense.title = title
         expense.description = description
@@ -711,6 +734,21 @@ def delete_expense(expense_id):
         flash(_("Cannot delete approved or invoiced expenses"), "error")
         return redirect(url_for("expenses.view_expense", expense_id=expense_id))
 
+    # Not even an admin deletes an expense an issued invoice bills
+    from app.services.invoice_costs_service import InvoiceCostsService
+
+    locked = InvoiceCostsService().edit_lock(expense, delete=True)
+    if locked:
+        flash(
+            _(
+                "This expense is on invoice %(number)s, which was issued: its amount, currency, date, project and "
+                "billable flag cannot change, and it cannot be deleted or rejected. Cancel the invoice first.",
+                number=locked.invoice_number,
+            ),
+            "error",
+        )
+        return redirect(url_for("expenses.view_expense", expense_id=expense_id))
+
     try:
         # Delete receipt file if exists
         if expense.receipt_path:
@@ -770,6 +808,14 @@ def bulk_delete_expenses():
             if not current_user.is_admin and (expense.status == "approved" or expense.invoiced):
                 skipped_count += 1
                 errors.append(f"'{expense.title or expense_id_str}': Approved or invoiced")
+                continue
+
+            # Not even an admin deletes an expense an issued invoice bills
+            from app.services.invoice_costs_service import InvoiceCostsService
+
+            if InvoiceCostsService().edit_lock(expense, delete=True):
+                skipped_count += 1
+                errors.append(f"'{expense.title or expense_id_str}': On an issued invoice")
                 continue
 
             # Delete receipt file if exists
@@ -907,6 +953,14 @@ def bulk_update_status():
                 skipped_count += 1
                 continue
 
+            # An expense an issued invoice bills is not rejected: it would stay on the invoice
+            from app.services.invoice_costs_service import InvoiceCostsService
+
+            if new_status == "rejected" and InvoiceCostsService().edit_lock(expense, delete=True):
+                skipped_count += 1
+                update_errors.append(f"'{expense.title or expense_id_str}': On an issued invoice")
+                continue
+
             expense.status = new_status
             updated_count += 1
 
@@ -992,6 +1046,21 @@ def reject_expense(expense_id):
 
     if expense.status != "pending":
         flash(_("Only pending expenses can be rejected"), "error")
+        return redirect(url_for("expenses.view_expense", expense_id=expense_id))
+
+    # An expense an issued invoice bills is not rejected: it would stay on the invoice
+    from app.services.invoice_costs_service import InvoiceCostsService
+
+    locked = InvoiceCostsService().edit_lock(expense, delete=True)
+    if locked:
+        flash(
+            _(
+                "This expense is on invoice %(number)s, which was issued: its amount, currency, date, project and "
+                "billable flag cannot change, and it cannot be deleted or rejected. Cancel the invoice first.",
+                number=locked.invoice_number,
+            ),
+            "error",
+        )
         return redirect(url_for("expenses.view_expense", expense_id=expense_id))
 
     try:

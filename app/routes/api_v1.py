@@ -1959,6 +1959,28 @@ def update_project_cost(cost_id):
         .first_or_404()
     )
     data = request.get_json() or {}
+    # An issued invoice bills this cost: its amount, date and billable flag stay
+    from decimal import Decimal as _Decimal
+
+    from app.services.invoice_costs_service import InvoiceCostsService
+
+    changes = {}
+    if "amount" in data:
+        try:
+            changes["amount"] = _Decimal(str(data["amount"]))
+        except (ValueError, TypeError, InvalidOperation):
+            return validation_error_response({"amount": ["Invalid value."]}, message="Invalid amount")
+    if "cost_date" in data and _parse_date(data["cost_date"]):
+        changes["date"] = _parse_date(data["cost_date"])
+    if "billable" in data:
+        changes["billable"] = data["billable"]
+    if "currency_code" in data:
+        changes["currency_code"] = data["currency_code"]
+    locked = InvoiceCostsService().edit_lock(cost, **changes)
+    if locked:
+        return error_response(
+            InvoiceCostsService.lock_message(cost, locked), status_code=409, error_code="cost_invoiced"
+        )
     for field in ("description", "currency_code", "notes", "billable"):
         if field in data:
             setattr(cost, field, data[field])
@@ -1991,6 +2013,13 @@ def delete_project_cost(cost_id):
         .filter_by(id=cost_id)
         .first_or_404()
     )
+    from app.services.invoice_costs_service import InvoiceCostsService
+
+    locked = InvoiceCostsService().edit_lock(cost, delete=True)
+    if locked:
+        return error_response(
+            InvoiceCostsService.lock_message(cost, locked), status_code=409, error_code="cost_invoiced"
+        )
 
     db.session.delete(cost)
     db.session.commit()

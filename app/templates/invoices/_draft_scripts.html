@@ -142,6 +142,18 @@
       const submitter = event.submitter;
       const action = submitter && submitter.getAttribute('formaction');
       if (!(await confirmed(submitter && submitter.getAttribute('data-confirm')))) return;
+      // A form marked data-once sends one request at a time: its buttons wait for the answer
+      const once = form.hasAttribute('data-once');
+      if (once && form.dataset.busy) return;
+      const buttons = once ? form.querySelectorAll('button') : [];
+      const settle = function () {
+        delete form.dataset.busy;
+        buttons.forEach(function (button) { button.disabled = false; });
+      };
+      if (once) {
+        form.dataset.busy = '1';
+        buttons.forEach(function (button) { button.disabled = true; });
+      }
       const status = form.querySelector('[data-save-status]');
       if (status) status.textContent = texts.saving;
       try {
@@ -150,20 +162,24 @@
         if (data.reload === false) {
           if (status) status.textContent = texts.saved;
           showTotals(data.totals);
+          settle();
           return;
         }
         reload();
       } catch (error) {
         if (status) status.textContent = '';
+        settle();
         toast(error.message, 'error');
       }
     });
   });
 
-  // A receipt or a bill is uploaded as soon as a file is chosen
+  // A receipt or a bill is uploaded as soon as a file is chosen; a setting is saved when ticked
   document.querySelectorAll('form[data-autoupload]').forEach(function (form) {
-    const input = form.querySelector('input[type="file"]');
-    if (input) input.addEventListener('change', function () { if (input.files.length) form.requestSubmit(); });
+    const input = form.querySelector('input[type="file"], input[type="checkbox"]');
+    if (input) input.addEventListener('change', function () {
+      if (input.type !== 'file' || input.files.length) form.requestSubmit();
+    });
   });
 
   // Notes and Terms save themselves when you leave the field

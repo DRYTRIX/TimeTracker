@@ -57,11 +57,18 @@
         <p class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No expenses on this draft.') }}</p>
         {% endif %}
 
-        <div class="border-t border-border-light dark:border-border-dark p-4 flex justify-between items-center">
+        <div class="border-t border-border-light dark:border-border-dark p-4 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex flex-wrap items-center gap-4">
             <button type="button" class="btn btn-secondary" data-toggle="logExpense" aria-controls="logExpense" id="logExpenseButton">+ {{ _('Log an expense') }}</button>
+            <form method="POST" action="{{ url_for('invoices.draft_pdf_attachments', invoice_id=invoice.id) }}" class="text-sm" data-draft-form data-autoupload id="attachReceiptsForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="field" value="attach_receipts">
+                <label class="flex items-center gap-2"><input type="checkbox" name="value" value="1" {% if invoice.attach_receipts %}checked{% endif %}> {{ _('Attach receipts to the invoice PDF') }}</label>
+            </form>
+            </div>
             <span class="text-lg">{{ _('Expenses') }} <strong id="expensesTotal">{{ money(expenses_total) }} {{ invoice.currency_code }}</strong></span>
         </div>
-        <form method="POST" action="{{ url_for('invoices.draft_log_expense', invoice_id=invoice.id) }}" enctype="multipart/form-data" id="logExpense" class="hidden border-t border-border-light dark:border-border-dark p-4 grid grid-cols-12 gap-3" data-draft-form>
+        <form method="POST" action="{{ url_for('invoices.draft_log_expense', invoice_id=invoice.id) }}" enctype="multipart/form-data" id="logExpense" class="hidden border-t border-border-light dark:border-border-dark p-4 grid grid-cols-12 gap-3" data-draft-form data-once>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label class="col-span-6 md:col-span-2 text-sm">{{ _('Date') }}
                 <input type="date" name="expense_date" value="{{ default_entry_date }}" required class="form-input w-full"
