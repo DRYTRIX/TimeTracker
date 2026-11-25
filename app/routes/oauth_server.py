@@ -12,14 +12,14 @@ import hmac
 from datetime import datetime
 from urllib.parse import urlencode
 
-from flask import Blueprint, current_app, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, g, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app import csrf, db, limiter
 from app.models import OAuthAccessToken, OAuthApplication, OAuthAuthorizationCode
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
-from app.utils.safe_redirect import match_registered_redirect
+from app.utils.safe_redirect import csp_form_action_source, match_registered_redirect
 
 oauth_server_bp = Blueprint("oauth_server", __name__)
 
@@ -120,6 +120,12 @@ def authorize():
             return render_template("oauth/authorize.html", error="PKCE code_challenge is required."), 400
         if (code_challenge_method or "S256").upper() != "S256":
             return render_template("oauth/authorize.html", error="Only S256 PKCE is supported."), 400
+
+        # Allow the validated client callback in form-action so the post-consent
+        # 302 is not blocked by CSP (browsers apply form-action to redirect chains).
+        form_action_source = csp_form_action_source(redirect_uri)
+        if form_action_source:
+            g.csp_form_action_extra = form_action_source
 
         granted_scope = _intersect_scopes(scope, app_rec.scope_list())
         return render_template(

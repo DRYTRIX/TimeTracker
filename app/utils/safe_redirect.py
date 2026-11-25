@@ -27,6 +27,34 @@ def match_registered_redirect(candidate: Optional[str], allowed: Sequence[str]) 
     return None
 
 
+def csp_form_action_source(redirect_uri: Optional[str]) -> Optional[str]:
+    """
+    Return a CSP ``form-action`` source for an OAuth client redirect URI.
+
+    Browsers apply ``form-action`` to redirects that follow a form POST, so the
+    OAuth consent page must allowlist the validated client callback origin.
+    For ``http``/``https`` this is ``scheme://host[:port]``; for custom schemes
+    such as ``cursor:`` or ``vscode:`` it is ``scheme:`` only.
+    """
+    if not redirect_uri or not isinstance(redirect_uri, str):
+        return None
+    candidate = redirect_uri.strip()
+    if not candidate:
+        return None
+    try:
+        parsed = urlparse(candidate)
+    except Exception:
+        return None
+    scheme = (parsed.scheme or "").lower()
+    if not scheme:
+        return None
+    if scheme in ("http", "https"):
+        if not parsed.netloc:
+            return None
+        return f"{scheme}://{parsed.netloc}"
+    return f"{scheme}:"
+
+
 def is_safe_relative_url(next_url: Optional[str]) -> bool:
     """
     Return True if next_url is a same-origin relative path (not protocol-relative).

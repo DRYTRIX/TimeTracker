@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.utils.safe_redirect import is_safe_next_url, is_safe_referrer, is_safe_relative_url
+from app.utils.safe_redirect import csp_form_action_source, is_safe_next_url, is_safe_referrer, is_safe_relative_url
 
 pytestmark = [pytest.mark.unit, pytest.mark.security]
 
@@ -88,3 +88,20 @@ def test_sanitize_log_value_strips_crlf():
     assert "\n" not in sanitize_log_value("a\nb\rc")
     assert sanitize_log_value("a\nb\rc") == "a b c"
     assert len(sanitize_log_value("x" * 1000, max_len=20)) <= 20
+
+
+@pytest.mark.parametrize(
+    "redirect_uri,expected",
+    [
+        ("http://localhost:3118/callback", "http://localhost:3118"),
+        ("https://claude.ai/api/mcp/auth_callback", "https://claude.ai"),
+        ("cursor://anysphere.cursor-mcp/oauth/callback", "cursor:"),
+        ("vscode://vscode.github-authentication/did-authenticate", "vscode:"),
+        ("", None),
+        (None, None),
+        ("not-a-uri", None),
+        ("http:///no-host", None),
+    ],
+)
+def test_csp_form_action_source(redirect_uri, expected):
+    assert csp_form_action_source(redirect_uri) == expected
