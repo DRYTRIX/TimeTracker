@@ -89,12 +89,14 @@ The API (`/api/v1/projects/<id>/costs`, `/api/v1/project-costs/<id>`, recurring 
 
 ### Including Costs in Invoices
 
-1. Create or edit an invoice
-2. Click "Generate from Time Entries"
-3. Select the costs you want to include along with time entries
-4. Click "Generate Items"
-5. Costs will appear as line items in the invoice
-6. Invoiced costs are automatically marked to prevent double-billing
+**Preferred — new invoice step 1:**
+
+1. **Invoices → New invoice** (or a draft's step 1)
+2. Choose client, period, and projects — period project costs appear under Hours (ticked by default)
+3. Choose **Show costs as** (per cost / by category / one line)
+4. **Create draft** — costs are billed with the hours; the draft has a **Project costs** block (Regroup costs, Log a cost, recurring monthly)
+
+**Alternate — Generate from Time/Costs** on a draft still lists uninvoiced costs. Invoiced costs are linked so they are not billed twice; cancel/reissue releases them.
 
 ### Project Statistics
 

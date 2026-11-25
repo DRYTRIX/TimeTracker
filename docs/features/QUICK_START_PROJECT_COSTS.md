@@ -48,14 +48,11 @@ docker-compose restart
 5. Click "Add Cost"
 
 ### Include Costs in Invoice
-1. Create or open an invoice for a project
-2. Click "Generate from Time Entries"
-3. You'll see two sections:
-   - **Time Entries**: Select hours to bill
-   - **Project Costs**: Select costs to bill
-4. Check the costs you want to include
-5. Click "Generate Items"
-6. Costs appear as line items in the invoice
+1. **Invoices → New invoice** (or open a draft's step 1) and pick the client / period / projects
+2. Tick the project costs listed under Hours (all eligible ones are selected by default)
+3. Optionally set **Show costs as**, then **Create draft**
+4. On the draft, use the **Project costs** block to regroup, remove, or **+ Log a cost**
+5. Alternate: on a draft, **Generate from Time/Costs** still lets you pick uninvoiced costs
 
 ### View Project Costs
 Project page shows:

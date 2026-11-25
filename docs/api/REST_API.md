@@ -604,6 +604,12 @@ POST /api/v1/time-entries
 
 **Note:** `end_time` is optional. Omit it to create an active timer.
 
+**Duration-only create:** send `date` (YYYY-MM-DD) + `duration_seconds` instead of `start_time`/`end_time` to place the entry after the user's last entry that day (same as dashboard Log Time).
+
+**Preview (no write):** `POST /api/v1/time-entries/preview` — same body as create; used by the MCP sidecar and agents before `confirm=true`.
+
+Entries linked to an invoice (draft or issued) cannot be updated or deleted (`409` with the invoice number). Bulk actions skip them as `already_invoiced`.
+
 Optional header: **`Idempotency-Key`** — see [Idempotent time entry creation](#idempotent-time-entry-creation) above.
 
 #### Import time entries (CSV)
@@ -640,10 +646,10 @@ POST /api/v1/time-entries/bulk
 }
 ```
 
-**`action`** (required): one of `delete`, `set_billable`, `set_paid`, `add_tag`, `remove_tag`.  
-**`value`**: required for tag actions (string tag); for `set_billable` / `set_paid`, pass a boolean.  
+**`action`** (required): one of `delete`, `set_billable`, `set_paid`, `set_project`, `set_task`, `add_tag`, `remove_tag`.  
+**`value`**: required for tag actions (string tag); for `set_billable` / `set_paid`, pass a boolean; for `set_project` / `set_task`, pass the target id.  
 Active (running) entries are skipped for non-delete actions; delete skips active entries.
-`set_billable` also skips entries that are already invoiced (`paid` is true).
+`set_billable` (and related writes) also skip entries that are already invoiced (`paid` is true or linked via `invoice_time_links`).
 
 **Response:**
 
@@ -1250,11 +1256,14 @@ Scopes: `read:invoices` / `write:invoices` (see [API_TOKEN_SCOPES.md](API_TOKEN_
 
 | Method | Path | Scope | Notes |
 |--------|------|-------|-------|
-| `GET` | `/invoices` | `read:invoices` | List (paginated; optional `status`) |
-| `GET` | `/invoices/{id}` | `read:invoices` | Detail with line items and payments |
+| `GET` | `/invoices` | `read:invoices` | List (paginated; optional `status`); includes `currency_code` |
+| `GET` | `/invoices/{id}` | `read:invoices` | Detail with line items and payments; includes `currency_code` |
 | `POST` | `/invoices` | `write:invoices` | Create draft |
 | `PUT`/`PATCH` | `/invoices/{id}` | `write:invoices` | Update draft fields |
-| `DELETE` | `/invoices/{id}` | `write:invoices` | Cancel (soft-delete) |
+| `PUT` | `/invoices/{id}/items` | `write:invoices` | Replace draft line items (rows may include line `id`) |
+| `POST` | `/invoices/from-time-entries` | `write:invoices` | Create draft from time entries; optional `hours_layout`, `line_template` |
+| `POST` | `/invoices/{id}/generate-from-time` | `write:invoices` | Add/rebuild hours on a draft; optional `hours_layout`, `line_template`, `replace_existing` |
+| `DELETE` | `/invoices/{id}` | `write:invoices` | Cancel (soft-delete); **409** if the invoice has payments |
 | `GET` | `/invoices/{id}/pdf` | `read:invoices` | PDF download |
 | `GET` | `/invoices/{id}/ubl` | `read:invoices` | PEPPOL UBL 2.1 XML (`application/xml`) |
 | `GET` | `/invoices/{id}/xrechnung` | `read:invoices` | XRechnung 3.0 XML |
@@ -1262,6 +1271,10 @@ Scopes: `read:invoices` / `write:invoices` (see [API_TOKEN_SCOPES.md](API_TOKEN_
 | `POST` | `/invoices/{id}/send-email` | `write:invoices` | Body: optional `recipient_email` / `recipient`, `subject`, `custom_message` |
 | `POST` | `/invoices/{id}/send-peppol` | `write:invoices` | Send via Peppol access point |
 | `POST` | `/invoices/{id}/send-sdi` | `write:invoices` | Send via SDI (FatturaPA) |
+
+**Hours layouts** (`hours_layout`): per-entry, by task, by person, by task+person, one line per project, or `none` (do not add hours). Unknown layout → `400`. Responses may include `warnings` (e.g. zero rate).
+
+Related reports (admin): `GET /api/v1/reports/unbilled`, `GET /api/v1/reports/expenses`, `GET /api/v1/reports/missing-hours`. Expense category list: `GET /api/v1/expense-categories`. MCP tooling: [MCP.md](../integrations/MCP.md).
 
 ### Credit notes
 

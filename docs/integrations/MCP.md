@@ -92,7 +92,7 @@ Read-only mode registers only read tools (`MCP_TOOLSET=admin_readonly` or a toke
 | `list_project_costs` / `create_project_cost` | Non-hourly costs |
 | `list_invoices` / `get_invoice` / `create_invoice` / `update_invoice` | Drafts; no send |
 | `delete_invoice` | Drafts only; soft-cancel |
-| `list_invoice_time_entries` | From line-item `time_entry_ids` |
+| `list_invoice_time_entries` | Entries linked via `invoice_time_links` (line `time_entry_ids` is a cache) |
 | `invoice_from_unbilled` / `invoice_generate_from_time` / `update_invoice_items` | No send |
 | `get_invoice_pdf` / `get_invoice_pdf_url` | PDF as base64 (or path); no email/Peppol |
 | `report_summary` / `report_unbilled` / `report_expenses` | |

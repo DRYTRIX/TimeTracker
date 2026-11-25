@@ -65,8 +65,11 @@ docs/
 - **[📋 Complete Features Overview](FEATURES_COMPLETE.md)** — Comprehensive documentation of all 130+ features (⭐ Complete reference!)
 - **[Task Management](TASK_MANAGEMENT_README.md)** — Complete task tracking system
 - **[Client Management](CLIENT_MANAGEMENT_README.md)** — Manage clients and relationships
-- **[Invoice System](INVOICE_FEATURE_README.md)** — Generate and track invoices
+- **[Invoice System](INVOICE_FEATURE_README.md)** — Two-step create, draft with time links, Issued / Cancel and reissue, legal entities, HTML + Visual templates
 - **[Invoice reminders & recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)** — Overdue notify, dunning policies/late fees, recurring billing
+- **[Invoice expenses](INVOICE_EXPENSES.md)** — Bill expenses on step 1 and drafts
+- **[Project costs](features/PROJECT_COSTS_FEATURE.md)** — Non-hourly costs (Expense categories) on invoices
+- **[MCP server](integrations/MCP.md)** — Optional Model Context Protocol sidecar for AI assistants
 - **[Calendar Features](CALENDAR_FEATURES_README.md)** — Calendar view and bulk entry
 - **[Expense Tracking](EXPENSE_TRACKING.md)** — Track business expenses
 - **[Payment Tracking](PAYMENT_TRACKING.md)** — Track invoice payments (incl. Stripe/Mollie/PayPal refunds)

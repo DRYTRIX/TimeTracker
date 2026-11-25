@@ -1,7 +1,7 @@
 # TimeTracker - Complete Features Documentation
 
 **Version:** See `setup.py` for current version (single source of truth).  
-**Last Updated:** 2026-11-18
+**Last Updated:** 2026-11-25
 
 **Navigation:** Many features are optional (see Admin → Module Management). Reports are available from the top-level **Reports** sidebar link (or **Finance & Expenses → Reports** for Report Builder, Saved Views, Scheduled Reports). Time entries export is under **Time entries** (overview page).
 
@@ -57,6 +57,15 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - Notes and tags support
 - Billable/non-billable flagging
 - Project and task association
+- **Hours-only / duration** — Dashboard Log Time and manual entry with only worked time place the entry after the last entry that day (or at 09:00); API accepts `date` + `duration_seconds`
+- **Bulk mark billable / non-billable** — Bulk Actions on `/time-entries` (skips invoiced and running timers)
+- **Overtime notes** — Soft note past your daily norm; stronger nudge past 12 h (`OVERWORK_NOTES=false` to disable)
+
+#### 3a. **Timesheet (Time → Track)**
+- Day and week timesheet for logging your own hours (`timesheet` module; on by default)
+- Day: tabs per weekday, Track time / Start timer from a row, Edit / Delete
+- Week: grid by project+task and day; save on blur; Undo when clearing a cell
+- With the module off, Track opens the dashboard as before
 
 #### 4. **Timer Management**
 - Start, stop, pause, and resume timers
@@ -167,11 +176,12 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 #### 18. **Project Costs**
 - Track direct project expenses
-- Cost categories and descriptions
+- **Categories from Expense categories** (Admin) via `category_id` (legacy `category` string kept for one release)
 - Cost date tracking
 - Cost amount and currency
+- Recurring monthly costs
 - Cost reporting and analytics
-- Integration with budget tracking
+- Integration with budget tracking and invoice step 1 / draft Project costs block
 
 #### 19. **Extra Goods & Services**
 - Add non-time-based line items to projects
@@ -433,56 +443,59 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 ### Core Invoicing Features
 
 #### 50. **Invoice Creation**
-- Generate invoices from time entries
-- Manual invoice creation
-- Invoice templates
-- Custom line items
-- Multiple invoice formats
+- **Two-step create** — Step 1 (`/invoices/new`): client, Who bills whom, period, projects, Show hours as, expenses & costs → Create draft
+- Draft page with time entries under each hours line; Mark as issued; Edit all fields
+- Generate from Time as a secondary path on drafts
+- Custom / manual hours lines and other items
+- Per-invoice currency
+- Project **Invoices** page (`/projects/<id>/invoices`)
 
 #### 51. **Invoice Management**
-- Invoice list view with filtering
-- Invoice status tracking (Draft, Sent, Paid, Overdue, Cancelled)
-- Invoice editing
-- Invoice duplication
-- Invoice deletion
+- Invoice list view with filtering (including **Issued**)
+- Invoice status tracking (Draft, Issued, Sent, Paid, Overdue, Cancelled)
+- Invoice editing (draft) and locked issued invoices (notes/terms/due date still editable)
+- **Cancel and reissue** (or only cancel); credit notes when payments exist
+- Invoice duplication / deletion (draft)
 - Bulk invoice operations
+- Billing badges on time entries (Billed / On draft / Non-billable / Marked paid)
 
 #### 42. **Invoice Items**
-- Time entry line items
-- Expense line items
+- Time entry line items (`kind` time / manual / manual_hours / cost) with `invoice_time_links`
+- Expense and project cost lines
 - Custom line items
-- Item descriptions and quantities
-- Unit prices and totals
+- **Show hours as** layouts and **Line description** templates; **Show costs as**
+- Item descriptions and quantities; rate per entry (user → project → client)
 - Per-line tax rates, discounts, and explicit line ordering
 
 #### 43. **Invoice Generation from Time**
-- Select time entries for invoicing
-- Automatic time entry grouping
-- Billable hours calculation
-- Rate application
-- Time entry filtering
+- Select time entries for invoicing (web + API `from-time-entries` / `generate-from-time`)
+- Optional `hours_layout` and `line_template`
+- Billable hours calculation with prepaid plan application
+- Rate application per entry; warnings when rate is 0
+- One-billing rule via `invoice_time_links` (409 if already invoiced)
 
 #### 44. **Invoice Templates**
-- Customizable invoice templates
-- Template selection per invoice
-- Template editing
-- Default template setting
-- Template preview
+- **Admin → Invoice templates**: **HTML templates** (sandboxed Jinja + WeasyPrint) and **Visual layout** (Konva designer)
+- Template selection per invoice; Settings (and legal entity) default
+- HTML upload/download/duplicate; live preview; version history
+- Built-in read-only `simple` HTML template
 
 #### 45. **PDF Invoice Export**
-- Professional PDF generation
-- Customizable PDF layout
-- Company branding (logo)
-- PDF template editor
-- PDF preview
-- PDF download
+- Professional PDF generation (HTML template or Visual layout)
+- Customizable PDF layout / branding (logo)
+- PDF preview and download
+- E-invoice embeds where configured (Factur-X / ZUGFeRD, etc.)
+
+#### 45a. **Legal entities**
+- **Seller** (`billing_entities`): Admin → Legal entities; From / Pay to; number format and invoice defaults
+- **Buyer** (`client_entities`): client Legal entities card; Bill to + buyer snapshot on PDF
 
 #### 46. **Invoice Status Management**
-- Status workflow (Draft → Sent → Paid / Overdue)
-- Status change tracking
+- Status workflow (Draft → **Issued** → Sent → Paid / Overdue; Cancelled)
+- Mark as issued; leaving draft via send/payment also marks time billed
 - Overdue invoice detection (APScheduler daily 09:00 → status `overdue`, staff + client notify, `invoice.overdue` webhook)
 - Configurable reminder policies with multi-step offsets and optional late fees (Admin → Reminder policies)
-- Bulk status updates
+- Bulk status updates (skips cancel when invoice has payments)
 - Status-based filtering
 - See [Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)
 
@@ -730,6 +743,7 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 - Overtime reporting
 - Overtime trends
 - Overtime alerts
+- Soft overtime notes when logging past daily norm / 12 h (see Manual Time Entry)
 
 #### 80. **Weekly Trends**
 - Weekly time trends
@@ -1082,12 +1096,18 @@ TimeTracker is a comprehensive, self-hosted time tracking and project management
 
 #### 120. **API Endpoints**
 - Projects API (CRUD)
-- Time Entries API (CRUD)
+- Time Entries API (CRUD; preview; bulk billable/project/task; duration-only create)
 - Tasks API (CRUD)
 - Clients API (CRUD)
-- Invoices API (CRUD)
+- Invoices API (CRUD; from-time; generate-from-time; items; currency_code)
 - Users API (read)
-- Reports API
+- Reports API (summary, unbilled, expenses, missing-hours, budget)
+- Expense categories API
+
+#### 120a. **MCP server**
+- Optional Model Context Protocol sidecar (`mcp_server/`) — stdio + Streamable HTTP
+- Role-scoped tools over `/api/v1`; admin billing tools; writes require `confirm=true`
+- Compose profile `mcp`; see [MCP.md](integrations/MCP.md)
 
 #### 121. **API Authentication**
 - API token generation
