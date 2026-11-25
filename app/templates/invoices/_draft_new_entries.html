@@ -1,0 +1,40 @@
+{# Entries of the invoice's period logged after the draft was created #}
+{% if new_entries %}
+<section id="newEntries" class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
+    <div class="flex flex-wrap justify-between items-center gap-3">
+        <p class="text-sm text-indigo-900 dark:text-indigo-100">
+            <strong>{{ ngettext('%(num)d new entry in this invoice\'s period', '%(num)d new entries in this invoice\'s period', new_entries|length) }}</strong>
+            ({{ new_hours_text }} h), {{ _('logged after the draft was created.') }}
+        </p>
+        <div class="flex gap-2">
+            <button type="button" class="btn btn-secondary" data-toggle="newEntriesList" aria-controls="newEntriesList">{{ _('Show') }}</button>
+            <form method="POST" action="{{ url_for('invoices.draft_add_new_entries', invoice_id=invoice.id) }}" data-draft-form>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-primary" id="addToMatchingLines">{{ _('Add to matching lines') }}</button>
+            </form>
+        </div>
+    </div>
+    <div id="newEntriesList" class="hidden mt-3 overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-text-muted-light dark:text-text-muted-dark">
+                    <th class="p-1">{{ _('Date') }}</th><th class="p-1">{{ _('Person') }}</th><th class="p-1">{{ _('Project') }}</th>
+                    <th class="p-1">{{ _('Task') }}</th><th class="p-1">{{ _('Notes') }}</th><th class="p-1 text-right">{{ _('Hours') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in new_entries %}
+                <tr class="border-t border-indigo-100 dark:border-indigo-800">
+                    <td class="p-1"><a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="text-primary hover:underline">{{ entry.start_time|format_date }}</a></td>
+                    <td class="p-1">{{ entry.user.display_name if entry.user else '' }}</td>
+                    <td class="p-1">{{ entry.project.name if entry.project else '' }}</td>
+                    <td class="p-1">{{ entry.task.name if entry.task_id and entry.task else '' }}</td>
+                    <td class="p-1 whitespace-pre-line">{{ entry.notes or '' }}</td>
+                    <td class="p-1 text-right">{{ "%.2f"|format((entry.duration_seconds or 0) / 3600) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}

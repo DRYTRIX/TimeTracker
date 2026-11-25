@@ -1564,6 +1564,8 @@ class InvoiceService:
             return {"success": False, "message": str(exc), "error": exc.code}
         for item, row_id in zip(new_items, row_ids):
             time_links.carry_line_state(previous_lines, item, row_id)
+        # Entries no line keeps any more give back the prepaid hours they used on this draft
+        time_links.release_dropped_prepaid(invoice, previous_hours.keys())
 
         invoice.calculate_totals()
         if not safe_commit("set_invoice_items", {"invoice_id": invoice_id, "user_id": user_id}):
@@ -1654,6 +1656,8 @@ class InvoiceService:
             created_by=user_id,
             project=project,
         )
+        # Replaced lines: entries no new line keeps give back the prepaid hours they used on this draft
+        time_links.release_dropped_prepaid(invoice, previous_hours.keys())
 
         invoice.calculate_totals()
         if not safe_commit("add_time_entries_to_invoice", {"invoice_id": invoice_id, "user_id": user_id}):

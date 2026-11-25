@@ -1,0 +1,117 @@
+{# One draft line: its fields, the line menu (VAT, discount, position) and, for an hours line, its entries #}
+{% set item = line.item %}
+<div class="draft-line border-t border-border-light dark:border-border-dark p-4" id="line-{{ item.id }}" data-line-id="{{ item.id }}" data-kind="{{ line.kind }}">
+    <form method="POST" action="{{ url_for('invoices.draft_update_line', invoice_id=invoice.id, item_id=item.id) }}" data-line-form id="line-form-{{ item.id }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {# First submit button: Enter in a field saves the line (and never removes it) #}
+        <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">{{ _('Save line') }}</button>
+        <div class="grid grid-cols-12 gap-3 items-start">
+            <div class="col-span-12 md:col-span-6">
+                <label class="sr-only" for="line-description-{{ item.id }}">{{ _('Description') }}</label>
+                <textarea id="line-description-{{ item.id }}" name="description" rows="{{ [item.description.count('\n') + 1, 2]|max }}" maxlength="500"
+                          class="form-input w-full font-normal" required>{{ item.description }}</textarea>
+                <div class="flex flex-wrap gap-2 items-center mt-1 text-xs">
+                    {% if line.is_time and item.description_edited %}<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" data-badge="text-edited">{{ _('text edited') }}</span>{% endif %}
+                    {% if line.is_manual_hours %}<span class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{{ _('added by hand, no entries') }}</span>{% endif %}
+                </div>
+            </div>
+            <div class="col-span-4 md:col-span-2 text-right">
+                <label class="sr-only" for="line-quantity-{{ item.id }}">{{ _('Quantity') }}</label>
+                <input id="line-quantity-{{ item.id }}" type="text" inputmode="decimal" name="quantity" value="{{ money(item.quantity) }}" class="form-input w-full text-right">
+                <span class="block text-xs mt-1 {{ 'text-amber-700' if line.is_time and item.quantity_edited else 'text-text-muted-light dark:text-text-muted-dark' }}" data-field="quantity_note">{{ line.quantity_note }}</span>
+                {% if line.added_text %}<span class="block text-xs text-indigo-700" data-field="added">{{ line.added_text }}</span>{% endif %}
+            </div>
+            <div class="col-span-4 md:col-span-2 text-right">
+                <label class="sr-only" for="line-price-{{ item.id }}">{{ _('Unit price') }}</label>
+                <input id="line-price-{{ item.id }}" type="text" inputmode="decimal" name="unit_price" value="{{ money(item.unit_price) }}" class="form-input w-full text-right">
+                <span class="block text-xs mt-1 text-text-muted-light dark:text-text-muted-dark" data-field="price_note">{{ line.price_note }}</span>
+            </div>
+            <div class="col-span-4 md:col-span-2 flex items-start justify-end gap-2">
+                <span class="font-semibold pt-2 whitespace-nowrap" data-field="amount">{{ money(item.total_amount) }} {{ invoice.currency_code }}</span>
+                <button type="submit" formaction="{{ url_for('invoices.draft_delete_line', invoice_id=invoice.id, item_id=item.id) }}"
+                        class="px-2 py-1 border border-border-light dark:border-border-dark rounded hover:bg-background-light dark:hover:bg-background-dark"
+                        title="{{ _('Remove the line') }}" aria-label="{{ _('Remove the line') }}" data-delete-line
+                        data-confirm="{{ _('Remove this line? Its time entries go back to Unbilled.') if line.entry_count else _('Remove this line?') }}">&times;</button>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 mt-2 text-sm">
+            {% if line.entry_count %}
+            <button type="button" class="px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-100" data-toggle="entries-{{ item.id }}" aria-controls="entries-{{ item.id }}">
+                {{ ngettext('%(num)d entry', '%(num)d entries', line.entry_count) }} · {{ _('%(hours)s h tracked', hours=line.tracked_text) }} · <span class="underline">{{ _('show') }}</span>
+            </button>
+            {% endif %}
+            <details class="relative">
+                <summary class="cursor-pointer text-text-muted-light dark:text-text-muted-dark list-none"><i class="fas fa-ellipsis-h mr-1"></i>{{ _('VAT, discount, position') }}</summary>
+                <div class="mt-2 grid grid-cols-2 md:grid-cols-5 gap-2 p-3 rounded-lg bg-background-light dark:bg-background-dark">
+                    <label class="text-xs">{{ _('Line VAT rate') }}
+                        <input type="text" inputmode="decimal" name="tax_rate" value="{{ money(item.tax_rate) if item.tax_rate is not none else '' }}" placeholder="{{ money(invoice.tax_rate) }}" class="form-input w-full">
+                    </label>
+                    <label class="text-xs">{{ _('VAT category') }}
+                        <select name="vat_category" class="form-input w-full">
+                            <option value="">{{ _('As the invoice') }}</option>
+                            {% for code in vat_categories %}<option value="{{ code }}" {% if item.vat_category == code %}selected{% endif %}>{{ code }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    <label class="text-xs">{{ _('Discount, percent') }}
+                        <input type="text" inputmode="decimal" name="discount_percent" value="{{ money(item.discount_percent) if item.discount_percent else '' }}" class="form-input w-full">
+                    </label>
+                    <label class="text-xs">{{ _('Discount amount') }}
+                        <input type="text" inputmode="decimal" name="discount_amount" value="{{ money(item.discount_amount) if item.discount_amount else '' }}" class="form-input w-full">
+                    </label>
+                    <label class="text-xs">{{ _('Position') }}
+                        <input type="number" name="position" value="{{ item.position or 0 }}" class="form-input w-full">
+                    </label>
+                </div>
+            </details>
+            <button type="submit" class="btn btn-secondary btn-sm" data-line-save>{{ _('Save line') }}</button>
+        </div>
+    </form>
+
+    {% if line.entry_count %}
+    <div id="entries-{{ item.id }}" class="hidden mt-3 overflow-x-auto" data-entries>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-text-muted-light dark:text-text-muted-dark">
+                    <th class="p-1">{{ _('Date') }}</th><th class="p-1">{{ _('Person') }}</th><th class="p-1">{{ _('Task') }}</th><th class="p-1">{{ _('Notes') }}</th>
+                    <th class="p-1 text-right">{{ _('Hours') }}</th><th class="p-1 text-right">{{ _('Rate') }}</th><th class="p-1 text-right">{{ _('Amount') }}</th><th class="p-1"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in line.entries %}
+                <tr class="border-t border-border-light dark:border-border-dark align-top" data-entry-id="{{ row.entry.id }}">
+                    <td class="p-1 whitespace-nowrap"><a href="{{ url_for('timer.edit_timer', timer_id=row.entry.id) }}" class="text-primary hover:underline">{{ row.date|format_date if row.date else '' }}</a></td>
+                    <td class="p-1">{{ row.person }}</td>
+                    <td class="p-1">{{ row.task }}</td>
+                    <td class="p-1 whitespace-pre-line">{{ row.notes }}</td>
+                    <td class="p-1 text-right">{{ money(row.hours) }}</td>
+                    <td class="p-1 text-right text-text-muted-light dark:text-text-muted-dark">{{ money(row.rate) }}</td>
+                    <td class="p-1 text-right">{{ money(row.amount) }}</td>
+                    <td class="p-1 text-right whitespace-nowrap">
+                        <form method="POST" action="{{ url_for('invoices.draft_non_billable_entry', invoice_id=invoice.id, item_id=item.id, entry_id=row.entry.id) }}" class="inline" data-draft-form>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="px-2 py-0.5 text-xs border border-border-light dark:border-border-dark rounded" data-entry-action="non-billable"
+                                    title="{{ _('Takes the entry off the invoice and never bills it') }}">{{ _('Non-billable') }}</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('invoices.draft_remove_entry', invoice_id=invoice.id, item_id=item.id, entry_id=row.entry.id) }}" class="inline" data-draft-form>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="px-2 py-0.5 text-xs border border-border-light dark:border-border-dark rounded" data-entry-action="remove"
+                                    title="{{ _('Back to Unbilled, to bill later') }}" aria-label="{{ _('Remove the entry from the invoice') }}">&times;</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="border-t border-border-light dark:border-border-dark font-semibold">
+                    <td class="p-1" colspan="4">{{ _('Tracked') }} · {{ ngettext('%(num)d entry', '%(num)d entries', line.entry_count) }}</td>
+                    <td class="p-1 text-right">{{ money(line.tracked) }}</td><td></td>
+                    <td class="p-1 text-right">{{ money(line.entries|sum(attribute='amount')) }}</td><td></td>
+                </tr>
+            </tfoot>
+        </table>
+        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+            {{ _('Non-billable takes the entry off the invoice and never bills it. × sends it back to Unbilled to bill later. The date opens the time entry.') }}
+        </p>
+    </div>
+    {% endif %}
+</div>

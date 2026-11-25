@@ -38,6 +38,16 @@ NON_BILLABLE = "non_billable"
 BILLED_OUTSIDE = "billed_outside"
 
 HOURS_PLACES = Decimal("0.0001")
+MONEY_PLACES = Decimal("0.01")
+
+# Kinds of invoice lines. A time line is built from time entries and follows them; a manual line is
+# typed in (a fixed fee, a retainer); a manual hours line is typed in too, but bills hours: it is
+# listed with the hours and counts in the hours billed. Rebuilding hours touches time lines only.
+LINE_KIND_TIME = "time"
+LINE_KIND_MANUAL = "manual"
+LINE_KIND_MANUAL_HOURS = "manual_hours"
+HOURS_LINE_KINDS = (LINE_KIND_TIME, LINE_KIND_MANUAL_HOURS)
+VAT_CATEGORIES = ("S", "Z", "E", "AE", "K", "G", "O", "L", "M")
 
 # Statuses of an invoice that has left draft and was not cancelled: its lines are locked and its time
 # entries are billed (``paid`` with the invoice's number, set by ``InvoiceService.transition_status``).
@@ -114,6 +124,34 @@ class InvalidHoursLayoutError(InvoiceTimeError):
     def __init__(self, layout: Optional[str]):
         self.layout = layout
         super().__init__(f"Hours cannot be regrouped as {layout!r}")
+
+
+class InvalidLineValueError(InvoiceTimeError):
+    """A value typed for a draft line or the invoice total that cannot be used.
+
+    ``field`` is the form field (``description``, ``quantity``, ``unit_price``, ``tax_rate``,
+    ``vat_category``, ``discount_percent``, ``discount_amount``, ``position``, ``discount``) and
+    ``problem`` what is wrong with it (``required``, ``not_a_number``, ``too_low``, ``too_high``,
+    ``unknown``), so a page can say it in its own words.
+    """
+
+    code = "invalid_value"
+
+    def __init__(self, field: str, problem: str):
+        self.field = field
+        self.problem = problem
+        super().__init__(f"{field}: {problem}")
+
+
+class EntryNotOnLineError(InvoiceTimeError):
+    """The time entry is not on this line of the invoice."""
+
+    code = "not_on_line"
+
+    def __init__(self, entry_id: int, item: InvoiceItem):
+        self.entry_id = entry_id
+        self.item = item
+        super().__init__(f"Time entry {entry_id} is not on this line")
 
 
 class InvoiceNotDraftError(InvoiceTimeError):
@@ -909,6 +947,546 @@ class InvoiceTimeService:
         db.session.flush()
         return rewritten
 
+    # ------------------------------------------------------------------
+    # Draft page: one line at a time
+    # ------------------------------------------------------------------
+    def _invoice_layout(self, invoice: Invoice) -> str:
+        """The invoice's hours layout, or the one its next hours would get when it has none."""
+        layout = normalize_layout(invoice.hours_layout)
+        if layout in (None, LAYOUT_NONE):
+            layout, _template = self.resolve_layout(invoice.project)
+        return LAYOUT_TASK if layout == LAYOUT_NONE else layout
+
+    def _refresh_descriptions(self, invoice: Invoice, items: Iterable[InvoiceItem]) -> None:
+        """Rewrite the descriptions of ``items`` (time lines not edited by hand) from their entries.
+
+        Every time line takes part, so lines of one group that differ by rate keep their rate suffix.
+        """
+        wanted = {item.id for item in items if item.kind == LINE_KIND_TIME and not item.description_edited}
+        if not wanted:
+            return
+        project = invoice.project
+        layout = self._invoice_layout(invoice)
+        template = normalize_template(invoice.line_template) or default_line_template(layout)
+        time_items = [i for i in self._ordered_items(invoice) if i.kind == LINE_KIND_TIME]
+        lines = [(item, [entry for entry, _hours in self._line_entries(item)]) for item in time_items]
+        descriptions = describe_lines(
+            lines,
+            layout=layout,
+            template=template,
+            currency=invoice.currency_code,
+            project_name=project.name if project is not None else None,
+        )
+        for index, (item, _entries) in enumerate(lines):
+            if item.id in wanted and index in descriptions:
+                item.description = descriptions[index]
+
+    def recalculate_line(self, invoice: Invoice, item: InvoiceItem, hours_change: Optional[Decimal] = None) -> str:
+        """Bring a time line back in line with its entries after entries were removed or added.
+
+        A line whose quantity was not changed by hand takes the tracked hours of its remaining links;
+        a line with a hand-edited quantity changes by ``hours_change`` (the hours of the entries
+        removed, negative, or added) and never goes below 0. A description not edited by hand is
+        rewritten from the remaining entries. A line left without entries is deleted, unless it was
+        edited by hand: then it stays as a manual hours line. Returns ``updated``, ``deleted`` or
+        ``manual``. Totals are recalculated; the caller commits.
+        """
+        self._require_draft(invoice)
+        db.session.flush()
+        result = "updated"
+        if self.tracked_quantity(item) is None:
+            if not item.is_edited:
+                db.session.delete(item)
+                db.session.flush()
+                invoice.calculate_totals()
+                return "deleted"
+            item.kind = LINE_KIND_MANUAL_HOURS
+            item.time_entry_ids = None
+            result = "manual"
+            if hours_change is not None:
+                quantity = Decimal(str(item.quantity or 0)) + Decimal(str(hours_change))
+                item.quantity = max(quantity, Decimal("0")).quantize(MONEY_PLACES)
+        elif item.quantity_edited:
+            if hours_change is not None:
+                quantity = Decimal(str(item.quantity or 0)) + Decimal(str(hours_change))
+                item.quantity = max(quantity, Decimal("0")).quantize(MONEY_PLACES)
+        else:
+            item.quantity = self.tracked_quantity(item)
+            self._refresh_descriptions(invoice, [item])
+        item.total_amount = item.line_net
+        db.session.flush()
+        invoice.calculate_totals()
+        return result
+
+    def _line_link(self, invoice: Invoice, item: InvoiceItem, entry: TimeEntry) -> InvoiceTimeLink:
+        link = InvoiceTimeLink.query.filter(
+            InvoiceTimeLink.invoice_id == invoice.id,
+            InvoiceTimeLink.invoice_item_id == item.id,
+            InvoiceTimeLink.time_entry_id == entry.id,
+            InvoiceTimeLink.released_at.is_(None),
+        ).first()
+        if link is None:
+            raise EntryNotOnLineError(entry.id, item)
+        return link
+
+    def release_prepaid(self, invoice: Invoice, entry: TimeEntry) -> Decimal:
+        """Give back the prepaid hours an entry used on this draft, as the prepaid allocator does.
+
+        The entry's ledger row for this invoice and its link without a line go, and the entry is
+        billable again. The other entries of the draft keep their prepaid hours: the hours freed are
+        not spread over them. Returns the prepaid hours freed (0 when the entry used none here).
+        """
+        from app.models import ClientPrepaidConsumption
+
+        self._require_draft(invoice)
+        rows = ClientPrepaidConsumption.query.filter(
+            ClientPrepaidConsumption.invoice_id == invoice.id,
+            ClientPrepaidConsumption.time_entry_id == entry.id,
+        ).all()
+        freed = sum((row.hours_consumed for row in rows), Decimal("0"))
+        for row in rows:
+            db.session.delete(row)
+        for link in InvoiceTimeLink.query.filter(
+            InvoiceTimeLink.invoice_id == invoice.id,
+            InvoiceTimeLink.time_entry_id == entry.id,
+            InvoiceTimeLink.invoice_item_id.is_(None),
+            InvoiceTimeLink.released_at.is_(None),
+        ).all():
+            db.session.delete(link)
+        if rows:
+            entry.billable = True
+        db.session.flush()
+        return freed
+
+    def release_dropped_prepaid(self, invoice: Invoice, entry_ids: Iterable[int]) -> Decimal:
+        """After a draft's lines were replaced or removed: give back the prepaid hours of the entries
+        that are on no line of the invoice any more (``release_prepaid``).
+
+        ``entry_ids``: the entries the old lines had (what ``detach_lines`` returned). Entries the new
+        lines kept keep their prepaid hours. Does nothing on an invoice that is not a draft. Returns the
+        prepaid hours freed.
+        """
+        ids = {int(i) for i in entry_ids}
+        if not ids or invoice.status != "draft":
+            return Decimal("0")
+        db.session.flush()
+        on_lines = {
+            row[0]
+            for row in db.session.query(InvoiceTimeLink.time_entry_id)
+            .filter(
+                InvoiceTimeLink.invoice_id == invoice.id,
+                InvoiceTimeLink.invoice_item_id.isnot(None),
+                InvoiceTimeLink.released_at.is_(None),
+                InvoiceTimeLink.time_entry_id.in_(list(ids)),
+            )
+            .all()
+        }
+        dropped = ids - on_lines
+        freed = Decimal("0")
+        if dropped:
+            for entry in TimeEntry.query.filter(TimeEntry.id.in_(list(dropped))).all():
+                freed += self.release_prepaid(invoice, entry)
+        return freed
+
+    def remove_line_entry(
+        self, invoice: Invoice, item: InvoiceItem, entry: TimeEntry, *, non_billable: bool = False
+    ) -> Dict:
+        """Take a time entry off a draft's line: × (back to Unbilled) or Non-billable.
+
+        The entry leaves the invoice: its line link goes, and so do the prepaid hours it used here
+        (``release_prepaid``). Non-billable then sets the entry's ``billable`` to False, so it is not
+        offered for an invoice again. The line is recalculated (``recalculate_line``). Returns
+        ``line`` (``updated``, ``deleted`` or ``manual``), ``hours`` (the hours the line lost) and
+        ``prepaid_freed`` (prepaid hours given back). The caller commits.
+        """
+        self._require_draft(invoice)
+        link = self._line_link(invoice, item, entry)
+        hours = round_quantity(Decimal(link.hours or 0))
+        self.unlink_entry(invoice, entry, item)
+        freed = self.release_prepaid(invoice, entry)
+        if non_billable:
+            entry.set_billable(False, commit=False)
+        line = self.recalculate_line(invoice, item, hours_change=-hours)
+        return {"line": line, "hours": hours, "prepaid_freed": freed}
+
+    @staticmethod
+    def default_hours_rate(invoice: Invoice) -> Decimal:
+        """Hourly rate a hand-added hours line starts with: the invoice project's rate (or its client's)."""
+        from app.models import RateOverride
+
+        try:
+            return Decimal(str(RateOverride.resolve_rate(invoice.project) or 0)).quantize(MONEY_PLACES)
+        except Exception:
+            return Decimal("0.00")
+
+    @staticmethod
+    def parse_amount(value, field: str, *, allow_empty: bool = False, minimum: Optional[Decimal] = None):
+        """A decimal typed in a draft form, or None when empty and ``allow_empty``.
+
+        ``field`` names the form field in the ``InvalidLineValueError`` raised for a bad value.
+        """
+        text = (str(value) if value is not None else "").strip().replace(",", ".")
+        if not text:
+            if allow_empty:
+                return None
+            raise InvalidLineValueError(field, "required")
+        try:
+            number = Decimal(text)
+        except (ArithmeticError, ValueError):
+            raise InvalidLineValueError(field, "not_a_number") from None
+        if not number.is_finite():
+            raise InvalidLineValueError(field, "not_a_number")
+        if minimum is not None and number < minimum:
+            raise InvalidLineValueError(field, "too_low")
+        return number
+
+    def add_manual_line(
+        self,
+        invoice: Invoice,
+        description: str,
+        quantity,
+        unit_price=None,
+        *,
+        hours: bool = False,
+    ) -> InvoiceItem:
+        """Add a line typed in to a draft, after its other lines.
+
+        ``hours`` makes it a manual hours line (listed with the hours; the price defaults to the
+        project's rate); otherwise a manual line (a fixed fee). It has no time entries. The caller commits.
+        """
+        self._require_draft(invoice)
+        description = self.normalize_description(description)
+        if not description:
+            raise InvalidLineValueError("description", "required")
+        quantity = self.parse_amount(quantity, "quantity", minimum=Decimal("0"))
+        price = self.parse_amount(unit_price, "unit_price", allow_empty=True)
+        if price is None:
+            price = self.default_hours_rate(invoice) if hours else Decimal("0")
+        item = InvoiceItem(
+            invoice_id=invoice.id,
+            description=description[:500],
+            quantity=quantity.quantize(MONEY_PLACES),
+            unit_price=price.quantize(MONEY_PLACES),
+            position=self._next_position(invoice),
+        )
+        item.kind = LINE_KIND_MANUAL_HOURS if hours else LINE_KIND_MANUAL
+        db.session.add(item)
+        db.session.flush()
+        invoice.calculate_totals()
+        return item
+
+    def update_line(self, invoice: Invoice, item: InvoiceItem, values: Dict) -> InvoiceItem:
+        """Change a draft line from the draft page; only the keys present in ``values`` change.
+
+        Keys: ``description``, ``quantity``, ``unit_price``, ``tax_rate`` (empty: the invoice's),
+        ``vat_category`` (empty: the invoice's), ``discount_percent``, ``discount_amount``,
+        ``position``. A time line whose description, quantity or price changes is marked as edited
+        by hand, as in the edit form. The caller commits.
+        """
+        self._require_draft(invoice)
+        is_time = item.kind == LINE_KIND_TIME
+        if "description" in values:
+            text = self.normalize_description(values["description"])
+            if not text:
+                raise InvalidLineValueError("description", "required")
+            if text != self.normalize_description(item.description):
+                item.description = text[:500]
+                if is_time:
+                    item.description_edited = True
+        if "quantity" in values:
+            quantity = self.parse_amount(values["quantity"], "quantity", minimum=Decimal("0")).quantize(MONEY_PLACES)
+            if quantity != Decimal(str(item.quantity or 0)).quantize(MONEY_PLACES):
+                item.quantity = quantity
+                if is_time:
+                    item.quantity_edited = True
+        if "unit_price" in values:
+            price = self.parse_amount(values["unit_price"], "unit_price").quantize(MONEY_PLACES)
+            if price != Decimal(str(item.unit_price or 0)).quantize(MONEY_PLACES):
+                item.unit_price = price
+                if is_time:
+                    item.price_edited = True
+        if "tax_rate" in values:
+            rate = self.parse_amount(values["tax_rate"], "tax_rate", allow_empty=True, minimum=Decimal("0"))
+            item.tax_rate = rate
+        if "vat_category" in values:
+            category = (values["vat_category"] or "").strip().upper() or None
+            if category is not None and category not in VAT_CATEGORIES:
+                raise InvalidLineValueError("vat_category", "unknown")
+            item.vat_category = category
+        if "discount_percent" in values:
+            percent = self.parse_amount(
+                values["discount_percent"], "discount_percent", allow_empty=True, minimum=Decimal("0")
+            )
+            if percent is not None and percent > 100:
+                raise InvalidLineValueError("discount_percent", "too_high")
+            item.discount_percent = percent or Decimal("0")
+        if "discount_amount" in values:
+            amount = self.parse_amount(
+                values["discount_amount"], "discount_amount", allow_empty=True, minimum=Decimal("0")
+            )
+            item.discount_amount = amount or Decimal("0")
+        if "position" in values:
+            position = self.parse_amount(values["position"], "position", allow_empty=True)
+            if position is not None:
+                item.position = int(position)
+        item.total_amount = item.line_net
+        db.session.flush()
+        invoice.calculate_totals()
+        return item
+
+    def delete_line(self, invoice: Invoice, item: InvoiceItem) -> Dict:
+        """Delete a draft line; its time entries go back to Unbilled with the prepaid hours they used here.
+
+        Returns ``entries`` (how many the line had) and ``prepaid_freed`` (prepaid hours given back).
+        """
+        self._require_draft(invoice)
+        hours = self.detach_lines(invoice, [item])
+        freed = self.release_dropped_prepaid(invoice, hours.keys())
+        db.session.delete(item)
+        db.session.flush()
+        invoice.calculate_totals()
+        return {"entries": len(hours), "prepaid_freed": freed}
+
+    def _period_query(self, invoice: Invoice):
+        """Time entries of the invoice's projects and period (None for an invoice without a period)."""
+        from datetime import time as dt_time
+
+        if invoice.period_start is None or invoice.period_end is None:
+            return None
+        project_ids, client_id = self._scope(invoice.project_id, invoice.client_id)
+        start = datetime.combine(invoice.period_start, dt_time.min)
+        end = datetime.combine(invoice.period_end, dt_time.max)
+        scope = [TimeEntry.project_id.in_(project_ids)] if project_ids else []
+        if client_id is not None:
+            scope.append(TimeEntry.client_id == client_id)
+        if not scope:
+            return None
+        return TimeEntry.query.filter(or_(*scope), TimeEntry.start_time >= start, TimeEntry.start_time <= end)
+
+    @staticmethod
+    def _draft_created_local(invoice: Invoice) -> Optional[datetime]:
+        """When the draft was created, in the app's time zone (time entries store local times)."""
+        if invoice.created_at is None:
+            return None
+        try:
+            from app.utils.timezone import utc_to_local
+
+            return utc_to_local(invoice.created_at).replace(tzinfo=None)
+        except Exception:
+            return invoice.created_at
+
+    @staticmethod
+    def _only_projects(query, allowed_project_ids: Optional[Iterable[int]]):
+        """Limit a time entry query to the projects a user may see (None: no limit)."""
+        if allowed_project_ids is None:
+            return query
+        allowed = [int(i) for i in allowed_project_ids]
+        return query.filter(TimeEntry.project_id.in_(allowed or [-1]))
+
+    def new_period_entries(
+        self, invoice: Invoice, allowed_project_ids: Optional[Iterable[int]] = None
+    ) -> List[TimeEntry]:
+        """Entries the draft could bill that were logged after it was created ("new entries").
+
+        The set the picker offers (billable, finished, on no invoice, on the invoice's projects)
+        within the invoice's period, limited to ``allowed_project_ids`` (the projects the user may
+        see; None: all). Empty for an invoice without a period.
+        """
+        if invoice.period_start is None or invoice.period_end is None:
+            return []
+        from datetime import time as dt_time
+
+        project_ids, client_id = self._scope(invoice.project_id, invoice.client_id)
+        query = self.unbilled_query(
+            project_ids,
+            datetime.combine(invoice.period_start, dt_time.min),
+            datetime.combine(invoice.period_end, dt_time.max),
+            client_id=client_id,
+        )
+        created = self._draft_created_local(invoice)
+        if created is not None:
+            query = query.filter(TimeEntry.created_at > created)
+        query = self._only_projects(query, allowed_project_ids)
+        return query.order_by(TimeEntry.start_time.asc(), TimeEntry.id.asc()).all()
+
+    def running_period_entries(
+        self, invoice: Invoice, allowed_project_ids: Optional[Iterable[int]] = None
+    ) -> List[TimeEntry]:
+        """Entries in the invoice's projects and period whose timer is still running.
+
+        ``allowed_project_ids``: the projects the user may see (None: all).
+        """
+        query = self._period_query(invoice)
+        if query is None:
+            return []
+        query = self._only_projects(query, allowed_project_ids)
+        return query.filter(TimeEntry.end_time.is_(None)).order_by(TimeEntry.start_time.asc()).all()
+
+    def add_new_entries(
+        self,
+        invoice: Invoice,
+        entry_ids: Optional[Iterable[int]] = None,
+        created_by: Optional[int] = None,
+        allowed_project_ids: Optional[Iterable[int]] = None,
+    ) -> Dict:
+        """Add new entries of the period to the lines they belong to ("Add to matching lines").
+
+        The entries first go through the client's prepaid hours (``PrepaidHoursAllocator``); the
+        entries already on the draft keep theirs. An entry fully covered by prepaid hours gets a link
+        without a line; the rest of an entry (all of it without prepaid hours) joins the time line with
+        the same group (by the invoice's layout) and the same hourly rate: a line not edited by hand
+        follows its entries (hours and text); an edited line keeps its text, and an edited quantity
+        grows by those hours. Entries with no such line get new lines. ``entry_ids`` limits it to these
+        of ``new_period_entries``; ``allowed_project_ids`` to the projects the user may see. Returns
+        ``added`` (hours per line id), ``new_lines``, ``entries``, ``prepaid_hours`` (prepaid hours
+        the new entries used), ``warnings`` (hours of new lines that had no rate) and ``skipped``
+        (entries left out because their prepaid hours are recorded on another invoice). The caller commits.
+        """
+        from app.utils.invoice_time_entry_items import group_key, resolve_entry_rate
+        from app.utils.prepaid_hours import PrepaidHoursAllocator
+
+        self._require_draft(invoice)
+        entries = self.new_period_entries(invoice, allowed_project_ids)
+        if entry_ids is not None:
+            wanted = {int(i) for i in entry_ids}
+            entries = [e for e in entries if e.id in wanted]
+        # An entry whose prepaid hours are recorded on another invoice cannot be allocated again
+        # (one ledger row per entry): it is left out and reported
+        skipped = self._prepaid_elsewhere(invoice, [e.id for e in entries])
+        if skipped:
+            entries = [e for e in entries if e.id not in skipped]
+        if not entries:
+            return {
+                "added": {},
+                "new_lines": 0,
+                "entries": 0,
+                "prepaid_hours": Decimal("0"),
+                "warnings": [],
+                "skipped": len(skipped),
+            }
+
+        allocator = PrepaidHoursAllocator(
+            client=invoice.client,
+            invoice=invoice,
+            keep_entry_ids=self.invoice_entry_ids(invoice),
+        )
+        processed = allocator.process(entries)
+        covered = [p for p in processed if p.prepaid_hours > 0 and p.billable_hours <= 0]
+        if covered:
+            self.link_entries(invoice, None, [(p.entry, p.prepaid_hours) for p in covered], created_by=created_by)
+        to_bill = [p for p in processed if p.billable_hours > 0]
+
+        layout = self._invoice_layout(invoice)
+        lines: Dict[tuple, InvoiceItem] = {}
+        for item in self._ordered_items(invoice):
+            if item.kind != LINE_KIND_TIME:
+                continue
+            line_entries = self._line_entries(item)
+            if not line_entries:
+                continue
+            first = sorted((e for e, _h in line_entries), key=lambda e: (e.start_time or datetime.min, e.id))[0]
+            key = (group_key(layout, first), resolve_entry_rate(first).rate)
+            lines.setdefault(key, item)
+
+        added: Dict[int, Decimal] = {}
+        leftovers = []
+        for billed in to_bill:
+            entry = billed.entry
+            item = lines.get((group_key(layout, entry), resolve_entry_rate(entry).rate))
+            if item is None:
+                leftovers.append(billed)
+                continue
+            self.link_entries(invoice, item, [(entry, billed.billable_hours)], created_by=created_by)
+            added[item.id] = added.get(item.id, Decimal("0")) + round_quantity(billed.billable_hours)
+
+        by_id = {item.id: item for item in lines.values()}
+        for item_id, hours in added.items():
+            self.recalculate_line(invoice, by_id[item_id], hours_change=hours)
+
+        new_lines, warnings = 0, []
+        if leftovers:
+            built = self.add_entries(
+                invoice,
+                leftovers,
+                layout,
+                invoice.line_template,
+                created_by=created_by,
+                remember=False,
+            )
+            new_lines, warnings = len(built.items), built.warnings
+        invoice.calculate_totals()
+        return {
+            "added": added,
+            "new_lines": new_lines,
+            "skipped": len(skipped),
+            "warnings": warnings,
+            "entries": len(entries),
+            "prepaid_hours": allocator.total_prepaid_hours_assigned,
+        }
+
+    @staticmethod
+    def _prepaid_elsewhere(invoice: Invoice, entry_ids: List[int]) -> set:
+        """Entries among ``entry_ids`` with a prepaid ledger row that does not belong to this invoice."""
+        from app.models import ClientPrepaidConsumption
+
+        if not entry_ids:
+            return set()
+        rows = (
+            db.session.query(ClientPrepaidConsumption.time_entry_id)
+            .filter(
+                ClientPrepaidConsumption.time_entry_id.in_(entry_ids),
+                or_(
+                    ClientPrepaidConsumption.invoice_id.is_(None),
+                    ClientPrepaidConsumption.invoice_id != invoice.id,
+                ),
+            )
+            .all()
+        )
+        return {row[0] for row in rows}
+
+    def draft_lines(self, invoice: Invoice) -> List[Dict]:
+        """Lines of a draft with their entries, for the draft page, in a few queries.
+
+        Each element: ``item``, ``entries`` (``[(link, entry)]`` by date), ``tracked`` (hours of
+        the links, rounded as on the line) and ``kind``.
+        """
+        from sqlalchemy.orm import joinedload
+
+        items = self._ordered_items(invoice)
+        links = (
+            InvoiceTimeLink.query.options(
+                joinedload(InvoiceTimeLink.time_entry).joinedload(TimeEntry.user),
+                joinedload(InvoiceTimeLink.time_entry).joinedload(TimeEntry.task),
+                joinedload(InvoiceTimeLink.time_entry).joinedload(TimeEntry.project),
+            )
+            .filter(
+                InvoiceTimeLink.invoice_id == invoice.id,
+                InvoiceTimeLink.invoice_item_id.isnot(None),
+                InvoiceTimeLink.released_at.is_(None),
+            )
+            .order_by(InvoiceTimeLink.id.asc())
+            .all()
+        )
+        by_item: Dict[int, List[InvoiceTimeLink]] = {}
+        for link in links:
+            by_item.setdefault(link.invoice_item_id, []).append(link)
+        result = []
+        for item in items:
+            item_links = sorted(
+                by_item.get(item.id, []),
+                key=lambda link: (link.time_entry.start_time or datetime.min, link.time_entry_id),
+            )
+            tracked = sum((round_quantity(Decimal(link.hours or 0)) for link in item_links), Decimal("0"))
+            result.append(
+                {
+                    "item": item,
+                    "kind": item.kind or LINE_KIND_MANUAL,
+                    "entries": [(link, link.time_entry) for link in item_links],
+                    "tracked": tracked,
+                }
+            )
+        return result
+
     @staticmethod
     def snapshot_lines(invoice: Invoice) -> Dict[str, Dict]:
         """What a draft's lines look like before a form or the API replaces them (see ``carry_line_state``)."""
@@ -968,10 +1546,13 @@ class InvoiceTimeService:
         when they differ from the previous line's (line breaks and spaces at the ends do not count).
         A flag once set stays.
         """
-        item.kind = "time" if item.time_entry_ids else "manual"
-        if item.kind != "time":
-            return
         previous = cls.previous_line_state(snapshot, item.time_entry_ids, item_id)
+        if not item.time_entry_ids:
+            # A line typed in keeps its kind (a manual hours line stays one)
+            kept = (previous or {}).get("kind")
+            item.kind = kept if kept in (LINE_KIND_MANUAL, LINE_KIND_MANUAL_HOURS) else LINE_KIND_MANUAL
+            return
+        item.kind = LINE_KIND_TIME
         if previous is not None and previous["kind"] != "time":
             previous = None
 

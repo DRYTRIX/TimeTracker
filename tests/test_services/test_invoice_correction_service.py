@@ -148,6 +148,68 @@ def test_reissue_copies_lines_and_links_with_the_same_hours(setup):
     assert InvoiceCorrectionService.cancellation(inv) == {"reason": "Wrong hours", "reissued_as": draft}
 
 
+def test_reissue_keeps_line_kinds_edit_flags_hours_layout_and_pdf_template(setup):
+    from datetime import date
+
+    from app.models import InvoiceHtmlTemplate, InvoiceHtmlTemplateVersion
+    from app.services import InvoiceService
+
+    template = InvoiceHtmlTemplate(name="Own layout", html="<html>{{ invoice.invoice_number }}</html>")
+    db.session.add(template)
+    db.session.flush()
+    version = InvoiceHtmlTemplateVersion(template_id=template.id, number=1, html=template.html)
+    db.session.add(version)
+    db.session.flush()
+
+    service = InvoiceTimeService()
+    first, second, extra = setup["entry"](hours=2), setup["entry"](hours=1, day=1), setup["entry"](hours=1, day=2)
+    inv = setup["invoice"]("INV-COR-KIND")
+    inv.hours_layout = "task"
+    inv.line_template = "{task} ({hours} h)"
+    inv.period_start, inv.period_end = date(2026, 10, 1), date(2026, 10, 31)
+    inv.pdf_template_ref, inv.pdf_template_version_id = f"html:{template.id}", version.id
+    time_line = setup["line"](inv, quantity="3", description="Design, reworded")
+    service.link_entries(inv, time_line, [first, second])
+    time_line.kind = "time"
+    time_line.description_edited = True
+    hours_line = setup["line"](inv, quantity="1", description="Extra hours")
+    service.link_entries(inv, hours_line, [extra])
+    hours_line.kind = "manual_hours"
+    hours_line.quantity_edited = True
+    hours_line.price_edited = True
+    fee = setup["line"](inv, quantity="1", description="Fixed fee")
+    fee.kind = "manual"
+    inv.calculate_totals()
+    assert InvoiceService().transition_status(inv, "issued")["success"]
+    db.session.commit()
+
+    draft = InvoiceCorrectionService().reissue(inv, "Wrong client", setup["user"].id)
+    db.session.commit()
+
+    def state(invoice):
+        return [
+            (i.description, i.kind, i.description_edited, i.quantity_edited, i.price_edited)
+            for i in invoice.items.order_by("position", "id").all()
+        ]
+
+    assert state(draft) == state(inv)
+    assert state(draft) == [
+        ("Design, reworded", "time", True, False, False),
+        ("Extra hours", "manual_hours", False, True, True),
+        ("Fixed fee", "manual", False, False, False),
+    ]
+    assert (draft.hours_layout, draft.line_template) == ("task", "{task} ({hours} h)")
+    assert (draft.period_start, draft.period_end) == (date(2026, 10, 1), date(2026, 10, 31))
+    assert (draft.pdf_template_ref, draft.pdf_template_version_id) == (f"html:{template.id}", version.id)
+
+    # Regroup keeps the edited time line as it is, with its entries
+    service.rebuild_lines(draft)
+    db.session.commit()
+    kept = draft.items.filter_by(description="Design, reworded").one()
+    assert (kept.kind, kept.description_edited, kept.quantity) == ("time", True, Decimal("3.00"))
+    assert sorted(int(i) for i in kept.time_entry_ids.split(",")) == sorted([first.id, second.id])
+
+
 def test_reason_and_status_are_checked(setup):
     service = InvoiceCorrectionService()
     issued = setup["invoice"]("INV-COR-CHK", status="issued")

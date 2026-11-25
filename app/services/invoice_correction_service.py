@@ -143,7 +143,8 @@ class InvoiceCorrectionService:
     def reissue(self, invoice: Invoice, reason: str, user_id: Optional[int]) -> Invoice:
         """Cancel an issued invoice and copy it into a new draft with the next number. Returns the draft.
 
-        The draft gets the same header, lines (as edited on the invoice), extra goods, expenses and
+        The draft gets the same header (with the hours layout, line template, period and PDF template), lines (as
+        edited on the invoice, with their kind and edit flags), extra goods, expenses and
         project costs, and new links for the same time entries with the same hours. Prepaid hours
         the invoice used move to the draft as they are.
         """
@@ -181,6 +182,11 @@ class InvoiceCorrectionService:
                 position=item.position,
             )
             copy.is_stock_item = item.is_stock_item
+            # What kind of line it is and what was changed by hand, so a rebuild treats it the same
+            copy.kind = item.kind
+            copy.description_edited = item.description_edited
+            copy.quantity_edited = item.quantity_edited
+            copy.price_edited = item.price_edited
             db.session.add(copy)
             new_items[item.id] = copy
         self._copy_extra_goods(invoice, draft, user_id)
@@ -302,6 +308,13 @@ class InvoiceCorrectionService:
         draft.seller_snapshot = invoice.seller_snapshot
         draft.payment_details_text = invoice.payment_details_text
         draft.reminder_policy_id = invoice.reminder_policy_id
+        draft.hours_layout = invoice.hours_layout
+        draft.line_template = invoice.line_template
+        draft.period_start = invoice.period_start
+        draft.period_end = invoice.period_end
+        # The same PDF template and version, so the reissue prints like the invoice it replaces
+        draft.pdf_template_ref = invoice.pdf_template_ref
+        draft.pdf_template_version_id = invoice.pdf_template_version_id
         return draft
 
     @staticmethod

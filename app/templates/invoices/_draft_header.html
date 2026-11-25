@@ -1,0 +1,71 @@
+{# Step 1 as it prints on the invoice: From, Bill to, number, period, dates, currency, VAT #}
+<section id="draftHeader" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <div class="flex justify-between items-start gap-4 mb-4">
+        <p class="text-sm text-text-muted-light dark:text-text-muted-dark">
+            <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-100 text-teal-800 text-xs font-semibold mr-1">1</span>
+            {{ _('Who bills whom, number and period, as it prints on the invoice') }}
+        </p>
+        {% if step_one_url %}
+        <button type="button" class="btn btn-secondary" id="editStepOne" data-open-dialog="stepOneDialog">{{ _('Edit in step 1') }}</button>
+        {% else %}
+        <button type="button" class="btn btn-secondary opacity-50 cursor-not-allowed" id="editStepOne" disabled aria-disabled="true"
+                title="{{ _('Step 1 is not available in this version') }}">{{ _('Edit in step 1') }}</button>
+        {% endif %}
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <div>
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('From') }}</h3>
+            <p class="font-semibold">{{ seller.company_name }}</p>
+            {% if seller.company_address %}<p class="whitespace-pre-line">{{ seller.company_address }}</p>{% endif %}
+            {% if seller.company_tax_id %}<p>{{ _('Tax ID') }}: {{ seller.company_tax_id }}</p>{% endif %}
+            {% if pay_to %}<p class="text-text-muted-light dark:text-text-muted-dark whitespace-pre-line mt-1">{{ _('Pay to') }}: {{ pay_to }}</p>{% endif %}
+        </div>
+        <div>
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Bill to') }}</h3>
+            <p class="font-semibold">{{ invoice.client_name }}</p>
+            {% if invoice.client_address %}<p class="whitespace-pre-line">{{ invoice.client_address }}</p>{% endif %}
+            {% for label, value in buyer_lines %}<p>{{ label }}: {{ value }}</p>{% endfor %}
+            {% if invoice.client_email %}<p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Send to %(email)s', email=invoice.client_email) }}</p>{% endif %}
+        </div>
+        <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+            <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Invoice') }}</dt><dd>{{ invoice.invoice_number }}</dd>
+            {% if invoice.period_start and invoice.period_end %}
+            <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Period') }}</dt>
+            <dd id="draftPeriod">{{ invoice.period_start|format_date }} – {{ invoice.period_end|format_date }}</dd>
+            {% endif %}
+            <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Issued') }}</dt><dd>{{ invoice.issue_date|format_date }}</dd>
+            <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Due') }}</dt><dd>{{ invoice.due_date|format_date }}</dd>
+            <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Currency') }}</dt><dd>{{ invoice.currency_code }}</dd>
+            <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('VAT') }}</dt>
+            <dd>
+                {{ (invoice.vat_category or 'S')|upper }} · {{ "%.2f"|format(invoice.tax_rate or 0) }}%
+                {% if invoice.vat_exemption_reason %}<span class="block text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('reason printed: %(reason)s', reason=invoice.vat_exemption_reason) }}</span>{% endif %}
+            </dd>
+        </dl>
+    </div>
+</section>
+
+{% if step_one_url %}
+<div id="stepOneDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="stepOneTitle">
+    <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark max-w-lg w-full p-6">
+        <h3 id="stepOneTitle" class="text-lg font-semibold mb-3">{{ _('Back to step 1?') }}</h3>
+        <div class="text-sm space-y-2">
+            <p>{{ _('%(hours)s h on this draft go back to Unbilled and are collected again from the new period and projects.', hours=tracked_text) }}</p>
+            {% if edited_lines %}
+            <p>{{ ngettext('Hours lines are rebuilt: your edits to %(num)d line are lost:', 'Hours lines are rebuilt: your edits to %(num)d lines are lost:', edited_lines|length) }}</p>
+            <ul class="list-disc list-inside text-text-muted-light dark:text-text-muted-dark">
+                {% for item in edited_lines %}<li>{{ item.description|truncate(80) }}</li>{% endfor %}
+            </ul>
+            {% else %}
+            <p>{{ _('Hours lines are rebuilt.') }}</p>
+            {% endif %}
+            <p>{{ _('Lines you added by hand stay. Non-billable marks stay.') }}</p>
+            <p>{{ _('Entries you took off with × are collected again if they fall in the new period.') }}</p>
+        </div>
+        <div class="flex justify-end gap-2 mt-5">
+            <button type="button" class="btn btn-secondary" data-close-dialog="stepOneDialog">{{ _('Stay on the draft') }}</button>
+            <a href="{{ step_one_url }}" class="btn btn-primary" id="backToStepOne">{{ _('Back to step 1') }}</a>
+        </div>
+    </div>
+</div>
+{% endif %}
