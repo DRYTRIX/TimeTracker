@@ -179,12 +179,23 @@ def initialize_database(engine):
             print(f"Checking for admin user: {admin_username}")
 
             if not User.query.filter_by(username=admin_username).first():
+                import secrets
+
                 print("Creating admin user...")
                 admin_user = User(username=admin_username, role="admin")
                 admin_user.is_active = True
+                bootstrap_password = (os.getenv("ADMIN_BOOTSTRAP_PASSWORD") or "").strip() or secrets.token_urlsafe(24)
+                admin_user.set_password(bootstrap_password)
+                if hasattr(admin_user, "password_change_required"):
+                    admin_user.password_change_required = True
                 db.session.add(admin_user)
                 db.session.commit()
                 print(f"Created default admin user: {admin_username}")
+                if not (os.getenv("ADMIN_BOOTSTRAP_PASSWORD") or "").strip():
+                    print(
+                        f"IMPORTANT: Set a new password on first login. "
+                        f"Temporary admin password: {bootstrap_password}"
+                    )
             else:
                 print(f"Admin user {admin_username} already exists")
 

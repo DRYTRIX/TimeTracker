@@ -41,17 +41,35 @@ def create_comment():
             flash(_("Comment cannot be associated with multiple targets"), "error")
             return safe_redirect(request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard"))
 
-        # Verify target exists
+        from app.utils.scope_filter import user_can_access_project
+
+        # Verify target exists and caller may access its project scope
         if project_id:
             target = Project.query.get_or_404(project_id)
             target_type = "project"
+            if not user_can_access_project(current_user, project_id):
+                flash(_("You do not have access to this project"), "error")
+                return safe_redirect(
+                    request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")
+                )
         elif task_id:
             target = Task.query.get_or_404(task_id)
             target_type = "task"
             project_id = target.project_id  # For redirects
+            if project_id and not user_can_access_project(current_user, project_id):
+                flash(_("You do not have access to this project"), "error")
+                return safe_redirect(
+                    request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")
+                )
         else:
             target = Quote.query.get_or_404(quote_id)
             target_type = "quote"
+            quote_project_id = getattr(target, "project_id", None)
+            if quote_project_id and not user_can_access_project(current_user, quote_project_id):
+                flash(_("You do not have access to this project"), "error")
+                return safe_redirect(
+                    request.referrer, allow_absolute_same_host=True, fallback=url_for("main.dashboard")
+                )
 
         # If this is a reply, verify parent comment exists
         if parent_id:
@@ -209,17 +227,26 @@ def list_comments():
         return jsonify({"error": "Cannot specify multiple targets"}), 400
 
     try:
+        from app.utils.scope_filter import user_can_access_project
+
         if project_id:
             # Verify project exists
             project = Project.query.get_or_404(project_id)
+            if not user_can_access_project(current_user, project_id):
+                return jsonify({"error": "Access denied"}), 403
             comments = Comment.get_project_comments(project_id, include_replies)
         elif task_id:
             # Verify task exists
             task = Task.query.get_or_404(task_id)
+            if task.project_id and not user_can_access_project(current_user, task.project_id):
+                return jsonify({"error": "Access denied"}), 403
             comments = Comment.get_task_comments(task_id, include_replies)
         else:
             # Verify quote exists
             quote = Quote.query.get_or_404(quote_id)
+            quote_project_id = getattr(quote, "project_id", None)
+            if quote_project_id and not user_can_access_project(current_user, quote_project_id):
+                return jsonify({"error": "Access denied"}), 403
             comments = Comment.get_quote_comments(quote_id, include_replies, include_internal)
 
         return jsonify({"success": True, "comments": [comment.to_dict() for comment in comments]})

@@ -60,18 +60,24 @@ def post_message(channel_id):
     if not _chat.user_can_access_channel(channel_id, g.api_user.id, is_admin=g.api_user.is_admin):
         return error_response("Access denied", error_code="forbidden", status_code=403)
 
+    from app.utils.attachment_url import sanitize_attachment_url
+
     data = request.get_json() or {}
     text = (data.get("message") or "").strip()
-    if not text and not data.get("attachment_url"):
+    raw_attachment = data.get("attachment_url")
+    attachment_url = sanitize_attachment_url(raw_attachment) if raw_attachment else None
+    if raw_attachment and attachment_url is None:
+        return validation_error_response({"attachment_url": ["Invalid or unsafe attachment path"]})
+    if not text and not attachment_url:
         return validation_error_response({"message": ["Message cannot be empty"]})
 
     message = _chat.post_message(
         channel_id,
         g.api_user.id,
         message=text,
-        message_type=data.get("message_type") or ("file" if data.get("attachment_url") else "text"),
+        message_type=data.get("message_type") or ("file" if attachment_url else "text"),
         reply_to_id=data.get("reply_to_id"),
-        attachment_url=data.get("attachment_url"),
+        attachment_url=attachment_url,
         attachment_filename=data.get("attachment_filename"),
         attachment_size=data.get("attachment_size"),
     )

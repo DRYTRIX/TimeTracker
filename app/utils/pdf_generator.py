@@ -1048,7 +1048,6 @@ class InvoicePDFGenerator:
                     autoescape=True,
                     invoice=invoice_data,  # Use wrapped object with lists
                     settings=self.settings,
-                    Path=Path,
                     get_logo_base64=get_logo_base64,
                     get_image_base64=get_image_base64,
                     format_date=format_date,
@@ -1069,7 +1068,6 @@ class InvoicePDFGenerator:
                     "invoices/pdf_default.html",
                     invoice=invoice_data,  # Use wrapped object with lists
                     settings=self.settings,
-                    Path=Path,
                     get_logo_base64=get_logo_base64,
                     get_image_base64=get_image_base64,
                     format_date=format_date,
@@ -2321,7 +2319,6 @@ class QuotePDFGenerator:
                     autoescape=True,
                     quote=quote_data,
                     settings=self.settings,
-                    Path=Path,
                     get_logo_base64=get_logo_base64,
                     get_image_base64=get_image_base64,
                     format_date=format_date,
@@ -2341,7 +2338,6 @@ class QuotePDFGenerator:
                     "quotes/pdf_default.html",
                     quote=quote_data,
                     settings=self.settings,
-                    Path=Path,
                     get_logo_base64=get_logo_base64,
                     get_image_base64=get_image_base64,
                     format_date=format_date,

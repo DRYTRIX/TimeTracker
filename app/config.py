@@ -317,8 +317,8 @@ class Config:
     METRICS_TOKEN = (os.getenv("METRICS_TOKEN") or "").strip()
 
     # Allow CalDAV / ActivityWatch integrations to target private/LAN hosts.
-    # Cloud metadata hostnames remain blocked. Set false to require public URLs only.
-    INTEGRATIONS_ALLOW_PRIVATE_URLS = os.getenv("INTEGRATIONS_ALLOW_PRIVATE_URLS", "true").lower() == "true"
+    # Default false: cloud metadata / loopback stay blocked unless operators opt in.
+    INTEGRATIONS_ALLOW_PRIVATE_URLS = os.getenv("INTEGRATIONS_ALLOW_PRIVATE_URLS", "false").lower() == "true"
 
     # Comma-separated browser origins allowed for /api/v1 CORS and Socket.IO.
     # Empty = derive from APP_BASE_URL / SERVER_NAME only (no wildcard reflection).

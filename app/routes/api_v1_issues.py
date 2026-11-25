@@ -22,17 +22,37 @@ def list_issues():
     if blocked:
         return blocked
 
+    from app.utils.api_object_auth import api_user_is_admin, require_client_access, require_project_access
+    from app.utils.scope_filter import get_allowed_client_ids, get_allowed_project_ids
+
     project_id = request.args.get("project_id", type=int)
     client_id = request.args.get("client_id", type=int)
     status = request.args.get("status")
     page = request.args.get("page", 1, type=int)
     per_page = min(request.args.get("per_page", 50, type=int), 100)
 
+    if project_id:
+        err = require_project_access(project_id)
+        if err:
+            return err
+    if client_id:
+        err = require_client_access(client_id)
+        if err:
+            return err
+
     query = Issue.query
     if project_id:
         query = query.filter_by(project_id=project_id)
+    elif not api_user_is_admin():
+        allowed_projects = get_allowed_project_ids(g.api_user)
+        if allowed_projects is not None:
+            query = query.filter(Issue.project_id.in_(allowed_projects or []))
     if client_id:
         query = query.filter_by(client_id=client_id)
+    elif not api_user_is_admin():
+        allowed_clients = get_allowed_client_ids(g.api_user)
+        if allowed_clients is not None:
+            query = query.filter(Issue.client_id.in_(allowed_clients or []))
     if status:
         query = query.filter_by(status=status)
 
@@ -58,9 +78,18 @@ def get_issue(issue_id):
     blocked = _require_module_enabled_for_api("issues")
     if blocked:
         return blocked
+    from app.utils.api_object_auth import require_client_access, require_project_access
+
     issue = Issue.query.filter_by(id=issue_id).first()
     if not issue:
         return not_found_response("Issue not found")
+    err = require_client_access(issue.client_id)
+    if err:
+        return err
+    if issue.project_id:
+        err = require_project_access(issue.project_id)
+        if err:
+            return err
     return jsonify({"issue": issue.to_dict()})
 
 
@@ -72,6 +101,8 @@ def create_issue():
     if blocked:
         return blocked
 
+    from app.utils.api_object_auth import require_client_access, require_project_access
+
     data = request.get_json() or {}
     title = (data.get("title") or "").strip()
     client_id = data.get("client_id")
@@ -79,6 +110,13 @@ def create_issue():
         return error_response("title is required", status_code=400)
     if not client_id:
         return error_response("client_id is required", status_code=400)
+    err = require_client_access(int(client_id), edit=True)
+    if err:
+        return err
+    if data.get("project_id"):
+        err = require_project_access(data.get("project_id"), edit=True)
+        if err:
+            return err
 
     issue = Issue(
         client_id=int(client_id),
@@ -105,9 +143,18 @@ def update_issue(issue_id):
     if blocked:
         return blocked
 
+    from app.utils.api_object_auth import require_client_access, require_project_access
+
     issue = Issue.query.filter_by(id=issue_id).first()
     if not issue:
         return not_found_response("Issue not found")
+    err = require_client_access(issue.client_id, edit=True)
+    if err:
+        return err
+    if issue.project_id:
+        err = require_project_access(issue.project_id, edit=True)
+        if err:
+            return err
 
     data = request.get_json() or {}
     if "title" in data and data["title"] is not None:

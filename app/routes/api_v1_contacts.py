@@ -72,6 +72,18 @@ def create_contact(client_id):
     return jsonify({"message": "Contact created successfully", "contact": contact.to_dict()}), 201
 
 
+def _load_contact_for_api(contact_id, *, edit: bool = False):
+    from app.utils.api_object_auth import not_found, require_client_access
+
+    contact = Contact.query.filter_by(id=contact_id).first()
+    if not contact:
+        return None, not_found("Contact not found")
+    err = require_client_access(contact.client_id, edit=edit)
+    if err:
+        return None, err
+    return contact, None
+
+
 @api_v1_contacts_bp.route("/contacts/<int:contact_id>", methods=["GET"])
 @require_api_token("read:contacts")
 def get_contact(contact_id):
@@ -79,7 +91,9 @@ def get_contact(contact_id):
     blocked = _require_module_enabled_for_api("contacts")
     if blocked:
         return blocked
-    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    contact, err = _load_contact_for_api(contact_id)
+    if err:
+        return err
     return jsonify({"contact": contact.to_dict()})
 
 
@@ -90,7 +104,9 @@ def update_contact(contact_id):
     blocked = _require_module_enabled_for_api("contacts")
     if blocked:
         return blocked
-    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    contact, err = _load_contact_for_api(contact_id, edit=True)
+    if err:
+        return err
     data = request.get_json() or {}
     for field in (
         "first_name",
@@ -130,7 +146,9 @@ def delete_contact(contact_id):
     blocked = _require_module_enabled_for_api("contacts")
     if blocked:
         return blocked
-    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    contact, err = _load_contact_for_api(contact_id, edit=True)
+    if err:
+        return err
     contact.is_active = False
     db.session.commit()
     return jsonify({"message": "Contact deleted successfully"})
@@ -145,7 +163,9 @@ def list_contact_communications(contact_id):
         return blocked
     from app.models import ContactCommunication
 
-    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    contact, err = _load_contact_for_api(contact_id)
+    if err:
+        return err
     communications = ContactCommunication.get_recent_communications(contact_id=contact.id, limit=100)
     return jsonify({"communications": [c.to_dict() for c in communications]})
 
@@ -160,7 +180,9 @@ def create_contact_communication(contact_id):
     from app.models import ContactCommunication
     from app.routes.api_v1_common import parse_datetime
 
-    contact = Contact.query.filter_by(id=contact_id).first_or_404()
+    contact, err = _load_contact_for_api(contact_id, edit=True)
+    if err:
+        return err
     data = request.get_json() or {}
     comm_type = (data.get("type") or "note").strip()
     communication = ContactCommunication(

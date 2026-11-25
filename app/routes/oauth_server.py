@@ -50,6 +50,13 @@ def _intersect_scopes(requested: str, allowed: list[str]) -> str:
     return ",".join(granted)
 
 
+def _cap_scopes_for_user(user, scopes: str) -> str:
+    """Non-admins never receive admin-tier OAuth scopes."""
+    from app.utils.api_object_auth import cap_scopes_for_user
+
+    return cap_scopes_for_user(user, scopes)
+
+
 def _authenticate_client() -> tuple[OAuthApplication | None, str | None]:
     """Resolve confidential/public client from Basic auth or form body."""
     client_id = None
@@ -127,7 +134,7 @@ def authorize():
         if form_action_source:
             g.csp_form_action_extra = form_action_source
 
-        granted_scope = _intersect_scopes(scope, app_rec.scope_list())
+        granted_scope = _cap_scopes_for_user(current_user, _intersect_scopes(scope, app_rec.scope_list()))
         return render_template(
             "oauth/authorize.html",
             application=app_rec,
@@ -168,6 +175,9 @@ def authorize():
     granted = _intersect_scopes(scope_for_intersect, app_rec.scope_list())
     if not granted and scope:
         granted = ",".join(s.strip() for s in scope.replace(" ", ",").split(",") if s.strip() in app_rec.scope_list())
+    granted = _cap_scopes_for_user(current_user, granted)
+    if not granted:
+        return render_template("oauth/authorize.html", error="No permitted scopes for this account."), 400
 
     code_rec, plain_code = OAuthAuthorizationCode.create_code(
         application_id=app_rec.id,
@@ -230,11 +240,17 @@ def _token_authorization_code(app_rec: OAuthApplication):
     if not _verify_pkce(code_verifier, code_rec.code_challenge or "", code_rec.code_challenge_method):
         return jsonify({"error": "invalid_grant", "error_description": "PKCE verification failed"}), 400
 
+    from app.models import User
+
     code_rec.used_at = datetime.utcnow()
+    user = User.query.get(code_rec.user_id)
+    capped = _cap_scopes_for_user(user, code_rec.scope or "")
+    if not capped:
+        return jsonify({"error": "invalid_scope"}), 400
     access_rec, plain_access, plain_refresh = OAuthAccessToken.create_token(
         application_id=app_rec.id,
         user_id=code_rec.user_id,
-        scopes=code_rec.scope or "",
+        scopes=capped,
     )
     db.session.add(access_rec)
     safe_commit("oauth_token_issued", {"app_id": app_rec.id, "user_id": code_rec.user_id})
@@ -265,12 +281,19 @@ def _token_refresh(app_rec: OAuthApplication):
     if existing.refresh_expires_at and existing.refresh_expires_at < datetime.utcnow():
         return jsonify({"error": "invalid_grant"}), 400
 
+    from app.models import User
+
+    user = User.query.get(existing.user_id)
+    capped = _cap_scopes_for_user(user, existing.scopes or "")
+    if not capped:
+        return jsonify({"error": "invalid_scope"}), 400
+
     # Rotate: revoke old access token, issue new pair
     existing.revoke()
     access_rec, plain_access, plain_refresh = OAuthAccessToken.create_token(
         application_id=app_rec.id,
         user_id=existing.user_id,
-        scopes=existing.scopes or "",
+        scopes=capped,
     )
     db.session.add(access_rec)
     safe_commit("oauth_token_refreshed", {"app_id": app_rec.id, "user_id": existing.user_id})
@@ -361,10 +384,46 @@ def _issuer_base() -> str:
 
 
 def _redirect_uri_allowed_for_dcr(uri: str) -> bool:
+    """Strict DCR redirect check (RFC 8252 loopback + exact https/custom hosts).
+
+    Rejects look-alike hosts such as ``http://localhost.attacker.example/``.
+    """
+    from urllib.parse import urlsplit
+
     u = (uri or "").strip()
     if not u:
         return False
-    return any(u.startswith(prefix) for prefix in _MCP_DCR_REDIRECT_ALLOW_PREFIXES)
+    try:
+        parts = urlsplit(u)
+    except Exception:
+        return False
+    if parts.fragment or parts.username or parts.password:
+        return False
+    scheme = (parts.scheme or "").lower()
+    host = (parts.hostname or "").lower()
+
+    # Loopback (RFC 8252 §7.3): http + exact localhost / 127.0.0.1 / ::1, any port
+    if scheme == "http" and host in {"localhost", "127.0.0.1", "::1"}:
+        return True
+
+    # Exact https hosts from the allowlist prefixes
+    if scheme == "https" and host:
+        https_hosts = {
+            "claude.ai",
+            "www.claude.ai",
+            "claude.com",
+            "www.claude.com",
+            "cursor.com",
+            "www.cursor.com",
+        }
+        if host in https_hosts:
+            return True
+
+    # Custom URI schemes (exact scheme match)
+    if scheme in {"cursor", "vscode", "vscode-insiders"}:
+        return True
+
+    return False
 
 
 def _dcr_owner_user_id() -> int | None:
@@ -466,11 +525,12 @@ def dynamic_client_register():
     if not owner_id:
         return jsonify({"error": "server_error", "error_description": "No user available to own the client"}), 500
 
+    # Dynamically registered clients are capped to the user preset so anonymous
+    # DCR cannot mint admin-capable apps for non-admin consentors.
     preset = (data.get("scope_preset") or data.get("timetracker_scope_preset") or "user").strip().lower()
-    if preset in ("admin_readonly", "admin-readonly", "readonly"):
-        allowed = MCP_ADMIN_READONLY_SCOPES
-    elif preset == "admin":
-        allowed = MCP_ADMIN_SCOPES
+    if preset in ("admin", "admin_readonly", "admin-readonly", "readonly"):
+        # Keep registration public but never pre-authorize admin scopes via DCR.
+        allowed = MCP_USER_SCOPES
     else:
         allowed = MCP_USER_SCOPES
 

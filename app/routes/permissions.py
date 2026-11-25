@@ -308,18 +308,19 @@ def manage_user_roles(user_id):
         # Get selected role IDs
         role_ids = request.form.getlist("roles")
 
-        # Validate role assignments - only super_admins can assign super_admin roles
-        # and only super_admins can remove admin roles
+        # Validate role assignments - only super_admins can assign admin-tier roles
         is_super_admin = current_user.is_super_admin
         selected_roles = [Role.query.get(int(role_id)) for role_id in role_ids if role_id]
         selected_roles = [r for r in selected_roles if r]  # Remove None values
 
-        # Check if trying to assign super_admin role
-        has_super_admin = any(r.name == "super_admin" for r in selected_roles)
-        if has_super_admin and not is_super_admin:
-            flash(_("Only Super Admins can assign the super_admin role"), "error")
-            all_roles = Role.query.order_by(Role.name).all()
-            return render_template("admin/users/roles.html", user=user, all_roles=all_roles)
+        from app.utils.role_assignment import filter_assignable_roles, user_can_assign_role
+
+        for role in selected_roles:
+            allowed, role_err = user_can_assign_role(current_user, role.name)
+            if not allowed:
+                flash(_(role_err), "error")
+                all_roles = filter_assignable_roles(current_user, Role.query.order_by(Role.name).all())
+                return render_template("admin/users/roles.html", user=user, all_roles=all_roles)
 
         # Check if trying to remove admin role from self
         current_has_admin = any(r.name == "admin" for r in user.roles)
@@ -359,7 +360,9 @@ def manage_user_roles(user_id):
         return redirect(url_for("admin.edit_user", user_id=user.id))
 
     # GET request
-    all_roles = Role.query.order_by(Role.name).all()
+    from app.utils.role_assignment import filter_assignable_roles
+
+    all_roles = filter_assignable_roles(current_user, Role.query.order_by(Role.name).all())
     return render_template("admin/users/roles.html", user=user, all_roles=all_roles)
 
 

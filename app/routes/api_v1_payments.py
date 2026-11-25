@@ -9,9 +9,29 @@ from flask import Blueprint, g, jsonify, request
 
 from app.routes.api_v1_common import _parse_date
 from app.utils.api_auth import require_api_token
+from app.utils.api_object_auth import (
+    api_user_is_admin,
+    filter_payments_query,
+    not_found,
+    require_invoice_access,
+)
 from app.utils.api_responses import error_response, validation_error_response
 
 api_v1_payments_bp = Blueprint("api_v1_payments", __name__, url_prefix="/api/v1")
+
+
+def _load_payment_for_api(payment_id: int):
+    from sqlalchemy.orm import joinedload
+
+    from app.models import Payment
+
+    payment = Payment.query.options(joinedload(Payment.invoice)).filter_by(id=payment_id).first()
+    if not payment:
+        return None, not_found("Payment not found")
+    err = require_invoice_access(payment.invoice)
+    if err:
+        return None, err
+    return payment, None
 
 
 @api_v1_payments_bp.route("/payments", methods=["GET"])
@@ -27,7 +47,14 @@ def list_payments():
     per_page = request.args.get("per_page", 50, type=int)
     query = Payment.query.options(joinedload(Payment.invoice))
     if invoice_id:
+        from app.models import Invoice
+
+        invoice = Invoice.query.get(invoice_id)
+        err = require_invoice_access(invoice)
+        if err:
+            return err
         query = query.filter(Payment.invoice_id == invoice_id)
+    query = filter_payments_query(query)
     query = query.order_by(Payment.created_at.desc())
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     pagination_dict = {
@@ -47,11 +74,9 @@ def list_payments():
 @require_api_token("read:payments")
 def get_payment(payment_id):
     """Get a payment."""
-    from sqlalchemy.orm import joinedload
-
-    from app.models import Payment
-
-    payment = Payment.query.options(joinedload(Payment.invoice)).filter_by(id=payment_id).first_or_404()
+    payment, err = _load_payment_for_api(payment_id)
+    if err:
+        return err
     return jsonify({"payment": payment.to_dict()})
 
 
@@ -61,6 +86,7 @@ def create_payment():
     """Create a payment."""
     from datetime import date
 
+    from app.models import Invoice
     from app.services import PaymentService
 
     data = request.get_json() or {}
@@ -71,6 +97,10 @@ def create_payment():
         for f in missing:
             errors[f] = [f"{f} is required"]
         return validation_error_response(errors=errors, message=f"Missing required fields: {', '.join(missing)}")
+    invoice = Invoice.query.get(data["invoice_id"])
+    err = require_invoice_access(invoice, write=True)
+    if err:
+        return err
     try:
         amount = Decimal(str(data["amount"]))
     except Exception:
@@ -113,6 +143,9 @@ def update_payment(payment_id):
     """Update a payment."""
     from app.services import PaymentService
 
+    payment, err = _load_payment_for_api(payment_id)
+    if err:
+        return err
     data = request.get_json() or {}
     update_kwargs = {}
     for field in ("currency", "method", "reference", "notes", "status"):
@@ -140,6 +173,12 @@ def delete_payment(payment_id):
     """Delete a payment."""
     from app.services import PaymentService
 
+    payment, err = _load_payment_for_api(payment_id)
+    if err:
+        return err
+    # Non-admins may only delete payments they are allowed to see (invoice owner)
+    if not api_user_is_admin() and payment.invoice.created_by != g.api_user.id:
+        return not_found("Payment not found")
     payment_service = PaymentService()
     result = payment_service.delete_payment(payment_id=payment_id, user_id=g.api_user.id)
     if not result.get("success"):

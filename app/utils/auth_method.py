@@ -37,6 +37,11 @@ def requires_password_form(auth_method: str | None) -> bool:
     return m in ("local", "both", "ldap", "all")
 
 
+def allows_passwordless_login(auth_method: str | None) -> bool:
+    """True only for AUTH_METHOD=none (trusted environments). SSO-only modes never passwordless."""
+    return normalize_auth_method(auth_method) == "none"
+
+
 def forgot_password_available(auth_method: str | None) -> bool:
     """Forgot-password link when any local-password account may exist."""
     return auth_includes_local(auth_method)

@@ -23,6 +23,7 @@ from app.utils.auth_method import (
     auth_includes_local,
     auth_includes_oidc,
     auth_includes_saml,
+    allows_passwordless_login,
     forgot_password_available,
     normalize_auth_method,
     requires_password_form,
@@ -276,7 +277,22 @@ def forgot_password():
         if user and user.is_active and user.email and getattr(user, "auth_provider", "local") == "local":
             try:
                 token = _make_password_reset_token(user)
-                reset_url = url_for("auth.reset_password", token=token, _external=True)
+                # Build reset URL from configured APP_BASE_URL — never from request Host
+                # (prevents Host-header poisoning of password-reset emails).
+                from app.utils.urls import external_url_context, get_app_base_url, safe_external_url_for
+
+                app_obj = current_app._get_current_object()
+                if not get_app_base_url(app_obj):
+                    current_app.logger.error(
+                        "Password reset email skipped: APP_BASE_URL / app_base_url is not configured"
+                    )
+                    reset_url = ""
+                else:
+                    with external_url_context(app_obj):
+                        reset_url = safe_external_url_for("auth.reset_password", token=token)
+                if not reset_url:
+                    current_app.logger.error("Password reset email skipped: could not build safe reset URL")
+                    raise RuntimeError("safe reset URL unavailable")
 
                 from app.utils.email import send_email
 
@@ -386,6 +402,17 @@ def login():
         if next_page and is_safe_next_url(next_page):
             return redirect(url_for("auth.login_oidc", next=next_page))
         return redirect(url_for("auth.login_oidc"))
+
+    # SAML-only: never accept local username POST; send users to the IdP
+    if auth_method == "saml":
+        if request.method == "POST":
+            log_event("auth.login_failed", reason="saml_only_local_post_rejected", auth_method=auth_method)
+            flash(_("Use SAML single sign-on to sign in."), "error")
+            return redirect(url_for("auth_saml.saml_login"))
+        next_page = request.args.get("next")
+        if next_page and is_safe_next_url(next_page):
+            return redirect(url_for("auth_saml.saml_login", next=next_page))
+        return redirect(url_for("auth_saml.saml_login"))
 
     if request.method == "POST":
         try:
@@ -628,10 +655,41 @@ def login():
                         return render_template("auth/login.html", **_login_template_vars())
                     current_app.logger.info("User '%s' set initial password during login", user.username)
                     flash(_("Password has been set. You are now logged in."), "success")
+            elif allows_passwordless_login(auth_method):
+                # AUTH_METHOD=none only — trusted environments. Still require a password
+                # for admin-tier accounts so a passwordless bootstrap admin cannot be
+                # taken over remotely without setting credentials.
+                if getattr(user, "is_admin", False) and not user.has_password:
+                    if not password or len(password) < 8:
+                        log_event(
+                            "auth.login_failed",
+                            user_id=user.id,
+                            reason="admin_password_required",
+                            auth_method=auth_method,
+                        )
+                        flash(
+                            _(
+                                "Administrator accounts require a password. "
+                                "Enter a new password (at least 8 characters) to set one and log in."
+                            ),
+                            "error",
+                        )
+                        return render_template("auth/login.html", **_login_template_vars())
+                    user.set_password(password)
+                    if not safe_commit("set_initial_admin_password", {"user_id": user.id}):
+                        flash(_("Could not set password due to a database error. Please try again."), "error")
+                        return render_template("auth/login.html", **_login_template_vars())
+                    flash(_("Password has been set. You are now logged in."), "success")
             else:
-                # requires_password=False (AUTH_METHOD='none') - allow login without password
-                # This mode is for trusted environments only
-                pass
+                # SSO-only or other modes must never fall through to username-only login
+                log_event(
+                    "auth.login_failed",
+                    user_id=user.id,
+                    reason="local_login_not_allowed",
+                    auth_method=auth_method,
+                )
+                flash(_("Local username/password login is not available. Use SSO."), "error")
+                return render_template("auth/login.html", **_login_template_vars())
 
             return _finalize_login_after_verification(user, log_auth_method=auth_method)
         except Exception as e:

@@ -108,7 +108,27 @@ def validate_outbound_url(
     except ValueError:
         literal_ip = None
 
+    def _always_blocked_even_when_private_allowed(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+        # Cloud metadata / link-local / loopback must never be reachable via SSRF,
+        # even when INTEGRATIONS_ALLOW_PRIVATE_URLS opts into RFC1918 LAN hosts.
+        if ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved:
+            return True
+        try:
+            if ip in ipaddress.ip_network("169.254.0.0/16"):
+                return True
+            if ip in ipaddress.ip_network("fe80::/10"):
+                return True
+            if ip in ipaddress.ip_network("127.0.0.0/8"):
+                return True
+            if ip in ipaddress.ip_network("::1/128"):
+                return True
+        except TypeError:
+            pass
+        return False
+
     if literal_ip is not None:
+        if _always_blocked_even_when_private_allowed(literal_ip):
+            raise UnsafeOutboundURL("URL resolves to a blocked IP address")
         if not allow_private and _is_blocked_ip(literal_ip):
             raise UnsafeOutboundURL("URL resolves to a blocked IP address")
         return _rebuild_url(parsed)
@@ -124,17 +144,18 @@ def validate_outbound_url(
     if not addr_infos:
         raise UnsafeOutboundURL(f"Could not resolve hostname: {hostname}")
 
-    if not allow_private:
-        for info in addr_infos:
-            sockaddr = info[4]
-            if not sockaddr:
-                continue
-            try:
-                ip = ipaddress.ip_address(sockaddr[0])
-            except ValueError:
-                continue
-            if _is_blocked_ip(ip):
-                raise UnsafeOutboundURL("URL resolves to a blocked IP address")
+    for info in addr_infos:
+        sockaddr = info[4]
+        if not sockaddr:
+            continue
+        try:
+            ip = ipaddress.ip_address(sockaddr[0])
+        except ValueError:
+            continue
+        if _always_blocked_even_when_private_allowed(ip):
+            raise UnsafeOutboundURL("URL resolves to a blocked IP address")
+        if not allow_private and _is_blocked_ip(ip):
+            raise UnsafeOutboundURL("URL resolves to a blocked IP address")
 
     return _rebuild_url(parsed)
 

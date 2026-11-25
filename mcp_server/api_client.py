@@ -20,8 +20,18 @@ def set_api_token(token: Optional[str]) -> None:
     _token_var.set(token)
 
 
+# When True, never fall back to TIMETRACKER_API_TOKEN (HTTP multi-tenant mode).
+_http_mode_var: ContextVar[bool] = ContextVar("mcp_http_mode", default=False)
+
+
+def set_http_mode(enabled: bool) -> None:
+    _http_mode_var.set(bool(enabled))
+
+
 def get_api_token() -> str:
-    token = _token_var.get() or os.environ.get("TIMETRACKER_API_TOKEN") or ""
+    token = _token_var.get() or ""
+    if not token and not _http_mode_var.get():
+        token = os.environ.get("TIMETRACKER_API_TOKEN") or ""
     if not token:
         raise RuntimeError("No API token: set TIMETRACKER_API_TOKEN or pass Authorization bearer")
     return token
