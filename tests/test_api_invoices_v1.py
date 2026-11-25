@@ -26,6 +26,10 @@ def app():
     )
     with app.app_context():
         db.create_all()
+        from app.utils.permissions_seed import seed_permissions, seed_roles
+
+        seed_permissions()
+        seed_roles(silent=True)
         yield app
         db.session.remove()
         db.drop_all()
@@ -38,8 +42,12 @@ def client(app):
 
 @pytest.fixture
 def user(app):
+    from app.models import Role
+
     u = User(username="apiuser", email="apiuser@example.com", role="user")
     u.is_active = True
+    # The API checks client and project access like the web UI does: invoicing needs both.
+    u.roles.append(Role.query.filter_by(name="manager").first())
     db.session.add(u)
     db.session.commit()
     return u
