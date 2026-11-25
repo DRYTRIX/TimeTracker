@@ -168,9 +168,7 @@ def test_well_known_metadata(client):
     assert "S256" in data["code_challenge_methods_supported"]
 
 
-def test_authorize_consent_csp_allows_client_redirect_origin(
-    authenticated_client, oauth_mcp_app_record
-):
+def test_authorize_consent_csp_allows_client_redirect_origin(authenticated_client, oauth_mcp_app_record):
     """Consent page form-action must include the validated client origin (#971)."""
     app_rec, _secret = oauth_mcp_app_record
     _, challenge = _pkce_pair()

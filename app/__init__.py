@@ -1025,11 +1025,7 @@ def create_app(config=None):
             # OAuth consent may set g.csp_form_action_extra to the validated client
             # redirect origin so Approve's 302 is not blocked by form-action.
             form_action_extra = getattr(g, "csp_form_action_extra", None)
-            form_action = (
-                f"form-action 'self' {form_action_extra}"
-                if form_action_extra
-                else "form-action 'self'"
-            )
+            form_action = f"form-action 'self' {form_action_extra}" if form_action_extra else "form-action 'self'"
             if not response.headers.get("Content-Security-Policy"):
                 response.headers["Content-Security-Policy"] = (
                     "default-src 'self'; "
