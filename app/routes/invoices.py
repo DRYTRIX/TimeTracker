@@ -2519,21 +2519,41 @@ def generate_from_time(invoice_id):
                 flash(_("Could not add the time entries: %(error)s", error=str(exc)), "error")
                 return redirect(url_for("invoices.generate_from_time", invoice_id=invoice.id))
 
+        # Costs and expenses: only those this invoice may bill (its client's projects, on no other
+        # invoice); the rest of what was sent is left out and named
+        from app.services.invoice_costs_service import COSTS_BY_COST, InvoiceCostsService
+
+        cost_service = InvoiceCostsService()
+        billable_projects = _generate_projects(invoice)
+        not_added = []
+
         # Process project costs
         if selected_costs:
-            costs = ProjectCost.query.filter(ProjectCost.id.in_(selected_costs)).all()
+            wanted = _posted_ids(selected_costs)
+            costs = (
+                cost_service.costs_query(billable_projects, None, None, invoice=invoice)
+                .filter(ProjectCost.id.in_(wanted))
+                .all()
+            )
+            not_added += [str(i) for i in sorted(wanted - {c.id for c in costs})]
             # A cost already on this invoice keeps its line; a resubmitted form must not add a second one
             costs = [cost for cost in costs if cost.invoice_id != invoice.id]
 
             if costs:
                 # A cost line for each cost, linked to it (kind "cost"), after the other lines
-                from app.services.invoice_costs_service import COSTS_BY_COST, InvoiceCostsService
-
-                InvoiceCostsService().add_cost_lines(invoice, costs, COSTS_BY_COST)
+                cost_service.add_cost_lines(invoice, costs, COSTS_BY_COST)
 
         # Process expenses
         if selected_expenses:
-            expenses = Expense.query.filter(Expense.id.in_(selected_expenses)).all()
+            wanted = _posted_ids(selected_expenses)
+            expenses = (
+                cost_service.expenses_query(
+                    invoice.client_id, billable_projects, None, None, client_entries=True, invoice=invoice
+                )
+                .filter(Expense.id.in_(wanted))
+                .all()
+            )
+            not_added += [str(i) for i in sorted(wanted - {e.id for e in expenses})]
 
             for expense in expenses:
                 # Mark expense as invoiced (this links it to the invoice)
@@ -2580,6 +2600,15 @@ def generate_from_time(invoice_id):
             )
         else:
             flash(_("Invoice updated successfully"), "success")
+        if not_added:
+            flash(
+                _(
+                    "Not added, already on another invoice or not this client's: %(count)d (%(ids)s)",
+                    count=len(not_added),
+                    ids=", ".join(not_added),
+                ),
+                "warning",
+            )
         for missing in missing_rate_warnings:
             flash(
                 _(
@@ -2863,6 +2892,24 @@ def export_invoice_fatturapa(invoice_id):
         )
         flash(_("FatturaPA export failed. Please try again."), "error")
         return redirect(url_for("invoices.view_invoice", invoice_id=invoice_id))
+
+
+def _generate_projects(invoice):
+    """Projects whose costs and expenses Generate from Time may bill: the invoice's and its client's."""
+    ids = {invoice.project_id} if invoice.project_id else set()
+    if invoice.client_id:
+        ids.update(pid for (pid,) in db.session.query(Project.id).filter(Project.client_id == invoice.client_id).all())
+    return sorted(ids)
+
+
+def _posted_ids(values):
+    ids = set()
+    for raw in values:
+        try:
+            ids.add(int(raw))
+        except (TypeError, ValueError):
+            continue
+    return ids
 
 
 @invoices_bp.route("/invoices/<int:invoice_id>/export/pdf")
@@ -4585,9 +4632,10 @@ def draft_log_expense(invoice_id):
     if refusal is not None:
         return refusal
     form = request.form
+    # Paid by: one of the people the form offers (active users)
     paid_by = form.get("user_id", type=int) or current_user.id
-    if User.query.get(paid_by) is None:
-        paid_by = current_user.id
+    if User.query.filter_by(id=paid_by, is_active=True).first() is None:
+        return _draft_failed(invoice.id, _("Choose who paid from the list."), 400, "invalid_user")
     project_id = form.get("project_id", type=int)
     if project_id and not any(p.id == project_id for p in _draft_costs_context_projects(invoice)):
         project_id = None

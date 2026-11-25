@@ -5,8 +5,8 @@
 - ``invoices``: ``costs_layout``, how the invoice's project costs became lines.
 
 Existing invoiced costs are linked to their line: a line of the same invoice whose description is
-``"<description> (<category>)"`` and whose unit price is the cost's amount, as Generate from Time
-wrote it. The line becomes a ``cost`` line. Costs without such a line stay unlinked and are counted
+``"<description> (<category>)"`` (the catalog category's name, or the old category text) and whose
+unit price is the cost's amount, as Generate from Time wrote it. The line becomes a ``cost`` line. Costs without such a line stay unlinked and are counted
 in the log. The downgrade only drops the columns.
 
 Revision ID: 221_add_project_cost_invoice_lines
@@ -123,8 +123,10 @@ def _link_existing(bind, inspector):
     used = set()
     linked = missed = 0
     for cost_id, invoice_id, description, legacy, amount, category_name in costs:
-        label = category_name or legacy
-        wanted = f"{(description or '').strip()} ({label})"
+        # The line names the category as it was when it was written: the catalog name, or the old
+        # category text for lines written before costs had catalog categories
+        labels = [label for label in dict.fromkeys([category_name, legacy]) if label]
+        wanted = {f"{(description or '').strip()} ({label})" for label in labels}
         price = _money(amount)
         match = next(
             (
@@ -132,7 +134,7 @@ def _link_existing(bind, inspector):
                 for line in lines.get(invoice_id, [])
                 if line["id"] not in used
                 and line["kind"] != "time"
-                and line["description"] == wanted
+                and line["description"] in wanted
                 and line["price"] == price
             ),
             None,

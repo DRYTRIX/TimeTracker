@@ -101,7 +101,8 @@ def engine():
                 "(2, 1, 'Looker (Software)', 200, 'manual'), "
                 "(3, 1, 'Hosting (travel)', 45, 'manual'), "
                 "(4, 2, 'Renamed by hand', 99, 'manual'), "
-                "(5, 1, 'Looker (Software)', 200, 'manual')"
+                "(5, 1, 'Looker (Software)', 200, 'manual'), "
+                "(6, 2, 'Tools (software)', 30, 'manual')"
             )
         )
         conn.execute(
@@ -112,7 +113,9 @@ def engine():
                 "(2, 1, 'Hosting', 'travel', NULL, 45, 1), "  # legacy category string: matches line 3
                 "(3, 1, 'Metabase', 'software', 1, 99, 2), "  # its line was renamed: stays without a line
                 "(4, 1, 'Looker', 'software', 1, 200, 1), "  # a second cost with the same text takes line 5
-                "(5, 1, 'Unbilled', 'software', 1, 10, NULL)"
+                "(5, 1, 'Unbilled', 'software', 1, 10, NULL), "
+                # written before costs had catalog categories: the line names the old category text
+                "(6, 1, 'Tools', 'software', 1, 30, 2)"
             )
         )
     yield engine
@@ -131,8 +134,8 @@ def test_upgrade_links_old_costs_to_their_line(engine):
     with engine.connect() as conn:
         costs = dict(conn.execute(sa.text("SELECT id, invoice_item_id FROM project_costs ORDER BY id")).fetchall())
         kinds = dict(conn.execute(sa.text("SELECT id, kind FROM invoice_items ORDER BY id")).fetchall())
-    assert costs == {1: 2, 2: 3, 3: None, 4: 5, 5: None}
-    assert kinds == {1: "time", 2: "cost", 3: "cost", 4: "manual", 5: "cost"}
+    assert costs == {1: 2, 2: 3, 3: None, 4: 5, 5: None, 6: 6}
+    assert kinds == {1: "time", 2: "cost", 3: "cost", 4: "manual", 5: "cost", 6: "cost"}
 
     # Running it twice changes nothing
     _run(engine, migration.upgrade)
@@ -148,5 +151,5 @@ def test_downgrade_drops_the_columns_and_keeps_the_rows(engine):
     assert not ({"invoice_item_id", "recurring_cost_id"} & _columns(engine, "project_costs"))
     assert "costs_layout" not in _columns(engine, "invoices")
     with engine.connect() as conn:
-        assert conn.execute(sa.text("SELECT count(*) FROM project_costs")).scalar() == 5
-        assert conn.execute(sa.text("SELECT count(*) FROM invoice_items")).scalar() == 5
+        assert conn.execute(sa.text("SELECT count(*) FROM project_costs")).scalar() == 6
+        assert conn.execute(sa.text("SELECT count(*) FROM invoice_items")).scalar() == 6

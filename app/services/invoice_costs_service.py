@@ -294,9 +294,10 @@ class InvoiceCostsService:
     def refresh_cost_line(self, invoice: Invoice, item: InvoiceItem, removed: Decimal = Decimal("0")) -> str:
         """Bring a cost line in step with its costs after some were taken off. Returns ``updated`` or ``deleted``.
 
-        A line left without costs is deleted. Otherwise its price is the sum of its costs; a price
-        changed by hand goes down by ``removed`` instead (never below 0). A description not changed by
-        hand is written again. Totals are recalculated; the caller commits.
+        A line left without costs is deleted. Otherwise its price is the sum of its costs; on a line
+        whose price or quantity was changed by hand the amount goes down by exactly ``removed`` instead
+        (price minus ``removed`` / quantity, never below 0). A description not changed by hand is written
+        again. Totals are recalculated; the caller commits.
         """
         db.session.flush()
         costs = (
@@ -309,8 +310,10 @@ class InvoiceCostsService:
             db.session.flush()
             invoice.calculate_totals()
             return "deleted"
-        if item.price_edited:
-            price = Decimal(str(item.unit_price or 0)) - Decimal(str(removed or 0))
+        if item.price_edited or item.quantity_edited:
+            quantity = Decimal(str(item.quantity or 0))
+            step = Decimal(str(removed or 0)) / quantity if quantity > 0 else Decimal("0")
+            price = Decimal(str(item.unit_price or 0)) - step
             item.unit_price = max(price, Decimal("0")).quantize(MONEY)
         else:
             item.quantity = Decimal("1")
@@ -367,7 +370,7 @@ class InvoiceCostsService:
             raise InvoiceCostsError("Choose how to show the costs")
         lines = self.cost_lines(invoice)
         by_line = self.costs_by_line(invoice)
-        rebuilt = [i for i in lines if not (keep_edited and (i.price_edited or i.description_edited))]
+        rebuilt = [i for i in lines if not (keep_edited and self.line_edited(i))]
         position = min((i.position or 0) for i in rebuilt) if rebuilt else None
         costs = [cost for item in rebuilt for cost in by_line.get(item.id, [])]
         for cost in costs:
@@ -399,8 +402,13 @@ class InvoiceCostsService:
             next_position += 1
         db.session.flush()
 
+    @staticmethod
+    def line_edited(item: InvoiceItem) -> bool:
+        """Whether a cost line's description, quantity or price was changed by hand."""
+        return bool(item.price_edited or item.quantity_edited or item.description_edited)
+
     def edited_cost_lines(self, invoice: Invoice) -> List[InvoiceItem]:
-        return [i for i in self.cost_lines(invoice) if i.price_edited or i.description_edited]
+        return [i for i in self.cost_lines(invoice) if self.line_edited(i)]
 
     # ------------------------------------------------------------------
     # Step 1: bill the ticked expenses and costs

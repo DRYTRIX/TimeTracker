@@ -209,22 +209,27 @@ def test_step_one_lists_the_periods_expenses_and_costs_ticked_with_their_status(
     _login(client, user)
     html = client.get(f"/invoices/new?client_id={setup['client'].id}").get_data(as_text=True)
     exp, costs = setup["expenses"], setup["costs"]
-    for name in ("train", "hotel", "lunch"):
+    for name in ("train", "hotel"):
         assert _ticked(html, "expense_ids", exp[name]) is True
+    # Was non-billable: listed, not ticked
+    assert _ticked(html, "expense_ids", exp["lunch"]) is False
     # Rejected, outside the period, another client's, a project not selected (no hours): not listed
     for name in ("taxi", "old", "other", "traffic"):
         assert f'data-expense-id="{exp[name].id}"' not in html
-    for name in ("metabase", "looker", "photos", "old_nonbill"):
+    for name in ("metabase", "looker", "photos"):
         assert _ticked(html, "cost_ids", costs[name]) is True
+    assert _ticked(html, "cost_ids", costs["old_nonbill"]) is False
     assert f'data-cost-id="{costs["old"].id}"' not in html
     assert "waiting for approval" in html
     assert "was non-billable" in html
     assert "recurring · fixed" in html
     assert "logged" in html
-    # Before you create: the pending expense with Approve, the non-billable ones
+    # Before you create: the pending expense with Approve; a non-billable one only once it is ticked
     assert 'data-warning="expenses_pending"' in html
     assert f'data-approve-expense="{exp["hotel"].id}"' in html
-    assert 'data-warning="was_non_billable"' in html
+    assert 'data-warning="was_non_billable"' not in html
+    ticked = _summary(client, _body(setup, expenses=("train", "lunch"), costs=("looker",)))["html"]
+    assert 'data-warning="was_non_billable"' in ticked["warnings"] and "Lunch" in ticked["warnings"]
 
 
 def test_projects_not_selected_leave_their_expenses_and_costs_out(client, user, setup):
@@ -280,11 +285,17 @@ def test_step_one_total_is_the_drafts_in_every_layout(client, user, setup, layou
         assert cost_lines[0].description == "Project costs"
 
 
-def test_without_the_blocks_posted_everything_of_the_period_is_billed(client, user, setup):
+def test_without_the_blocks_posted_everything_billable_of_the_period_is_billed(client, user, setup):
     _login(client, user)
     invoice = _create(client, setup)
-    assert invoice.expenses.count() == 3  # train, hotel, lunch (traffic is not selected)
-    assert len(ProjectCost.query.filter_by(invoice_id=invoice.id).all()) == 4
+    # Train and Hotel (pending counts); Lunch was non-billable, Traffic's project is not selected
+    assert {e.title for e in invoice.expenses.all()} == {"Train", "Hotel"}
+    assert {c.description for c in ProjectCost.query.filter_by(invoice_id=invoice.id).all()} == {
+        "Metabase",
+        "Looker",
+        "Stock photos",
+    }
+    assert _reload(setup["expenses"]["lunch"]).invoice_id is None
 
 
 def test_step_one_does_not_count_costs_twice_or_as_lines_added_by_hand(client, user, setup):
@@ -397,6 +408,8 @@ def test_ticks_posted_for_another_period_do_not_count(client, user, setup):
     html = _summary(client, body)["html"]
     assert _ticked(html["expenses"], "expense_ids", setup["expenses"]["hotel"]) is True
     assert _ticked(html["costs"], "cost_ids", setup["costs"]["photos"]) is True
+    # A non-billable one stays unticked there too
+    assert _ticked(html["expenses"], "expense_ids", setup["expenses"]["lunch"]) is False
 
 
 def test_unticking_on_a_drafts_step_one_lets_go(client, user, setup):
@@ -766,3 +779,141 @@ def test_recurring_cost_generator_links_the_cost_to_its_recurring_cost(app, setu
     cost = RecurringProjectCostService().generate_cost(recurring)
     db.session.commit()
     assert cost.recurring_cost_id == recurring.id
+
+
+# --- review fixes -------------------------------------------------------------------------------
+
+
+def _second_draft(setup, user, number="INV-COSTS-B"):
+    invoice = Invoice(
+        invoice_number=number,
+        project_id=setup["analytics"].id,
+        client_name=setup["client"].name,
+        due_date=date.today() + timedelta(days=30),
+        created_by=user.id,
+        client_id=setup["client"].id,
+    )
+    invoice.period_start, invoice.period_end = LAST.start, LAST.end
+    db.session.add(invoice)
+    db.session.commit()
+    return invoice
+
+
+def test_generate_from_time_takes_only_what_this_invoice_may_bill(client, user, setup):
+    _login(client, user)
+    first = _create(client, setup, expenses=("train",), costs=("looker",))
+    second = _second_draft(setup, user)
+    looker, train = setup["costs"]["looker"], setup["expenses"]["train"]
+    other_client = setup["expenses"]["other"]
+    photos = setup["costs"]["photos"]
+    resp = client.post(
+        f"/invoices/{second.id}/generate-from-time",
+        data={
+            "project_costs[]": [looker.id, photos.id],
+            "expenses[]": [train.id, other_client.id, setup["expenses"]["traffic"].id],
+        },
+    )
+    assert resp.status_code == 302
+    # On draft A they stay, with their line; A's total is unchanged
+    looker, train = _reload(looker), _reload(train)
+    assert looker.invoice_id == first.id and InvoiceItem.query.get(looker.invoice_item_id).invoice_id == first.id
+    assert train.invoice_id == first.id
+    assert Decimal(_reload(first).subtotal) == Decimal("80") + 50 + 200
+    # Another client's expense is not taken; what B may bill is
+    assert _reload(other_client).invoice_id is None
+    assert _reload(photos).invoice_id == second.id
+    assert _reload(setup["expenses"]["traffic"]).invoice_id == second.id
+    assert Decimal(_reload(second).subtotal) == Decimal("40") + 15
+    with client.session_transaction() as sess:
+        flashes = [m for _c, m in sess.get("_flashes", [])]
+    assert any("Not added" in m and str(looker.id) in m and str(other_client.id) in m for m in flashes)
+
+
+def test_generate_from_time_does_not_take_a_cost_of_an_issued_invoice(client, user, setup):
+    _login(client, user)
+    first = _create(client, setup, expenses=(), costs=("looker",))
+    _issue(client, first)
+    second = _second_draft(setup, user)
+    client.post(f"/invoices/{second.id}/generate-from-time", data={"project_costs[]": [setup["costs"]["looker"].id]})
+    assert _reload(setup["costs"]["looker"]).invoice_id == first.id
+    assert _cost_lines(second) == []
+
+
+def _edit_line(client, invoice, line, **values):
+    resp = client.post(f"/invoices/{invoice.id}/lines/{line.id}", data=values, headers=JSON)
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+
+
+def test_x_on_a_cost_of_a_line_with_an_edited_quantity(client, user, setup):
+    _login(client, user)
+    invoice = _create(client, setup, expenses=(), costs=("metabase", "photos"), layout="one_line")
+    line = _cost_lines(invoice)[0]  # 100 + 40 = 140
+    _edit_line(client, invoice, line, quantity="2")
+    line = _reload(line)
+    assert line.quantity_edited and Decimal(line.total_amount) == Decimal("280.00")
+    client.post(f"/invoices/{invoice.id}/costs/{setup['costs']['photos'].id}/remove", headers=JSON)
+    line = _reload(line)
+    # The quantity stays; the amount goes down by the cost, 40
+    assert (Decimal(line.quantity), Decimal(line.unit_price)) == (Decimal("2"), Decimal("120.00"))
+    assert Decimal(line.total_amount) == Decimal("240.00")
+
+
+def test_x_on_a_cost_of_a_line_with_edited_quantity_and_price(client, user, setup):
+    _login(client, user)
+    invoice = _create(client, setup, expenses=(), costs=("metabase", "photos"), layout="one_line")
+    line = _cost_lines(invoice)[0]
+    _edit_line(client, invoice, line, quantity="2", unit_price="100")
+    client.post(f"/invoices/{invoice.id}/costs/{setup['costs']['photos'].id}/remove", headers=JSON)
+    line = _reload(line)
+    assert Decimal(line.total_amount) == Decimal("160.00")  # 200 - 40, not 200 - 80
+    assert Decimal(_reload(invoice).subtotal) == Decimal("80") + 160
+
+
+def test_regroup_asks_about_a_line_with_an_edited_quantity(client, user, setup):
+    _login(client, user)
+    invoice = _create(client, setup, expenses=(), costs=("metabase", "looker"), layout="cost")
+    edited = _cost_lines(invoice)[0]
+    _edit_line(client, invoice, edited, quantity="3")
+    assert 'id="keepEditedCosts"' in client.get(f"/invoices/{invoice.id}").get_data(as_text=True)
+    client.post(
+        f"/invoices/{invoice.id}/costs/regroup", data={"costs_layout": "one_line", "keep_edited": "keep"}, headers=JSON
+    )
+    lines = _cost_lines(invoice)
+    assert any(line.id == edited.id and Decimal(line.quantity) == Decimal("3") for line in lines)
+    assert len(lines) == 2
+
+
+def test_paid_by_is_one_of_the_people_offered(client, user, setup):
+    _login(client, user)
+    invoice = _create(client, setup, expenses=(), costs=())
+    gone = UserFactory(username="gone-costs")
+    gone.is_active = False
+    db.session.commit()
+    for user_id in (gone.id, 987654):
+        resp = client.post(
+            f"/invoices/{invoice.id}/expenses",
+            data={
+                "expense_date": _day(12).isoformat(),
+                "title": "Fuel",
+                "category": "travel",
+                "amount": "9",
+                "user_id": user_id,
+            },
+            headers=JSON,
+        )
+        assert resp.status_code == 400
+    assert Expense.query.filter_by(title="Fuel").first() is None
+
+
+def test_api_put_items_refuses_a_line_id_sent_twice(app, client, user, setup):
+    from app.services import InvoiceService
+
+    _login(client, user)
+    invoice = _create(client, setup, expenses=(), costs=("looker",), layout="cost")
+    line = _cost_lines(invoice)[0]
+    row = {"id": line.id, "description": line.description, "quantity": 1, "unit_price": str(line.unit_price)}
+    result = InvoiceService().set_invoice_items(invoice.id, user.id, [row, dict(row)], is_admin=True)
+    assert not result["success"] and result["error"] == "duplicate_line_id"
+    db.session.rollback()
+    assert [item.id for item in _cost_lines(invoice)] == [line.id]
+    assert Decimal(_reload(invoice).subtotal) == Decimal("80") + 200

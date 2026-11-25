@@ -678,10 +678,11 @@ class InvoiceStepOneService:
     def expenses_and_costs(self, selection: StepOneSelection) -> ExpensesAndCosts:
         """Expenses and project costs step 1 lists for the selection, and those it bills.
 
-        A new invoice ticks every one (rejected expenses are not listed). Step 1 of a draft with the
-        same period and projects lists what the draft bills (ticked) and the rest of the period (not
-        ticked, as for hours: Save changes nothing); with another period or other projects everything
-        of the new period is ticked, and what the draft billed outside it is let go.
+        A new invoice ticks every billable one; a non-billable one is listed, not ticked (rejected
+        expenses are not listed). Step 1 of a draft with the same period and projects lists what the
+        draft bills (ticked) and the rest of the period (not ticked, as for hours: Save changes
+        nothing); with another period or other projects every billable one of the new period is
+        ticked, and what the draft billed outside it is let go.
         """
         invoice = selection.invoice
         draft = invoice is not None and invoice.id is not None
@@ -699,7 +700,9 @@ class InvoiceStepOneService:
         costs = self.costs.period_costs(selection.project_ids, start, end, invoice=invoice, keep_own=not changed)
 
         def default(item):
-            return changed or item.invoice_id == invoice.id
+            if invoice is not None and invoice.id is not None and item.invoice_id == invoice.id:
+                return True
+            return changed and bool(item.billable)
 
         layout = normalize_costs_layout(selection.costs_layout)
         if layout is None:

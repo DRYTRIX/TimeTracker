@@ -1493,6 +1493,10 @@ class InvoiceService:
         from app.services.invoice_time_service import InvoiceTimeError, InvoiceTimeService, line_entry_ids
 
         time_links = InvoiceTimeService()
+        # A line id may come once: a second row with it would bill the same costs or entries twice
+        sent_ids = [str(row.get("id")) for row in items if row.get("id") not in (None, "")]
+        if len(sent_ids) != len(set(sent_ids)):
+            return {"success": False, "message": "A line id appears more than once", "error": "duplicate_line_id"}
         # Every listed time entry must be one this invoice may bill (as in the picker), on one line only
         try:
             time_links.check_line_entries(
