@@ -2,12 +2,7 @@
 
 import pytest
 
-from app.utils.safe_redirect import (
-    csp_form_action_source,
-    is_safe_next_url,
-    is_safe_referrer,
-    is_safe_relative_url,
-)
+from app.utils.safe_redirect import csp_form_action_source, is_safe_next_url, is_safe_referrer, is_safe_relative_url
 
 pytestmark = [pytest.mark.unit, pytest.mark.security]
 
