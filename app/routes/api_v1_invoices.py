@@ -343,7 +343,8 @@ def set_invoice_items(invoice_id):
         return error_response(
             result.get("message", "Could not update items"),
             status_code=status,
-            error_code=result.get("error") if status == 409 else None,
+            # A line id sent twice says so: the client can fix its request
+            error_code=result.get("error") if status == 409 or result.get("error") == "duplicate_line_id" else None,
         )
     detail = _invoice_service().get_invoice_detail(invoice_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     return jsonify({"message": result["message"], "invoice": detail.get("invoice")})

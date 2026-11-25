@@ -30,6 +30,7 @@ class RecurringProjectCostService:
             currency_code=recurring_cost.currency_code,
             notes=f"Generated from recurring cost #{recurring_cost.id}",
         )
+        cost.recurring_cost_id = recurring_cost.id
         db.session.add(cost)
 
         recurring_cost.last_generated_at = datetime.utcnow()

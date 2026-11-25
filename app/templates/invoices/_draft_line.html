@@ -11,7 +11,7 @@
                 <textarea id="line-description-{{ item.id }}" name="description" rows="{{ [item.description.count('\n') + 1, 2]|max }}" maxlength="500"
                           class="form-input w-full font-normal" required>{{ item.description }}</textarea>
                 <div class="flex flex-wrap gap-2 items-center mt-1 text-xs">
-                    {% if line.is_time and item.description_edited %}<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" data-badge="text-edited">{{ _('text edited') }}</span>{% endif %}
+                    {% if (line.is_time or line.kind == 'cost') and item.description_edited %}<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" data-badge="text-edited">{{ _('text edited') }}</span>{% endif %}
                     {% if line.is_manual_hours %}<span class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700">{{ _('added by hand, no entries') }}</span>{% endif %}
                 </div>
             </div>
@@ -31,10 +31,15 @@
                 <button type="submit" formaction="{{ url_for('invoices.draft_delete_line', invoice_id=invoice.id, item_id=item.id) }}"
                         class="px-2 py-1 border border-border-light dark:border-border-dark rounded hover:bg-background-light dark:hover:bg-background-dark"
                         title="{{ _('Remove the line') }}" aria-label="{{ _('Remove the line') }}" data-delete-line
-                        data-confirm="{{ _('Remove this line? Its time entries go back to Unbilled.') if line.entry_count else _('Remove this line?') }}">&times;</button>
+                        data-confirm="{{ _('Remove this line? Its costs go back to Unbilled.') if line.kind == 'cost' else (_('Remove this line? Its time entries go back to Unbilled.') if line.entry_count else _('Remove this line?')) }}">&times;</button>
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-3 mt-2 text-sm">
+            {% if line.kind == 'cost' %}
+            <button type="button" class="px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-100" data-toggle="costs-{{ item.id }}" aria-controls="costs-{{ item.id }}">
+                {{ ngettext('%(num)d cost', '%(num)d costs', line.count) }} · <span class="underline">{{ _('show') }}</span>
+            </button>
+            {% endif %}
             {% if line.entry_count %}
             <button type="button" class="px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-100" data-toggle="entries-{{ item.id }}" aria-controls="entries-{{ item.id }}">
                 {{ ngettext('%(num)d entry', '%(num)d entries', line.entry_count) }} · {{ _('%(hours)s h tracked', hours=line.tracked_text) }} · <span class="underline">{{ _('show') }}</span>
@@ -66,6 +71,8 @@
             <button type="submit" class="btn btn-secondary btn-sm" data-line-save>{{ _('Save line') }}</button>
         </div>
     </form>
+
+    {% if line.kind == 'cost' %}{% include 'invoices/_draft_cost_rows.html' %}{% endif %}
 
     {% if line.entry_count %}
     <div id="entries-{{ item.id }}" class="hidden mt-3 overflow-x-auto" data-entries>

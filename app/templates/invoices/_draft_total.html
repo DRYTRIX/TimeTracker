@@ -44,13 +44,10 @@
 
         <div class="text-sm">
             <dl class="divide-y divide-border-light dark:divide-border-dark">
-                <div class="flex justify-between py-2"><dt>{{ _('Hours') }}</dt><dd>{{ money(hours_total) }} {{ invoice.currency_code }}</dd></div>
-                {% if other_total or expenses %}
-                <div class="flex justify-between py-2"><dt>{{ _('Other items') }}</dt><dd>{{ money(other_total) }} {{ invoice.currency_code }}</dd></div>
-                {% endif %}
-                {% if expenses %}
-                <div class="flex justify-between py-2"><dt>{{ _('Expenses') }}</dt><dd>{{ money(expenses_total) }} {{ invoice.currency_code }}</dd></div>
-                {% endif %}
+                <div class="flex justify-between py-2" data-total-block="hours"><dt><a href="#hours" class="hover:underline">{{ _('Hours') }}</a> <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ ngettext('%(num)d line', '%(num)d lines', hours_line_count) }}</span></dt><dd>{{ money(hours_total) }} {{ invoice.currency_code }}</dd></div>
+                <div class="flex justify-between py-2" data-total-block="expenses"><dt><a href="#expenses" class="hover:underline">{{ _('Expenses') }}</a> <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ ngettext('%(num)d row', '%(num)d rows', expense_rows|length) }}</span></dt><dd>{{ money(expenses_total) }} {{ invoice.currency_code }}</dd></div>
+                <div class="flex justify-between py-2" data-total-block="costs"><dt><a href="#costs" class="hover:underline">{{ _('Project costs') }}</a> <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ ngettext('%(num)d line', '%(num)d lines', cost_lines|length) }}</span></dt><dd>{{ money(costs_total) }} {{ invoice.currency_code }}</dd></div>
+                <div class="flex justify-between py-2" data-total-block="other"><dt><a href="#other-items" class="hover:underline">{{ _('Other items') }}</a> <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ ngettext('%(num)d line', '%(num)d lines', other_line_count) }}</span></dt><dd>{{ money(other_total) }} {{ invoice.currency_code }}</dd></div>
                 {% if discount_value %}
                 <div class="flex justify-between py-2" id="discountRow">
                     <dt>{{ _('Discount') }}{% if invoice.discount_percent and not invoice.discount_amount %} ({{ money(invoice.discount_percent) }}%){% endif %}</dt>

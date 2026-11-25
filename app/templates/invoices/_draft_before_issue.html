@@ -1,5 +1,5 @@
 {# Before you issue: only what needs attention, each with a link to its block #}
-{% set attention = zero_rate_lines|length + running_entries|length + (1 if new_entries else 0) %}
+{% set attention = zero_rate_lines|length + running_entries|length + (1 if new_entries else 0) + pending_expenses|length + non_billable_items|length %}
 {% if attention %}
 <section id="beforeIssue" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-900 dark:text-amber-100">
     <h2 class="font-semibold mb-2">{{ ngettext('Before you issue · %(num)d thing to look at', 'Before you issue · %(num)d things to look at', attention) }}</h2>
@@ -14,6 +14,18 @@
         <li class="flex justify-between gap-4" data-warning="running-timer">
             <span><i class="fas fa-exclamation-triangle mr-1"></i>{{ _('A timer is still running in this period: %(person)s, since %(start)s.', person=entry.user.display_name if entry.user else '', start=entry.start_time|format_date) }}</span>
             <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="underline whitespace-nowrap">{{ _('Open the entry') }}</a>
+        </li>
+        {% endfor %}
+        {% for row in pending_expenses %}
+        <li class="flex justify-between gap-4" data-warning="expense-pending">
+            <span><i class="fas fa-exclamation-triangle mr-1"></i>{{ _('The expense "%(title)s" is waiting for approval.', title=row.expense.title|truncate(60)) }}</span>
+            <a href="#expense-{{ row.expense.id }}" class="underline whitespace-nowrap">{{ _('Go to the expense') }}</a>
+        </li>
+        {% endfor %}
+        {% for entry in non_billable_items %}
+        <li class="flex justify-between gap-4" data-warning="was-non-billable">
+            <span><i class="fas fa-exclamation-triangle mr-1"></i>{% if entry.kind == 'expense' %}{{ _('The expense "%(title)s" was non-billable: it is billed here.', title=entry.title|truncate(60)) }}{% else %}{{ _('The cost "%(title)s" was non-billable: it is billed here.', title=entry.title|truncate(60)) }}{% endif %}</span>
+            <a href="#{{ entry.anchor }}" class="underline whitespace-nowrap">{{ _('Go to the expense') if entry.kind == 'expense' else _('Go to the cost') }}</a>
         </li>
         {% endfor %}
         {% if new_entries %}

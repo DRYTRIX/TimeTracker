@@ -916,7 +916,7 @@ def test_step_one_amount_counts_hours_lines_typed_in_and_goods(client, user, set
     data = _summary(client, **_draft_body(invoice, setup))["html"]
     assert _amount(data["summary"]) == Decimal(invoice.subtotal) == Decimal("275.00") + 80 + 50
     assert "80.00 in lines added by hand" in data["summary"]
-    assert "50.00 in goods and expenses" in data["summary"]
+    assert "50.00 in goods" in data["summary"]
     assert "Support hours – 80.00 EUR" in data["warnings"]
     assert f'data-remove-line="{typed.id}"' in data["warnings"]
     marked = _summary(client, remove_line_ids=[typed.id], **_draft_body(invoice, setup))["html"]["summary"]

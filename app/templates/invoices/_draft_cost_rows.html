@@ -1,0 +1,41 @@
+{# The costs a cost line bills: date, description, category, status, the supplier's bill, × #}
+{% from 'invoices/_costs_macros.html' import status_badges, other_currency %}
+<div id="costs-{{ item.id }}" class="hidden mt-3 overflow-x-auto" data-costs>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-text-muted-light dark:text-text-muted-dark">
+                <th class="p-1">{{ _('Date') }}</th><th class="p-1">{{ _('Description') }}</th><th class="p-1">{{ _('Category') }}</th>
+                <th class="p-1 text-right">{{ _('Amount') }}</th><th class="p-1">{{ _('Status') }}</th><th class="p-1">{{ _("Supplier's bill") }}</th><th class="p-1"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in line.costs %}
+            {% set c = row.cost %}
+            <tr class="border-t border-border-light dark:border-border-dark align-top" data-cost-id="{{ c.id }}">
+                <td class="p-1 whitespace-nowrap">{{ c.cost_date|format_date }}</td>
+                <td class="p-1">{{ c.description }}</td>
+                <td class="p-1">{{ c.category_name or '' }}</td>
+                <td class="p-1 text-right whitespace-nowrap">{{ money(row.amount) }} {{ c.currency_code }}{% if row.other_currency %}{{ other_currency(c.currency_code, invoice.currency_code) }}{% endif %}</td>
+                <td class="p-1">{{ status_badges(row.statuses) }}</td>
+                <td class="p-1 whitespace-nowrap">
+                    {% if c.receipt_path %}<a href="{{ url_for('invoices.invoice_cost_bill', invoice_id=invoice.id, cost_id=c.id) }}" target="_blank" rel="noopener" class="text-primary underline" data-bill="view">{{ _('View') }}</a>{% endif %}
+                    <form method="POST" action="{{ url_for('invoices.invoice_cost_bill', invoice_id=invoice.id, cost_id=c.id) }}" enctype="multipart/form-data" class="inline" data-draft-form data-autoupload>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <label class="ml-1 text-xs underline cursor-pointer">{{ _('Replace') if c.receipt_path else _('Add bill') }}
+                            <input type="file" name="receipt_file" accept=".png,.jpg,.jpeg,.gif,.pdf" class="sr-only">
+                        </label>
+                    </form>
+                </td>
+                <td class="p-1 text-right">
+                    <form method="POST" action="{{ url_for('invoices.draft_remove_cost', invoice_id=invoice.id, cost_id=c.id) }}" class="inline" data-draft-form>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="px-2 py-0.5 text-xs border border-border-light dark:border-border-dark rounded" data-cost-action="remove"
+                                title="{{ _('Take it off the invoice; it stays as it is, unbilled') }}" aria-label="{{ _('Take the cost off the invoice') }}">&times;</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('× takes a cost off the invoice and the line follows; a line without costs is removed.') }}</p>
+</div>

@@ -105,6 +105,8 @@ class Invoice(db.Model):
     period_end = db.Column(db.Date, nullable=True)
     hours_layout = db.Column(db.String(20), nullable=True)
     line_template = db.Column(db.String(255), nullable=True)
+    # How project costs become lines: "cost" (a line per cost), "category" or "one_line"; None: per cost
+    costs_layout = db.Column(db.String(20), nullable=True)
 
     # Relationships
     project = db.relationship("Project", backref="invoices")
@@ -558,8 +560,9 @@ class InvoiceItem(db.Model):
     # Time entry reference (optional)
     time_entry_ids = db.Column(db.Text, nullable=True)  # Comma-separated IDs
 
-    # "time": built from time entries; "manual": typed in. A rebuild leaves manual lines alone and
-    # keeps a time line whose description, quantity or price was changed by hand.
+    # "time": built from time entries; "manual": typed in; "manual_hours": hours typed in; "cost": bills
+    # project costs (ProjectCost.invoice_item_id). A rebuild leaves manual lines alone and keeps a time
+    # line whose description, quantity or price was changed by hand.
     kind = db.Column(db.String(20), nullable=False, default="manual", server_default="manual")
     description_edited = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     quantity_edited = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
