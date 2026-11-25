@@ -125,7 +125,8 @@ class TestAdminUserEditing:
 
             response = client.post(
                 url_for("admin.edit_user", user_id=user.id),
-                data={"username": "updateduser", "role": "admin", "is_active": "on"},
+                # Only a super admin may grant the admin role (#988), so promote to manager here
+                data={"username": "updateduser", "role": "manager", "is_active": "on"},
                 follow_redirects=True,
             )
 
@@ -136,7 +137,24 @@ class TestAdminUserEditing:
             with app.app_context():
                 updated_user = User.query.get(user.id)
                 assert updated_user.username == "updateduser"
-                assert updated_user.role == "admin"
+                assert updated_user.role == "manager"
+
+    def test_edit_user_cannot_grant_admin_without_super_admin(self, client, admin_user, user, app):
+        """A plain admin cannot promote a user to admin."""
+        with client:
+            with client.session_transaction() as sess:
+                sess["_user_id"] = str(admin_user.id)
+
+            response = client.post(
+                url_for("admin.edit_user", user_id=user.id),
+                data={"username": user.username, "role": "admin", "is_active": "on"},
+                follow_redirects=True,
+            )
+
+            assert response.status_code == 200
+            assert b"updated successfully" not in response.data
+            with app.app_context():
+                assert User.query.get(user.id).role != "admin"
 
     def test_edit_user_deactivate(self, client, admin_user, user, app):
         """Test deactivating a user."""
