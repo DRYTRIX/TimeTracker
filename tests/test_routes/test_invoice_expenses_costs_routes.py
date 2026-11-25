@@ -918,6 +918,20 @@ def test_api_put_items_refuses_a_line_id_sent_twice(app, client, user, setup):
     assert [item.id for item in _cost_lines(invoice)] == [line.id]
     assert Decimal(_reload(invoice).subtotal) == Decimal("80") + 200
 
+    # Through the API the answer names the problem
+    from factories import ApiTokenFactory
+
+    _token, plain = ApiTokenFactory.create(user_id=user.id, scopes="read:invoices,write:invoices")
+    db.session.commit()
+    resp = client.put(
+        f"/api/v1/invoices/{invoice.id}/items",
+        json={"items": [row, dict(row)]},
+        headers={"Authorization": f"Bearer {plain}"},
+    )
+    assert resp.status_code == 400
+    assert resp.get_json()["error_code"] == "duplicate_line_id"
+    assert [item.id for item in _cost_lines(invoice)] == [line.id]
+
 
 @pytest.mark.parametrize(
     "path,data,code,message",
