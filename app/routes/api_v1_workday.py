@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Tuple
 from flask import g, request
 
 from app.routes.api_v1 import api_v1_bp
+from app.routes.api_v1_common import _require_module_enabled_for_api
 from app.services.geofence_service import GeofenceService
 from app.services.workday_session_service import WorkdaySessionService
 from app.utils.api_auth import require_api_token
@@ -41,6 +42,9 @@ def _geofence_payload(enforcement: Dict[str, Any]) -> Dict[str, Any]:
 @api_v1_bp.route("/workday/status", methods=["GET"])
 @require_api_token("read:time_entries")
 def api_workday_status():
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     session = WorkdaySessionService().get_active_session(g.api_user.id)
     return success_response(
         data={
@@ -53,6 +57,9 @@ def api_workday_status():
 @api_v1_bp.route("/workday/start", methods=["POST"])
 @require_api_token("write:time_entries")
 def api_workday_start():
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     data = request.get_json(silent=True) or {}
     notes = (data.get("notes") or "").strip() or None
     source = (data.get("source") or "mobile").strip() or "mobile"
@@ -94,6 +101,9 @@ def api_workday_start():
 @api_v1_bp.route("/workday/end", methods=["POST"])
 @require_api_token("write:time_entries")
 def api_workday_end():
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     from app.services.workday_session_service import parse_workday_end_time
 
     data = request.get_json(silent=True) or {}
@@ -153,6 +163,9 @@ def api_workday_end():
 @api_v1_bp.route("/workday/auto-closed/<int:session_id>/resolve", methods=["POST"])
 @require_api_token("write:time_entries")
 def api_resolve_auto_closed_workday(session_id):
+    blocked = _require_module_enabled_for_api("workday")
+    if blocked:
+        return blocked
     from app.services.workday_session_service import parse_workday_end_time
 
     data = request.get_json(silent=True) or {}

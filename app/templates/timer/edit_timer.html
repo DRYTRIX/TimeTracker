@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "components/client_select.html" import client_select %}
+{% from "timer/_billing_badge.html" import billing_badge %}
 
 {% block title %}{{ _('Edit Time Entry') }} - {{ app_name }}{% endblock %}
 
@@ -336,6 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {{ _('Time entry') }}
             {% endif %}
         </p>
+        {% if billing_state %}<div class="mt-2">{{ billing_badge(billing_state, billing_invoice, timer) }}</div>{% endif %}
     </div>
     {% if current_user.is_admin %}
     <span class="inline-flex items-center px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-sm font-medium mt-4 md:mt-0">
@@ -347,6 +349,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2">
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+            {% if billing_invoice %}
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6" id="entryOnInvoiceNotice">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-lock text-amber-600 dark:text-amber-400 mt-1"></i>
+                    <div class="text-sm text-amber-900 dark:text-amber-100">
+                        <p>{{ _('This entry is on invoice %(number)s, so it is locked, for everyone. To change it, take it off the invoice first: × on a draft, or Cancel on an issued invoice.', number=billing_invoice.invoice_number) }}</p>
+                        <p class="mt-1"><a href="{{ url_for('invoices.view_invoice', invoice_id=billing_invoice.id) }}" class="font-medium underline">{{ _('Open invoice %(number)s', number=billing_invoice.invoice_number) }}</a></p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             {% if can_edit_schedule %}
             {% if current_user.is_admin %}
             <!-- Admin notification -->
@@ -487,6 +500,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <select class="form-input" id="source" name="source">
                             <option value="manual" {% if timer.source == 'manual' %}selected{% endif %}>{{ _('Manual') }}</option>
                             <option value="auto" {% if timer.source == 'auto' %}selected{% endif %}>{{ _('Automatic') }}</option>
+                            <option value="api" {% if timer.source == 'api' %}selected{% endif %}>{{ _('API') }}</option>
+                            <option value="agent" {% if timer.source == 'agent' %}selected{% endif %}>{{ _('Agent') }}</option>
+                            <option value="template" {% if timer.source == 'template' %}selected{% endif %}>{{ _('Template') }}</option>
+                            <option value="bulk" {% if timer.source == 'bulk' %}selected{% endif %}>{{ _('Bulk') }}</option>
                         </select>
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('How this entry was created') }}</p>
                     </div>
@@ -527,7 +544,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Separate tags with commas') }}</p>
                 </div>
 
-                <!-- Paid Status and Invoice Number -->
+                <!-- Paid Status and Invoice Number: a manual mark for time billed outside the app; an entry on an invoice gets both from the invoice -->
+                {% if not billing_invoice %}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="flex items-center">
                         <div class="flex items-center gap-3">
@@ -545,6 +563,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Reference to internal invoice number') }}</p>
                     </div>
                 </div>
+                {% endif %}
 
                 <!-- Reason for Change -->
                 <div class="mb-6">
@@ -620,6 +639,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
                             {{ _('Manual') }}
                         </span>
+                        {% elif timer.source == 'agent' %}
+                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            {{ _('Agent') }}
+                        </span>
+                        {% elif timer.source == 'api' %}
+                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300">
+                            {{ _('API') }}
+                        </span>
                         {% else %}
                         <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                             {{ _('Automatic') }}
@@ -658,7 +685,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
-                <!-- Paid Status and Invoice Number -->
+                <!-- Paid Status and Invoice Number: a manual mark for time billed outside the app; an entry on an invoice gets both from the invoice -->
+                {% if not billing_invoice %}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="flex items-center">
                         <div class="flex items-center gap-3">
@@ -676,6 +704,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Reference to internal invoice number') }}</p>
                     </div>
                 </div>
+                {% endif %}
 
                 <!-- Reason for Change -->
                 <div class="mb-6">

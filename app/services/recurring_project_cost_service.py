@@ -23,12 +23,14 @@ class RecurringProjectCostService:
             user_id=recurring_cost.user_id,
             description=recurring_cost.description,
             category=recurring_cost.category,
+            category_id=recurring_cost.category_id,
             amount=recurring_cost.amount,
             cost_date=cost_date,
             billable=recurring_cost.billable,
             currency_code=recurring_cost.currency_code,
             notes=f"Generated from recurring cost #{recurring_cost.id}",
         )
+        cost.recurring_cost_id = recurring_cost.id
         db.session.add(cost)
 
         recurring_cost.last_generated_at = datetime.utcnow()

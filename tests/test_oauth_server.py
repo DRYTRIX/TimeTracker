@@ -36,6 +36,22 @@ def oauth_app_record(app, user):
         return rec, secret
 
 
+@pytest.fixture
+def oauth_mcp_app_record(app, user):
+    with app.app_context():
+        rec, secret = OAuthApplication.create_application(
+            owner_user_id=user.id,
+            name="MCP Client",
+            redirect_uris=["http://localhost:3118/callback"],
+            allowed_scopes="read:projects,write:time_entries",
+            is_confidential=True,
+        )
+        db.session.add(rec)
+        db.session.commit()
+        db.session.refresh(rec)
+        return rec, secret
+
+
 def test_oauth_code_pkce_happy_path(authenticated_client, app, user, oauth_app_record):
     app_rec, secret = oauth_app_record
     verifier, challenge = _pkce_pair()
@@ -150,3 +166,28 @@ def test_well_known_metadata(client):
     assert "authorization_endpoint" in data
     assert "token_endpoint" in data
     assert "S256" in data["code_challenge_methods_supported"]
+
+
+def test_authorize_consent_csp_allows_client_redirect_origin(authenticated_client, oauth_mcp_app_record):
+    """Consent page form-action must include the validated client origin (#971)."""
+    app_rec, _secret = oauth_mcp_app_record
+    _, challenge = _pkce_pair()
+
+    resp = authenticated_client.get(
+        "/oauth/authorize",
+        query_string={
+            "client_id": app_rec.client_id,
+            "redirect_uri": "http://localhost:3118/callback",
+            "response_type": "code",
+            "scope": "read:projects",
+            "state": "s",
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+        },
+    )
+    assert resp.status_code == 200
+    csp = resp.headers.get("Content-Security-Policy", "")
+    report_only = resp.headers.get("Content-Security-Policy-Report-Only", "")
+
+    assert "form-action 'self' http://localhost:3118" in csp
+    assert "form-action 'self' http://localhost:3118" in report_only

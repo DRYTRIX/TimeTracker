@@ -403,6 +403,19 @@ class ModuleRegistry:
 
         cls.register(
             ModuleDefinition(
+                id="workday",
+                name="Workday",
+                description="Attendance clock-in/out and working time tracking",
+                category=ModuleCategory.TIME_TRACKING,
+                blueprint_name="workday",
+                default_enabled=True,
+                icon="fa-briefcase",
+                order=15,
+            )
+        )
+
+        cls.register(
+            ModuleDefinition(
                 id="issues",
                 name="Issues",
                 description="Issue and bug tracking",
@@ -410,6 +423,20 @@ class ModuleRegistry:
                 blueprint_name="issues",
                 default_enabled=True,
                 icon="fa-bug",
+                order=16,
+            )
+        )
+
+        cls.register(
+            ModuleDefinition(
+                id="timesheet",
+                name="Timesheet",
+                description="Day view and week grid of your own hours: Track time, Start and Stop on a row",
+                category=ModuleCategory.TIME_TRACKING,
+                blueprint_name="timesheet",
+                default_enabled=True,
+                dependencies=["timer"],
+                icon="fa-table",
                 order=15,
             )
         )
@@ -423,7 +450,7 @@ class ModuleRegistry:
                 blueprint_name="time_entry_templates",
                 default_enabled=True,
                 icon="fa-clipboard-list",
-                order=16,
+                order=17,
             )
         )
 
@@ -554,6 +581,21 @@ class ModuleRegistry:
 
         cls.register(
             ModuleDefinition(
+                id="billing_entities",
+                name="Legal entities",
+                description="Several legal entities that issue invoices, each with its own details and payment accounts",
+                category=ModuleCategory.FINANCE,
+                blueprint_name="billing_entities",
+                default_enabled=False,
+                dependencies=["invoices"],
+                routes=["billing_entities.index"],
+                icon="fa-building",
+                order=34,
+            )
+        )
+
+        cls.register(
+            ModuleDefinition(
                 id="recurring_invoices",
                 name="Recurring Invoices",
                 description="Recurring invoice management",
@@ -562,6 +604,20 @@ class ModuleRegistry:
                 default_enabled=True,
                 dependencies=["invoices"],
                 icon="fa-sync-alt",
+                order=35,
+            )
+        )
+
+        cls.register(
+            ModuleDefinition(
+                id="client_entities",
+                name="Client legal entities",
+                description="Several legal entities per client; an invoice picks one as Bill to",
+                category=ModuleCategory.FINANCE,
+                blueprint_name="client_entities",
+                default_enabled=False,
+                dependencies=["clients", "invoices"],
+                icon="fa-building-user",
                 order=35,
             )
         )
@@ -849,6 +905,7 @@ class ModuleRegistry:
         "import_export",
         "weekly_goals",
         "time_entry_templates",
+        "timesheet",
     }
 
     #: Adds collaboration, scheduling and light process on top of SOLO.
@@ -860,6 +917,7 @@ class ModuleRegistry:
         "activity_feed",
         "team_chat",
         "time_approvals",
+        "workday",
         "project_templates",
         "recurring_tasks",
         "recurring_invoices",

@@ -25,9 +25,11 @@ class InvoicePDFGeneratorFallback:
     """Generate PDF invoices with company branding using ReportLab"""
 
     def __init__(self, invoice, settings=None):
+        from app.utils.billing_entities import seller_settings_for
+
         ensure_pdf_fonts_registered()
         self.invoice = invoice
-        self.settings = settings or Settings.get_settings()
+        self.settings = seller_settings_for(invoice, settings or Settings.get_settings())
         self.styles = getSampleStyleSheet()
         self._setup_custom_styles()
 
@@ -218,6 +220,11 @@ class InvoicePDFGeneratorFallback:
         story.append(Paragraph("Bill To:", self.styles["SectionHeader"]))
         story.append(Paragraph(self.invoice.client_name, self.styles["NormalText"]))
 
+        from app.utils.client_entities import buyer_lines
+
+        for label, value in buyer_lines(self.invoice):
+            story.append(Paragraph(f"{label}: {value}", self.styles["NormalText"]))
+
         if self.invoice.client_email:
             story.append(Paragraph(self.invoice.client_email, self.styles["NormalText"]))
 
@@ -354,12 +361,16 @@ class InvoicePDFGeneratorFallback:
         story.append(table)
         return story
 
+    def _currency(self):
+        """Currency code to print: the invoice's own, else the global setting (same rule as quotes)."""
+        return getattr(self.invoice, "currency_code", None) or self.settings.currency
+
     def _format_currency(self, value):
         """Format numeric currency with thousands separators and 2 decimals."""
         try:
-            return f"{float(value):,.2f} {self.settings.currency}"
+            return f"{float(value):,.2f} {self._currency()}"
         except Exception:
-            return f"{value} {self.settings.currency}"
+            return f"{value} {self._currency()}"
 
     def _add_page_number(self, canv, doc):
         """Add page number at the bottom-right of each page."""

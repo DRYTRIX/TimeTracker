@@ -2,271 +2,95 @@
 
 ## Overview
 
-The Invoice Generation feature completes the billing workflow in TimeTracker by providing a comprehensive system for creating, managing, and tracking client invoices. This feature integrates seamlessly with the existing time tracking and project management systems to automate the billing process.
+The Invoice Generation feature completes the billing workflow in TimeTracker: turn tracked time, expenses, and project costs into drafts, issue them, send them (email / Peppol / SDI), and track payment — with EN 16931-friendly line amounts and optional multi-entity seller/buyer details.
 
 ## Features
 
-### 🧾 Core Invoice Management
-- **Create Invoices**: Generate professional invoices for clients
-- **Invoice Items**: Add line items with descriptions, quantities, and unit prices
-- **Tax Calculation**: Automatic tax calculations with configurable rates
-- **Status Tracking**: Track invoice status (draft, sent, paid, overdue, cancelled)
-- **Unique Numbering**: Automatic invoice number generation (INV-YYYYMMDD-XXX format)
+### Core invoice management
+- **Two-step create** — **New invoice** opens step 1 at `/invoices/new` (`/invoices/create` redirects there with `project_id` / `client_id`): client, **Who bills whom**, period, projects, hours layout, expenses & costs, then **Create draft**
+- **Draft page** — Hours lines with the time entries under each; edit lines in place; **Non-billable** / **×** per entry; expenses and project costs blocks; **Before you issue**; **Mark as issued**
+- **Statuses** — Draft, **Issued**, Sent, Paid, Overdue, Cancelled (list filter for Issued)
+- **Cancel and reissue** — Correct menu for issued/sent/overdue invoices without payments; or only cancel to return hours/costs to unbilled
+- **Unique numbering** — Entity format (`{YYYY}` / `{YY}` / `{MM}` / `{DD}` / `{SEQ}`) or Settings; taken numbers refuse save with **Use next free**
+- **Per-invoice currency** — Create/edit Currency select; defaults from the client's last invoice, else Settings
 
-### ⏰ Time Integration
-- **Generate from Time**: Automatically create invoice items from tracked time entries
-- **Smart Grouping**: Group time entries by task or project for organized billing
-- **Billing Prevention**: Prevent double-billing of time entries across invoices
-- **Project Rates**: Use project hourly rates for automatic calculations
+### Time, expenses, and costs
+- **Show hours as** — One line per entry, by task, by person, by task and person, one line per project, or don't add hours; **Line description** template (`{date}`, `{project}`, `{task}`, `{person}`, `{note}`)
+- **invoice_time_links** — Each billed entry is linked once to the line that bills it (prepaid-only coverage links without a line); edit/delete of linked entries is refused
+- **Rates** — Per entry: user override → project override → project rate → client default
+- **Expenses & project costs on step 1** — Period expenses/costs of selected projects, **Show costs as**, create draft bills the ticked ones; draft has Expenses and Project costs blocks
+- **Project Invoices page** — `/projects/<id>/invoices` with New Invoice pre-filled for that project
 
-### 💰 Financial Features
-- **Automatic Totals**: Real-time calculation of subtotals, tax, and final amounts
-- **Currency Support**: Full currency support through system settings
-- **Tax Management**: Configurable tax rates per invoice
-- **Payment Tracking**: Monitor outstanding and overdue amounts
+### Legal entities and templates
+- **Seller legal entities** (`billing_entities` module) — Admin → Legal entities; invoice **From / Currency / Pay to**; entity defaults and number format
+- **Client legal entities** (`client_entities` module) — Client **Legal entities** card; invoice **Bill to** with buyer snapshot on the PDF
+- **Invoice templates** — Admin → **Invoice templates**: **HTML templates** (Jinja + WeasyPrint) and **Visual layout** (Konva designer). Settings (and each entity) pick the default; Visual remains default until changed
 
-### 📊 Management & Reporting
-- **Invoice Dashboard**: Overview of all invoices with summary statistics
-- **Status Management**: Easy status updates and workflow management
-- **Export Options**: CSV export for external accounting systems
-- **Duplicate Invoices**: Create recurring invoices quickly
-- **Search & Filter**: Find invoices by client, project, or status
+### Financial & delivery
+- Tax (header and per-line), discounts, line ordering
+- Payment tracking (incl. Stripe / Mollie / PayPal)
+- PDF export, email, Peppol/UBL, Factur-X/ZUGFeRD, XRechnung, FatturaPA/SDI
+- Credit notes; reminder policies and recurring invoices — see [Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)
 
-## Database Schema
+## User interface
 
-### Invoices Table
-```sql
-CREATE TABLE invoices (
-    id SERIAL PRIMARY KEY,
-    invoice_number VARCHAR(50) UNIQUE NOT NULL,
-    project_id INTEGER REFERENCES projects(id),
-    client_name VARCHAR(200) NOT NULL,
-    client_email VARCHAR(200),
-    client_address TEXT,
-    issue_date DATE NOT NULL,
-    due_date DATE NOT NULL,
-    status VARCHAR(20) DEFAULT 'draft',
-    subtotal NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    tax_rate NUMERIC(5, 2) NOT NULL DEFAULT 0,
-    tax_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    total_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    notes TEXT,
-    terms TEXT,
-    created_by INTEGER REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+### Invoice list (`/invoices`)
+Summary cards, filters (including **Issued**), export, bulk actions. Shared table also used on the project Invoices page.
 
-### Invoice Items Table
-```sql
-CREATE TABLE invoice_items (
-    id SERIAL PRIMARY KEY,
-    invoice_id INTEGER REFERENCES invoices(id),
-    description VARCHAR(500) NOT NULL,
-    quantity NUMERIC(10, 2) NOT NULL DEFAULT 1,
-    unit_price NUMERIC(10, 2) NOT NULL,
-    total_amount NUMERIC(10, 2) NOT NULL,
-    time_entry_ids VARCHAR(500),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+### Step 1 (`/invoices/new`, `/invoices/<id>/step-1`)
+Client, Who bills whom (From, Currency, Pay to, Bill to when modules are on), issue/due date, VAT, period (Last month / This month / Custom / All unbilled), projects with unbilled hours, **Show hours as** / **Line description**, expenses & costs, **Before you create**, then **Create draft** (or save on an existing draft's step 1). Summary refreshes via `POST /invoices/step-1/summary` without writing.
 
-## User Interface
+### Draft invoice (`/invoices/<id>`)
+Header as printed; hours lines with entries underneath; **Add to matching lines** for new period entries; Notes/Terms; Preview PDF; **Mark as issued**; **Edit all fields** for the full form; `?view=full` for email/Peppol/approval/payments.
 
-### Invoice List Page (`/invoices`)
-- **Summary Cards**: Total invoices, amounts, outstanding, and overdue
-- **Invoice Table**: Sortable list with status indicators and actions
-- **Quick Actions**: Create, edit, view, and manage invoices
-- **Status Management**: Update invoice status with one click
-
-### Create Invoice (`/invoices/create`)
-- **Project Selection**: Choose from billable projects
-- **Client Information**: Enter client details and billing address
-- **Invoice Settings**: Set due date, tax rate, notes, and terms
-- **Auto-fill**: Client name automatically populated from project
-
-### Edit Invoice (`/invoices/edit`)
-- **Dynamic Line Items**: Add, remove, and edit invoice items
-- **Real-time Calculations**: Automatic total updates as you type
-- **Project Integration**: Use project hourly rates for items
-- **Time Generation**: Generate items from time entries
-
-### View Invoice (`/invoices/view`)
-- **Professional Layout**: Clean, printable invoice format
-- **Status Actions**: Change status, generate from time, export
-- **Item Details**: View all line items with time entry references
-- **Financial Summary**: Clear breakdown of totals and tax
-
-### Generate from Time (`/invoices/generate-from-time`)
-- **Time Entry Selection**: Choose which time entries to bill
-- **Smart Grouping**: Automatic grouping by task or project
-- **Preview Totals**: See estimated amounts before generation
-- **Billing Prevention**: Avoid double-billing of time entries
-
-## API Endpoints
-
-### Invoice Management
-- `GET /invoices` - List all invoices
-- `POST /invoices/create` - Create new invoice
-- `GET /invoices/<id>` - View invoice details
-- `POST /invoices/<id>/edit` - Edit invoice
-- `POST /invoices/<id>/delete` - Delete invoice
-- `POST /invoices/<id>/status` - Update invoice status
-
-### Time Integration
-- `GET /invoices/<id>/generate-from-time` - Show time entry selection
-- `POST /invoices/<id>/generate-from-time` - Generate items from time
-
-### Export & Utilities
-- `GET /invoices/<id>/export/csv` - Export invoice as CSV
-- `GET /invoices/<id>/duplicate` - Duplicate existing invoice
+### Generate from Time (secondary)
+Still available on a draft for adding or regrouping hours: same **Show hours as** / line template as step 1. API: `POST /api/v1/invoices/from-time-entries`, `POST /api/v1/invoices/{id}/generate-from-time` with optional `hours_layout` and `line_template`.
 
 ## Workflow
 
-### 1. Create Invoice
-1. Navigate to Invoices → Create Invoice
-2. Select project and set client details
-3. Configure due date, tax rate, and terms
-4. Save invoice (creates draft status)
+1. **Invoices → New invoice** — Complete step 1 and create the draft (or open a project's **Invoices → New Invoice**).
+2. **Review the draft** — Adjust lines/entries, expenses, costs; fix anything listed under Before you issue.
+3. **Mark as issued** — Locks lines/amounts and marks linked time as billed; then send (email / Peppol / SDI) or record payment.
+4. **Corrections** — **Cancel and reissue** (copy to a new draft) or only cancel; use a credit note once there are payments.
 
-### 2. Generate Items from Time
-1. Open draft invoice
-2. Click "Generate from Time Entries"
-3. Select time entries to include
-4. Review grouped items and totals
-5. Generate invoice items
+## API (REST v1)
 
-### 3. Customize & Review
-1. Edit invoice details and line items
-2. Adjust quantities, descriptions, or prices
-3. Add manual line items if needed
-4. Review totals and calculations
+See [REST API — Invoices](api/REST_API.md#invoices-credit-notes-and-payments). Highlights:
 
-### 4. Send & Track
-1. Update status to "Sent"
-2. Monitor payment status
-3. Update to "Paid" when received
-4. Track overdue invoices automatically
+- Create/update drafts; `currency_code` on list/detail
+- `POST .../from-time-entries`, `POST .../{id}/generate-from-time` (`hours_layout`, `line_template`)
+- `PUT .../{id}/items`; cancel/`DELETE` refuses invoices with payments (409)
+- Linked time entries: edit/delete → 409 with invoice number; bulk skips `already_invoiced`
 
-## Integration Points
+## Integration points
 
-### With Existing Features
-- **Projects**: Uses project hourly rates and client information
-- **Time Tracking**: Integrates with time entries for billing
-- **Tasks**: Groups time by tasks when available
-- **User Management**: Tracks who created each invoice
-- **Settings**: Uses system currency and timezone settings
-
-### Data Flow
-```
-Time Entries → Invoice Generation → Invoice Items → Totals Calculation → Invoice
-     ↓              ↓                    ↓              ↓              ↓
-  Billable      Group by Task      Line Items      Tax & Total    Status Tracking
-  Hours         or Project         with Rates      Calculation    & Management
-```
-
-## Security & Permissions
-
-### Access Control
-- **Regular Users**: Can create and manage their own invoices
-- **Admin Users**: Can view and manage all invoices
-- **Project Access**: Users can only invoice projects they have access to
-
-### Data Validation
-- **Required Fields**: Invoice number, project, client, due date
-- **Numeric Validation**: Hours, rates, and amounts
-- **Date Validation**: Due dates must be in the future
-- **Unique Constraints**: Invoice numbers must be unique
+- **Projects / clients** — Rates, currency defaults, prepaid plans, legal entities
+- **Time tracking** — Billable finished entries; badges **Billed** / **On draft** / **Non-billable** / **Marked paid**
+- **Expenses & project costs** — Shared Expense categories; recurring costs
+- **Settings / modules** — `invoices`, `billing_entities`, `client_entities`; Invoice Defaults (default template, VAT, terms)
 
 ## Configuration
 
-### System Settings
-- **Currency**: Set in system settings (default: EUR)
-- **Timezone**: Affects date displays and calculations
-- **Rounding**: Time rounding for billing accuracy
+- **Currency** — Global setting plus per-invoice (and Pay to account) currency
+- **Rounding** — Entry hours rounded to 2 places before line totals
+- **Number format** — Per legal entity or Settings
+- **Default template** — Settings → Invoice Defaults; entity override when `billing_entities` is on
 
-### Project Settings
-- **Hourly Rate**: Set per project for automatic calculations
-- **Billable Flag**: Only billable projects can have invoices
-- **Billing Reference**: Optional reference for external systems
+## Recurring invoices, reminders, and e-invoicing
 
-## Testing
-
-### Test Coverage
-- **Model Tests**: Invoice and InvoiceItem creation and validation
-- **Calculation Tests**: Tax and total calculations
-- **Integration Tests**: Time entry to invoice generation
-- **Permission Tests**: User access control
-
-### Running Tests
-```bash
-# Run all invoice tests
-pytest tests/test_invoices.py -v
-
-# Run specific test
-pytest tests/test_invoices.py::test_invoice_creation -v
-```
-
-## Deployment
-
-### Database Migration
-The invoice tables are automatically created when the application starts. For existing installations:
-
-1. **Automatic**: Tables created on first run
-2. **Manual**: Run database initialization script
-3. **Migration**: Use Flask-Migrate for schema updates
-
-### Dependencies
-- **Core**: Flask, SQLAlchemy (already included)
-- **Database**: PostgreSQL/SQLite (already supported)
-- **Frontend**: Bootstrap 5, Font Awesome (already included)
-
-## Recurring invoices, overdue reminders, and dunning
-
-Automated recurring billing, past-due detection, multi-step reminder policies (with optional late fees), and `invoice.overdue` webhooks are implemented. See **[Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)**.
-
-Also shipped with recent invoicing work:
-
-- Per-line tax rates, discounts, and line ordering
-- Credit notes (web + `/api/v1/credit-notes`, PDF/UBL/FatturaPA)
-- E-invoicing exports: Peppol/UBL, Factur-X/ZUGFeRD, XRechnung, FatturaPA/SDI — see [PEPPOL_EINVOICING.md](admin/configuration/PEPPOL_EINVOICING.md) and [FATTURAPA_SDI.md](admin/configuration/FATTURAPA_SDI.md)
-
-## Future Enhancements
-
-### Planned Features
-- Fixed line items on recurring invoice templates (today: unbilled time only)
-- Deeper installment / payment-plan workflows (see [Payment tracking](PAYMENT_TRACKING.md))
-
-### API Extensions
-- **Bulk Operations**: Mass invoice operations
-- **Reporting API**: Invoice analytics and reporting
+- [Invoice reminders and recurring](features/INVOICE_REMINDERS_AND_RECURRING.md)
+- [Peppol e-invoicing](admin/configuration/PEPPOL_EINVOICING.md) · [FatturaPA / SDI](admin/configuration/FATTURAPA_SDI.md)
+- [Payment tracking](PAYMENT_TRACKING.md) · [Invoice expenses](INVOICE_EXPENSES.md) · [Project costs](features/PROJECT_COSTS_FEATURE.md)
 
 ## Troubleshooting
 
-### Common Issues
-1. **Invoice Numbers**: Ensure unique invoice numbers
-2. **Time Entry Billing**: Check for already-billed entries
-3. **Calculations**: Verify tax rates and rounding
-4. **Permissions**: Check user access to projects
-
-### Debug Information
-- **Logs**: Check application logs for errors
-- **Database**: Verify table structure and data integrity
-- **Permissions**: Confirm user roles and project access
+1. **Number already taken** — Use **Use next free** or pick another `{SEQ}`
+2. **Entry missing from step 1 / Generate from Time** — Must be billable, finished, not already linked, and on a selected project (or client without project when allowed)
+3. **Cannot edit a time entry** — It is on an invoice (draft or issued); remove it from the draft or cancel/reissue first
+4. **Cannot cancel** — Invoice has payments; use Correct → Credit note
 
 ## Support
 
-### Documentation
-- **User Guide**: In-app help and tooltips
-- **API Reference**: Endpoint documentation
-- **Code Comments**: Inline code documentation
-
-### Community
-- **GitHub Issues**: Report bugs and request features
-- **Discussions**: Community support and ideas
-- **Contributing**: Guidelines for code contributions
-
----
-
-**Note**: This feature completes the billing workflow by providing a professional invoice system that integrates seamlessly with TimeTracker's existing time tracking and project management capabilities.
+- In-app help and tooltips
+- [REST API](api/REST_API.md) · [MCP sidecar](integrations/MCP.md)
+- GitHub Issues / Discussions

@@ -19,6 +19,12 @@ class Invoice(db.Model):
     buyer_reference = db.Column(db.String(200), nullable=True)  # PEPPOL BT-10 / EN 16931
     # Link to clients table (enforced by DB schema)
     client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False, index=True)
+    # "Bill to" legal entity of the client, from the optional Client legal entities module.
+    # Empty: the invoice is billed to the client's own details as before.
+    client_entity_id = db.Column(
+        db.Integer, db.ForeignKey("client_entities.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    buyer_snapshot = db.Column(db.JSON, nullable=True)  # copy of the entity's details (number, VAT, …)
     quote_id = db.Column(db.Integer, db.ForeignKey("quotes.id"), nullable=True, index=True)
 
     # Invoice details
@@ -35,6 +41,12 @@ class Invoice(db.Model):
     total_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     currency_code = db.Column(db.String(3), nullable=False, default="EUR")
     template_id = db.Column(db.Integer, db.ForeignKey("invoice_templates.id"), nullable=True, index=True)
+    # Template the PDF prints with, fixed when the invoice leaves draft (app/utils/invoice_templates.py).
+    # Empty: chosen at print time (legal entity, then Settings).
+    pdf_template_ref = db.Column(db.String(64), nullable=True)
+    pdf_template_version_id = db.Column(
+        db.Integer, db.ForeignKey("invoice_html_template_versions.id", ondelete="SET NULL"), nullable=True
+    )
     recurring_invoice_id = db.Column(db.Integer, db.ForeignKey("recurring_invoices.id"), nullable=True, index=True)
 
     # Notes and terms
@@ -77,9 +89,29 @@ class Invoice(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     integration_metadata = db.Column(db.JSON, nullable=True)
 
+    # Seller ("From") and payment account, from the optional Legal entities module.
+    # Empty: the invoice prints the seller from Settings.company_* as before.
+    billing_entity_id = db.Column(
+        db.Integer, db.ForeignKey("billing_entities.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    payment_account_id = db.Column(
+        db.Integer, db.ForeignKey("payment_accounts.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    seller_snapshot = db.Column(db.JSON, nullable=True)  # copy of the entity's details when issued
+    payment_details_text = db.Column(db.Text, nullable=True)  # copy of the payment text, {IBAN} filled in
+
+    # How hours become lines (see app.utils.invoice_time_entry_items) and the period billed
+    period_start = db.Column(db.Date, nullable=True)
+    period_end = db.Column(db.Date, nullable=True)
+    hours_layout = db.Column(db.String(20), nullable=True)
+    line_template = db.Column(db.String(255), nullable=True)
+    # How project costs become lines: "cost" (a line per cost), "category" or "one_line"; None: per cost
+    costs_layout = db.Column(db.String(20), nullable=True)
+
     # Relationships
     project = db.relationship("Project", backref="invoices")
     client = db.relationship("Client", backref="invoices")
+    client_entity = db.relationship("ClientEntity")
     quote = db.relationship("Quote", backref="invoices")
     creator = db.relationship("User", backref="created_invoices")
     items = db.relationship("InvoiceItem", backref="invoice", lazy="dynamic", cascade="all, delete-orphan")
@@ -90,6 +122,8 @@ class Invoice(db.Model):
     )
     template = db.relationship("InvoiceTemplate", backref="invoices", lazy="joined")
     extra_goods = db.relationship("ExtraGood", backref="invoice", lazy="dynamic", cascade="all, delete-orphan")
+    billing_entity = db.relationship("BillingEntity", foreign_keys=[billing_entity_id])
+    payment_account = db.relationship("PaymentAccount", foreign_keys=[payment_account_id])
 
     def __init__(self, invoice_number, project_id, client_name, due_date, created_by, client_id, **kwargs):
         self.invoice_number = invoice_number
@@ -224,8 +258,10 @@ class Invoice(db.Model):
 
         self.update_payment_status()
 
-        # Update invoice status based on payment
-        if self.payment_status == "fully_paid":
+        # Update invoice status based on payment (a cancelled invoice keeps its status)
+        if self.status == "cancelled":
+            pass
+        elif self.payment_status == "fully_paid":
             self.status = "paid"
         elif self.payment_status in ["partially_paid", "overpaid"]:
             # Keep current status but ensure it's not 'paid' if only partially paid
@@ -464,6 +500,7 @@ class Invoice(db.Model):
             "tax_rate": float(self.tax_rate),
             "tax_amount": float(self.tax_amount),
             "total_amount": float(self.total_amount),
+            "currency_code": self.currency_code,
             "discount_percent": float(self.discount_percent) if self.discount_percent else 0,
             "discount_amount": float(self.discount_amount) if self.discount_amount else 0,
             "vat_category": getattr(self, "vat_category", None),
@@ -522,6 +559,14 @@ class InvoiceItem(db.Model):
 
     # Time entry reference (optional)
     time_entry_ids = db.Column(db.Text, nullable=True)  # Comma-separated IDs
+
+    # "time": built from time entries; "manual": typed in; "manual_hours": hours typed in; "cost": bills
+    # project costs (ProjectCost.invoice_item_id). A rebuild leaves manual lines alone and keeps a time
+    # line whose description, quantity or price was changed by hand.
+    kind = db.Column(db.String(20), nullable=False, default="manual", server_default="manual")
+    description_edited = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    quantity_edited = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    price_edited = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
 
     # Inventory integration
     stock_item_id = db.Column(db.Integer, db.ForeignKey("stock_items.id"), nullable=True, index=True)
@@ -586,6 +631,11 @@ class InvoiceItem(db.Model):
         """Net line amount after discount (qty × unit_price − line_discount_total)."""
         gross = Decimal(str(self.quantity or 0)) * Decimal(str(self.unit_price or 0))
         return gross - self.line_discount_total
+
+    @property
+    def is_edited(self) -> bool:
+        """True when the description, quantity or price was changed by hand."""
+        return bool(self.description_edited or self.quantity_edited or self.price_edited)
 
     def effective_tax_rate(self, invoice) -> Decimal:
         """Return this item's tax rate, falling back to the invoice-level rate."""

@@ -45,7 +45,7 @@
 </div>
 {% endif %}
 
-{% if pending_violations %}
+{% if is_module_enabled('workday') and pending_violations %}
 <div class="mb-6 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4" role="alert">
     <p class="font-semibold text-amber-900 dark:text-amber-100 mb-1">
         <i class="fas fa-exclamation-triangle mr-2"></i>{{ _('Working time limit exceeded') }}
@@ -189,6 +189,7 @@
     {% endif %}
 </div>
 
+{% if is_module_enabled('workday') %}
 <!-- Workday (secondary strip; separate from project timer) -->
 <div class="{% if active_workday_session %}border-emerald-300 dark:border-emerald-700 bg-emerald-50/50 dark:bg-emerald-900/10{% else %}border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark{% endif %} border rounded-tt px-4 py-3 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" {% if active_workday_session %}data-workday-start="{{ active_workday_session.start_time.isoformat() }}"{% endif %}>
     <div class="flex items-center gap-3 min-w-0">
@@ -229,6 +230,7 @@
         <a href="{{ url_for('workday.workday_history') }}" class="btn btn-ghost btn-sm">{{ _('History') }}</a>
     </div>
 </div>
+{% endif %}
 
 {% set progress_pct = (today_seconds / daily_target_seconds * 100) if daily_target_seconds and daily_target_seconds > 0 else 0 %}
 {% set progress_pct_display = [progress_pct, 100]|min %}
@@ -328,16 +330,28 @@
                 </tr>
             </thead>
             <tbody>
-                {% for entry in recent_entries[:5] %}
+                {% for entry in recent_entries %}
                 <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark transition-colors">
                     <td class="p-3" data-label="{{ _('Project') }}">
-                        {% if entry.project %}
-                            <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="text-primary hover:underline font-medium">{{ entry.project.name }}</a>
-                        {% elif entry.client %}
-                            <a href="{{ url_for('clients.view_client', client_id=entry.client.id) }}" class="text-primary hover:underline font-medium">{{ entry.client.name }} <span class="text-xs opacity-75">({{ _('Direct') }})</span></a>
-                        {% else %}
-                            <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('N/A') }}</span>
-                        {% endif %}
+                        <div>
+                            {% if entry.project %}
+                                <a href="{{ url_for('projects.view_project', project_id=entry.project.id) }}" class="text-primary hover:underline font-medium">{{ entry.project.name }}</a>
+                            {% elif entry.client %}
+                                <a href="{{ url_for('clients.view_client', client_id=entry.client.id) }}" class="text-primary hover:underline font-medium">{{ entry.client.name }} <span class="text-xs opacity-75">({{ _('Direct') }})</span></a>
+                            {% else %}
+                                <span class="text-text-muted-light dark:text-text-muted-dark">{{ _('N/A') }}</span>
+                            {% endif %}
+                            {% if entry.task or entry.notes %}
+                            <div class="text-sm text-text-muted-light dark:text-text-muted-dark mt-0.5">
+                                {% if entry.task %}{{ entry.task.name }}{% endif %}
+                                {% if entry.task and entry.notes %}<span class="opacity-60"> · </span>{% endif %}
+                                {% if entry.notes %}
+                                    {% set notes_first_line = entry.notes.split('\n')[0] %}
+                                    {{ notes_first_line[:80] }}{% if notes_first_line|length > 80 %}…{% endif %}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="p-3" data-label="{{ _('Duration') }}">
                         {% if active_timer and entry.id == active_timer.id %}<span class="dashboard-live-duration" data-timer-start="{{ active_timer.start_time.isoformat() }}">{{ entry.duration_formatted }}</span>{% else %}{{ entry.duration_formatted }}{% endif %}
@@ -358,7 +372,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4" class="p-8 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No recent entries found.') }}</td>
+                    <td colspan="4" class="p-8 text-center text-text-muted-light dark:text-text-muted-dark">{{ _('No entries in the last 7 days.') }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -1069,8 +1083,10 @@
     </div>
 
     {% include 'components/inline_create_modals.html' %}
+    {% if is_module_enabled('workday') %}
     {% include 'workday/_overnight_clock_out_modal.html' %}
     {% include 'workday/_auto_closed_clock_out_modal.html' %}
+    {% endif %}
 {% endblock %}
 
 
@@ -1202,13 +1218,13 @@
                     }
                     return;
                 }
-                var endDt = new Date(dateVal + 'T12:00:00');
-                var startDt = new Date(endDt.getTime() - durationSec * 1000);
+                // send the day and the hours; the server places the entry after that day's
+                // last entry (a fixed 12:00 end made every second entry of a day overlap)
                 var payload = {
                     project_id: parseInt(projectId, 10),
                     task_id: taskSelect && taskSelect.value ? parseInt(taskSelect.value, 10) : null,
-                    start_time: startDt.toISOString(),
-                    end_time: endDt.toISOString(),
+                    date: dateVal,
+                    duration_seconds: durationSec,
                     notes: (document.getElementById('quickLogNotes').value || '').trim() || null,
                     billable: true
                 };
@@ -1301,7 +1317,7 @@
             if (!timerWidget) return;
             var startIso = timerWidget.getAttribute('data-timer-start');
             if (!startIso) return;
-            var startTime = new Date(startIso).getTime();
+            var startTime = NaN; function ensureStartTime() { if (isNaN(startTime)) startTime = (window.ttParseStart ? window.ttParseStart(startIso) : new Date(startIso).getTime()); return startTime; }
             var todayHours = parseFloat(timerWidget.getAttribute('data-today-hours')) || 0;
             var weekHours = parseFloat(timerWidget.getAttribute('data-week-hours')) || 0;
             var monthHours = parseFloat(timerWidget.getAttribute('data-month-hours')) || 0;
@@ -1314,7 +1330,7 @@
             }
             function tick() {
                 var now = Date.now();
-                var elapsedSec = (now - startTime) / 1000;
+                var elapsedSec = (now - ensureStartTime()) / 1000;
                 var elapsedHours = elapsedSec / 3600;
                 var display = formatElapsed(Math.floor(elapsedSec));
                 var elapsedEl = document.getElementById('dashboard-timer-elapsed');
@@ -1346,7 +1362,7 @@
             if (!workdayWidget) return;
             var startIso = workdayWidget.getAttribute('data-workday-start');
             if (!startIso) return;
-            var startTime = new Date(startIso).getTime();
+            var startTime = NaN; function ensureStartTime() { if (isNaN(startTime)) startTime = (window.ttParseStart ? window.ttParseStart(startIso) : new Date(startIso).getTime()); return startTime; }
             var baseWorkdayHours = parseFloat({{ workday_today_hours|tojson }}) || 0;
             var pageLoadMs = Date.now();
             function formatWorkdayElapsed(seconds) {
@@ -1356,7 +1372,7 @@
                 return m + 'm ' + (seconds % 60) + 's';
             }
             function tickWorkday() {
-                var elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+                var elapsedSec = Math.floor((Date.now() - ensureStartTime()) / 1000);
                 var el = document.getElementById('dashboard-workday-elapsed');
                 if (el) el.textContent = formatWorkdayElapsed(elapsedSec);
                 var wh = document.getElementById('workdayTodayHoursValue');

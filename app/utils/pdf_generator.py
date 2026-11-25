@@ -302,8 +302,10 @@ class InvoicePDFGenerator:
     """Generate PDF invoices with company branding"""
 
     def __init__(self, invoice, settings=None, page_size="A4"):
+        from app.utils.billing_entities import seller_settings_for
+
         self.invoice = invoice
-        self.settings = settings or Settings.get_settings()
+        self.settings = seller_settings_for(invoice, settings or Settings.get_settings())
         self.page_size = page_size or "A4"
 
     def generate_pdf(self):
@@ -312,6 +314,18 @@ class InvoicePDFGenerator:
         import sys
 
         from flask import current_app
+
+        # HTML invoice templates (app/utils/invoice_templates.py): everything but "visual"
+        # prints from an HTML template; "visual" falls through to the layout designer below.
+        from app.utils.invoice_templates import load_ref, resolve_invoice_template
+
+        # template_ref: set by previews to print with a given template instead of the invoice's own
+        _override = getattr(self, "template_ref", None)
+        _resolved = load_ref(_override) if _override else resolve_invoice_template(self.invoice, self.settings)
+        if not _resolved.is_visual:
+            from app.utils.invoice_pdf_html import render_invoice_pdf
+
+            return render_invoice_pdf(_resolved.html, self.invoice, self.settings)
 
         def debug_print(msg):
             """Print debug message to stdout with immediate flush for Docker visibility"""
@@ -755,9 +769,9 @@ class InvoicePDFGenerator:
 
         def format_money(value):
             try:
-                return f"{float(value):,.2f} {self.settings.currency}"
+                return f"{float(value):,.2f} {self._currency()}"
             except Exception:
-                return f"{value} {self.settings.currency}"
+                return f"{value} {self._currency()}"
 
         # PEPPOL compliance: include when invoices_peppol_compliant is on
         result = {
@@ -1175,6 +1189,7 @@ class InvoicePDFGenerator:
                     <div class="card">
                         <div class="section-title">{_('Bill To')}</div>
                         <div><strong>{self._escape(self.invoice.client_name)}</strong></div>
+                        {self._get_client_entity_html()}
                         {self._get_client_email_html()}
                         {self._get_client_address_html()}
                     </div>
@@ -1268,6 +1283,15 @@ class InvoicePDFGenerator:
         if self.invoice.client_email:
             return f'<div class="client-email">{self.invoice.client_email}</div>'
         return ""
+
+    def _get_client_entity_html(self):
+        """Registration number and VAT of the invoice's Bill to legal entity, if it has them"""
+        from app.utils.client_entities import buyer_lines
+
+        return "".join(
+            f'<div class="client-entity">{self._escape(label)}: {self._escape(value)}</div>'
+            for label, value in buyer_lines(self.invoice)
+        )
 
     def _get_client_address_html(self):
         """Generate HTML for client address if available"""
@@ -1393,12 +1417,16 @@ class InvoicePDFGenerator:
             return f'<div class="additional-info">{"".join(html_parts)}</div>'
         return ""
 
+    def _currency(self):
+        """Currency code to print: the invoice's own, else the global setting (same rule as quotes)."""
+        return getattr(self.invoice, "currency_code", None) or self.settings.currency
+
     def _format_currency(self, value):
         """Format numeric currency with thousands separators and 2 decimals."""
         try:
-            return f"{float(value):,.2f} {self.settings.currency}"
+            return f"{float(value):,.2f} {self._currency()}"
         except Exception:
-            return f"{value} {self.settings.currency}"
+            return f"{value} {self._currency()}"
 
     def _get_payment_info_html(self):
         """Generate HTML for payment information"""

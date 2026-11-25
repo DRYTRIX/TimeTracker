@@ -1,0 +1,46 @@
+{# Step 1: Before you create. Only warnings about the hours; none of them stops the draft. #}
+<div id="stepOneWarningList">
+    {% if warnings %}
+    <div class="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4" role="status">
+        <h2 class="text-base font-semibold text-amber-900 dark:text-amber-200 mb-2"><i class="fas fa-exclamation-triangle mr-1" aria-hidden="true"></i>{{ _('Before you save') if invoice else _('Before you create') }}</h2>
+        <ul class="space-y-1 text-sm text-amber-900 dark:text-amber-100">
+            {% for w in warnings %}
+            <li data-warning="{{ w.kind }}">
+                {{ w.text }}
+                {% if w.link %}<a href="{{ w.link.url }}" target="_blank" rel="noopener" class="font-medium underline ml-1">{{ w.link.label }}</a>{% endif %}
+                {% if w.action %}<button type="button" class="font-medium underline ml-1" data-include-from="{{ w.action.start }}">{{ w.action.label }}</button>{% endif %}
+                {% if w.expenses %}
+                <ul class="mt-1 ml-4 space-y-1">
+                    {% for e in w.expenses %}
+                    <li data-pending-expense="{{ e.id }}">{{ e.text }}{% if w.can_approve %}<button type="button" class="font-medium underline ml-1" data-approve-expense="{{ e.id }}">{{ _('Approve') }}</button>{% endif %}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if w.listed %}
+                <ul class="mt-1 ml-4 space-y-1 list-disc list-inside">
+                    {% for text in w.listed %}<li>{{ text }}</li>{% endfor %}
+                </ul>
+                {% endif %}
+                {% if w.lines %}
+                <ul class="mt-1 ml-4 space-y-1">
+                    {% for line in w.lines %}
+                    {% set marked = line.id in remove_line_ids %}
+                    <li data-manual-line="{{ line.id }}">
+                        <span{% if marked %} class="line-through opacity-70"{% endif %}>{{ line.text }}</span>
+                        {% if marked %}
+                        <input type="hidden" name="remove_line_ids" value="{{ line.id }}">
+                        <span class="ml-1">{{ _('removed when you save') }}</span>
+                        <button type="button" class="font-medium underline ml-1" data-remove-line="{{ line.id }}" data-undo="1">{{ _('Undo') }}</button>
+                        {% else %}
+                        <button type="button" class="font-medium underline ml-1" data-remove-line="{{ line.id }}">{{ _('Remove') }}</button>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>

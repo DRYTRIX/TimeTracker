@@ -171,6 +171,18 @@ def create_payment():
             flash(_("You do not have permission to add payments to this invoice"), "error")
             return redirect(url_for("payments.list_payments"))
 
+        # A cancelled invoice has let go of its hours; a payment must not bring it back as paid
+        if invoice.status == "cancelled":
+            flash(
+                _(
+                    "Invoice %(number)s is cancelled; payments cannot be recorded on it",
+                    number=invoice.invoice_number,
+                ),
+                "error",
+            )
+            invoices = get_user_invoices()
+            return render_template("payments/create.html", invoices=invoices)
+
         # Validate and parse amount
         try:
             amount = Decimal(amount_str)
@@ -242,56 +254,17 @@ def create_payment():
             invoice.amount_paid = (invoice.amount_paid or Decimal("0")) + amount
             invoice.update_payment_status()
 
-            # Update invoice status if fully paid or overpaid
-            if invoice.payment_status in ("fully_paid", "overpaid"):
-                invoice.status = "paid"
+            # Fully paid: the invoice becomes paid through transition_status, which bills its time
+            # entries (a draft paid in full included) and reduces stock if configured
+            if invoice.payment_status in ("fully_paid", "overpaid") and invoice.status not in ("paid", "cancelled"):
+                from app.services import InvoiceService
 
-                # Reduce stock when invoice is fully paid (if configured)
-                import os
-
-                from app.models import StockMovement, StockReservation
-
-                reduce_on_paid = os.getenv("INVENTORY_REDUCE_ON_INVOICE_PAID", "false").lower() == "true"
-                if reduce_on_paid:
-                    for item in invoice.items:
-                        if item.is_stock_item and item.stock_item_id and item.warehouse_id:
-                            try:
-                                # Fulfill any existing reservations
-                                reservation = StockReservation.query.filter_by(
-                                    stock_item_id=item.stock_item_id,
-                                    warehouse_id=item.warehouse_id,
-                                    reservation_type="invoice",
-                                    reservation_id=invoice.id,
-                                    status="reserved",
-                                ).first()
-
-                                if reservation:
-                                    reservation.fulfill()
-
-                                # Create stock movement (sale)
-                                StockMovement.record_movement(
-                                    movement_type="sale",
-                                    stock_item_id=item.stock_item_id,
-                                    warehouse_id=item.warehouse_id,
-                                    quantity=-item.quantity,  # Negative for removal
-                                    moved_by=current_user.id,
-                                    reference_type="invoice",
-                                    reference_id=invoice.id,
-                                    unit_cost=item.stock_item.default_cost if item.stock_item else None,
-                                    reason=f"Invoice {invoice.invoice_number} payment",
-                                    update_stock=True,
-                                )
-                            except Exception as e:
-                                current_app.logger.warning(
-                                    "Payment saved but inventory stock update failed for invoice %s: %s",
-                                    invoice.id,
-                                    e,
-                                    exc_info=True,
-                                )
-                                flash(
-                                    _("Payment saved, but inventory could not be updated. Please verify stock levels."),
-                                    "warning",
-                                )
+                transition = InvoiceService().transition_status(invoice, "paid", actor_id=current_user.id, force=True)
+                for warning in transition.get("warnings") or []:
+                    current_app.logger.warning("Payment saved for invoice %s: %s", invoice.id, warning)
+                    flash(
+                        _("Payment saved, but inventory could not be updated. Please verify stock levels."), "warning"
+                    )
 
         if not safe_commit("create_payment", {"invoice_id": invoice_id, "amount": float(amount)}):
             flash(_("Could not create payment due to a database error. Please check server logs."), "error")
@@ -416,9 +389,13 @@ def edit_payment(payment_id):
 
         invoice.update_payment_status()
 
-        # Update invoice status
-        if invoice.payment_status == "fully_paid":
-            invoice.status = "paid"
+        # Update invoice status (a cancelled invoice keeps its status)
+        if invoice.status == "cancelled":
+            pass
+        elif invoice.payment_status == "fully_paid" and invoice.status not in ("paid", "cancelled"):
+            from app.services import InvoiceService
+
+            InvoiceService().transition_status(invoice, "paid", actor_id=current_user.id, force=True)
         elif invoice.status == "paid" and invoice.payment_status != "fully_paid":
             invoice.status = "sent"
 

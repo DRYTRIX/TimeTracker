@@ -1,0 +1,79 @@
+{# Delete and Cancel for a draft, as on the full invoice page #}
+<div class="flex flex-wrap gap-2 items-center" id="draftDeleteCancel">
+    <button type="button" onclick="showDeleteModal('{{ invoice.id }}', '{{ invoice.invoice_number }}')"
+            class="btn border border-rose-300 text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/20" id="deleteDraft">
+        <i class="fas fa-trash mr-1"></i>{{ _('Delete draft') }}
+    </button>
+    <button type="button" onclick="cancelInvoice({{ invoice.id }})" class="btn btn-secondary" id="cancelDraft">
+        <i class="fas fa-ban mr-1"></i>{{ _('Cancel invoice') }}
+    </button>
+</div>
+
+<div id="deleteInvoiceModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+  <div class="absolute inset-0 bg-black/50" onclick="hideDeleteModal()"></div>
+  <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark">
+    <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+      <h5 id="deleteModalTitle" class="text-lg font-semibold flex items-center gap-2">
+        <i class="fas fa-trash text-red-500"></i> {{ _('Delete Invoice') }}
+      </h5>
+      <button type="button" class="px-2 py-1 hover:bg-background-light dark:hover:bg-background-dark rounded text-2xl leading-none" aria-label="{{ _('Close') }}" onclick="hideDeleteModal()">&times;</button>
+    </div>
+    <div class="p-4">
+      <div class="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100 rounded-lg p-3 ring-1 ring-yellow-200/60 dark:ring-yellow-700/50 flex items-start gap-2">
+        <i class="fas fa-exclamation-triangle mt-1"></i>
+        <div><strong>{{ _('Warning:') }}</strong> {{ _('This action cannot be undone.') }}</div>
+      </div>
+      <p class="mt-4">{{ _('Are you sure you want to delete invoice') }} <strong id="deleteInvoiceNumber"></strong>?</p>
+      <p class="text-text-muted-light dark:text-text-muted-dark mt-2">
+        <small>{{ _('Its lines and goods are deleted; its time entries go back to Unbilled.') }}</small>
+      </p>
+    </div>
+    <div class="p-4 border-t border-border-light dark:border-border-dark flex items-center justify-between">
+      <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">
+        <i class="fas fa-times"></i> {{ _('Cancel') }}
+      </button>
+      <form method="POST" id="deleteInvoiceForm" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> {{ _('Delete Invoice') }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce() }}">
+function showDeleteModal(invoiceId, invoiceNumber) {
+  const numberEl = document.getElementById('deleteInvoiceNumber');
+  const formEl = document.getElementById('deleteInvoiceForm');
+  if (numberEl) numberEl.textContent = invoiceNumber || '';
+  if (formEl) formEl.action = "{{ url_for('invoices.delete_invoice', invoice_id=0) }}".replace('0', invoiceId);
+  const modal = document.getElementById('deleteInvoiceModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function hideDeleteModal() {
+  const modal = document.getElementById('deleteInvoiceModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function cancelInvoice(invoiceId) {
+  if (!(await ttConfirm({{ _('Cancel this invoice? Time entries will be released and the invoice cannot be edited again.')|tojson }}, { confirmText: {{ _('Cancel invoice')|tojson }} }))) {
+    return;
+  }
+  const body = new FormData();
+  body.append('csrf_token', "{{ csrf_token() }}");
+  body.append('new_status', 'cancelled');
+  try {
+    const response = await fetch("{{ url_for('invoices.update_invoice_status', invoice_id=invoice.id) }}", {
+      method: 'POST', body: body, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      if (window.showToast) window.showToast(data.error || {{ _('Could not cancel invoice')|tojson }}, 'error');
+      return;
+    }
+    window.location.reload();
+  } catch (err) {
+    if (window.showToast) window.showToast({{ _('Could not cancel invoice')|tojson }}, 'error');
+  }
+}
+</script>

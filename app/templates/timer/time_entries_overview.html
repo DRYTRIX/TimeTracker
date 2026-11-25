@@ -149,6 +149,16 @@
     {% endfor %}
 </form>
 
+<form id="bulkBillableForm" method="POST" action="{{ url_for('timer.bulk_mark_billable') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="set_billable" id="bulkBillableValue">
+    {% for key, value in filters.items() %}
+        {% if value %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endif %}
+    {% endfor %}
+</form>
+
 <form id="bulkDeleteForm" method="POST" action="{{ url_for('timer.bulk_delete_time_entries') }}" class="hidden">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="reason" id="bulkDeleteReason">
@@ -214,6 +224,25 @@
     </div>
 </div>
 
+<!-- Bulk Mark Billable Dialog -->
+<div id="bulkBillableDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold mb-4" id="bulkBillableTitle"></h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4" id="bulkBillableMessage"></p>
+            <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Entries that are already invoiced or have a running timer are skipped.') }}</p>
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors" id="closeBulkBillableBtn">
+                    {{ _('Cancel') }}
+                </button>
+                <button type="button" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" id="confirmBulkBillableBtn">
+                    {{ _('Update') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script nonce="{{ csp_nonce() }}">
 // Bind event listeners (replaces inline onclick/onchange handlers)
 document.addEventListener('DOMContentLoaded', function() {
@@ -237,6 +266,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var submitBulkPaidBtn = document.getElementById('submitBulkPaidBtn');
     if (submitBulkPaidBtn) submitBulkPaidBtn.addEventListener('click', submitBulkPaid);
+
+    var closeBulkBillableBtn = document.getElementById('closeBulkBillableBtn');
+    if (closeBulkBillableBtn) closeBulkBillableBtn.addEventListener('click', closeBulkBillableDialog);
+
+    var confirmBulkBillableBtn = document.getElementById('confirmBulkBillableBtn');
+    if (confirmBulkBillableBtn) confirmBulkBillableBtn.addEventListener('click', confirmBulkBillable);
 });
 
 function toggleFilterVisibility() {
@@ -375,6 +410,52 @@ function submitBulkPaid() {
     }
 
     document.getElementById('bulkPaidValue').value = paidValue;
+    form.submit();
+}
+
+function showBulkBillableDialog(billable) {
+    const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('{{ _("Please select at least one time entry") }}');
+        return false;
+    }
+    const count = checkboxes.length;
+    const title = billable ? '{{ _("Mark billable") }}' : '{{ _("Mark non-billable") }}';
+    const msg = billable
+        ? `{{ _("Mark") }} ${count} {{ _("time entry/entries as billable?") }}`
+        : `{{ _("Mark") }} ${count} {{ _("time entry/entries as non-billable?") }}`;
+
+    document.getElementById('bulkBillableValue').value = billable ? 'true' : 'false';
+    document.getElementById('bulkBillableTitle').textContent = title;
+    document.getElementById('bulkBillableMessage').textContent = msg;
+    document.getElementById('bulkBillableDialog').classList.remove('hidden');
+
+    // Close the menu
+    document.getElementById('bulkActionsMenu').classList.add('hidden');
+    return false;
+}
+
+function closeBulkBillableDialog() {
+    document.getElementById('bulkBillableDialog').classList.add('hidden');
+}
+
+function confirmBulkBillable() {
+    const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
+    const form = document.getElementById('bulkBillableForm');
+
+    // Clear existing entry IDs
+    form.querySelectorAll('input[name="entry_ids[]"]').forEach(input => input.remove());
+
+    // Add selected entry IDs to form
+    checkboxes.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'entry_ids[]';
+        input.value = cb.value;
+        form.appendChild(input);
+    });
+
+    closeBulkBillableDialog();
     form.submit();
 }
 

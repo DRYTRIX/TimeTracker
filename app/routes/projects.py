@@ -23,14 +23,17 @@ from app import db, log_event, track_event
 from app.models import (
     Activity,
     Client,
+    ExpenseCategory,
     ExtraGood,
     KanbanColumn,
     Project,
     ProjectAttachment,
     ProjectCost,
+    RateOverride,
     RecurringProjectCost,
     Task,
     TimeEntry,
+    User,
     UserFavoriteProject,
 )
 from app.services import ProjectService
@@ -144,6 +147,19 @@ def list_projects():
 
     custom_field_definitions = CustomFieldService().get_definitions("project")
 
+    # Filter params for pagination links (page is added by pagination_nav)
+    pagination_url_params = {}
+    if search:
+        pagination_url_params["search"] = search
+    if status:
+        pagination_url_params["status"] = status
+    if client_name:
+        pagination_url_params["client"] = client_name
+    if favorites_only:
+        pagination_url_params["favorites"] = "true"
+    for key, value in client_custom_field.items():
+        pagination_url_params[f"custom_field_{key}"] = value
+
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the projects list HTML for AJAX requests
@@ -154,6 +170,7 @@ def list_projects():
                 "projects/_projects_list.html",
                 projects=result["projects"],
                 pagination=result["pagination"],
+                pagination_url_params=pagination_url_params,
                 favorite_project_ids=favorite_project_ids,
                 search=search,
                 status=status,
@@ -166,6 +183,7 @@ def list_projects():
         "projects/list.html",
         projects=result["projects"],
         pagination=result["pagination"],
+        pagination_url_params=pagination_url_params,
         status=status or "all",  # Ensure status is always set
         search=search,
         clients=client_list,
@@ -1581,6 +1599,34 @@ def unfavorite_project(project_id):
 # ===== PROJECT COSTS ROUTES =====
 
 
+def _cost_form_context(record=None):
+    """Template context for cost forms: active expense categories plus the record's current one."""
+    return {"expense_categories": ExpenseCategory.get_choices(include_id=getattr(record, "category_id", None))}
+
+
+def _has_cost_category():
+    return bool(request.form.get("category_id", "").strip() or request.form.get("category", "").strip())
+
+
+def _apply_cost_category(record, current_category_id=None):
+    """Set the category on ``record`` from the submitted form. Returns an error message or None.
+
+    The form sends ``category_id``. An inactive category is accepted only when the record already has it.
+    A ``category`` string (code or name) is still accepted for older clients.
+    """
+    category_id = request.form.get("category_id", "").strip()
+    if category_id:
+        try:
+            expense_category = ExpenseCategory.query.get(int(category_id))
+        except ValueError:
+            expense_category = None
+        if expense_category is None or (not expense_category.is_active and expense_category.id != current_category_id):
+            return _("Please select a valid category")
+        record.set_category(expense_category)
+        return None
+    return record.set_category_from_input(category=request.form.get("category", ""))
+
+
 @projects_bp.route("/projects/<int:project_id>/costs")
 @login_required
 def list_costs(project_id):
@@ -1591,6 +1637,7 @@ def list_costs(project_id):
     start_date_str = request.args.get("start_date", "")
     end_date_str = request.args.get("end_date", "")
     category = request.args.get("category", "")
+    category_id = request.args.get("category_id", type=int)
 
     start_date = None
     end_date = None
@@ -1616,7 +1663,9 @@ def list_costs(project_id):
     if end_date:
         query = query.filter(ProjectCost.cost_date <= end_date)
 
-    if category:
+    if category_id:
+        query = query.filter(ProjectCost.category_id == category_id)
+    elif category:
         query = query.filter(ProjectCost.category == category)
 
     costs = query.order_by(ProjectCost.cost_date.desc()).all()
@@ -1632,6 +1681,8 @@ def list_costs(project_id):
         start_date=start_date_str,
         end_date=end_date_str,
         selected_category=category,
+        selected_category_id=category_id,
+        expense_categories=ExpenseCategory.query.order_by(ExpenseCategory.name).all(),
     )
 
 
@@ -1643,7 +1694,6 @@ def add_cost(project_id):
 
     if request.method == "POST":
         description = request.form.get("description", "").strip()
-        category = request.form.get("category", "").strip()
         amount = request.form.get("amount", "").strip()
         cost_date_str = request.form.get("cost_date", "").strip()
         billable = request.form.get("billable") == "on"
@@ -1651,9 +1701,9 @@ def add_cost(project_id):
         currency_code = request.form.get("currency_code", "EUR").strip()
 
         # Validate required fields
-        if not description or not category or not amount or not cost_date_str:
+        if not description or not _has_cost_category() or not amount or not cost_date_str:
             flash(_("Description, category, amount, and date are required"), "error")
-            return render_template("projects/add_cost.html", project=project)
+            return render_template("projects/add_cost.html", project=project, **_cost_form_context())
 
         # Validate amount
         try:
@@ -1662,21 +1712,21 @@ def add_cost(project_id):
                 raise ValueError("Amount must be positive")
         except (ValueError, Exception):
             flash(_("Invalid amount format"), "error")
-            return render_template("projects/add_cost.html", project=project)
+            return render_template("projects/add_cost.html", project=project, **_cost_form_context())
 
         # Validate date
         try:
             cost_date = datetime.strptime(cost_date_str, "%Y-%m-%d").date()
         except ValueError:
             flash(_("Invalid date format"), "error")
-            return render_template("projects/add_cost.html", project=project)
+            return render_template("projects/add_cost.html", project=project, **_cost_form_context())
 
         # Create cost
         cost = ProjectCost(
             project_id=project_id,
             user_id=current_user.id,
             description=description,
-            category=category,
+            category=None,
             amount=amount,
             cost_date=cost_date,
             billable=billable,
@@ -1684,15 +1734,20 @@ def add_cost(project_id):
             currency_code=currency_code,
         )
 
+        category_error = _apply_cost_category(cost)
+        if category_error:
+            flash(category_error, "error")
+            return render_template("projects/add_cost.html", project=project, **_cost_form_context())
+
         db.session.add(cost)
         if not safe_commit("add_project_cost", {"project_id": project_id}):
             flash(_("Could not add cost due to a database error. Please check server logs."), "error")
-            return render_template("projects/add_cost.html", project=project)
+            return render_template("projects/add_cost.html", project=project, **_cost_form_context())
 
         flash(_("Cost added successfully"), "success")
         return redirect(url_for("projects.view_project", project_id=project.id))
 
-    return render_template("projects/add_cost.html", project=project)
+    return render_template("projects/add_cost.html", project=project, **_cost_form_context())
 
 
 @projects_bp.route("/projects/<int:project_id>/costs/<int:cost_id>/edit", methods=["GET", "POST"])
@@ -1714,7 +1769,6 @@ def edit_cost(project_id, cost_id):
 
     if request.method == "POST":
         description = request.form.get("description", "").strip()
-        category = request.form.get("category", "").strip()
         amount = request.form.get("amount", "").strip()
         cost_date_str = request.form.get("cost_date", "").strip()
         billable = request.form.get("billable") == "on"
@@ -1722,9 +1776,9 @@ def edit_cost(project_id, cost_id):
         currency_code = request.form.get("currency_code", "EUR").strip()
 
         # Validate required fields
-        if not description or not category or not amount or not cost_date_str:
+        if not description or not _has_cost_category() or not amount or not cost_date_str:
             flash(_("Description, category, amount, and date are required"), "error")
-            return render_template("projects/edit_cost.html", project=project, cost=cost)
+            return render_template("projects/edit_cost.html", project=project, cost=cost, **_cost_form_context(cost))
 
         # Validate amount
         try:
@@ -1733,18 +1787,23 @@ def edit_cost(project_id, cost_id):
                 raise ValueError("Amount must be positive")
         except (ValueError, Exception):
             flash(_("Invalid amount format"), "error")
-            return render_template("projects/edit_cost.html", project=project, cost=cost)
+            return render_template("projects/edit_cost.html", project=project, cost=cost, **_cost_form_context(cost))
 
         # Validate date
         try:
             cost_date = datetime.strptime(cost_date_str, "%Y-%m-%d").date()
         except ValueError:
             flash(_("Invalid date format"), "error")
-            return render_template("projects/edit_cost.html", project=project, cost=cost)
+            return render_template("projects/edit_cost.html", project=project, cost=cost, **_cost_form_context(cost))
+
+        current_category_id = cost.category_id
+        category_error = _apply_cost_category(cost, current_category_id=current_category_id)
+        if category_error:
+            flash(category_error, "error")
+            return render_template("projects/edit_cost.html", project=project, cost=cost, **_cost_form_context(cost))
 
         # Update cost
         cost.description = description
-        cost.category = category
         cost.amount = amount
         cost.cost_date = cost_date
         cost.billable = billable
@@ -1754,12 +1813,12 @@ def edit_cost(project_id, cost_id):
 
         if not safe_commit("edit_project_cost", {"cost_id": cost_id}):
             flash(_("Could not update cost due to a database error. Please check server logs."), "error")
-            return render_template("projects/edit_cost.html", project=project, cost=cost)
+            return render_template("projects/edit_cost.html", project=project, cost=cost, **_cost_form_context(cost))
 
         flash(_("Cost updated successfully"), "success")
         return redirect(url_for("projects.view_project", project_id=project.id))
 
-    return render_template("projects/edit_cost.html", project=project, cost=cost)
+    return render_template("projects/edit_cost.html", project=project, cost=cost, **_cost_form_context(cost))
 
 
 @projects_bp.route("/projects/<int:project_id>/costs/<int:cost_id>/delete", methods=["POST"])
@@ -1792,6 +1851,189 @@ def delete_cost(project_id, cost_id):
 
     flash(_(f'Cost "{cost_description}" deleted successfully'), "success")
     return redirect(url_for("projects.view_project", project_id=project.id))
+
+
+def _rate_form_users():
+    """Active users for the rate-override person picker."""
+    return User.query.filter_by(is_active=True).order_by(User.username).limit(500).all()
+
+
+def _parse_rate_user_id(raw):
+    """Parse optional user_id from form/API; empty means project-wide (None)."""
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return False
+
+
+@projects_bp.route("/projects/<int:project_id>/rates")
+@login_required
+def list_rates(project_id):
+    """List hourly rate overrides for a project."""
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get_or_404(project_id)
+    if not user_can_access_project(current_user, project_id):
+        from flask import abort
+
+        abort(403)
+
+    overrides = (
+        RateOverride.query.filter_by(project_id=project_id)
+        .order_by(RateOverride.user_id.asc().nullsfirst(), RateOverride.effective_from.asc().nullsfirst())
+        .all()
+    )
+    can_edit = user_can_edit_project(current_user, project)
+    return render_template(
+        "projects/rates.html",
+        project=project,
+        overrides=overrides,
+        can_edit=can_edit,
+    )
+
+
+@projects_bp.route("/projects/<int:project_id>/rates/add", methods=["GET", "POST"])
+@login_required
+@admin_or_permission_required("edit_projects", "edit_all_projects", "edit_own_projects")
+def add_rate(project_id):
+    """Add a rate override to a project."""
+    from flask import abort
+
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.rate_override_validation import validate_rate_override_fields
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get_or_404(project_id)
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_edit_project(current_user, project):
+        abort(403)
+
+    users = _rate_form_users()
+    if request.method == "POST":
+        user_id = _parse_rate_user_id(request.form.get("user_id"))
+        if user_id is False:
+            flash(_("Invalid person selected"), "error")
+            return render_template("projects/add_rate.html", project=project, users=users)
+
+        if user_id is not None and not User.query.filter_by(id=user_id, is_active=True).first():
+            flash(_("Selected person was not found"), "error")
+            return render_template("projects/add_rate.html", project=project, users=users)
+
+        parsed, errors = validate_rate_override_fields(
+            hourly_rate=request.form.get("hourly_rate"),
+            effective_from=request.form.get("effective_from") or None,
+            effective_to=request.form.get("effective_to") or None,
+            project_id=project.id,
+            user_id=user_id,
+        )
+        if errors:
+            first = next(iter(errors.values()))[0]
+            flash(first, "error")
+            return render_template("projects/add_rate.html", project=project, users=users)
+
+        override = RateOverride(
+            project_id=project.id,
+            user_id=parsed["user_id"],
+            hourly_rate=parsed["hourly_rate"],
+            effective_from=parsed["effective_from"],
+            effective_to=parsed["effective_to"],
+        )
+        db.session.add(override)
+        if not safe_commit("add_rate_override", {"project_id": project.id}):
+            flash(_("Could not save rate override due to a database error."), "error")
+            return render_template("projects/add_rate.html", project=project, users=users)
+
+        flash(_("Rate override added successfully"), "success")
+        return redirect(url_for("projects.list_rates", project_id=project.id))
+
+    return render_template("projects/add_rate.html", project=project, users=users)
+
+
+@projects_bp.route("/projects/<int:project_id>/rates/<int:override_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_or_permission_required("edit_projects", "edit_all_projects", "edit_own_projects")
+def edit_rate(project_id, override_id):
+    """Edit a rate override."""
+    from flask import abort
+
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.rate_override_validation import validate_rate_override_fields
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get_or_404(project_id)
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_edit_project(current_user, project):
+        abort(403)
+
+    override = RateOverride.query.filter_by(id=override_id, project_id=project_id).first_or_404()
+    users = _rate_form_users()
+
+    if request.method == "POST":
+        user_id = _parse_rate_user_id(request.form.get("user_id"))
+        if user_id is False:
+            flash(_("Invalid person selected"), "error")
+            return render_template("projects/edit_rate.html", project=project, override=override, users=users)
+
+        if user_id is not None and not User.query.filter_by(id=user_id, is_active=True).first():
+            flash(_("Selected person was not found"), "error")
+            return render_template("projects/edit_rate.html", project=project, override=override, users=users)
+
+        parsed, errors = validate_rate_override_fields(
+            hourly_rate=request.form.get("hourly_rate"),
+            effective_from=request.form.get("effective_from") or None,
+            effective_to=request.form.get("effective_to") or None,
+            project_id=project.id,
+            user_id=user_id,
+            exclude_id=override.id,
+        )
+        if errors:
+            first = next(iter(errors.values()))[0]
+            flash(first, "error")
+            return render_template("projects/edit_rate.html", project=project, override=override, users=users)
+
+        override.user_id = parsed["user_id"]
+        override.hourly_rate = parsed["hourly_rate"]
+        override.effective_from = parsed["effective_from"]
+        override.effective_to = parsed["effective_to"]
+        if not safe_commit("edit_rate_override", {"override_id": override.id}):
+            flash(_("Could not update rate override due to a database error."), "error")
+            return render_template("projects/edit_rate.html", project=project, override=override, users=users)
+
+        flash(_("Rate override updated successfully"), "success")
+        return redirect(url_for("projects.list_rates", project_id=project.id))
+
+    return render_template("projects/edit_rate.html", project=project, override=override, users=users)
+
+
+@projects_bp.route("/projects/<int:project_id>/rates/<int:override_id>/delete", methods=["POST"])
+@login_required
+@admin_or_permission_required("edit_projects", "edit_all_projects", "edit_own_projects")
+def delete_rate(project_id, override_id):
+    """Delete a rate override."""
+    from flask import abort
+
+    from app.utils.permissions import user_can_edit_project
+    from app.utils.scope_filter import user_can_access_project
+
+    project = Project.query.get_or_404(project_id)
+    if not user_can_access_project(current_user, project_id):
+        abort(403)
+    if not user_can_edit_project(current_user, project):
+        abort(403)
+
+    override = RateOverride.query.filter_by(id=override_id, project_id=project_id).first_or_404()
+    db.session.delete(override)
+    if not safe_commit("delete_rate_override", {"override_id": override_id}):
+        flash(_("Could not delete rate override due to a database error."), "error")
+        return redirect(url_for("projects.list_rates", project_id=project.id))
+
+    flash(_("Rate override deleted successfully"), "success")
+    return redirect(url_for("projects.list_rates", project_id=project.id))
 
 
 # API endpoint for getting project costs as JSON
@@ -1839,7 +2081,6 @@ def api_project_costs(project_id):
 def _parse_recurring_cost_form(project_id):
     """Parse and validate recurring cost form fields."""
     description = request.form.get("description", "").strip()
-    category = request.form.get("category", "").strip()
     amount = request.form.get("amount", "").strip()
     frequency = request.form.get("frequency", "").strip()
     interval = request.form.get("interval", type=int, default=1)
@@ -1849,7 +2090,7 @@ def _parse_recurring_cost_form(project_id):
     currency_code = request.form.get("currency_code", "EUR").strip()
     is_active = request.form.get("is_active") == "on" if "is_active" in request.form else True
 
-    if not description or not category or not amount or not frequency or not next_run_date_str:
+    if not description or not _has_cost_category() or not amount or not frequency or not next_run_date_str:
         return None, _("Description, category, amount, frequency, and next run date are required")
 
     if frequency not in ("daily", "weekly", "monthly", "yearly"):
@@ -1876,7 +2117,6 @@ def _parse_recurring_cost_form(project_id):
 
     return {
         "description": description,
-        "category": category,
         "amount": amount,
         "frequency": frequency,
         "interval": interval or 1,
@@ -1915,13 +2155,18 @@ def add_recurring_cost(project_id):
         data, error = _parse_recurring_cost_form(project_id)
         if error:
             flash(error, "error")
-            return render_template("projects/add_recurring_cost.html", project=project)
+            return render_template("projects/add_recurring_cost.html", project=project, **_cost_form_context())
 
-        recurring = RecurringProjectCost(**data)
+        recurring = RecurringProjectCost(category=None, **data)
+        category_error = _apply_cost_category(recurring)
+        if category_error:
+            flash(category_error, "error")
+            return render_template("projects/add_recurring_cost.html", project=project, **_cost_form_context())
+
         db.session.add(recurring)
         if not safe_commit("add_recurring_project_cost", {"project_id": project_id}):
             flash(_("Could not add recurring cost due to a database error. Please check server logs."), "error")
-            return render_template("projects/add_recurring_cost.html", project=project)
+            return render_template("projects/add_recurring_cost.html", project=project, **_cost_form_context())
 
         flash(_("Recurring cost created successfully"), "success")
         return redirect(url_for("projects.list_recurring_costs", project_id=project.id))
@@ -1931,6 +2176,7 @@ def add_recurring_cost(project_id):
         "projects/add_recurring_cost.html",
         project=project,
         default_next_run_date=default_next_run_date,
+        **_cost_form_context(),
     )
 
 
@@ -1953,11 +2199,25 @@ def edit_recurring_cost(project_id, rid):
         data, error = _parse_recurring_cost_form(project_id)
         if error:
             flash(error, "error")
-            return render_template("projects/add_recurring_cost.html", project=project, recurring=recurring)
+            return render_template(
+                "projects/add_recurring_cost.html",
+                project=project,
+                recurring=recurring,
+                **_cost_form_context(recurring),
+            )
+
+        category_error = _apply_cost_category(recurring, current_category_id=recurring.category_id)
+        if category_error:
+            flash(category_error, "error")
+            return render_template(
+                "projects/add_recurring_cost.html",
+                project=project,
+                recurring=recurring,
+                **_cost_form_context(recurring),
+            )
 
         for field in (
             "description",
-            "category",
             "amount",
             "frequency",
             "interval",
@@ -1972,12 +2232,19 @@ def edit_recurring_cost(project_id, rid):
 
         if not safe_commit("edit_recurring_project_cost", {"recurring_id": rid}):
             flash(_("Could not update recurring cost due to a database error. Please check server logs."), "error")
-            return render_template("projects/add_recurring_cost.html", project=project, recurring=recurring)
+            return render_template(
+                "projects/add_recurring_cost.html",
+                project=project,
+                recurring=recurring,
+                **_cost_form_context(recurring),
+            )
 
         flash(_("Recurring cost updated successfully"), "success")
         return redirect(url_for("projects.list_recurring_costs", project_id=project.id))
 
-    return render_template("projects/add_recurring_cost.html", project=project, recurring=recurring)
+    return render_template(
+        "projects/add_recurring_cost.html", project=project, recurring=recurring, **_cost_form_context(recurring)
+    )
 
 
 @projects_bp.route("/projects/<int:project_id>/costs/recurring/<int:rid>/delete", methods=["POST"])

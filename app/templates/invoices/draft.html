@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
+
+{% block content %}
+{% set actions %}
+<div class="flex flex-wrap gap-2 items-center">
+    <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" target="_blank" rel="noopener" class="btn btn-secondary" id="previewPdfTop">
+        <i class="fas fa-file-pdf mr-1"></i>{{ _('Preview PDF') }}
+    </a>
+    <button type="button" class="btn bg-teal-600 text-white hover:bg-teal-700" data-mark-issued
+            title="{{ _('The invoice is ready: lines and amounts are locked, its time entries are billed') }}">
+        <i class="fas fa-lock mr-1"></i>{{ _('Mark as issued') }}
+    </button>
+    <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary" id="editAllFields"
+       title="{{ _('The full edit form: every field, expenses and goods') }}">{{ _('Edit all fields') }}</a>
+    <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id, view='full') }}" class="btn btn-secondary"
+       title="{{ _('Send by email, Peppol, approval, payments') }}">{{ _('More actions') }}</a>
+</div>
+{% endset %}
+{{ page_header('fas fa-file-invoice', _('Invoice %(number)s', number=invoice.invoice_number), subtitle_text=_('Draft · lines and their time entries'), actions_html=actions, breadcrumbs=[{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': invoice.invoice_number}]) }}
+
+<div id="invoiceDraft" class="space-y-6" data-invoice-id="{{ invoice.id }}">
+    {% if reissue_of %}
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-blue-900 dark:text-blue-100" id="reissueNotice">
+        <i class="fas fa-redo mr-1"></i>{{ _('Reissue of') }}
+        {% if reissue_of.invoice %}<a href="{{ url_for('invoices.view_invoice', invoice_id=reissue_of.invoice.id) }}" class="font-semibold underline">{{ reissue_of.number }}</a>{% else %}<strong>{{ reissue_of.number }}</strong>{% endif %}
+        ({{ _('cancelled: %(reason)s', reason=reissue_of.reason) }})
+    </div>
+    {% endif %}
+
+    {% include 'invoices/_draft_header.html' %}
+    <div id="draftWarnings" class="hidden bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-900 dark:text-amber-100" role="status" aria-live="polite">
+        <div class="flex justify-between gap-4">
+            <ul class="list-disc list-inside space-y-1"></ul>
+            <button type="button" class="text-lg leading-none" data-dismiss-warnings aria-label="{{ _('Close') }}">&times;</button>
+        </div>
+    </div>
+    {% include 'invoices/_draft_new_entries.html' %}
+    {% include 'invoices/_draft_hours.html' %}
+    {% include 'invoices/_draft_expenses.html' %}
+    {% include 'invoices/_draft_costs.html' %}
+    {% include 'invoices/_draft_other_items.html' %}
+    {% include 'invoices/_draft_before_issue.html' %}
+    {% include 'invoices/_draft_total.html' %}
+
+    {% include 'invoices/_draft_delete_cancel.html' %}
+</div>
+
+{% include 'invoices/_draft_scripts.html' %}
+{% endblock %}

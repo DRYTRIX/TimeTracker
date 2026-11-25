@@ -60,11 +60,19 @@ def dashboard():
     # Get user's active timer
     active_timer = current_user.active_timer
 
-    # Get recent entries for the user (using repository to avoid N+1)
+    # Get recent entries for the user (last 7 days; using repository to avoid N+1)
     from app.repositories import TimeEntryRepository
 
     time_entry_repo = TimeEntryRepository()
-    recent_entries = time_entry_repo.get_by_user(user_id=current_user.id, limit=10, include_relations=True)
+    recent_end = datetime.utcnow()
+    recent_start = recent_end - timedelta(days=7)
+    recent_entries = time_entry_repo.get_by_date_range(
+        start_date=recent_start,
+        end_date=recent_end,
+        user_id=current_user.id,
+        include_relations=True,
+        limit=5,
+    )
 
     # Get active projects and clients for timer dropdown (scoped for subcontractors)
     from app.utils.scope_filter import apply_client_scope_to_model, apply_project_scope_to_model
@@ -144,34 +152,46 @@ def dashboard():
     except Exception:
         pass
 
-    from app.services.attendance_compliance_service import AttendanceComplianceService
-    from app.services.workday_session_service import WorkdaySessionService
-    from app.services.working_time_limit_service import WorkingTimeLimitService
+    from app.utils.module_helpers import is_module_enabled
 
-    workday_svc = WorkdaySessionService()
-    active_workday_session = workday_svc.get_active_session(current_user.id)
-    attendance_status = AttendanceComplianceService().get_status(current_user.id)
-    attendance_break_active = attendance_status.get("break_active", False)
-    overnight_open_workday = workday_svc.is_overnight_open_session(active_workday_session)
-    suggested_leave_time = (
-        workday_svc.suggested_leave_datetime_local(active_workday_session, current_user)
-        if overnight_open_workday and active_workday_session
-        else None
-    )
-    auto_closed_workday_session = (
-        None if overnight_open_workday else workday_svc.get_unconfirmed_auto_closed_session(current_user.id)
-    )
-    auto_closed_suggested_leave_time = (
-        workday_svc.suggested_leave_datetime_local(auto_closed_workday_session, current_user)
-        if auto_closed_workday_session
-        else None
-    )
-    auto_closed_max_leave_time = (
-        auto_closed_workday_session.end_time.strftime("%Y-%m-%dT%H:%M")
-        if auto_closed_workday_session and auto_closed_workday_session.end_time
-        else None
-    )
-    pending_violations = WorkingTimeLimitService().get_violations_needing_justification(current_user.id)
+    active_workday_session = None
+    attendance_break_active = False
+    overnight_open_workday = False
+    suggested_leave_time = None
+    auto_closed_workday_session = None
+    auto_closed_suggested_leave_time = None
+    auto_closed_max_leave_time = None
+    pending_violations = []
+
+    if is_module_enabled("workday"):
+        from app.services.attendance_compliance_service import AttendanceComplianceService
+        from app.services.workday_session_service import WorkdaySessionService
+        from app.services.working_time_limit_service import WorkingTimeLimitService
+
+        workday_svc = WorkdaySessionService()
+        active_workday_session = workday_svc.get_active_session(current_user.id)
+        attendance_status = AttendanceComplianceService().get_status(current_user.id)
+        attendance_break_active = attendance_status.get("break_active", False)
+        overnight_open_workday = workday_svc.is_overnight_open_session(active_workday_session)
+        suggested_leave_time = (
+            workday_svc.suggested_leave_datetime_local(active_workday_session, current_user)
+            if overnight_open_workday and active_workday_session
+            else None
+        )
+        auto_closed_workday_session = (
+            None if overnight_open_workday else workday_svc.get_unconfirmed_auto_closed_session(current_user.id)
+        )
+        auto_closed_suggested_leave_time = (
+            workday_svc.suggested_leave_datetime_local(auto_closed_workday_session, current_user)
+            if auto_closed_workday_session
+            else None
+        )
+        auto_closed_max_leave_time = (
+            auto_closed_workday_session.end_time.strftime("%Y-%m-%dT%H:%M")
+            if auto_closed_workday_session and auto_closed_workday_session.end_time
+            else None
+        )
+        pending_violations = WorkingTimeLimitService().get_violations_needing_justification(current_user.id)
 
     # Overtime for dashboard cards (today and week)
     today_dt = datetime.utcnow().date()

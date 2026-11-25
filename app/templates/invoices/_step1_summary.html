@@ -1,0 +1,57 @@
+{# Step 1: the summary card. Number and From are filled by the page's script from the fields above. #}
+<div id="stepOneSummaryCard" class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="min-w-0 space-y-1">
+            <div class="text-lg font-semibold [overflow-wrap:anywhere]" data-summary-number>{{ invoice.invoice_number if invoice else '' }}</div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark" data-summary-from></div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark" data-summary-period>
+                {% if summary.period.start and summary.period.end %}
+                {{ summary.period.start | format_date }} – {{ summary.period.end | format_date }}
+                {% elif summary.first_entry_date %}
+                {{ _('All unbilled') }}: {{ summary.first_entry_date | format_date }} – {{ summary.last_entry_date | format_date }}
+                {% else %}
+                {{ _('All unbilled') }}
+                {% endif %}
+            </div>
+            <div class="flex flex-wrap gap-2 pt-3">
+                <button type="submit" class="btn btn-primary min-h-[44px]" id="stepOneSubmit">
+                    {% if invoice %}{{ _('Save step 1') }}{% else %}{{ ngettext('Create draft with %(num)d line', 'Create draft with %(num)d lines', summary.lines + summary.cost_lines) }}{% endif %}
+                </button>
+                <a href="{{ url_for('invoices.view_invoice', invoice_id=invoice.id) if invoice else url_for('invoices.list_invoices') }}" class="btn btn-secondary min-h-[44px]">{{ _('Cancel') }}</a>
+            </div>
+            {% if invoice %}
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark pt-1">{{ _('Another period, other projects or another way to show hours lets go of the hours on this draft and collects them again: hours lines are rebuilt, edits to them are lost. Lines you added by hand stay.') }}</p>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark pt-1">{{ _('Another period or other projects also let go of the expenses and costs on this draft and collect them again. Other ticks or another way to show costs rebuild the cost lines.') }}</p>
+            {% endif %}
+        </div>
+        <div class="min-w-0 md:text-right space-y-1">
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Hours') }}</div>
+            {% if summary.layout == 'none' %}
+            <div class="text-sm">{{ _("Don't add any hours") }}</div>
+            {% else %}
+            <div class="text-xl font-semibold tabular-nums">{{ hours_label(summary.billed_hours + summary.prepaid_hours) }} h</div>
+            {% if summary.prepaid_hours > 0 %}
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('%(hours)s h of them from the prepaid plan', hours=hours_label(summary.prepaid_hours)) }}</div>
+            {% endif %}
+            {% endif %}
+            {% if summary.draft %}
+            {% set d = summary.draft %}
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark pt-2">{{ _('Amount before tax, after Save') }}</div>
+            <div class="text-2xl font-semibold tabular-nums" data-summary-amount>{{ "%.2f"|format(d.total) }} {{ currency }}</div>
+            {% if d.by_hand or d.expenses or d.costs or d.other or d.discount %}
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark tabular-nums" data-summary-breakdown>
+                {{ _('%(amount)s for hours', amount="%.2f"|format(d.hours)) }}{% if d.expenses %} + {{ _('%(amount)s in expenses', amount="%.2f"|format(d.expenses)) }}{% endif %}{% if d.costs %} + {{ _('%(amount)s in project costs', amount="%.2f"|format(d.costs)) }}{% endif %}{% if d.by_hand %} + {{ _('%(amount)s in lines added by hand', amount="%.2f"|format(d.by_hand)) }}{% endif %}{% if d.other %} + {{ _('%(amount)s in goods', amount="%.2f"|format(d.other)) }}{% endif %}{% if d.discount %} − {{ _('%(amount)s discount', amount="%.2f"|format(d.discount)) }}{% endif %}
+            </div>
+            {% endif %}
+            {% else %}
+            <dl class="text-sm pt-2 tabular-nums space-y-0.5" data-summary-parts>
+                <div class="flex md:justify-end gap-3"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Hours') }}</dt><dd>{{ "%.2f"|format(summary.amount) }} {{ currency }}</dd></div>
+                <div class="flex md:justify-end gap-3"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Expenses') }}</dt><dd data-summary-expenses>{{ "%.2f"|format(summary.expenses_total) }} {{ currency }}</dd></div>
+                <div class="flex md:justify-end gap-3"><dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Project costs') }}</dt><dd data-summary-costs>{{ "%.2f"|format(summary.costs_total) }} {{ currency }}</dd></div>
+            </dl>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark pt-2">{{ _('Amount before tax') }}</div>
+            <div class="text-2xl font-semibold tabular-nums" data-summary-amount>{{ "%.2f"|format(summary.amount + summary.expenses_total + summary.costs_total) }} {{ currency }}</div>
+            {% endif %}
+        </div>
+    </div>
+</div>

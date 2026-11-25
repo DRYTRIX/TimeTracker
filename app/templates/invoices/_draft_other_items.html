@@ -1,0 +1,62 @@
+{# Other items: lines typed in (fixed fee, retainer), goods. Expenses and project costs have their own blocks. #}
+<section id="other-items" class="space-y-2">
+    <h2 class="text-lg font-semibold">{{ _('Other items') }} <span class="text-sm font-normal text-text-muted-light dark:text-text-muted-dark">{{ _('fixed fees and anything typed by hand') }}</span></h2>
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        {% for line in other_lines %}
+            {% include 'invoices/_draft_line.html' %}
+        {% endfor %}
+
+        {% if goods %}
+        <div class="border-t border-border-light dark:border-border-dark p-4" id="draftGoods">
+            <h3 class="text-sm font-semibold mb-2">{{ _('Extra goods') }}</h3>
+            <table class="w-full text-sm">
+                <tbody>
+                    {% for good in goods %}
+                    <tr class="border-t border-border-light dark:border-border-dark first:border-t-0">
+                        <td class="p-1">{{ good.name }}{% if good.sku %} <span class="text-text-muted-light dark:text-text-muted-dark">({{ good.sku }})</span>{% endif %}</td>
+                        <td class="p-1 text-right">{{ money(good.quantity) }}</td>
+                        <td class="p-1 text-right">{{ money(good.unit_price) }}</td>
+                        <td class="p-1 text-right font-semibold">{{ money(good.total_amount) }} {{ invoice.currency_code }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="text-primary hover:underline">{{ _('Edit goods in all fields') }}</a>
+            </p>
+        </div>
+        {% endif %}
+
+        {% if costs_count %}
+        <div class="border-t border-border-light dark:border-border-dark p-4 text-sm" id="draftExpensesNote">
+            {{ ngettext('%(num)d project cost is billed by a line above that is not linked to it.', '%(num)d project costs are billed by lines above that are not linked to them.', costs_count) }}
+            <a href="{{ url_for('invoices.edit_invoice', invoice_id=invoice.id) }}" class="text-primary hover:underline">{{ _('Edit them in all fields') }}</a>
+        </div>
+        {% endif %}
+
+        {% if not other_lines and not goods and not costs_count %}
+        <p class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No other items.') }}</p>
+        {% endif %}
+
+        <div class="border-t border-border-light dark:border-border-dark p-4 flex justify-between items-center">
+            <button type="button" class="btn btn-secondary" data-toggle="addItem" aria-controls="addItem" id="addItemButton">+ {{ _('Add item') }}</button>
+            <span class="text-lg">{{ _('Other items') }} <strong id="otherTotal">{{ money(other_total) }} {{ invoice.currency_code }}</strong></span>
+        </div>
+        <form method="POST" action="{{ url_for('invoices.draft_add_line', invoice_id=invoice.id) }}" id="addItem" class="hidden border-t border-border-light dark:border-border-dark p-4 grid grid-cols-12 gap-3" data-draft-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="line_type" value="item">
+            <label class="col-span-12 md:col-span-6 text-sm">{{ _('Description') }}
+                <textarea name="description" rows="2" maxlength="500" required class="form-input w-full" placeholder="{{ _('e.g. Support retainer, December') }}"></textarea>
+            </label>
+            <label class="col-span-4 md:col-span-2 text-sm">{{ _('Quantity') }}
+                <input type="text" inputmode="decimal" name="quantity" value="1.00" required class="form-input w-full text-right">
+            </label>
+            <label class="col-span-4 md:col-span-2 text-sm">{{ _('Unit price') }}
+                <input type="text" inputmode="decimal" name="unit_price" required class="form-input w-full text-right">
+            </label>
+            <div class="col-span-4 md:col-span-2 flex items-end">
+                <button type="submit" class="btn btn-primary w-full">{{ _('Add item') }}</button>
+            </div>
+        </form>
+    </div>
+</section>

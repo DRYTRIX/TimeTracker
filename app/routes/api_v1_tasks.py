@@ -60,6 +60,7 @@ def list_tasks():
     from app.services import TaskService
 
     project_id = request.args.get("project_id", type=int)
+    milestone_id = request.args.get("milestone_id", type=int)
     status_raw = request.args.get("status")
     status, statuses, exclude_statuses = parse_task_status_filter(status_raw)
     tags = request.args.get("tags", "").strip() or None
@@ -69,6 +70,7 @@ def list_tasks():
     task_service = TaskService()
     result = task_service.list_tasks(
         project_id=project_id,
+        milestone_id=milestone_id,
         status=status,
         statuses=statuses,
         exclude_statuses=exclude_statuses,
@@ -137,6 +139,7 @@ def create_task():
         due_date=data.get("due_date"),
         estimated_hours=data.get("estimated_hours"),
         tags=data.get("tags"),
+        milestone_id=data.get("milestone_id"),
     )
     if not result.get("success"):
         return error_response(result.get("message", "Could not create task"), status_code=400)
@@ -170,6 +173,8 @@ def update_task(task_id):
         update_kwargs["estimated_hours"] = data["estimated_hours"]
     if "tags" in data:
         update_kwargs["tags"] = data["tags"]
+    if "milestone_id" in data:
+        update_kwargs["milestone_id"] = data["milestone_id"]
 
     if "custom_fields" in data:
         update_kwargs["custom_fields"] = data["custom_fields"]

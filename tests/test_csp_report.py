@@ -25,6 +25,18 @@ class TestCspHeaders:
         for host in ("cdnjs", "jsdelivr", "uicdn", "bunny", "googleapis", "esm.sh"):
             assert host not in csp, f"CSP still allowlists {host}"
 
+    def test_normal_page_form_action_is_self_only(self, client):
+        """Non-OAuth pages must not allowlist third-party form-action origins (#971)."""
+        response = client.get("/login")
+        csp = response.headers.get("Content-Security-Policy", "")
+        report_only = response.headers.get("Content-Security-Policy-Report-Only", "")
+
+        # Semicolon immediately after 'self' means no extra origins were appended.
+        assert "form-action 'self';" in csp
+        assert "localhost" not in csp
+        assert "form-action 'self';" in report_only
+        assert "localhost" not in report_only
+
     def test_report_only_policy_allows_blob_frames(self, client):
         """Report-Only must stay aligned with enforced frame-src for PDF previews."""
         response = client.get("/login")

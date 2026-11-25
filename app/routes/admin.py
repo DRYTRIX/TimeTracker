@@ -1848,6 +1848,11 @@ def settings():
         settings_obj.invoice_terms = request.form.get("invoice_terms", "Payment is due within 30 days of invoice date.")
         settings_obj.invoice_notes = request.form.get("invoice_notes", "Thank you for your business!")
         settings_obj.invoice_group_time_entries = request.form.get("invoice_group_time_entries") == "on"
+        if "invoice_pdf_template" in request.form:
+            from app.utils.invoice_templates import VISUAL, ref_exists
+
+            chosen_template = (request.form.get("invoice_pdf_template") or VISUAL).strip()
+            settings_obj.invoice_pdf_template = chosen_template if ref_exists(chosen_template) else VISUAL
 
         # Update quote defaults
         quote_prefix_form = sanitize_invoice_prefix(request.form.get("quote_prefix", ""))
@@ -2556,15 +2561,11 @@ def pdf_layout():
             f"[PDF_TEMPLATE] Committing template to database - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}"
         )
         if not safe_commit("admin_update_pdf_layout"):
-            from flask_babel import gettext as _
-
             current_app.logger.error(
                 f"[PDF_TEMPLATE] Database commit failed - PageSize: '{page_size}', TemplateID: {template.id}, User: {current_user.username}"
             )
             flash(_("Could not update PDF layout due to a database error."), "error")
         else:
-            from flask_babel import gettext as _
-
             # Verify that template_json was actually saved
             db.session.refresh(template)
             if template.template_json and template.template_json.strip() and template.template_json == template_json:
@@ -2625,7 +2626,7 @@ def pdf_layout():
     try:
         if not initial_html:
             env = current_app.jinja_env
-            html_src, _, _ = env.loader.get_source(env, "invoices/pdf_default.html")
+            html_src = env.loader.get_source(env, "invoices/pdf_default.html")[0]
             # Extract body only for editor
             try:
                 import re as _re
@@ -2638,7 +2639,7 @@ def pdf_layout():
         if not initial_css:
             try:
                 env = current_app.jinja_env
-                css_src, _, _ = env.loader.get_source(env, "invoices/pdf_styles_default.css")
+                css_src = env.loader.get_source(env, "invoices/pdf_styles_default.css")[0]
                 initial_css = css_src
             except Exception as e:
                 # Log but continue - CSS loading failure is not critical

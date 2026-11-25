@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+{% from "billing_entities/_entity_fields.html" import details_section, defaults_section, help_card %}
+
+{% block content %}
+{% set actions %}
+<a href="{{ url_for('billing_entities.index') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> {{ _('Back to legal entities') }}</a>
+{% endset %}
+{{ page_header('fas fa-building', _('Add legal entity'), subtitle_text=_('A company or an individual entrepreneur that issues invoices.'), actions_html=actions, breadcrumbs=[{'text': _('Admin')}, {'text': _('Our legal entities'), 'url': url_for('billing_entities.index')}, {'text': _('Add entity')}]) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('billing_entities.create') }}" class="lg:col-span-3 min-w-0 space-y-4 sm:space-y-6">
+        {{ details_section(entity) }}
+        {{ defaults_section(entity, vat_categories) }}
+        <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm px-4 sm:px-6 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <a href="{{ url_for('billing_entities.index') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+            <button type="submit" class="btn btn-primary">{{ _('Create entity') }}</button>
+        </div>
+    </form>
+
+    {% call help_card() %}
+    <p><strong>{{ _('Short name') }}</strong> {{ _('is what you pick in the invoice form.') }} <strong>{{ _('Legal name') }}</strong> {{ _('is printed on the invoice.') }}</p>
+    <p><strong>{{ _('Payment accounts') }}</strong> {{ _('are added right after the entity is created.') }}</p>
+    <p>{{ _('An entity can be deleted until it is used on an invoice. After that, archive it.') }}</p>
+    {% endcall %}
+</div>
+{% endblock %}

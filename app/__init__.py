@@ -1022,6 +1022,10 @@ def create_app(config=None):
             # observable in the wild without breaking pages. Once the end-to-end suite
             # confirms zero script-src violations, the Report-Only policy becomes the
             # enforced one and 'unsafe-inline' is dropped.
+            # OAuth consent may set g.csp_form_action_extra to the validated client
+            # redirect origin so Approve's 302 is not blocked by form-action.
+            form_action_extra = getattr(g, "csp_form_action_extra", None)
+            form_action = f"form-action 'self' {form_action_extra}" if form_action_extra else "form-action 'self'"
             if not response.headers.get("Content-Security-Policy"):
                 response.headers["Content-Security-Policy"] = (
                     "default-src 'self'; "
@@ -1033,7 +1037,7 @@ def create_app(config=None):
                     "frame-src 'self' blob:; "
                     "object-src 'none'; "
                     "base-uri 'self'; "
-                    "form-action 'self'; "
+                    f"{form_action}; "
                     "frame-ancestors 'none'"
                 )
             if not response.headers.get("Content-Security-Policy-Report-Only"):
@@ -1062,7 +1066,7 @@ def create_app(config=None):
                         "frame-src 'self' blob:; "
                         "object-src 'none'; "
                         "base-uri 'self'; "
-                        "form-action 'self'; "
+                        f"{form_action}; "
                         "frame-ancestors 'none'; "
                         "report-uri /csp-report"
                     )
@@ -1354,12 +1358,17 @@ def create_app(config=None):
     # Exempt legacy session JSON API and docs from CSRF.
     # /api/v1 is skipped by PathExemptCSRFProtect (path prefix), so split
     # api_v1_* blueprints do not need individual csrf.exempt() calls.
+    # SCIM clients use Bearer tokens only (no CSRF); exempt when SCIM_ENABLED.
     from app.routes.api import api_bp
     from app.routes.api_docs import api_docs_bp
 
     if app.config.get("WTF_CSRF_ENABLED"):
         csrf.exempt(api_bp)
         csrf.exempt(api_docs_bp)
+        if app.config.get("SCIM_ENABLED"):
+            from app.routes.api_scim import api_scim_bp
+
+            csrf.exempt(api_scim_bp)
 
     # Initialize OIDC IP cache
     from app.utils.oidc_metadata import initialize_ip_cache

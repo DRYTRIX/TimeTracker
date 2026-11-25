@@ -7,7 +7,7 @@ This guide will help you create your first custom invoice layout using the enhan
 ## Step 1: Access the Editor
 
 1. Log in as an admin user
-2. Navigate to **Admin → PDF Templates → Invoice PDF**
+2. Navigate to **Admin → Invoice templates → Visual layout** (HTML templates are the other tab; this guide covers the Konva Visual layout only)
 3. You'll see three main sections:
    - **Left**: Element library
    - **Center**: Canvas workspace

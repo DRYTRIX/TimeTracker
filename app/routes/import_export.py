@@ -15,13 +15,7 @@ from app.models import DataExport, DataImport, User
 from app.utils.backup import restore_backup as restore_backup_archive
 from app.utils.data_export import create_backup, export_filtered_data, export_user_data_gdpr
 from app.utils.data_import import ImportError as DataImportError
-from app.utils.data_import import (
-    import_csv_clients,
-    import_csv_time_entries,
-    import_from_harvest,
-    import_from_toggl,
-    restore_from_backup,
-)
+from app.utils.data_import import import_csv_clients, import_csv_time_entries, import_from_harvest, import_from_toggl
 from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload, client_error_response
 from app.utils.module_helpers import module_enabled
 
@@ -516,8 +510,13 @@ def restore_backup():
         return jsonify({"error": "No file selected"}), 400
 
     fn_lower = (file.filename or "").lower()
-    if not (fn_lower.endswith(".json") or fn_lower.endswith(".zip")):
-        return jsonify({"error": "File must be a JSON or ZIP backup file"}), 400
+    if fn_lower.endswith(".json"):
+        return (
+            jsonify({"error": "JSON backups cannot be restored. Restore a ZIP backup from Admin > Backups."}),
+            400,
+        )
+    if not fn_lower.endswith(".zip"):
+        return jsonify({"error": "File must be a ZIP backup file"}), 400
 
     filepath = None
     try:
@@ -529,46 +528,23 @@ def restore_backup():
         filepath = os.path.join(backup_dir, f"restore_{filename}")
         file.save(filepath)
 
-        is_zip = fn_lower.endswith(".zip")
-
-        if is_zip:
-            # Full system backup (same as Admin restore)
-            app_obj = current_app._get_current_object()
-            success, message = restore_backup_archive(app_obj, filepath)
-            if not success:
-                current_app.logger.warning("Backup restore failed: %s", message)
-                return client_error_response("Backup restore failed", 400)
-            return (
-                jsonify(
-                    {
-                        "success": True,
-                        "import_id": None,
-                        "statistics": {"message": "Backup restored successfully"},
-                        "message": "Backup restored successfully",
-                    }
-                ),
-                200,
-            )
-        else:
-            # JSON backup (Import/Export style)
-            import_record = DataImport(user_id=current_user.id, import_type="backup", source_file=filename)
-            db.session.add(import_record)
-            db.session.commit()
-
-            statistics = restore_from_backup(user_id=current_user.id, backup_file_path=filepath)
-
-            return (
-                jsonify(
-                    {
-                        "success": True,
-                        "import_id": import_record.id,
-                        "statistics": statistics,
-                        "message": "Backup restored successfully",
-                    }
-                ),
-                200,
-            )
-
+        # Full system backup (same as Admin restore)
+        app_obj = current_app._get_current_object()
+        success, message = restore_backup_archive(app_obj, filepath)
+        if not success:
+            current_app.logger.warning("Backup restore failed: %s", message)
+            return client_error_response("Backup restore failed", 400)
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "import_id": None,
+                    "statistics": {"message": "Backup restored successfully"},
+                    "message": "Backup restored successfully",
+                }
+            ),
+            200,
+        )
     except DataImportError as e:
         current_app.logger.warning("Import validation failed: %s", e)
         return client_error_response("Import failed", 400)

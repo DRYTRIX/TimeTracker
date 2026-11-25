@@ -92,7 +92,8 @@ def create_payment():
         status=data.get("status", "completed"),
     )
     if not result.get("success"):
-        return jsonify({"error": result.get("message", "Could not create payment")}), 400
+        status = 409 if result.get("error") == "invoice_cancelled" else 400
+        return jsonify({"error": result.get("message", "Could not create payment")}), status
     try:
         from app.utils.integration_sync_hooks import trigger_payment_sync
 

@@ -1,0 +1,136 @@
+{# "Bill to" on the invoice create and edit forms (Client legal entities module).
+   Expects client_entity_data; bill_to_mode = 'create' | 'edit'.
+   Shown only for a client that has legal entities. When the Legal entities (billing_entities)
+   block is on the page, its #billToSlot / #billToPreviewSlot receive the field and the preview. #}
+<div class="md:col-span-2 min-w-0 rounded-lg border border-border-light dark:border-border-dark p-4 hidden" id="billToBlock" data-mode="{{ bill_to_mode }}"{% if posted %} data-keep="1" data-posted="{{ posted.client_entity_id or '' }}"{% endif %}>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="min-w-0" id="billToField">
+            <label for="client_entity_id" class="form-label">{{ _('Bill to') }}</label>
+            <select name="client_entity_id" id="client_entity_id" class="form-input text-base min-h-[44px]"></select>
+            {% if bill_to_mode == 'create' %}
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Same as the last invoice for this client') }}</p>
+            {% endif %}
+        </div>
+        <div class="min-w-0" id="billToPreviewWrap">
+            <div class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Bill to, as printed') }}</div>
+            <div id="billToPreview" class="[overflow-wrap:anywhere] text-sm whitespace-pre-line rounded-lg bg-background-light dark:bg-background-dark p-3 min-h-[3rem]"></div>
+        </div>
+    </div>
+</div>
+<script type="application/json" id="billToData" nonce="{{ csp_nonce() }}">{{ client_entity_data | tojson }}</script>
+<script nonce="{{ csp_nonce() }}">
+document.addEventListener('DOMContentLoaded', function () {
+    var block = document.getElementById('billToBlock');
+    if (!block) return;
+    var mode = block.dataset.mode;
+    var keep = block.dataset.keep === '1';  // the form came back with an error: keep what was posted
+    var data = JSON.parse(document.getElementById('billToData').textContent || '{}');
+    var field = document.getElementById('billToField');
+    var previewWrap = document.getElementById('billToPreviewWrap');
+    var sel = document.getElementById('client_entity_id');
+    var preview = document.getElementById('billToPreview');
+    var projectSel = document.getElementById('project_id');
+    var nameEl = document.getElementById('client_name');
+    var emailEl = document.getElementById('client_email');
+    var addrEl = document.getElementById('client_address');
+    var T = {
+        clientDetails: {{ _('Client details') | tojson }},
+        archived: {{ _('archived') | tojson }},
+        reg: {{ _('Registration number') | tojson }},
+        vat: {{ _('VAT') | tojson }}
+    };
+
+    // With the Legal entities block on the page, Bill to sits next to From (its slots).
+    var slot = document.getElementById('billToSlot');
+    var previewSlot = document.getElementById('billToPreviewSlot');
+    var host = slot ? slot.closest('[data-bill-to-host]') : null;
+    var moved = !!(slot && previewSlot);
+    if (moved) {
+        field.classList.add('md:col-span-3');
+        previewWrap.classList.add('md:col-span-2');
+        slot.replaceWith(field);
+        previewSlot.replaceWith(previewWrap);
+    }
+
+    function clientId() {
+        var pc = data.projectClients || {};
+        if (mode === 'create') return projectSel ? pc[projectSel.value] : null;
+        var keys = Object.keys(pc);
+        return keys.length ? pc[keys[0]] : null;
+    }
+    function entities() {
+        var c = clientId();
+        return c != null ? ((data.byClient || {})[String(c)] || []) : [];
+    }
+    function currentEntity() {
+        return entities().find(function (e) { return String(e.id) === sel.value; }) || null;
+    }
+
+    function renderPreview() {
+        var e = currentEntity();
+        var lines = [nameEl ? nameEl.value : ''];
+        if (e && e.registration_number) lines.push(T.reg + ': ' + e.registration_number);
+        if (e && e.vat_number) lines.push(T.vat + ': ' + e.vat_number);
+        if (emailEl && emailEl.value) lines.push(emailEl.value);
+        if (addrEl && addrEl.value) lines.push(addrEl.value);
+        preview.textContent = lines.filter(Boolean).join('\n');
+    }
+
+    function fill(e) {
+        var c = (data.clients || {})[String(clientId())] || {};
+        if (nameEl) nameEl.value = e ? e.legal_name : (c.name || nameEl.value);
+        if (emailEl) emailEl.value = e ? e.email : (c.email || '');
+        if (addrEl) addrEl.value = e ? e.address : (c.address || '');
+        renderPreview();
+    }
+
+    function rebuild(useDefault) {
+        var list = entities();
+        sel.innerHTML = '';
+        list.forEach(function (e) {
+            var o = document.createElement('option');
+            o.value = String(e.id);
+            o.textContent = e.legal_name + (e.active ? '' : ' (' + T.archived + ')');
+            sel.appendChild(o);
+        });
+        var c = (data.clients || {})[String(clientId())] || {};
+        var none = document.createElement('option');
+        none.value = '';
+        none.textContent = T.clientDetails + (c.name ? ' (' + c.name + ')' : '');
+        sel.appendChild(none);
+
+        var want = useDefault ? (data.defaults || {})[projectSel ? projectSel.value : ''] : data.current;
+        sel.value = want != null && list.some(function (e) { return String(e.id) === String(want); }) ? String(want) : '';
+
+        var show = list.length > 0;
+        if (moved) {
+            field.classList.toggle('hidden', !show);
+            previewWrap.classList.toggle('hidden', !show);
+            if (host) host.classList.toggle('has-bill-to', show);
+        } else {
+            block.classList.toggle('hidden', !show);
+        }
+        renderPreview();
+    }
+
+    sel.addEventListener('change', function () { fill(currentEntity()); });
+    [nameEl, emailEl, addrEl].forEach(function (el) { if (el) el.addEventListener('input', renderPreview); });
+
+    if (mode === 'create') {
+        // After the form's own script fills the client fields from the project
+        var applyProject = function () {
+            rebuild(true);
+            if (currentEntity()) fill(currentEntity());
+        };
+        if (projectSel) projectSel.addEventListener('change', function () { setTimeout(applyProject, 0); });
+        if (keep) {
+            data.current = block.dataset.posted || null;
+            setTimeout(function () { rebuild(false); }, 0);
+        } else {
+            setTimeout(applyProject, 0);
+        }
+    } else {
+        rebuild(false);
+    }
+});
+</script>

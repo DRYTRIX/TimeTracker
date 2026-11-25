@@ -15,7 +15,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import joinedload
 
 from app import db
-from app.models import Client, InvoiceItem, Project, TimeEntry
+from app.models import Client, Project, TimeEntry
 
 
 class UnpaidHoursService:
@@ -33,10 +33,8 @@ class UnpaidHoursService:
         """
         Get unpaid (unbilled) time entries.
 
-        Unpaid means:
-        - billable = True
-        - paid = False
-        - Not referenced in any InvoiceItem.time_entry_ids
+        Unpaid means billable, finished and not billed: no invoice bills the entry and it is not
+        marked paid outside an invoice (see ``InvoiceTimeService.unbilled_query``).
 
         Args:
             start_date: Filter entries from this date
@@ -50,12 +48,10 @@ class UnpaidHoursService:
         Returns:
             List of TimeEntry objects that are unpaid
         """
-        # Start with base query for billable, unpaid entries
-        query = TimeEntry.query.filter(
-            TimeEntry.billable == True,
-            TimeEntry.paid == False,
-            TimeEntry.end_time.isnot(None),
-        )
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        # Billable, finished entries that no invoice bills
+        query = InvoiceTimeService.unbilled_query()
 
         # Date filters
         if start_date:
@@ -74,19 +70,7 @@ class UnpaidHoursService:
         # Get all entries first
         all_entries = query.options(joinedload(TimeEntry.project), joinedload(TimeEntry.client)).all()
 
-        # Get all billed time entry IDs from invoice items
-        billed_entry_ids = set()
-        invoice_items = InvoiceItem.query.filter(InvoiceItem.time_entry_ids.isnot(None)).all()
-        for item in invoice_items:
-            if item.time_entry_ids:
-                try:
-                    entry_ids = [int(id_str.strip()) for id_str in item.time_entry_ids.split(",") if id_str.strip()]
-                    billed_entry_ids.update(entry_ids)
-                except (ValueError, AttributeError):
-                    continue
-
-        # Filter out billed entries
-        unpaid_entries = [entry for entry in all_entries if entry.id not in billed_entry_ids]
+        unpaid_entries = all_entries
 
         # Apply custom field filter if provided
         if custom_field_filter:

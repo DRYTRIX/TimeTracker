@@ -39,7 +39,7 @@ docker-compose restart
 3. Click "Add Cost" button
 4. Fill in the form:
    - **Description**: What the cost is for (e.g., "Travel to client site")
-   - **Category**: Select from dropdown (Travel, Materials, Services, Equipment, Software, Other)
+   - **Category**: Select from dropdown (the active categories from **Admin → Expense Categories**)
    - **Amount**: Cost amount
    - **Date**: When the cost occurred
    - **Currency**: Select currency (default: EUR)
@@ -48,14 +48,11 @@ docker-compose restart
 5. Click "Add Cost"
 
 ### Include Costs in Invoice
-1. Create or open an invoice for a project
-2. Click "Generate from Time Entries"
-3. You'll see two sections:
-   - **Time Entries**: Select hours to bill
-   - **Project Costs**: Select costs to bill
-4. Check the costs you want to include
-5. Click "Generate Items"
-6. Costs appear as line items in the invoice
+1. **Invoices → New invoice** (or open a draft's step 1) and pick the client / period / projects
+2. Tick the project costs listed under Hours (all eligible ones are selected by default)
+3. Optionally set **Show costs as**, then **Create draft**
+4. On the draft, use the **Project costs** block to regroup, remove, or **+ Log a cost**
+5. Alternate: on a draft, **Generate from Time/Costs** still lets you pick uninvoiced costs
 
 ### View Project Costs
 Project page shows:
@@ -91,7 +88,7 @@ Project page shows:
 
 ## 🎨 Features
 
-- **6 Cost Categories**: Travel, Materials, Services, Equipment, Software, Other
+- **Shared Categories**: Costs use the same Expense Categories as expenses
 - **Multi-currency**: EUR, USD, GBP, CHF
 - **Billable Tracking**: Mark costs as billable or internal
 - **Invoice Integration**: Seamless inclusion in invoices
@@ -185,7 +182,7 @@ For complete details, see:
 
 ## 🌟 Tips
 
-1. **Use Categories Consistently**: Stick to the predefined categories for better reporting
+1. **Use Categories Consistently**: Manage the list in **Admin → Expense Categories**; it is shared with expenses
 2. **Add Notes**: Use the notes field for details that might be needed later
 3. **Check Billable**: Always verify billable status before adding
 4. **Regular Invoicing**: Invoice costs regularly to keep track of what's billed

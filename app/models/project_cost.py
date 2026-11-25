@@ -2,9 +2,10 @@ from datetime import datetime
 from decimal import Decimal
 
 from app import db
+from app.models.cost_category import ExpenseCategoryLinkMixin
 
 
-class ProjectCost(db.Model):
+class ProjectCost(ExpenseCategoryLinkMixin, db.Model):
     """Project cost model for tracking expenses beyond hourly work"""
 
     __tablename__ = "project_costs"
@@ -15,7 +16,8 @@ class ProjectCost(db.Model):
 
     # Cost details
     description = db.Column(db.String(500), nullable=False)
-    category = db.Column(db.String(50), nullable=False)  # 'travel', 'materials', 'services', 'equipment', 'other'
+    # Legacy string kept for one release; category_id (from ExpenseCategoryLinkMixin) is the source of truth
+    category = db.Column(db.String(50), nullable=False)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     currency_code = db.Column(db.String(3), nullable=False, default="EUR")
 
@@ -23,6 +25,14 @@ class ProjectCost(db.Model):
     billable = db.Column(db.Boolean, default=True, nullable=False)
     invoiced = db.Column(db.Boolean, default=False, nullable=False)
     invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True, index=True)
+    # The invoice line (kind "cost") that bills this cost; one line may bill several costs
+    invoice_item_id = db.Column(
+        db.Integer, db.ForeignKey("invoice_items.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # The recurring cost this cost was generated from
+    recurring_cost_id = db.Column(
+        db.Integer, db.ForeignKey("recurring_project_costs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     # Date and metadata
     cost_date = db.Column(db.Date, nullable=False, index=True)
@@ -47,11 +57,13 @@ class ProjectCost(db.Model):
         notes=None,
         currency_code="EUR",
         receipt_path=None,
+        category_id=None,
     ):
         self.project_id = project_id
         self.user_id = user_id
         self.description = description.strip() if description else None
         self.category = category
+        self.category_id = category_id
         self.amount = Decimal(str(amount))
         self.cost_date = cost_date
         self.billable = billable
@@ -77,6 +89,7 @@ class ProjectCost(db.Model):
         """Unmark this cost as invoiced (e.g., if invoice is deleted)"""
         self.invoiced = False
         self.invoice_id = None
+        self.invoice_item_id = None
         self.updated_at = datetime.utcnow()
 
     def to_dict(self):
@@ -87,11 +100,15 @@ class ProjectCost(db.Model):
             "user_id": self.user_id,
             "description": self.description,
             "category": self.category,
+            "category_id": self.category_id,
+            "category_name": self.category_name,
             "amount": float(self.amount),
             "currency_code": self.currency_code,
             "billable": self.billable,
             "invoiced": self.invoiced,
             "invoice_id": self.invoice_id,
+            "invoice_item_id": self.invoice_item_id,
+            "recurring_cost_id": self.recurring_cost_id,
             "cost_date": self.cost_date.isoformat() if self.cost_date else None,
             "notes": self.notes,
             "receipt_path": self.receipt_path,
@@ -151,10 +168,24 @@ class ProjectCost(db.Model):
 
     @classmethod
     def get_costs_by_category(cls, project_id, start_date=None, end_date=None):
-        """Get costs grouped by category"""
-        query = db.session.query(
-            cls.category, db.func.sum(cls.amount).label("total_amount"), db.func.count(cls.id).label("count")
-        ).filter_by(project_id=project_id)
+        """Get costs grouped by category.
+
+        Costs linked to an ExpenseCategory are grouped by that category; costs without a link
+        fall back to the legacy string (case-insensitive).
+        """
+        from app.models.expense_category import ExpenseCategory
+
+        query = (
+            db.session.query(
+                cls.category_id,
+                ExpenseCategory.name,
+                cls.category,
+                db.func.sum(cls.amount).label("total_amount"),
+                db.func.count(cls.id).label("count"),
+            )
+            .outerjoin(ExpenseCategory, ExpenseCategory.id == cls.category_id)
+            .filter(cls.project_id == project_id)
+        )
 
         if start_date:
             query = query.filter(cls.cost_date >= start_date)
@@ -162,9 +193,21 @@ class ProjectCost(db.Model):
         if end_date:
             query = query.filter(cls.cost_date <= end_date)
 
-        results = query.group_by(cls.category).all()
+        results = query.group_by(cls.category_id, ExpenseCategory.name, cls.category).all()
 
-        return [
-            {"category": category, "total_amount": float(total_amount), "count": count}
-            for category, total_amount, count in results
-        ]
+        groups = {}
+        for category_id, category_name, legacy, total_amount, count in results:
+            if category_id is not None and category_name is not None:
+                key = ("id", category_id)
+                label = category_name
+            else:
+                key = ("legacy", (legacy or "").lower())
+                label = legacy
+                category_id = None
+            group = groups.setdefault(
+                key, {"category": label, "category_id": category_id, "total_amount": 0.0, "count": 0}
+            )
+            group["total_amount"] += float(total_amount or 0)
+            group["count"] += count
+
+        return list(groups.values())

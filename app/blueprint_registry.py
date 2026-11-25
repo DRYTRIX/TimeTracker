@@ -85,8 +85,10 @@ def register_all_blueprints(app, logger=None):
     from app.routes.api_v1_workflows import api_v1_workflows_bp
     from app.routes.auth import auth_bp
     from app.routes.bank_reconciliation import bank_reconciliation_bp
+    from app.routes.billing_entities import billing_entities_bp
     from app.routes.budget_alerts import budget_alerts_bp
     from app.routes.calendar import calendar_bp
+    from app.routes.client_entities import client_entities_bp
     from app.routes.client_notes import client_notes_bp
     from app.routes.client_portal import client_portal_bp
     from app.routes.clients import clients_bp
@@ -100,6 +102,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.gamification import gamification_bp
     from app.routes.import_export import import_export_bp
     from app.routes.inventory import inventory_bp
+    from app.routes.invoice_templates import invoice_templates_bp
     from app.routes.invoices import invoices_bp
     from app.routes.issues import issues_bp
     from app.routes.kanban import kanban_bp
@@ -124,6 +127,7 @@ def register_all_blueprints(app, logger=None):
     from app.routes.tasks import tasks_bp
     from app.routes.time_entry_templates import time_entry_templates_bp
     from app.routes.timer import timer_bp
+    from app.routes.timesheet import timesheet_bp
     from app.routes.user import user_bp
     from app.routes.webhooks import webhooks_bp
     from app.routes.weekly_goals import weekly_goals_bp
@@ -230,6 +234,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(milestones_bp)
     app.register_blueprint(resource_scheduling_bp)
     app.register_blueprint(timer_bp)
+    app.register_blueprint(timesheet_bp)
     app.register_blueprint(workday_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(admin_bp)
@@ -273,11 +278,13 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(tasks_bp)
     app.register_blueprint(issues_bp)
     app.register_blueprint(invoices_bp)
+    app.register_blueprint(invoice_templates_bp)
     app.register_blueprint(recurring_invoices_bp)
     app.register_blueprint(payments_bp)
     app.register_blueprint(bank_reconciliation_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(client_notes_bp)
+    app.register_blueprint(client_entities_bp)
     app.register_blueprint(client_portal_bp)
     app.register_blueprint(comments_bp)
     app.register_blueprint(kanban_bp)
@@ -292,6 +299,7 @@ def register_all_blueprints(app, logger=None):
     app.register_blueprint(calendar_bp)
     app.register_blueprint(gamification_bp)
     app.register_blueprint(expense_categories_bp)
+    app.register_blueprint(billing_entities_bp)
     app.register_blueprint(mileage_bp)
     app.register_blueprint(per_diem_bp)
     app.register_blueprint(budget_alerts_bp)

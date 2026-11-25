@@ -81,10 +81,11 @@
                         <span class="text-sm font-medium">Monthly Budget</span>
                         <span class="text-sm font-semibold">€{{ '%.2f'|format(category.monthly_budget) }}</span>
                     </div>
-                    {% if monthly_utilization is defined %}
+                    {% if monthly_utilization is defined and monthly_utilization is not none %}
+                    {% set monthly_pct = monthly_utilization.utilization_percent if monthly_utilization is mapping else monthly_utilization %}
                     <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                        <div class="{% if monthly_utilization >= category.budget_threshold_percent %}bg-red-500{% elif monthly_utilization >= category.budget_threshold_percent * 0.8 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full flex items-center justify-center text-xs text-white font-semibold" style="width: {{ [monthly_utilization, 100]|min }}%">
-                            {{ monthly_utilization }}%
+                        <div class="{% if monthly_pct >= category.budget_threshold_percent %}bg-red-500{% elif monthly_pct >= category.budget_threshold_percent * 0.8 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full flex items-center justify-center text-xs text-white font-semibold" style="width: {{ [monthly_pct, 100]|min }}%">
+                            {{ monthly_pct }}%
                         </div>
                     </div>
                     {% endif %}
@@ -97,10 +98,11 @@
                         <span class="text-sm font-medium">Quarterly Budget</span>
                         <span class="text-sm font-semibold">€{{ '%.2f'|format(category.quarterly_budget) }}</span>
                     </div>
-                    {% if quarterly_utilization is defined %}
+                    {% if quarterly_utilization is defined and quarterly_utilization is not none %}
+                    {% set quarterly_pct = quarterly_utilization.utilization_percent if quarterly_utilization is mapping else quarterly_utilization %}
                     <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                        <div class="{% if quarterly_utilization >= category.budget_threshold_percent %}bg-red-500{% elif quarterly_utilization >= category.budget_threshold_percent * 0.8 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full flex items-center justify-center text-xs text-white font-semibold" style="width: {{ [quarterly_utilization, 100]|min }}%">
-                            {{ quarterly_utilization }}%
+                        <div class="{% if quarterly_pct >= category.budget_threshold_percent %}bg-red-500{% elif quarterly_pct >= category.budget_threshold_percent * 0.8 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full flex items-center justify-center text-xs text-white font-semibold" style="width: {{ [quarterly_pct, 100]|min }}%">
+                            {{ quarterly_pct }}%
                         </div>
                     </div>
                     {% endif %}
@@ -113,10 +115,11 @@
                         <span class="text-sm font-medium">Yearly Budget</span>
                         <span class="text-sm font-semibold">€{{ '%.2f'|format(category.yearly_budget) }}</span>
                     </div>
-                    {% if yearly_utilization is defined %}
+                    {% if yearly_utilization is defined and yearly_utilization is not none %}
+                    {% set yearly_pct = yearly_utilization.utilization_percent if yearly_utilization is mapping else yearly_utilization %}
                     <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                        <div class="{% if yearly_utilization >= category.budget_threshold_percent %}bg-red-500{% elif yearly_utilization >= category.budget_threshold_percent * 0.8 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full flex items-center justify-center text-xs text-white font-semibold" style="width: {{ [yearly_utilization, 100]|min }}%">
-                            {{ yearly_utilization }}%
+                        <div class="{% if yearly_pct >= category.budget_threshold_percent %}bg-red-500{% elif yearly_pct >= category.budget_threshold_percent * 0.8 %}bg-yellow-500{% else %}bg-green-500{% endif %} h-3 rounded-full flex items-center justify-center text-xs text-white font-semibold" style="width: {{ [yearly_pct, 100]|min }}%">
+                            {{ yearly_pct }}%
                         </div>
                     </div>
                     {% endif %}

@@ -34,26 +34,28 @@ Expenses must be created and marked as billable before they can be added to invo
 
 ### 2. Adding Expenses to Invoices
 
-There are two ways to add expenses to invoices:
+Preferred path is the **new-invoice step 1** (and draft Expenses block). Generate from Time/Costs remains available on drafts.
 
-#### Method 1: Generate from Time, Costs & Goods
+#### Method 1: New invoice step 1 (recommended)
 
-1. Open an existing invoice or create a new one
-2. Click **Generate from Time/Costs** or **Add Time Entries** on the edit page (for logged hours), or **Add Expense** (for expense-module records)
+1. Go to **Invoices → New invoice** (or a draft's **step 1**)
+2. Choose the client, period, and projects
+3. Under Hours, review **expenses and project costs** for the period (all billable ones ticked by default)
+4. Pending approval shows **Approve** in the row when you may approve; rejected expenses are not listed; non-billable expenses are listed but unticked (ticking bills them without changing the flag)
+5. An expense or cost in another currency than the invoice shows a warning and is billed as-is
+6. **Create draft** (or save step 1) bills the ticked expenses and costs with the hours
+
+On the draft, the **Expenses** block supports View / Add / Replace receipt, × to remove, and **+ Log an expense** (approved immediately when logged by someone who may approve). **Before you issue** lists expenses still waiting for approval.
+
+#### Method 2: Generate from Time, Costs & Goods
+
+1. Open a draft invoice
+2. Click **Generate from Time/Costs** or **Add Time Entries** on the edit page (for logged hours), or **Add Expense**
 3. In the **Uninvoiced Billable Expenses** section, select the expenses you want to add
 4. You can also select time entries, project costs, and extra goods at the same time
 5. Click **Add Selected to Invoice**
 
-The selected expenses will be linked to the invoice and appear in the Expenses section.
-
-**Important:** Time entries (logged work hours) always become **Invoice Items**, not Expenses. Use **Generate from Time/Costs** for hours and **Add Expense** only for travel, meals, and other expense-module records.
-
-#### Method 2: Direct Edit
-
-1. Open an invoice in edit mode
-2. Navigate to the "Expenses" section
-3. Click "Add Expense" to go to the Generate from Time/Costs page
-4. Alternatively, expenses can be managed through the invoice edit form
+**Important:** Time entries (logged work hours) always become **Invoice Items**, not Expenses. Use step 1 or Generate from Time/Costs for hours; use expenses only for travel, meals, and other expense-module records.
 
 ### 3. Viewing Expenses on Invoices
 
@@ -196,7 +198,7 @@ A: Time entries are listed under **Unbilled Time Entries**, not under expenses. 
 
 **Q: Multiple time entries are merged into one line and descriptions are lost**
 
-A: On Generate from Time/Costs, enable **Create one invoice line per time entry**, or disable **Group time entries on invoices** in Admin → Settings → Invoice Defaults.
+A: On step 1 or Generate from Time/Costs, set **Show hours as** to **one line per entry** (or another layout). Use **Line description** with placeholders such as `{note}` so each entry's text is kept. The project's last layout is remembered for next time.
 
 **Q: The invoice total doesn't include my expense**
 
@@ -215,8 +217,7 @@ A: The expenses are automatically unlinked and become available for other invoic
 Potential future improvements to the expense feature:
 
 - Bulk expense import
-- Expense approval workflow integration
-- Multi-currency expense support
+- Richer multi-currency conversion when expense currency differs from the invoice
 - Expense templates
 - Automated expense categorization
 - Integration with accounting systems

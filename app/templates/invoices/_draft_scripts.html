@@ -1,0 +1,246 @@
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  const root = document.getElementById('invoiceDraft');
+  if (!root) return;
+  const OPEN_KEY = 'invoiceDraftOpen:{{ invoice.id }}';
+  const SCROLL_KEY = 'invoiceDraftScroll:{{ invoice.id }}';
+  const WARNINGS_KEY = 'invoiceDraftWarnings:{{ invoice.id }}';
+  const texts = {
+    failed: {{ _('Could not save the change')|tojson }},
+    saved: {{ _('Saved')|tojson }},
+    saving: {{ _('Saving…')|tojson }},
+    issueConfirm: {{ issue_confirm|tojson }},
+    issueButton: {{ _('Mark as issued')|tojson }},
+    issueFailed: {{ _('Could not mark the invoice as issued')|tojson }},
+    confirmButton: {{ _('Continue')|tojson }}
+  };
+
+  function toast(message, type) {
+    if (window.showToast && message) window.showToast(message, type || 'success');
+  }
+
+  async function confirmed(message) {
+    if (!message) return true;
+    if (window.ttConfirm) return await window.ttConfirm(message, { confirmText: texts.confirmButton });
+    return window.confirm(message);
+  }
+
+  // Panels that were open stay open after the page reloads
+  function openPanels() {
+    try { return JSON.parse(sessionStorage.getItem(OPEN_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function rememberPanel(id, open) {
+    try {
+      const ids = new Set(openPanels());
+      if (open) ids.add(id); else ids.delete(id);
+      sessionStorage.setItem(OPEN_KEY, JSON.stringify(Array.from(ids)));
+    } catch (e) { /* storage unavailable: panels start closed */ }
+  }
+  function setPanel(id, open) {
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    panel.classList.toggle('hidden', !open);
+    document.querySelectorAll('[data-toggle="' + id + '"]').forEach(function (button) {
+      button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+  openPanels().forEach(function (id) { if (id.indexOf('entries-') === 0 || id.indexOf('costs-') === 0) setPanel(id, true); });
+  try {
+    const scroll = sessionStorage.getItem(SCROLL_KEY);
+    if (scroll) { sessionStorage.removeItem(SCROLL_KEY); window.scrollTo(0, parseInt(scroll, 10) || 0); }
+  } catch (e) { /* ignore */ }
+
+  root.addEventListener('click', function (event) {
+    const toggle = event.target.closest('[data-toggle]');
+    if (toggle) {
+      const id = toggle.getAttribute('data-toggle');
+      const panel = document.getElementById(id);
+      if (!panel) return;
+      const open = panel.classList.contains('hidden');
+      setPanel(id, open);
+      rememberPanel(id, open);
+      return;
+    }
+    const opener = event.target.closest('[data-open-dialog]');
+    if (opener) {
+      const dialog = document.getElementById(opener.getAttribute('data-open-dialog'));
+      if (dialog) dialog.classList.remove('hidden');
+    }
+  });
+  document.querySelectorAll('[data-close-dialog]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const dialog = document.getElementById(button.getAttribute('data-close-dialog'));
+      if (dialog) dialog.classList.add('hidden');
+    });
+  });
+
+  // Warnings of the last action (rates missing, prepaid hours freed): shown at once, and kept on the
+  // page after it reloads with the new lines
+  function showWarnings(warnings) {
+    const box = document.getElementById('draftWarnings');
+    if (!box || !warnings || !warnings.length) return;
+    const list = box.querySelector('ul');
+    list.innerHTML = '';
+    warnings.forEach(function (text) {
+      const li = document.createElement('li');
+      li.textContent = text;
+      list.appendChild(li);
+    });
+    box.classList.remove('hidden');
+  }
+  try {
+    const kept = JSON.parse(sessionStorage.getItem(WARNINGS_KEY) || '[]');
+    sessionStorage.removeItem(WARNINGS_KEY);
+    showWarnings(kept);
+  } catch (e) { /* storage unavailable */ }
+  const closeWarnings = document.querySelector('#draftWarnings [data-dismiss-warnings]');
+  if (closeWarnings) closeWarnings.addEventListener('click', function () {
+    document.getElementById('draftWarnings').classList.add('hidden');
+  });
+  function keepWarnings(warnings) {
+    if (!warnings || !warnings.length) return;
+    showWarnings(warnings);
+    warnings.forEach(function (text) { toast(text, 'warning'); });
+    try { sessionStorage.setItem(WARNINGS_KEY, JSON.stringify(warnings)); } catch (e) { /* ignore */ }
+  }
+
+  function reload() {
+    try { sessionStorage.setItem(SCROLL_KEY, String(window.scrollY)); } catch (e) { /* ignore */ }
+    window.location.reload();
+  }
+
+  async function post(form, action) {
+    const response = await fetch(action || form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin'
+    });
+    let data = {};
+    try { data = await response.json(); } catch (e) { data = {}; }
+    if (!response.ok || data.success === false) {
+      throw new Error(data.message || data.error || texts.failed);
+    }
+    return data;
+  }
+
+  function showTotals(totals) {
+    if (!totals) return;
+    const put = function (id, value) {
+      const el = document.getElementById(id);
+      if (el && value !== undefined) el.textContent = value + ' ' + totals.currency;
+    };
+    put('draftSubtotal', totals.subtotal);
+    put('draftTax', totals.tax);
+    put('draftAmountDue', totals.total);
+  }
+
+  // Actions that change the lines: the page reloads with the new state
+  document.querySelectorAll('form[data-draft-form]').forEach(function (form) {
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const submitter = event.submitter;
+      const action = submitter && submitter.getAttribute('formaction');
+      if (!(await confirmed(submitter && submitter.getAttribute('data-confirm')))) return;
+      const status = form.querySelector('[data-save-status]');
+      if (status) status.textContent = texts.saving;
+      try {
+        const data = await post(form, action);
+        keepWarnings(data.warnings);
+        if (data.reload === false) {
+          if (status) status.textContent = texts.saved;
+          showTotals(data.totals);
+          return;
+        }
+        reload();
+      } catch (error) {
+        if (status) status.textContent = '';
+        toast(error.message, 'error');
+      }
+    });
+  });
+
+  // A receipt or a bill is uploaded as soon as a file is chosen
+  document.querySelectorAll('form[data-autoupload]').forEach(function (form) {
+    const input = form.querySelector('input[type="file"]');
+    if (input) input.addEventListener('change', function () { if (input.files.length) form.requestSubmit(); });
+  });
+
+  // Notes and Terms save themselves when you leave the field
+  document.querySelectorAll('form[data-autosave]').forEach(function (form) {
+    form.querySelectorAll('textarea').forEach(function (field) {
+      field.addEventListener('change', function () { form.requestSubmit(); });
+    });
+  });
+
+  // A line saves itself when a field changes; × on the line removes it
+  document.querySelectorAll('form[data-line-form]').forEach(function (form) {
+    const line = form.closest('[data-line-id]');
+    const saveButton = form.querySelector('[data-line-save]');
+    if (saveButton) saveButton.style.display = 'none';
+    let pending = null;
+    async function save() {
+      try {
+        const data = await post(form);
+        if (data.line) {
+          const set = function (field, value) {
+            const el = line.querySelector('[data-field="' + field + '"]');
+            if (el && value !== undefined) el.textContent = value;
+          };
+          set('amount', data.line.amount + ' {{ invoice.currency_code }}');
+          set('quantity_note', data.line.quantity_note);
+          set('price_note', data.line.price_note);
+          const quantity = form.querySelector('[name="quantity"]');
+          const price = form.querySelector('[name="unit_price"]');
+          if (quantity && document.activeElement !== quantity) quantity.value = data.line.quantity;
+          if (price && document.activeElement !== price) price.value = data.line.unit_price;
+        }
+        showTotals(data.totals);
+      } catch (error) {
+        toast(error.message, 'error');
+      }
+    }
+    form.addEventListener('change', function () {
+      clearTimeout(pending);
+      pending = setTimeout(save, 150);
+    });
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const submitter = event.submitter;
+      if (submitter && submitter.hasAttribute('data-delete-line')) {
+        if (!(await confirmed(submitter.getAttribute('data-confirm')))) return;
+        try {
+          const data = await post(form, submitter.getAttribute('formaction'));
+          keepWarnings(data.warnings);
+          reload();
+        } catch (error) {
+          toast(error.message, 'error');
+        }
+        return;
+      }
+      clearTimeout(pending);
+      save();
+    });
+  });
+
+  // Mark as issued: the same status change as on the invoice page
+  document.querySelectorAll('[data-mark-issued]').forEach(function (button) {
+    button.addEventListener('click', async function () {
+      if (!(await window.ttConfirm(texts.issueConfirm, { confirmText: texts.issueButton }))) return;
+      const body = new FormData();
+      body.append('csrf_token', "{{ csrf_token() }}");
+      body.append('new_status', 'issued');
+      try {
+        const response = await fetch("{{ url_for('invoices.update_invoice_status', invoice_id=invoice.id) }}", {
+          method: 'POST', body: body, credentials: 'same-origin'
+        });
+        const data = await response.json().catch(function () { return {}; });
+        if (!response.ok || !data.success) throw new Error(data.error || texts.issueFailed);
+        window.location.reload();
+      } catch (error) {
+        toast(error.message || texts.issueFailed, 'error');
+      }
+    });
+  });
+})();
+</script>

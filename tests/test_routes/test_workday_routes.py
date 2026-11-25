@@ -1,6 +1,7 @@
 """Route tests for workday attendance pages."""
 
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
 
@@ -9,6 +10,19 @@ from app.models.attendance_compliance import AttendanceWorkPeriod, DailyAttendan
 from app.models.time_entry import local_now
 from app.services.attendance_compliance_service import AttendanceComplianceService
 from app.services.workday_session_service import WorkdaySessionService
+from app.utils.module_registry import ModuleRegistry
+
+
+def _patch_workday_disabled():
+    """Force workday off for UI/API gating assertions."""
+    real = ModuleRegistry.is_enabled
+
+    def _is_enabled(module_id, settings=None, user=None):
+        if module_id == "workday":
+            return False
+        return real(module_id, settings, user)
+
+    return patch.object(ModuleRegistry, "is_enabled", side_effect=_is_enabled)
 
 
 @pytest.mark.routes
@@ -122,3 +136,33 @@ def test_dashboard_shows_auto_closed_clock_out_modal(authenticated_client, app, 
     body = response.data.decode("utf-8", errors="replace")
     assert "autoClosedClockOutModal" in body
     assert "autoClosedLeaveTime" in body
+
+
+@pytest.mark.routes
+def test_workday_disabled_hides_dashboard_strip_and_blocks_routes(authenticated_client, app, user):
+    """When workday module is off: no dashboard strip, history returns 403."""
+    with _patch_workday_disabled():
+        dash = authenticated_client.get("/dashboard")
+        assert dash.status_code == 200
+        body = dash.data.decode("utf-8", errors="replace")
+        assert 'action="/workday/start"' not in body
+        assert "Workday tracks attendance" not in body
+        assert 'id="dashboard-workday-elapsed"' not in body
+
+        history = authenticated_client.get("/workday/history")
+        assert history.status_code == 403
+
+        start = authenticated_client.post("/workday/start", follow_redirects=False)
+        assert start.status_code == 403
+
+
+@pytest.mark.api
+@pytest.mark.integration
+def test_workday_api_disabled_returns_module_disabled(client_with_token, app):
+    """API workday endpoints return 403 module_disabled when the module is off."""
+    with _patch_workday_disabled():
+        response = client_with_token.get("/api/v1/workday/status")
+        assert response.status_code == 403
+        data = response.get_json()
+        assert data is not None
+        assert data.get("error") == "module_disabled"

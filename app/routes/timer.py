@@ -43,6 +43,15 @@ def _parse_optional_int(value):
         return None
 
 
+def _wants_json():
+    """True when the client prefers a JSON response over a redirect+flash."""
+    return (
+        "application/json" in (request.headers.get("Accept") or "")
+        or request.is_json
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    )
+
+
 def _parse_duration_to_seconds(raw_value):
     """Parse a duration string into seconds; return None if unparseable.
 
@@ -151,11 +160,15 @@ def _edit_timer_form_projects_tasks(timer, can_edit_schedule):
 
 def _edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown):
     from app.services.custom_field_service import CustomFieldService
+    from app.services.invoice_time_service import InvoiceTimeService
     from app.utils.scope_filter import get_active_clients_for_user
 
     projects, tasks = _edit_timer_form_projects_tasks(timer, can_edit_schedule)
     clients = get_active_clients_for_user(current_user) if can_edit_schedule else []
+    billing_state, billing_invoice = InvoiceTimeService().billing_states([timer]).get(timer.id, (None, None))
     return {
+        "billing_state": billing_state,
+        "billing_invoice": billing_invoice,
         "timer": timer,
         "projects": projects,
         "tasks": tasks,
@@ -166,6 +179,20 @@ def _edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown):
         "can_create_projects": current_user.is_admin or current_user.has_permission("create_projects"),
         "custom_field_definitions": CustomFieldService().get_definitions("time_entry"),
     }
+
+
+def _flash_overwork_note(entry, owner_id):
+    """After saving the user's own entry, a note if the day went past their norm or 12 hours."""
+    try:
+        if not entry or not entry.start_time or owner_id != current_user.id:
+            return
+        from app.utils.overwork_notes import note_for_day
+
+        note = note_for_day(current_user, entry.start_time.date())
+        if note:
+            flash(note["text"], "warning" if note["level"] == "long_day" else "info")
+    except Exception:
+        current_app.logger.debug("Overwork note skipped", exc_info=True)
 
 
 @timer_bp.route("/timer/start", methods=["POST"])
@@ -661,9 +688,12 @@ def start_timer_for_project(project_id):
 def stop_timer():
     """Stop the current user's active timer"""
     active_timer = current_user.active_timer
+    wants_json = _wants_json()
     current_app.logger.info("POST /timer/stop user=%s active_timer=%s", current_user.username, bool(active_timer))
 
     if not active_timer:
+        if wants_json:
+            return jsonify({"success": False, "error": "no_active_timer"}), 400
         flash(_("No active timer to stop"), "error")
         return redirect(url_for("main.dashboard"))
 
@@ -732,7 +762,7 @@ def stop_timer():
             awarded = GamificationService().check_and_award_badges(
                 current_user.id, "time_entry_created", {"entry_id": active_timer.id}
             )
-            if awarded:
+            if awarded and not wants_json:
                 flash(_("Badge earned: %(name)s", name=awarded[0].get("name", "Badge")), "success")
         except Exception:
             current_app.logger.debug("Gamification hook failed", exc_info=True)
@@ -769,12 +799,24 @@ def stop_timer():
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
+        if not wants_json:
+            _flash_overwork_note(active_timer, current_user.id)
+
         # Pass data for post-timer toast (message + link to time entries; no flash to avoid duplicate)
         project_name = (
             active_timer.project.name
             if active_timer.project
             else (active_timer.client.name if active_timer.client else _("No project"))
         )
+        if wants_json:
+            return jsonify(
+                {
+                    "success": True,
+                    "duration": active_timer.duration_formatted,
+                    "project_name": project_name,
+                }
+            )
+
         session["timer_stopped_toast"] = {
             "duration": active_timer.duration_formatted,
             "project_name": project_name,
@@ -784,6 +826,8 @@ def stop_timer():
     except ValueError as e:
         # Timer already stopped or invalid state
         current_app.logger.warning("Cannot stop timer: %s", e)
+        if wants_json:
+            return jsonify({"success": False, "error": str(e)}), 400
         flash(_("Cannot stop timer: %(error)s", error=str(e)), "error")
         return redirect(url_for("main.dashboard"))
     except Exception as e:
@@ -796,6 +840,8 @@ def stop_timer():
             exc=e,
             level="exception",
         )
+        if wants_json:
+            return jsonify({"success": False, "error": "stop_failed"}), 500
         flash(
             _("Could not stop timer due to an error. Please try again or contact support if the problem persists."),
             "error",
@@ -808,23 +854,35 @@ def stop_timer():
 def pause_timer():
     """Pause the current user's active timer (clock stops; break accumulates on resume)."""
     active_timer = current_user.active_timer
+    wants_json = _wants_json()
     if not active_timer:
+        if wants_json:
+            return jsonify({"success": False, "error": "no_active_timer"}), 400
         flash(_("No active timer to pause"), "error")
         return redirect(url_for("main.dashboard"))
     try:
         active_timer.pause_timer()
-        flash(_("Timer paused"), "success")
+        if not wants_json:
+            flash(_("Timer paused"), "success")
     except ValueError as e:
+        if wants_json:
+            return jsonify({"success": False, "error": str(e)}), 400
         flash(_(str(e)), "error")
+        return redirect(url_for("main.dashboard"))
     except Exception as e:
         current_app.logger.exception("Error pausing timer: %s", e)
+        if wants_json:
+            return jsonify({"success": False, "error": "pause_failed"}), 500
         flash(_("Could not pause timer. Please try again."), "error")
+        return redirect(url_for("main.dashboard"))
     try:
         from app.utils.cache import invalidate_dashboard_for_user
 
         invalidate_dashboard_for_user(current_user.id)
     except Exception as e:
         safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
+    if wants_json:
+        return jsonify({"success": True})
     return redirect(url_for("main.dashboard"))
 
 
@@ -833,23 +891,35 @@ def pause_timer():
 def resume_timer():
     """Resume a paused timer (time since pause is counted as break)."""
     active_timer = current_user.active_timer
+    wants_json = _wants_json()
     if not active_timer:
+        if wants_json:
+            return jsonify({"success": False, "error": "no_active_timer"}), 400
         flash(_("No active timer to resume"), "error")
         return redirect(url_for("main.dashboard"))
     try:
         active_timer.resume_timer()
-        flash(_("Timer resumed"), "success")
+        if not wants_json:
+            flash(_("Timer resumed"), "success")
     except ValueError as e:
+        if wants_json:
+            return jsonify({"success": False, "error": str(e)}), 400
         flash(_(str(e)), "error")
+        return redirect(url_for("main.dashboard"))
     except Exception as e:
         current_app.logger.exception("Error resuming timer: %s", e)
+        if wants_json:
+            return jsonify({"success": False, "error": "resume_failed"}), 500
         flash(_("Could not resume timer. Please try again."), "error")
+        return redirect(url_for("main.dashboard"))
     try:
         from app.utils.cache import invalidate_dashboard_for_user
 
         invalidate_dashboard_for_user(current_user.id)
     except Exception as e:
         safe_log(current_app.logger, "debug", "Dashboard cache invalidation failed: %s", e)
+    if wants_json:
+        return jsonify({"success": True})
     return redirect(url_for("main.dashboard"))
 
 
@@ -1087,6 +1157,19 @@ def edit_timer(timer_id):
     if timer.user_id != current_user.id and not current_user.is_admin:
         flash(_("You can only edit your own timers"), "error")
         return redirect(url_for("main.dashboard"))
+
+    # An entry an invoice bills is frozen, for admins too
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    locked = InvoiceTimeService().edit_lock(timer)
+    if locked:
+        if request.method == "POST":
+            flash(_(locked["message"]), "error")
+            return render_template(
+                "timer/edit_timer.html",
+                **_edit_timer_render_kwargs(timer, can_edit_schedule, show_source_dropdown),
+            )
+        # A GET shows the "on invoice" notice in the form itself
 
     if request.method == "POST":
         from app.utils.validation import sanitize_input
@@ -1393,6 +1476,14 @@ def delete_timer(timer_id):
         flash(_("Cannot delete an active timer"), "error")
         return redirect(url_for("main.dashboard"))
 
+    # An entry an invoice bills cannot be deleted, by admins either
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    locked = InvoiceTimeService().edit_lock(timer)
+    if locked:
+        flash(_(locked["message"]), "error")
+        return redirect(url_for("timer.edit_timer", timer_id=timer.id))
+
     # Get the name for the success message (project or client)
     if timer.project:
         target_name = timer.project.name
@@ -1517,6 +1608,7 @@ def bulk_delete_time_entries():
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     deleted_count = 0
     skipped_count = 0
+    invoiced_skipped = []
 
     # Use service layer for proper audit logging
     service = TimeTrackingService()
@@ -1542,6 +1634,8 @@ def bulk_delete_time_entries():
 
         if result.get("success"):
             deleted_count += 1
+        elif result.get("error") == "time_entry_invoiced":
+            invoiced_skipped.append(f"#{entry.id} ({result.get('invoice_number')})")
         else:
             skipped_count += 1
 
@@ -1550,6 +1644,15 @@ def bulk_delete_time_entries():
 
     if skipped_count > 0:
         flash(_("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count), "warning")
+    if invoiced_skipped:
+        flash(
+            _(
+                "Skipped %(count)d time entry/entries that are on an invoice: %(entries)s",
+                count=len(invoiced_skipped),
+                entries=", ".join(invoiced_skipped),
+            ),
+            "warning",
+        )
 
     # Track event
     track_event(current_user.id, "time_entries.bulk_delete", {"count": deleted_count})
@@ -1755,11 +1858,21 @@ def manual_entry():
                 end_time_parsed = start_time_parsed + timedelta(minutes=worked_minutes)
                 duration_seconds_override = worked_minutes * 60
             else:
-                # Duration-only: no start given → end=now, start=end-duration
+                # duration only: place it on the chosen day (today if none), after that
+                # day's last entry, instead of ending it "now" and ignoring the date
+                from datetime import date as _date
+
                 from app.models.time_entry import local_now as _local_now_db
 
-                end_time_parsed = _local_now_db()
-                start_time_parsed = end_time_parsed - timedelta(minutes=worked_minutes)
+                placement_day = _date.fromisoformat(start_date) if start_date else _local_now_db().date()
+                placement = TimeTrackingService().place_duration_entry(
+                    selected_user_id, placement_day, worked_minutes * 60
+                )
+                if not placement.get("success"):
+                    flash(_(placement.get("message") or "Could not place the entry"), "error")
+                    return render_template("timer/manual_entry.html", **_manual_ctx(**prefill_kwargs))
+                start_time_parsed = placement["start_time"]
+                end_time_parsed = placement["end_time"]
                 duration_seconds_override = worked_minutes * 60
         except ValueError:
             flash(_("Invalid date/time format"), "error")
@@ -1886,6 +1999,7 @@ def manual_entry():
         except Exception as e:
             current_app.logger.warning("Failed to invalidate dashboard cache: %s", e)
 
+        _flash_overwork_note(entry, target_user_id)
         return redirect(url_for("main.dashboard"))
 
     # Pre-fill start/end date with today in user's timezone (Issue #489)
@@ -2223,37 +2337,49 @@ def timer_page():
         .all()
     )
 
-    from app.services.attendance_compliance_service import AttendanceComplianceService
-    from app.services.workday_session_service import WorkdaySessionService
+    from app.utils.module_helpers import is_module_enabled
 
-    workday_svc = WorkdaySessionService()
-    active_workday_session = workday_svc.get_active_session(current_user.id)
-    attendance_status = AttendanceComplianceService().get_status(current_user.id)
-    overnight_open_workday = workday_svc.is_overnight_open_session(active_workday_session)
-    suggested_leave_time = (
-        workday_svc.suggested_leave_datetime_local(active_workday_session, current_user)
-        if overnight_open_workday and active_workday_session
-        else None
-    )
-    auto_closed_workday_session = (
-        None if overnight_open_workday else workday_svc.get_unconfirmed_auto_closed_session(current_user.id)
-    )
-    auto_closed_suggested_leave_time = (
-        workday_svc.suggested_leave_datetime_local(auto_closed_workday_session, current_user)
-        if auto_closed_workday_session
-        else None
-    )
-    auto_closed_max_leave_time = (
-        auto_closed_workday_session.end_time.strftime("%Y-%m-%dT%H:%M")
-        if auto_closed_workday_session and auto_closed_workday_session.end_time
-        else None
-    )
+    active_workday_session = None
+    attendance_break_active = False
+    overnight_open_workday = False
+    suggested_leave_time = None
+    auto_closed_workday_session = None
+    auto_closed_suggested_leave_time = None
+    auto_closed_max_leave_time = None
+
+    if is_module_enabled("workday"):
+        from app.services.attendance_compliance_service import AttendanceComplianceService
+        from app.services.workday_session_service import WorkdaySessionService
+
+        workday_svc = WorkdaySessionService()
+        active_workday_session = workday_svc.get_active_session(current_user.id)
+        attendance_status = AttendanceComplianceService().get_status(current_user.id)
+        attendance_break_active = attendance_status.get("break_active", False)
+        overnight_open_workday = workday_svc.is_overnight_open_session(active_workday_session)
+        suggested_leave_time = (
+            workday_svc.suggested_leave_datetime_local(active_workday_session, current_user)
+            if overnight_open_workday and active_workday_session
+            else None
+        )
+        auto_closed_workday_session = (
+            None if overnight_open_workday else workday_svc.get_unconfirmed_auto_closed_session(current_user.id)
+        )
+        auto_closed_suggested_leave_time = (
+            workday_svc.suggested_leave_datetime_local(auto_closed_workday_session, current_user)
+            if auto_closed_workday_session
+            else None
+        )
+        auto_closed_max_leave_time = (
+            auto_closed_workday_session.end_time.strftime("%Y-%m-%dT%H:%M")
+            if auto_closed_workday_session and auto_closed_workday_session.end_time
+            else None
+        )
 
     return render_template(
         "timer/timer_page.html",
         active_timer=active_timer,
         active_workday_session=active_workday_session,
-        attendance_break_active=attendance_status.get("break_active", False),
+        attendance_break_active=attendance_break_active,
         overnight_open_workday=overnight_open_workday,
         suggested_leave_time=suggested_leave_time,
         auto_closed_workday_session=auto_closed_workday_session,
@@ -2273,9 +2399,16 @@ def timer_page():
 @login_required
 def calendar_view():
     """Calendar UI combining day/week/month with list toggle."""
+    from app.utils.time_rounding import get_calendar_snap_minutes
+
     # Provide projects for quick assignment during drag-create
     active_projects = Project.query.filter_by(status="active").order_by(Project.name).all()
-    return render_template("timer/calendar.html", projects=active_projects)
+
+    return render_template(
+        "timer/calendar.html",
+        projects=active_projects,
+        calendar_snap_minutes=get_calendar_snap_minutes(current_user),
+    )
 
 
 @timer_bp.route("/timer/bulk/<int:project_id>")
@@ -2703,10 +2836,12 @@ def time_entries_overview():
             current_app.logger.debug("Ignoring invalid end_date filter %r", end_date, exc_info=True)
 
     # Filter by paid status
-    if paid_filter == "true":
-        query = query.filter(TimeEntry.paid == True)
-    elif paid_filter == "false":
-        query = query.filter(TimeEntry.paid == False)
+    # "Paid" here means billed: on an invoice that is no longer a draft, or marked paid outside one
+    if paid_filter in ("true", "false"):
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        billed_clause = InvoiceTimeService.billed_clause()
+        query = query.filter(billed_clause if paid_filter == "true" else ~billed_clause)
 
     # Filter by billable status
     if billable_filter == "true":
@@ -2893,6 +3028,11 @@ def time_entries_overview():
                 current_app.logger.debug("Rollback after pending-approvals query failure also failed", exc_info=True)
             entry_ids_with_pending_approval = set()
 
+    # Which invoice bills each entry on the page: one query for the page, not one per entry
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    billing_states = InvoiceTimeService().billing_states(time_entries)
+
     # Check if this is an AJAX request
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         # Return only the time entries list HTML for AJAX requests
@@ -2910,6 +3050,7 @@ def time_entries_overview():
                 link_templates_by_field=link_templates_by_field,
                 time_approvals_enabled=time_approvals_enabled,
                 entry_ids_with_pending_approval=entry_ids_with_pending_approval,
+                billing_states=billing_states,
             )
         )
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -2931,6 +3072,7 @@ def time_entries_overview():
         link_templates_by_field=link_templates_by_field,
         time_approvals_enabled=time_approvals_enabled,
         entry_ids_with_pending_approval=entry_ids_with_pending_approval,
+        billing_states=billing_states,
         totals={
             "total_hours": round(total_hours, 2),
             "total_billable_hours": round(total_billable_hours, 2),
@@ -3049,10 +3191,12 @@ def export_time_entries_csv():
             current_app.logger.debug("Ignoring invalid end_date filter %r", end_date, exc_info=True)
 
     # Paid/billable
-    if paid_filter == "true":
-        query = query.filter(TimeEntry.paid == True)
-    elif paid_filter == "false":
-        query = query.filter(TimeEntry.paid == False)
+    # "Paid" here means billed: on an invoice that is no longer a draft, or marked paid outside one
+    if paid_filter in ("true", "false"):
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        billed_clause = InvoiceTimeService.billed_clause()
+        query = query.filter(billed_clause if paid_filter == "true" else ~billed_clause)
 
     if billable_filter == "true":
         query = query.filter(TimeEntry.billable == True)
@@ -3263,10 +3407,12 @@ def export_time_entries_pdf():
             current_app.logger.debug("Ignoring invalid end_date filter %r", end_date, exc_info=True)
 
     # Paid/billable
-    if paid_filter == "true":
-        query = query.filter(TimeEntry.paid == True)
-    elif paid_filter == "false":
-        query = query.filter(TimeEntry.paid == False)
+    # "Paid" here means billed: on an invoice that is no longer a draft, or marked paid outside one
+    if paid_filter in ("true", "false"):
+        from app.services.invoice_time_service import InvoiceTimeService
+
+        billed_clause = InvoiceTimeService.billed_clause()
+        query = query.filter(billed_clause if paid_filter == "true" else ~billed_clause)
 
     if billable_filter == "true":
         query = query.filter(TimeEntry.billable == True)
@@ -3382,6 +3528,11 @@ def bulk_mark_paid():
     can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
     updated_count = 0
     skipped_count = 0
+    invoiced_skipped = []
+
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    time_links = InvoiceTimeService()
 
     for entry in entries:
         # Check permissions
@@ -3392,6 +3543,12 @@ def bulk_mark_paid():
         # Skip active timers
         if entry.is_active:
             skipped_count += 1
+            continue
+
+        # Entries an invoice bills are frozen
+        billing_invoice = time_links.billing_invoice(entry)
+        if billing_invoice is not None:
+            invoiced_skipped.append(f"#{entry.id} ({billing_invoice.invoice_number})")
             continue
 
         # Update paid status with invoice reference if provided
@@ -3430,9 +3587,131 @@ def bulk_mark_paid():
 
     if skipped_count > 0:
         flash(_("Skipped %(count)d time entry/entries (no permission or active timer)", count=skipped_count), "warning")
+    if invoiced_skipped:
+        flash(
+            _(
+                "Skipped %(count)d time entry/entries that are on an invoice: %(entries)s",
+                count=len(invoiced_skipped),
+                entries=", ".join(invoiced_skipped),
+            ),
+            "warning",
+        )
 
     # Track event
     track_event(current_user.id, "time_entries.bulk_mark_paid", {"count": updated_count, "paid": is_paid})
+
+    # Preserve filters in redirect
+    redirect_url = url_for("timer.time_entries_overview")
+    filters = {}
+    for key in ["user_id", "project_id", "client_id", "start_date", "end_date", "paid", "billable", "search", "page"]:
+        value = request.form.get(key) or request.args.get(key)
+        if value:
+            filters[key] = value
+
+    if filters:
+        redirect_url += "?" + "&".join(f"{k}={v}" for k, v in filters.items())
+
+    return redirect(redirect_url)
+
+
+@timer_bp.route("/time-entries/bulk-billable", methods=["POST"])
+@login_required
+def bulk_mark_billable():
+    """Bulk mark time entries as billable or non-billable.
+
+    Entries that are already invoiced (paid) or have a running timer are skipped.
+    """
+    from app.services.time_entry_bulk_service import (
+        SKIP_ALREADY_INVOICED,
+        SKIP_TIMER_RUNNING,
+        apply_bulk_time_entry_actions,
+    )
+
+    entry_ids = request.form.getlist("entry_ids[]")
+    # Not "billable": the form also carries the list filters, and "billable" is one of them
+    billable_status = request.form.get("set_billable", "").strip().lower()
+
+    if not entry_ids:
+        flash(_("No time entries selected"), "warning")
+        return redirect(url_for("timer.time_entries_overview"))
+
+    if billable_status not in ("true", "false"):
+        flash(_("Invalid billable status"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+
+    is_billable = billable_status == "true"
+
+    entry_ids_int = [int(eid) for eid in entry_ids if eid.isdigit()]
+    if not entry_ids_int:
+        flash(_("Invalid entry IDs"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+
+    entries = TimeEntry.query.filter(TimeEntry.id.in_(entry_ids_int)).all()
+
+    if not entries:
+        flash(_("No time entries found"), "error")
+        return redirect(url_for("timer.time_entries_overview"))
+
+    # Same permission rule as bulk mark paid: other users' entries are skipped
+    can_view_all = current_user.is_admin or current_user.has_permission("view_all_time_entries")
+    allowed_ids = [e.id for e in entries if can_view_all or e.user_id == current_user.id]
+    no_permission_count = len(entries) - len(allowed_ids)
+
+    updated_ids = []
+    skipped_reasons = {}
+    if allowed_ids:
+        # Only permitted entries are passed on, so the service ownership check always passes
+        result = apply_bulk_time_entry_actions(
+            allowed_ids, "set_billable", is_billable, user_id=current_user.id, is_admin=can_view_all
+        )
+        if not result.get("success") and not result.get("skipped"):
+            flash(_("Could not update time entries due to a database error. Please check server logs."), "error")
+            return redirect(url_for("timer.time_entries_overview"))
+        updated_ids = result.get("affected_ids", [])
+        skipped_reasons = result.get("skipped_reasons", {})
+
+    entries_by_id = {e.id: e for e in entries}
+    for entry_id in updated_ids:
+        entry = entries_by_id[entry_id]
+        Activity.log(
+            user_id=current_user.id,
+            action="updated",
+            entity_type="time_entry",
+            entity_id=entry.id,
+            entity_name=f"Time entry #{entry.id}",
+            description=f"Marked time entry as {'billable' if is_billable else 'non-billable'}",
+            extra_data={"billable": is_billable, "project_id": entry.project_id, "client_id": entry.client_id},
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get("User-Agent"),
+        )
+
+    status = _("billable") if is_billable else _("non-billable")
+    reasons = []
+    if skipped_reasons.get(SKIP_ALREADY_INVOICED):
+        reasons.append(_("%(count)d already invoiced", count=skipped_reasons[SKIP_ALREADY_INVOICED]))
+    if skipped_reasons.get(SKIP_TIMER_RUNNING):
+        reasons.append(_("%(count)d timer running", count=skipped_reasons[SKIP_TIMER_RUNNING]))
+    if no_permission_count:
+        reasons.append(_("%(count)d no permission", count=no_permission_count))
+    skipped_count = sum(skipped_reasons.values()) + no_permission_count
+
+    if skipped_count:
+        flash(
+            _(
+                "%(count)d entries marked %(status)s, %(skipped)d skipped: %(reasons)s",
+                count=len(updated_ids),
+                status=status,
+                skipped=skipped_count,
+                reasons=", ".join(reasons),
+            ),
+            "success" if updated_ids else "warning",
+        )
+    else:
+        flash(_("%(count)d entries marked %(status)s", count=len(updated_ids), status=status), "success")
+
+    track_event(
+        current_user.id, "time_entries.bulk_mark_billable", {"count": len(updated_ids), "billable": is_billable}
+    )
 
     # Preserve filters in redirect
     redirect_url = url_for("timer.time_entries_overview")

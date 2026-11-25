@@ -1,0 +1,634 @@
+{% extends "base.html" %}
+{% from 'components/ui.html' import page_header %}
+
+{% block content %}
+{% if invoice %}
+{% set title = _('Invoice %(number)s: step 1', number=invoice.invoice_number) %}
+{% set crumbs = [{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': invoice.invoice_number, 'url': url_for('invoices.view_invoice', invoice_id=invoice.id)}, {'text': _('Step 1')}] %}
+{% else %}
+{% set title = _('New invoice') %}
+{% set crumbs = [{'text': _('Invoices'), 'url': url_for('invoices.list_invoices')}, {'text': _('New invoice')}] %}
+{% endif %}
+{{ page_header('fas fa-file-invoice', title, subtitle_text=_('Who bills whom, the number and which hours go on the invoice'), breadcrumbs=crumbs) }}
+
+{# Steps #}
+<ol class="flex flex-wrap items-center gap-x-6 gap-y-2 mb-6 text-sm" aria-label="{{ _('Steps') }}">
+    <li class="flex items-center gap-2 font-semibold" aria-current="step">
+        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-xs">1</span>
+        {{ _('Who bills whom, number and period') }}
+    </li>
+    <li class="flex items-center gap-2 text-text-muted-light dark:text-text-muted-dark">
+        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border-light dark:border-border-dark text-xs">2</span>
+        {{ _('Lines') }}
+    </li>
+</ol>
+
+<form method="POST" id="stepOneForm" novalidate data-step-one
+      data-mode="{{ 'edit' if invoice else 'create' }}"
+      data-summary-url="{{ url_for('invoices.step_one_summary') }}"
+      data-approve-url="{{ url_for('invoices.approve_invoice_expense', expense_id=0) }}"
+      data-invoice-id="{{ invoice.id if invoice else '' }}"
+      data-company="{{ settings.company_name or '' }}"
+      class="space-y-6 pb-24 sm:pb-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="projects_touched" id="projects_touched" value="{{ '1' if (invoice or request.method == 'POST') else '' }}">
+    <input type="hidden" name="from_project_id" id="from_project_id" value="{{ (selection.primary_project_id if selection and selection.primary_project_id else '') }}">
+    {# The invoice's own project; the From and Bill to blocks read their defaults through it #}
+    <input type="hidden" name="project_id" id="project_id" value="{{ primary_project.id if primary_project else '' }}">
+
+    {# 1. Who bills whom #}
+    <section class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" id="stepOneWho">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Who bills whom') }}</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="min-w-0">
+                <label for="client_id" class="form-label">{{ _('Client') }} *</label>
+                {% if invoice %}
+                <input type="hidden" name="client_id" id="client_id" value="{{ invoice.client_id }}">
+                <div class="form-input text-base min-h-[44px] flex items-center bg-background-light dark:bg-background-dark">{{ client.name }}</div>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Another client means another invoice.') }}</p>
+                {% else %}
+                <select name="client_id" id="client_id" required class="form-input text-base min-h-[44px]">
+                    <option value="">{{ _('Select a client') }}</option>
+                    {% for c in clients %}
+                    <option value="{{ c.id }}"{% if client and c.id == client.id %} selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+            </div>
+            <div class="min-w-0">
+                <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
+                {% set current_currency = values.currency_code or (invoice.currency_code if invoice else (client_currencies.get(client.id|string, default_currency) if client else default_currency)) %}
+                <select name="currency_code" id="currency_code" class="form-input text-base min-h-[44px]" data-default-currency="{{ default_currency }}">
+                    {% for code in currency_choices %}
+                    <option value="{{ code }}"{% if code == current_currency %} selected{% endif %}>{{ code }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if billing_enabled %}
+            {% if invoice %}{% set mode = 'edit' %}{% set current_entity_id = invoice.billing_entity_id %}{% set current_account_id = invoice.payment_account_id %}
+            {% else %}{% set mode = 'create' %}{% set current_entity_id = posted.entity_id if posted else None %}{% set current_account_id = posted.account_id if posted else None %}{% endif %}
+            {% include 'billing_entities/_invoice_seller_fields.html' %}
+            {% endif %}
+            {% if client_entities_enabled %}
+            {% set bill_to_mode = 'edit' if invoice else 'create' %}
+            {% include 'client_entities/_invoice_bill_to.html' %}
+            {% endif %}
+            {# As printed: From without the Legal entities module; Bill to when the client has no legal entities #}
+            <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4" id="stepOnePrinted"{% if not billing_enabled %} data-has-from="1"{% endif %}>
+                {% if not billing_enabled %}
+                <div class="min-w-0">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('From, as printed') }}</div>
+                    <div class="[overflow-wrap:anywhere] text-sm whitespace-pre-line rounded-lg bg-background-light dark:bg-background-dark p-3 min-h-[3rem]">{{ settings.company_name }}{% if settings.company_address %}
+{{ settings.company_address }}{% endif %}</div>
+                </div>
+                {% endif %}
+                <div class="min-w-0" id="stepOneBillToFallback">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Bill to, as printed') }}</div>
+                    <div id="stepOneBillToPrinted" class="[overflow-wrap:anywhere] text-sm whitespace-pre-line rounded-lg bg-background-light dark:bg-background-dark p-3 min-h-[3rem]"></div>
+                </div>
+            </div>
+            {% if invoice %}
+            <div class="min-w-0 md:col-span-2" id="stepOneNumberRow">
+                <label for="invoice_number" class="form-label">{{ _('Number') }}</label>
+                <input type="text" name="invoice_number" id="invoice_number" value="{{ posted.number if posted else (values.invoice_number or invoice.invoice_number) }}" class="form-input text-base min-h-[44px]{% if posted %} border-red-500{% endif %}"{% if posted %} aria-invalid="true"{% endif %}>
+                {% if posted %}
+                <div role="alert" class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+                    <span>{{ _('Number already taken by %(invoice)s', invoice=[posted.taken.number, posted.taken.client, posted.taken.date] | select | join(' · ')) }}</span>
+                    {% if posted.next_free %}<button type="button" class="font-medium underline" data-use-number="{{ posted.next_free }}">{{ _('Use next free: %(number)s', number=posted.next_free) }}</button>{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% elif not billing_enabled %}
+            <div class="min-w-0 md:col-span-2">
+                <div class="form-label">{{ _('Number') }}</div>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Given when the draft is created, from the invoice number settings.') }}</p>
+            </div>
+            {% endif %}
+            <div class="min-w-0">
+                <label for="issue_date" class="form-label">{{ _('Issue date') }}</label>
+                <input type="date" name="issue_date" id="issue_date" value="{{ values.issue_date or period.issue_date().isoformat() }}" class="form-input text-base min-h-[44px] user-date-input"{% if dates_touched.issue_date %} data-touched="1"{% endif %}>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('The last day of the period; today for This month and All unbilled.') }}</p>
+            </div>
+            <div class="min-w-0">
+                <label for="due_date" class="form-label">{{ _('Due date') }}</label>
+                <input type="date" name="due_date" id="due_date" value="{{ values.due_date }}" class="form-input text-base min-h-[44px] user-date-input"{% if dates_touched.due_date %} data-touched="1"{% endif %}>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1 hidden" id="dueDateHint"></p>
+            </div>
+            <div class="min-w-0">
+                <label for="vat_category" class="form-label">{{ _('VAT category') }}</label>
+                {% set vc = values.vat_category %}
+                <select name="vat_category" id="vat_category" class="form-input text-base min-h-[44px]">
+                    <option value="">{{ _('Use default from settings') }}</option>
+                    <option value="S" {% if vc == 'S' %}selected{% endif %}>S — Standard</option>
+                    <option value="Z" {% if vc == 'Z' %}selected{% endif %}>Z — Zero rated</option>
+                    <option value="E" {% if vc == 'E' %}selected{% endif %}>E — Exempt</option>
+                    <option value="AE" {% if vc == 'AE' %}selected{% endif %}>AE — Reverse charge</option>
+                    <option value="K" {% if vc == 'K' %}selected{% endif %}>K — Intra-Community</option>
+                    <option value="G" {% if vc == 'G' %}selected{% endif %}>G — Export</option>
+                    <option value="O" {% if vc == 'O' %}selected{% endif %}>O — Not subject to VAT</option>
+                </select>
+            </div>
+            <div class="min-w-0">
+                <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
+                <input type="number" name="tax_rate" id="tax_rate" value="{{ values.tax_rate or (settings.tax_rate or 0) }}" step="0.01" inputmode="decimal" class="form-input text-base min-h-[44px]">
+            </div>
+            <div class="md:col-span-2 min-w-0">
+                <label for="vat_exemption_reason" class="form-label">{{ _('VAT exemption reason') }}</label>
+                <input type="text" name="vat_exemption_reason" id="vat_exemption_reason" value="{{ values.vat_exemption_reason }}" class="form-input text-base min-h-[44px]">
+            </div>
+        </div>
+
+        {# More: the rest of the author's create form, as it is #}
+        <details class="mt-6 group/more" id="stepOneMore"{% if values.buyer_reference or values.cig or values.cup or values.vat_exemption_code or values.notes %} open{% endif %}>
+            <summary class="cursor-pointer text-sm font-semibold select-none">{{ _('More') }}</summary>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div class="min-w-0">
+                    <label for="client_name" class="form-label">{{ _('Client name on this invoice') }}</label>
+                    <input type="text" name="client_name" id="client_name" value="{{ values.client_name }}" class="form-input text-base min-h-[44px]">
+                </div>
+                <div class="min-w-0">
+                    <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
+                    <input type="email" name="client_email" id="client_email" value="{{ values.client_email }}" class="form-input text-base min-h-[44px]">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Optional: only needed to send the invoice by email.') }}</p>
+                </div>
+                <div class="md:col-span-2 min-w-0">
+                    <label for="client_address" class="form-label">{{ _('Client Address') }}</label>
+                    <textarea name="client_address" id="client_address" rows="3" class="form-input text-base">{{ values.client_address }}</textarea>
+                </div>
+                <div class="min-w-0">
+                    <label for="vat_exemption_code" class="form-label">{{ _('VAT exemption code') }}</label>
+                    <input type="text" name="vat_exemption_code" id="vat_exemption_code" value="{{ values.vat_exemption_code }}" class="form-input text-base min-h-[44px]" placeholder="VATEX-EU-O">
+                </div>
+                <div class="min-w-0">
+                    <label for="buyer_reference" class="form-label">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
+                    <input type="text" name="buyer_reference" id="buyer_reference" value="{{ values.buyer_reference }}" class="form-input text-base min-h-[44px]" placeholder="{{ _('Optional; used in PEPPOL UBL') }}">
+                </div>
+                <div class="min-w-0">
+                    <label for="cig" class="form-label">{{ _('CIG (FatturaPA PA)') }}</label>
+                    <input type="text" name="cig" id="cig" value="{{ values.cig }}" class="form-input text-base min-h-[44px]" maxlength="15" placeholder="{{ _('Optional procurement code') }}">
+                </div>
+                <div class="min-w-0">
+                    <label for="cup" class="form-label">{{ _('CUP (FatturaPA PA)') }}</label>
+                    <input type="text" name="cup" id="cup" value="{{ values.cup }}" class="form-input text-base min-h-[44px]" maxlength="15" placeholder="{{ _('Optional project code') }}">
+                </div>
+                <div class="md:col-span-2 min-w-0">
+                    <label for="notes" class="form-label">{{ _('Notes') }}</label>
+                    <textarea name="notes" id="notes" rows="3" class="form-input text-base" placeholder="{{ _('What differs on this invoice, e.g. the client\'s payment order') }}">{{ values.notes }}</textarea>
+                </div>
+                <div class="md:col-span-2 min-w-0">
+                    <label for="terms" class="form-label">{{ _('Terms') }}</label>
+                    <textarea name="terms" id="terms" rows="3" class="form-input text-base"{% if invoice or values.terms %} data-touched="1"{% endif %}>{{ values.terms }}</textarea>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    {# 2. Period to bill and the client's projects #}
+    <section class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" id="stepOnePeriod">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Period to bill') }}</h2>
+        <div class="flex flex-wrap gap-x-6 gap-y-2 mb-3" role="radiogroup" aria-label="{{ _('Period to bill') }}">
+            {% for kind, label in [('last_month', _('Last month')), ('this_month', _('This month')), ('custom', _('Custom')), ('all', _('All unbilled'))] %}
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="radio" name="period" value="{{ kind }}" class="js-period"{% if period.kind == kind %} checked{% endif %}>
+                {{ label }}
+            </label>
+            {% endfor %}
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 max-w-xl" id="periodDates">
+            <div class="min-w-0">
+                <label for="period_start" class="form-label">{{ _('From') }}</label>
+                <input type="date" name="period_start" id="period_start" value="{{ period.start.isoformat() if period.start else '' }}" class="form-input text-base min-h-[44px]"{% if period.kind != 'custom' %} readonly{% endif %}>
+            </div>
+            <div class="min-w-0">
+                <label for="period_end" class="form-label">{{ _('To') }}</label>
+                <input type="date" name="period_end" id="period_end" value="{{ period.end.isoformat() if period.end else '' }}" class="form-input text-base min-h-[44px]"{% if period.kind != 'custom' %} readonly{% endif %}>
+            </div>
+        </div>
+        <div id="stepOneProjects" aria-live="polite">
+            {% if parts %}{{ parts.projects | safe }}{% else %}<p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('Choose a client to see its projects and their hours.') }}</p>{% endif %}
+        </div>
+    </section>
+
+    {# 3. Hours: the total, how hours become lines, the prepaid plan #}
+    <section class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" id="stepOneHours">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Hours') }}</h2>
+        <div id="stepOneHoursParts" aria-live="polite">{% if parts %}{{ parts.hours | safe }}{% endif %}</div>
+        {% set current_layout = selection.layout if selection and selection.layout else 'task' %}
+        {% set current_template = selection.template if selection and selection.template else default_line_templates.get(current_layout, '') %}
+        <div class="mt-4 p-4 rounded-lg border border-border-light dark:border-border-dark bg-gray-50/50 dark:bg-gray-900/30" id="hours-layout-section">
+            <h3 class="text-sm font-semibold mb-2">{{ _('Show hours as') }}</h3>
+            <div class="space-y-2" role="radiogroup" aria-label="{{ _('Show hours as') }}">
+                {% for layout, label in hours_layouts %}
+                <label class="flex items-start gap-3 cursor-pointer text-sm">
+                    <input type="radio" class="mt-1 js-hours-layout" name="hours_layout" value="{{ layout }}" {% if layout == current_layout %}checked{% endif %}>
+                    <span class="min-w-0">
+                        <span class="font-medium text-text-light dark:text-text-dark">{{ _(label) }}</span>
+                        <span class="block text-text-muted-light dark:text-text-muted-dark mt-0.5 whitespace-pre-line break-words js-layout-example" data-layout="{{ layout }}"></span>
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="mt-4" id="line-template-field">
+                <label for="line_template" class="block text-sm font-medium mb-1">{{ _('Line description') }}</label>
+                <div class="flex gap-2">
+                    <input type="text" id="line_template" name="line_template" maxlength="255" value="{{ current_template }}" class="form-input flex-1 text-sm">
+                    <button type="button" class="btn btn-secondary text-sm" id="line-template-reset">{{ _('Reset') }}</button>
+                </div>
+                <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                    {{ _('Placeholders: {date}, {project}, {task}, {person}, {note}. A line with several entries shows the period, the names comma-separated and each note on its own line. Lines that differ only by rate end with the rate.') }}
+                </p>
+            </div>
+        </div>
+    </section>
+
+    {# 3a. Expenses and project costs of the period: all ticked, untick to leave one unbilled #}
+    <section class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" id="stepOneExpenses">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Expenses') }}</h2>
+        <div id="stepOneExpensesParts" aria-live="polite">{% if parts %}{{ parts.expenses | safe }}{% endif %}</div>
+    </section>
+    <section class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" id="stepOneCosts">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Project costs') }}</h2>
+        <div id="stepOneCostsParts" aria-live="polite">{% if parts %}{{ parts.costs | safe }}{% endif %}</div>
+    </section>
+
+    {# 4. Before you create #}
+    <div id="stepOneWarnings" aria-live="polite">{% if parts %}{{ parts.warnings | safe }}{% endif %}</div>
+
+    {# 5. Summary #}
+    <div id="stepOneSummary">{% if parts %}{{ parts.summary | safe }}{% else %}
+        <div class="flex gap-2"><a href="{{ url_for('invoices.list_invoices') }}" class="btn btn-secondary min-h-[44px]">{{ _('Cancel') }}</a></div>
+    {% endif %}</div>
+</form>
+{% endblock %}
+
+{% block scripts_extra %}
+<style>
+/* The Legal entities block sits inside "Who bills whom" here: no second frame, no second heading */
+#stepOneWho #billingSellerBlock { border: 0; padding: 0; }
+#stepOneWho #billingSellerBlock > h3 { display: none; }
+#stepOneWho #billToBlock { border: 0; padding: 0; }
+</style>
+<script type="application/json" id="stepOneData" nonce="{{ csp_nonce() }}">{{ {
+    'clients': client_details,
+    'currencies': client_currencies,
+    'defaultCurrency': default_currency,
+    'defaults': invoice_defaults,
+    'layoutDefaults': default_line_templates,
+    'texts': {
+        'noLines': _('No hours lines'),
+        'dueOne': _('%(num)s day after the issue date, like the last invoice for %(client)s', num='__DAYS__', client='__CLIENT__'),
+        'dueMany': _('%(num)s days after the issue date, like the last invoice for %(client)s', num='__DAYS__', client='__CLIENT__'),
+        'numberLater': _('Number given on create'),
+        'taken': _('Number already taken by %(invoice)s', invoice='__REF__'),
+        'nextFree': _('Use next free: %(number)s', number='__NUMBER__'),
+        'company': settings.company_name or ''
+    }
+} | tojson }}</script>
+<script nonce="{{ csp_nonce() }}">
+document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('stepOneForm');
+    if (!form) return;
+    var data = JSON.parse(document.getElementById('stepOneData').textContent || '{}');
+    var T = data.texts || {};
+    var editMode = form.dataset.mode === 'edit';
+    var csrf = form.querySelector('input[name="csrf_token"]');
+    var clientSel = document.getElementById('client_id');
+    var projectInput = document.getElementById('project_id');
+    var fromProject = document.getElementById('from_project_id');
+    var touchedInput = document.getElementById('projects_touched');
+    var startEl = document.getElementById('period_start');
+    var endEl = document.getElementById('period_end');
+    var issueEl = document.getElementById('issue_date');
+    var dueEl = document.getElementById('due_date');
+    var dueHint = document.getElementById('dueDateHint');
+    var termsEl = document.getElementById('terms');
+    var currencySel = document.getElementById('currency_code');
+    var templateInput = document.getElementById('line_template');
+    var templateField = document.getElementById('line-template-field');
+    var templateReset = document.getElementById('line-template-reset');
+    var nameEl = document.getElementById('client_name');
+    var emailEl = document.getElementById('client_email');
+    var addrEl = document.getElementById('client_address');
+    var entitySel = document.getElementById('billing_entity_id');
+    var currentLayout = (form.querySelector('.js-hours-layout:checked') || {}).value || 'task';
+    var seq = 0;
+    var timer = null;
+
+    function clientId() { return clientSel ? clientSel.value : ''; }
+    function periodKind() { return (form.querySelector('.js-period:checked') || {}).value || 'last_month'; }
+    function touched(el) { return el && el.dataset.touched === '1'; }
+    function markTouched(el) { if (el) el.addEventListener('change', function () { el.dataset.touched = '1'; }); }
+    [issueEl, dueEl].forEach(markTouched);
+    if (termsEl) termsEl.addEventListener('input', function () { termsEl.dataset.touched = '1'; });
+    if (currencySel) currencySel.addEventListener('change', function () { currencySel.dataset.touched = '1'; });
+
+    // Dates
+    function parseDay(s) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+        return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
+    }
+    function addDays(d, n) { var r = new Date(d.getTime()); r.setUTCDate(r.getUTCDate() + n); return r; }
+    function isoDay(d) { return d.toISOString().slice(0, 10); }
+    function setDate(el, value) {
+        if (!el) return;
+        if (el._flatpickr) el._flatpickr.setDate(value, false); else el.value = value;
+    }
+    function clientDefaults() {
+        var c = clientId();
+        return c ? ((data.defaults || {}).byClient || {})[c] || null : null;
+    }
+    // Due date: as many days after the issue date as on the client's last invoice (30 for a new client)
+    function applyDue() {
+        var cd = clientDefaults();
+        var fromClient = cd && cd.days != null;
+        if (dueHint) {
+            dueHint.textContent = fromClient
+                ? (cd.days === 1 ? T.dueOne : T.dueMany).replace('__DAYS__', cd.days).replace('__CLIENT__', cd.client)
+                : '';
+            dueHint.classList.toggle('hidden', !fromClient);
+        }
+        var issue = parseDay(issueEl && issueEl.value);
+        if (issue && !touched(dueEl)) setDate(dueEl, isoDay(addDays(issue, fromClient ? cd.days : (data.defaults || {}).defaultDays || 30)));
+    }
+    // Terms: the client's last invoice, else the From entity's, else Settings
+    function applyTerms() {
+        if (!termsEl || touched(termsEl) || editMode) return;
+        var cd = clientDefaults();
+        var entityTerms = '';
+        var billing = document.getElementById('billingEntityData');
+        if (billing && entitySel) {
+            var e = (JSON.parse(billing.textContent || '{}').entities || {})[entitySel.value];
+            entityTerms = e && e.defaults ? e.defaults.terms : '';
+        }
+        termsEl.value = (cd && cd.terms) || entityTerms || (data.defaults || {}).settingsTerms || '';
+    }
+    // A later issue date moves the due date by the same number of days (as on the create form)
+    if (issueEl) {
+        var lastIssue = issueEl.value;
+        issueEl.addEventListener('change', function () {
+            var before = parseDay(lastIssue), after = parseDay(issueEl.value), due = parseDay(dueEl && dueEl.value);
+            lastIssue = issueEl.value;
+            if (before && after && due) setDate(dueEl, isoDay(addDays(due, Math.round((after - before) / 86400000))));
+        });
+    }
+    if (entitySel) entitySel.addEventListener('change', function () { setTimeout(applyTerms, 0); });
+
+    // Bill to as printed without the Client legal entities module
+    var billToPrinted = document.getElementById('stepOneBillToPrinted');
+    var billToFallback = document.getElementById('stepOneBillToFallback');
+    function renderBillTo() {
+        if (!billToPrinted) return;
+        billToPrinted.textContent = [nameEl && nameEl.value, emailEl && emailEl.value, addrEl && addrEl.value].filter(Boolean).join('\n');
+        // The Client legal entities block prints Bill to itself when the client has entities
+        var entitySelect = document.getElementById('client_entity_id');
+        var hasEntities = !!(entitySelect && Array.prototype.some.call(entitySelect.options, function (o) { return o.value; }));
+        if (billToFallback) billToFallback.classList.toggle('hidden', hasEntities);
+        var printed = document.getElementById('stepOnePrinted');
+        if (printed && !printed.dataset.hasFrom) printed.classList.toggle('hidden', hasEntities);
+    }
+    [nameEl, emailEl, addrEl].forEach(function (el) { if (el) el.addEventListener('input', renderBillTo); });
+
+    // Summary card: number and From as they are above
+    function renderSummaryHead() {
+        var numberEl = form.querySelector('[data-summary-number]');
+        var fromEl = form.querySelector('[data-summary-from]');
+        var numberInput = document.getElementById('invoice_number');
+        if (numberEl) numberEl.textContent = (numberInput && numberInput.value) || numberEl.textContent || T.numberLater;
+        if (fromEl) {
+            var name = entitySel && entitySel.value ? entitySel.options[entitySel.selectedIndex].textContent : (T.company || '');
+            fromEl.textContent = name;
+        }
+    }
+    form.addEventListener('input', function (e) { if (e.target && e.target.id === 'invoice_number') renderSummaryHead(); });
+    if (entitySel) entitySel.addEventListener('change', function () { setTimeout(renderSummaryHead, 0); });
+    form.querySelectorAll('[data-use-number]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var input = document.getElementById('invoice_number');
+            if (input) { input.value = btn.dataset.useNumber; input.classList.remove('border-red-500'); }
+            renderSummaryHead();
+        });
+    });
+
+    // The number follows the period ({YYYY}, {MM}) and the issue date ({DD}) until it is typed by hand
+    var lastNumbers = null;
+    function applyNumber(numbers) {
+        if (numbers) lastNumbers = numbers;
+        var input = document.getElementById('invoice_number');
+        var preview = document.getElementById('invoice_number_preview');
+        if (!lastNumbers || !input || !entitySel || input.dataset.touched) return;
+        var n = lastNumbers[entitySel.value];
+        if (!n) return;
+        input.value = n.number || '';
+        if (preview) preview.value = n.number || '';
+        var box = document.getElementById('numberTaken');
+        var text = document.getElementById('numberTakenText');
+        var next = document.getElementById('useNextFree');
+        if (box) box.classList.toggle('hidden', !n.taken);
+        input.classList.toggle('border-red-500', !!n.taken);
+        if (n.taken && text) text.textContent = T.taken.replace('__REF__', [n.taken.number, n.taken.client, n.taken.date].filter(Boolean).join(' · '));
+        if (next) {
+            next.dataset.number = n.next_free || '';
+            next.textContent = n.next_free ? T.nextFree.replace('__NUMBER__', n.next_free) : '';
+            next.classList.toggle('hidden', !n.next_free);
+        }
+    }
+    if (entitySel) entitySel.addEventListener('change', function () { setTimeout(function () { applyNumber(); schedule(); }, 0); });
+    if (issueEl) issueEl.addEventListener('change', schedule);
+
+    // Show hours as / Line description, as on Generate from Time
+    function templateIsCustom() {
+        var value = templateInput ? templateInput.value.trim() : '';
+        return value !== '' && value !== ((data.layoutDefaults || {})[currentLayout] || '');
+    }
+    function syncTemplateField() { if (templateField) templateField.style.display = currentLayout === 'none' ? 'none' : ''; }
+    form.querySelectorAll('.js-hours-layout').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            if (!radio.checked) return;
+            var custom = templateIsCustom();
+            currentLayout = radio.value;
+            if (templateInput && !custom) templateInput.value = (data.layoutDefaults || {})[currentLayout] || '';
+            syncTemplateField();
+            schedule();
+        });
+    });
+    if (templateInput) templateInput.addEventListener('input', schedule);
+    if (templateReset) templateReset.addEventListener('click', function () {
+        templateInput.value = (data.layoutDefaults || {})[currentLayout] || '';
+        schedule();
+    });
+    function setExamples(texts) {
+        form.querySelectorAll('.js-layout-example').forEach(function (el) {
+            el.textContent = (texts || {})[el.getAttribute('data-layout')] || '';
+        });
+    }
+
+    // Period
+    function syncPeriodFields() {
+        var custom = periodKind() === 'custom';
+        [startEl, endEl].forEach(function (el) { if (el) el.readOnly = !custom; });
+        document.getElementById('periodDates').classList.toggle('opacity-60', !custom);
+    }
+    form.querySelectorAll('.js-period').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            syncPeriodFields();
+            if (periodKind() === 'custom' && startEl && !startEl.value) startEl.focus();
+            schedule();
+        });
+    });
+    [startEl, endEl].forEach(function (el) { if (el) el.addEventListener('change', function () { if (periodKind() === 'custom') schedule(); }); });
+
+    // Projects: the first request for a client picks them; a click makes them the user's choice
+    form.addEventListener('change', function (e) {
+        var t = e.target;
+        if (t && (t.classList.contains('js-project') || t.id === 'client_entries')) {
+            touchedInput.value = '1';
+            schedule();
+        }
+    });
+    if (currencySel) currencySel.addEventListener('change', schedule);
+    // Remove a line added by hand: marked here, deleted when step 1 is saved
+    var removeLines = new Set(Array.prototype.map.call(form.querySelectorAll('input[name="remove_line_ids"]'), function (i) { return i.value; }));
+    form.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('[data-remove-line]') : null;
+        if (!btn) return;
+        if (btn.dataset.undo) removeLines.delete(btn.dataset.removeLine); else removeLines.add(btn.dataset.removeLine);
+        refresh();
+    });
+    // Include them: the period starts at the earliest unbilled entry
+    form.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('[data-include-from]') : null;
+        if (!btn) return;
+        var end = endEl && endEl.value ? endEl.value : isoDay(parseDay((data.defaults || {}).today) || new Date());
+        form.querySelector('.js-period[value="custom"]').checked = true;
+        setDate(startEl, btn.dataset.includeFrom);
+        setDate(endEl, end);
+        syncPeriodFields();
+        schedule();
+    });
+
+    function values(selector) {
+        return Array.prototype.map.call(form.querySelectorAll(selector), function (el) { return el.value; });
+    }
+    // Expenses and costs: a tick, an untick or another way to show costs changes the summary
+    form.addEventListener('change', function (e) {
+        var t = e.target;
+        if (t && t.classList && (t.classList.contains('js-expense') || t.classList.contains('js-cost') || t.classList.contains('js-costs-layout'))) schedule();
+    });
+    // Approve an expense waiting for approval, then show step 1 again
+    form.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('[data-approve-expense]') : null;
+        if (!btn) return;
+        btn.disabled = true;
+        fetch(form.dataset.approveUrl.replace('/0/', '/' + btn.dataset.approveExpense + '/'), {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf ? csrf.value : '' }
+        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); }).then(function (res) {
+            if (!res.ok || res.data.success === false) {
+                btn.disabled = false;
+                if (window.showToast) window.showToast(res.data.message || '', 'error');
+                return;
+            }
+            if (window.showToast) window.showToast(res.data.message || '', 'success');
+            refresh();
+        }).catch(function () { btn.disabled = false; });
+    });
+
+    function body() {
+        var b = {
+            client_id: clientId(),
+            invoice_id: form.dataset.invoiceId || '',
+            period: periodKind(),
+            period_start: startEl ? startEl.value : '',
+            period_end: endEl ? endEl.value : '',
+            project_ids: Array.prototype.map.call(form.querySelectorAll('.js-project:checked'), function (cb) { return cb.value; }),
+            projects_touched: touchedInput.value,
+            client_entries: !!(document.getElementById('client_entries') || {}).checked,
+            from_project_id: fromProject.value,
+            hours_layout: currentLayout,
+            line_template: templateInput ? templateInput.value : '',
+            currency_code: currencySel ? currencySel.value : '',
+            issue_date: issueEl && touched(issueEl) ? issueEl.value : '',
+            remove_line_ids: Array.from(removeLines),
+            expenses_costs_shown: form.querySelector('input[name="expenses_costs_shown"]') ? '1' : '',
+            expenses_costs_scope: (form.querySelector('input[name="expenses_costs_scope"]') || {}).value || '',
+            expense_ids: values('.js-expense:checked'),
+            expense_seen: values('input[name="expense_seen"]'),
+            cost_ids: values('.js-cost:checked'),
+            cost_seen: values('input[name="cost_seen"]'),
+            costs_layout: (form.querySelector('.js-costs-layout:checked') || form.querySelector('input[name="costs_layout"]') || {}).value || ''
+        };
+        return b;
+    }
+    function schedule() {
+        clearTimeout(timer);
+        timer = setTimeout(refresh, 250);
+    }
+    function setPart(id, html) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = html || '';
+    }
+    function refresh() {
+        if (!clientId()) return;
+        if (periodKind() === 'custom' && !(startEl.value && endEl.value)) return;
+        var mine = ++seq;
+        fetch(form.dataset.summaryUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf ? csrf.value : '' },
+            body: JSON.stringify(body())
+        }).then(function (r) { return r.ok ? r.json() : null; }).then(function (res) {
+            if (!res || mine !== seq) return;
+            setPart('stepOneProjects', res.html.projects);
+            setPart('stepOneHoursParts', res.html.hours);
+            setPart('stepOneExpensesParts', res.html.expenses);
+            setPart('stepOneCostsParts', res.html.costs);
+            setPart('stepOneWarnings', res.html.warnings);
+            setPart('stepOneSummary', res.html.summary);
+            setExamples(res.examples);
+            if (periodKind() !== 'custom') {
+                setDate(startEl, res.period.start);
+                setDate(endEl, res.period.end);
+            }
+            if (!touched(issueEl)) { setDate(issueEl, res.period.issue_date); applyDue(); }
+            var list = document.getElementById('stepOneProjectList');
+            if (list && list.dataset.primary) projectInput.value = list.dataset.primary;
+            applyNumber(res.numbers);
+            renderSummaryHead();
+        }).catch(function () {});
+    }
+
+    // Another client: its details, its currency, its From and Bill to, its projects
+    if (clientSel && clientSel.tagName === 'SELECT') {
+        clientSel.addEventListener('change', function () {
+            var c = (data.clients || {})[clientId()] || {};
+            touchedInput.value = '';
+            fromProject.value = '';
+            if (nameEl) nameEl.value = c.name || '';
+            if (emailEl) emailEl.value = c.email || '';
+            if (addrEl) addrEl.value = c.address || '';
+            renderBillTo();
+            if (currencySel && !touched(currencySel)) {
+                var code = (data.currencies || {})[clientId()] || data.defaultCurrency;
+                if (code) currencySel.value = code;
+            }
+            projectInput.value = c.project || '';
+            projectInput.dispatchEvent(new Event('change'));
+            setTimeout(function () { applyTerms(); applyDue(); renderSummaryHead(); renderBillTo(); }, 0);
+            schedule();
+        });
+    }
+
+    syncPeriodFields();
+    syncTemplateField();
+    renderBillTo();
+    if (!editMode && clientId() && nameEl && !nameEl.value) {
+        var c0 = (data.clients || {})[clientId()] || {};
+        nameEl.value = c0.name || '';
+        if (emailEl && !emailEl.value) emailEl.value = c0.email || '';
+        if (addrEl && !addrEl.value) addrEl.value = c0.address || '';
+        renderBillTo();
+    }
+    setTimeout(function () { applyTerms(); applyDue(); renderSummaryHead(); renderBillTo(); }, 0);
+    if (clientId()) refresh();
+});
+</script>
+{% endblock %}

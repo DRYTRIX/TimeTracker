@@ -134,11 +134,28 @@ def create_time_entries_excel(entries, filename_prefix="timetracker_export", col
         cell.alignment = header_alignment
         cell.border = border
 
+    # "Billed" means on an invoice that is no longer a draft, or marked paid outside an invoice
+    on_issued_invoice = set()
+    if "billed" in column_keys:
+        entries = list(entries)
+        try:
+            from app.services.invoice_time_service import InvoiceTimeService
+
+            on_issued_invoice = InvoiceTimeService.entry_ids_on_issued_invoices(
+                [getattr(e, "id", None) for e in entries]
+            )
+        except Exception:
+            logger.debug("Could not look up invoiced time entries for the Billed column", exc_info=True)
+
     # Write data
     for row_num, entry in enumerate(entries, 2):
         data = []
         for key in column_keys:
             try:
+                if key == "billed":
+                    billed = getattr(entry, "paid", False) or getattr(entry, "id", None) in on_issued_invoice
+                    data.append("Yes" if billed else "No")
+                    continue
                 extractor = ALLOWED_TIME_ENTRY_EXPORT_COLUMNS[key][1]
                 data.append(extractor(entry))
             except Exception as e:

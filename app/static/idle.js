@@ -356,7 +356,7 @@
       longEntryNudgeShown = false;
     }
     if (longEntryNudgeShown || activeReminderToast) return;
-    const started = new Date(active.start_time).getTime();
+    const started = (window.ttParseStart ? window.ttParseStart(active.start_time) : new Date(active.start_time).getTime());
     if (isNaN(started)) return;
     const runningMs = Date.now() - started;
     if (runningMs < getLongEntryThresholdMs()) return;
@@ -632,7 +632,18 @@
           style: 'primary',
           onClick: async function(){
             try {
-              await fetch('/timer/pause', { method: 'POST', redirect: 'manual', credentials: 'same-origin' });
+              const csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+              const res = await fetch('/timer/pause', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'X-CSRFToken': csrf,
+                  'Accept': 'application/json',
+                },
+                body: 'csrf_token=' + encodeURIComponent(csrf),
+                credentials: 'same-origin',
+              });
+              if (!res.ok) return;
               await refreshTimerUiAfterStop();
             } catch(e){}
           }

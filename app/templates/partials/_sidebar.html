@@ -11,7 +11,7 @@
             </div>
             <nav class="flex-1">
                 {% set ep = request.endpoint or '' %}
-                {% set time_open = ep == 'timer.manual_entry' or ep == 'timer.time_entries_overview' or ep == 'timer.focus_mode' or ep.startswith('workday.') %}
+                {% set time_open = ep == 'timer.manual_entry' or ep == 'timer.time_entries_overview' or ep == 'timer.focus_mode' or ep.startswith('workday.') or ep.startswith('timesheet.') %}
                 {% set work_open = (ep.startswith('issues.') or ep.startswith('time_approvals.') or ep.startswith('workflows.') or ep.startswith('recurring_tasks.') or ep.startswith('kanban.') or ep.startswith('weekly_goals.') or ep.startswith('project_templates.') or ep.startswith('gantt.') or ep.startswith('workforce.') or ep.startswith('milestones.') or ep.startswith('resource_scheduling.')) %}
                 {% set calendar_open = ep.startswith('calendar.') %}
                 {% set finance_open = ep.startswith('invoices.') or ep.startswith('recurring_invoices.') or ep.startswith('payments.') or ep.startswith('expenses.') or ep.startswith('mileage.') or ep.startswith('per_diem.') or ep.startswith('budget_alerts.') or ep.startswith('invoice_approvals.') or ep.startswith('payment_gateways.') %}
@@ -63,7 +63,9 @@
                         </button>
                         <ul id="timeDropdown" class="{% if not time_open %}hidden {% endif %}mt-2 space-y-2 ml-6">
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'main.dashboard' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('main.dashboard') }}" title="{{ _('Start and stop the live timer from the dashboard') }}">
+                                {# Track opens the timesheet when that module is on, else the dashboard timer #}
+                                {% set timesheet_on = is_module_enabled('timesheet') %}
+                                <a class="block px-2 py-1 rounded {% if (timesheet_on and ep.startswith('timesheet.')) or (not timesheet_on and ep == 'main.dashboard') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('timesheet.day') if timesheet_on else url_for('main.dashboard') }}" title="{{ _('Your day and week: hours, notes, Start and Stop') if timesheet_on else _('Start and stop the live timer from the dashboard') }}">
                                     <i class="fas fa-play w-4 mr-2"></i>{{ _('Track') }}
                                 </a>
                             </li>
@@ -152,7 +154,7 @@
                                 </a>
                             </li>
                             {% endif %}
-                            {% if current_user.is_admin %}
+                            {% if current_user.is_admin and is_module_enabled('workday') %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if nav_active_attendance_corrections %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('workday.admin_corrections_list') }}">
                                     <i class="fas fa-user-clock w-4 mr-2"></i>{{ _('Attendance Corrections') }}
@@ -592,14 +594,21 @@
                                     <i class="fas fa-sliders-h w-4 mr-2"></i>{{ _('Settings') }}
                                 </a>
                             </li>
+                            {% if is_module_enabled('billing_entities') %}
+                            <li>
+                                <a class="block px-2 py-1 rounded {% if ep.startswith('billing_entities.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('billing_entities.index') }}">
+                                    <i class="fas fa-building w-4 mr-2"></i>{{ _('Legal entities') }}
+                                </a>
+                            </li>
+                            {% endif %}
                             <li>
                                 <a class="block px-2 py-1 rounded {% if ep == 'admin.manage_modules' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.manage_modules') }}">
                                     <i class="fas fa-puzzle-piece w-4 mr-2"></i>{{ _('Modules') }}
                                 </a>
                             </li>
                             <li>
-                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('admin.pdf_layout') }}">
-                                    <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoice PDF') }}
+                                <a class="block px-2 py-1 rounded {% if ep == 'admin.pdf_layout' or ep.startswith('invoice_templates.') %}text-primary font-semibold bg-background-light dark:bg-background-dark{% else %}text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark{% endif %}" href="{{ url_for('invoice_templates.list_templates') }}">
+                                    <i class="fas fa-file-invoice w-4 mr-2"></i>{{ _('Invoice templates') }}
                                 </a>
                             </li>
                             <li>

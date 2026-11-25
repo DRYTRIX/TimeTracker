@@ -1,0 +1,86 @@
+{# Invoice total: number, From, period, tiles, Notes and Terms, Preview PDF and Mark as issued; money on the right #}
+<section id="total" class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="space-y-4">
+            <div class="text-sm">
+                <p class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark">{{ _('Invoice total') }}</p>
+                <p>{{ invoice.invoice_number }} · {{ seller.company_name }}</p>
+                <p>
+                    {% if invoice.period_start and invoice.period_end %}{{ _('Period') }} {{ invoice.period_start|format_date }} – {{ invoice.period_end|format_date }} · {% endif %}
+                    {{ _('due %(date)s', date=invoice.due_date|format_date) }}
+                </p>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Lines') }}</p>
+                    <p class="text-xl font-semibold" id="tileLines">{{ line_count }}</p>
+                </div>
+                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
+                    <p class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ _('Hours billed') }}</p>
+                    <p class="text-xl font-semibold" id="tileHours">{{ hours_billed_text }} h</p>
+                </div>
+            </div>
+            <form method="POST" action="{{ url_for('invoices.draft_notes_terms', invoice_id=invoice.id) }}" class="grid grid-cols-1 md:grid-cols-2 gap-3" data-draft-form data-autosave id="notesTermsForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label class="text-sm font-medium">{{ _('Notes') }}
+                    <textarea name="notes" rows="3" class="form-input w-full font-normal" placeholder="{{ _('e.g. the client\'s payment order') }}">{{ invoice.notes or '' }}</textarea>
+                    <span class="block text-xs font-normal text-text-muted-light dark:text-text-muted-dark">{{ _('printed; editable after issuing too') }}</span>
+                </label>
+                <label class="text-sm font-medium">{{ _('Terms') }}
+                    <textarea name="terms" rows="3" class="form-input w-full font-normal">{{ invoice.terms or '' }}</textarea>
+                </label>
+                <div class="md:col-span-2 flex items-center gap-3">
+                    <button type="submit" class="btn btn-secondary btn-sm" id="saveNotesTerms">{{ _('Save notes and terms') }}</button>
+                    <span class="text-xs text-text-muted-light dark:text-text-muted-dark" data-save-status></span>
+                </div>
+            </form>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ url_for('invoices.export_invoice_pdf', invoice_id=invoice.id) }}" target="_blank" rel="noopener" class="btn btn-secondary" id="previewPdf">{{ _('Preview PDF') }}</a>
+                <button type="button" class="btn bg-teal-600 text-white hover:bg-teal-700" data-mark-issued id="markIssuedButton">
+                    <i class="fas fa-lock mr-1"></i>{{ _('Mark as issued') }}
+                </button>
+            </div>
+        </div>
+
+        <div class="text-sm">
+            <dl class="divide-y divide-border-light dark:divide-border-dark">
+                <div class="flex justify-between py-2" data-total-block="hours"><dt><a href="#hours" class="hover:underline">{{ _('Hours') }}</a> <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ ngettext('%(num)d line', '%(num)d lines', hours_line_count) }}</span></dt><dd>{{ money(hours_total) }} {{ invoice.currency_code }}</dd></div>
+                <div class="flex justify-between py-2" data-total-block="expenses"><dt><a href="#expenses" class="hover:underline">{{ _('Expenses') }}</a> <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ ngettext('%(num)d row', '%(num)d rows', expense_rows|length) }}</span></dt><dd>{{ money(expenses_total) }} {{ invoice.currency_code }}</dd></div>
+                <div class="flex justify-between py-2" data-total-block="costs"><dt><a href="#costs" class="hover:underline">{{ _('Project costs') }}</a> <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ ngettext('%(num)d line', '%(num)d lines', cost_lines|length) }}</span></dt><dd>{{ money(costs_total) }} {{ invoice.currency_code }}</dd></div>
+                <div class="flex justify-between py-2" data-total-block="other"><dt><a href="#other-items" class="hover:underline">{{ _('Other items') }}</a> <span class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ ngettext('%(num)d line', '%(num)d lines', other_line_count) }}</span></dt><dd>{{ money(other_total) }} {{ invoice.currency_code }}</dd></div>
+                {% if discount_value %}
+                <div class="flex justify-between py-2" id="discountRow">
+                    <dt>{{ _('Discount') }}{% if invoice.discount_percent and not invoice.discount_amount %} ({{ money(invoice.discount_percent) }}%){% endif %}</dt>
+                    <dd>−{{ money(discount_value) }} {{ invoice.currency_code }}</dd>
+                </div>
+                {% endif %}
+                <div class="flex justify-between py-2 font-semibold"><dt>{{ _('Subtotal') }}</dt><dd id="draftSubtotal">{{ money(invoice.subtotal) }} {{ invoice.currency_code }}</dd></div>
+                <div class="py-2">
+                    <div class="flex justify-between">
+                        <button type="button" class="text-primary underline" data-toggle="discountForm" aria-controls="discountForm">{{ _('Change discount') if discount_value else '+ ' ~ _('Add discount') }}</button>
+                    </div>
+                    <form method="POST" action="{{ url_for('invoices.draft_discount', invoice_id=invoice.id) }}" id="discountForm" class="hidden mt-2 flex gap-2 items-end" data-draft-form>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="discount_type" class="form-input" aria-label="{{ _('Discount type') }}">
+                            <option value="percent" {% if not invoice.discount_amount %}selected{% endif %}>{{ _('Percent') }}</option>
+                            <option value="amount" {% if invoice.discount_amount %}selected{% endif %}>{{ _('Amount') }}</option>
+                        </select>
+                        <input type="text" inputmode="decimal" name="discount_value" class="form-input w-28 text-right" aria-label="{{ _('Discount') }}"
+                               value="{{ money(invoice.discount_amount) if invoice.discount_amount else (money(invoice.discount_percent) if invoice.discount_percent else '') }}">
+                        <button type="submit" class="btn btn-secondary btn-sm">{{ _('Save') }}</button>
+                    </form>
+                </div>
+                <div class="flex justify-between py-2">
+                    <dt>{{ _('VAT %(rate)s%%', rate=money(invoice.tax_rate)) }}
+                        <span class="block text-xs text-text-muted-light dark:text-text-muted-dark">{{ (invoice.vat_category or 'S')|upper }}{% if invoice.vat_exemption_reason %} · {{ invoice.vat_exemption_reason }}{% endif %}</span>
+                    </dt>
+                    <dd id="draftTax">{{ money(invoice.tax_amount) }} {{ invoice.currency_code }}</dd>
+                </div>
+            </dl>
+            <div class="mt-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 p-4 flex justify-between items-center">
+                <span class="font-semibold">{{ _('Amount Due') }}</span>
+                <span class="text-2xl font-bold" id="draftAmountDue">{{ money(invoice.total_amount) }} {{ invoice.currency_code }}</span>
+            </div>
+        </div>
+    </div>
+</section>

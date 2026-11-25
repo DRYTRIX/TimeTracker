@@ -1,0 +1,32 @@
+{# Step 1: the client's projects, each with its hours in the period. Rendered again by
+   invoices.step_one_summary when the client, the period or the selection changes. #}
+<div id="stepOneProjectList" data-primary="{{ primary_id }}">
+    {% if summary.projects %}
+    <fieldset>
+        <legend class="form-label">{{ _('Projects') }}</legend>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {% for p in summary.projects %}
+            <label class="flex items-center justify-between gap-3 rounded-lg border border-border-light dark:border-border-dark px-3 py-2 cursor-pointer text-sm">
+                <span class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" class="js-project" name="project_ids" value="{{ p.id }}"{% if p.id in selection.project_ids %} checked{% endif %}>
+                    <span class="truncate">{{ p.name }}</span>
+                </span>
+                <span class="shrink-0 tabular-nums {% if p.hours > 0 %}font-medium{% else %}text-text-muted-light dark:text-text-muted-dark{% endif %}">{{ hours_label(p.hours) }} h</span>
+            </label>
+            {% endfor %}
+            {% if summary.client_entries or selection.client_entries %}
+            <label class="flex items-center justify-between gap-3 rounded-lg border border-border-light dark:border-border-dark px-3 py-2 cursor-pointer text-sm">
+                <span class="flex items-center gap-2 min-w-0">
+                    <input type="checkbox" id="client_entries" name="client_entries" value="1"{% if selection.client_entries %} checked{% endif %}>
+                    <span class="truncate">{{ _('Logged on the client, no project') }}</span>
+                </span>
+                <span class="shrink-0 tabular-nums font-medium">{{ hours_label(summary.client_entries.hours if summary.client_entries else 0) }} h</span>
+            </label>
+            {% endif %}
+        </div>
+        <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('Hours in the period that are not on an invoice yet. The first selected project is the invoice\'s own project.') }}</p>
+    </fieldset>
+    {% else %}
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('This client has no projects you can invoice.') }}</p>
+    {% endif %}
+</div>

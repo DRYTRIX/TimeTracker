@@ -258,14 +258,14 @@ def test_create_invoice_template_has_client_data_attributes(app, client, user, p
 
     db.session.commit()
 
-    resp = client.get("/invoices/create")
+    resp = client.get("/invoices/new")
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
 
-    # The option should include data-client-name/email/address
-    assert f'data-client-name="{cl.name}"' in html
-    assert 'data-client-email="client@example.com"' in html
-    assert 'data-client-address="123 Test St' in html
+    # Step 1 carries each client's name, email and address to fill the client fields
+    assert f'"name": "{cl.name}"' in html
+    assert '"email": "client@example.com"' in html
+    assert '"address": "123 Test St' in html
 
 
 def test_invoice_to_dict(app, sample_invoice):
@@ -392,6 +392,19 @@ def test_generate_from_time_page_renders_lists(app, client, user, project):
     db.session.add(pc)
     db.session.commit()
 
+    # Second user entry so both display names appear on the picker
+    other = UserFactory(username="gft_teammate", full_name="GFT Teammate")
+    db.session.commit()
+    TimeEntryFactory(
+        user_id=other.id,
+        project_id=project.id,
+        start_time=start - timedelta(hours=3),
+        end_time=start - timedelta(hours=1),
+        notes="Work B",
+        billable=True,
+    )
+    db.session.commit()
+
     # Visit page
     resp = client.get(f"/invoices/{inv.id}/generate-from-time")
     assert resp.status_code == 200
@@ -403,6 +416,63 @@ def test_generate_from_time_page_renders_lists(app, client, user, project):
     # Check summary numbers render
     assert "Total available hours" in html
     assert "Total available costs" in html
+    assert "Selected hours" in html
+    assert 'id="selected-hours-total"' in html
+    # Who logged each entry + select-all controls (#908)
+    assert user.display_name in html
+    assert other.display_name in html
+    assert "js-select-all-time" in html
+    assert "js-select-day" in html
+    assert "js-time-entry" in html
+    assert "data-duration=" in html
+
+
+@pytest.mark.routes
+def test_generate_from_time_warns_when_project_has_no_hourly_rate(app, client, user, project):
+    """Picker shows a warning when resolved rate is 0 so zero-price lines are not a surprise (#906)."""
+    from factories import TimeEntryFactory
+
+    with client.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["_fresh"] = True
+
+    project.hourly_rate = None
+    if project.client_obj:
+        project.client_obj.default_hourly_rate = None
+    db.session.commit()
+
+    cl = ClientFactory(name="Zero Rate Client", email="zerorate@test.com", default_hourly_rate=None)
+    db.session.commit()
+
+    inv = InvoiceFactory(
+        invoice_number="INV-TEST-ZERO-RATE-001",
+        project_id=project.id,
+        client_name=cl.name,
+        client_id=cl.id,
+        due_date=date.today() + timedelta(days=7),
+        created_by=user.id,
+        status="draft",
+    )
+    db.session.commit()
+
+    start = datetime.utcnow() - timedelta(hours=2)
+    end = datetime.utcnow()
+    TimeEntryFactory(
+        user_id=user.id,
+        project_id=project.id,
+        start_time=start,
+        end_time=end,
+        notes="Zero rate work",
+        billable=True,
+    )
+    db.session.commit()
+
+    resp = client.get(f"/invoices/{inv.id}/generate-from-time")
+    assert resp.status_code == 200
+    html = resp.get_data(as_text=True)
+
+    assert "This project has no hourly rate: lines will be added at 0.00" in html
+    assert f"/projects/{project.id}/edit" in html
 
 
 @pytest.mark.routes
@@ -819,13 +889,17 @@ def test_unbilled_excludes_entries_on_current_invoice(app, client, user, project
     )
     db.session.commit()
 
-    InvoiceItemFactory(
+    item = InvoiceItemFactory(
         invoice_id=inv.id,
         description="Existing hours",
         quantity=Decimal("2.00"),
         unit_price=Decimal("50.00"),
         time_entry_ids=str(entry_on_invoice.id),
     )
+    # The entry is billed through its link to the line; time_entry_ids is only a cache
+    from app.services.invoice_time_service import InvoiceTimeService
+
+    InvoiceTimeService().link_items(inv, [item])
     db.session.commit()
 
     data = InvoiceService().get_unbilled_data_for_invoice(inv)

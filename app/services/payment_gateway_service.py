@@ -93,6 +93,9 @@ class PaymentGatewayService:
             invoice = Invoice.query.get(invoice_id)
             if not invoice:
                 return {"success": False, "message": "Invoice not found."}
+            # A cancelled invoice has let go of its hours; a payment must not bring it back as paid
+            if invoice.status == "cancelled":
+                return {"success": False, "message": "Invoice is cancelled; payments cannot be recorded on it."}
 
             gateway = PaymentGateway.query.get(gateway_id)
             if not gateway or not gateway.is_active:
@@ -119,7 +122,10 @@ class PaymentGatewayService:
             invoice.amount_paid = (invoice.amount_paid or Decimal("0")) + amount
             if invoice.amount_paid >= invoice.total_amount:
                 invoice.payment_status = "fully_paid"
-                invoice.status = "paid"
+                if invoice.status not in ("paid", "cancelled"):
+                    from app.services import InvoiceService
+
+                    InvoiceService().transition_status(invoice, "paid", force=True)
                 invoice.payment_date = now_in_app_timezone().date()
             elif invoice.amount_paid > Decimal("0"):
                 invoice.payment_status = "partially_paid"

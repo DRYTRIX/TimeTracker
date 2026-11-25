@@ -54,7 +54,7 @@ import { commandScore } from 'cmdk/command-score';
     clients: root.dataset.clientsUrl || '/clients',
     newTimeEntry: root.dataset.newTimeEntryUrl || '/timer/manual',
     newProject: root.dataset.newProjectUrl || '/projects/create',
-    newInvoice: root.dataset.newInvoiceUrl || '/invoices/create',
+    newInvoice: root.dataset.newInvoiceUrl || '/invoices/new',
     projects: root.dataset.projectsUrl || '/projects',
     tasks: root.dataset.tasksUrl || '/tasks',
     invoices: root.dataset.invoicesUrl || '/invoices',

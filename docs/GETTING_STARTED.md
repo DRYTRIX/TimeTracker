@@ -291,32 +291,24 @@ Time entries feed into Projects and Invoices; use **Reports** to see time and bi
 
 ### Workflow 3: Generate an Invoice
 
-**Turn tracked time into a professional invoice:**
+**Turn tracked time (and optional expenses/costs) into a professional invoice:**
 
-1. Go to **Invoices → Create Invoice**
+1. Go to **Invoices → New invoice** (or open a project and use its **Invoices** button)
 
-2. **Select project** and fill in client details
-   - Client info auto-populated from project
+2. **Step 1** — pick the client, then:
+   - **Who bills whom** (From / Currency / Pay to / Bill to when legal-entity modules are on)
+   - **Period to bill** (Last month default, This month, Custom, or All unbilled) and the projects with unbilled hours
+   - **Show hours as** and **Line description** (how hours become lines)
+   - Tick expenses and project costs for the period if you bill them
+   - Check **Before you create**, then **Create draft**
 
-3. **Set invoice details**:
-   - **Issue Date**: Today (default)
-   - **Due Date**: Payment deadline (e.g., 30 days)
-   - **Tax Rate**: Your tax rate (e.g., `21.00` for 21%)
+3. **Review the draft** — hours lines with time entries under each; edit lines, mark an entry non-billable, or remove it with ×; adjust expenses/costs; use **Edit all fields** for the full form
 
-4. **Click "Generate from Time Entries"**:
-   - Select time entries to bill
-   - Choose grouping (by task or project)
-   - Preview the total
+4. **Mark as issued** when the draft is ready (locks lines and marks linked time as billed), then send (email / Peppol / SDI) or record payment
 
-5. **Review and customize**:
-   - Edit descriptions
-   - Add manual line items
-   - Adjust quantities or rates
+5. **Status path**: Draft → Issued → Sent → Paid (Overdue is automatic). Use **Cancel and reissue** to correct an issued invoice without payments; use a credit note once there are payments
 
-6. **Save and send**:
-   - Status: Draft → Sent → Paid
-   - Export as CSV
-   - Export as PDF (and optional ZUGFeRD)
+Optional: log hours on **Time → Track** (day/week timesheet) before invoicing. Details: [Invoice System](INVOICE_FEATURE_README.md).
 
 ### Workflow 4: View Reports
 

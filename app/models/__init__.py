@@ -13,11 +13,13 @@ from .attendance_compliance import (
 )
 from .audit_log import AuditLog
 from .bank_transaction import BankTransaction
+from .billing_entity import BillingEntity, PaymentAccount
 from .budget_alert import BudgetAlert
 from .calendar_event import CalendarEvent
 from .calendar_integration import CalendarIntegration, CalendarSyncEvent
 from .client import Client
 from .client_attachment import ClientAttachment
+from .client_entity import ClientEntity
 from .client_message import ClientMessage
 from .client_note import ClientNote
 from .client_notification import ClientNotification, ClientNotificationPreferences, NotificationType
@@ -53,11 +55,13 @@ from .integration_sync_error import IntegrationSyncError
 from .invoice import Invoice, InvoiceItem
 from .invoice_approval import InvoiceApproval
 from .invoice_email import InvoiceEmail
+from .invoice_html_template import InvoiceHtmlTemplate, InvoiceHtmlTemplateVersion
 from .invoice_image import InvoiceImage
 from .invoice_pdf_template import InvoicePDFTemplate
 from .invoice_peppol import InvoicePeppolTransmission, PeppolInboundDocument
 from .invoice_sdi import InvoiceSdiTransmission
 from .invoice_template import InvoiceTemplate
+from .invoice_time_link import InvoiceTimeLink
 from .issue import Issue
 from .kanban_board_template import KanbanBoardTemplate
 from .kanban_column import KanbanColumn
@@ -128,6 +132,8 @@ from .workflow import WorkflowExecution, WorkflowRule, WorkflowTemplate
 from .working_time_violation import WorkingTimeViolation
 
 __all__ = [
+    "BillingEntity",
+    "PaymentAccount",
     "User",
     "UserSmartNotificationDismissal",
     "Project",
@@ -140,7 +146,9 @@ __all__ = [
     "Settings",
     "Invoice",
     "InvoiceItem",
+    "InvoiceTimeLink",
     "Client",
+    "ClientEntity",
     "TaskActivity",
     "TaskChecklistItem",
     "Comment",
@@ -199,6 +207,8 @@ __all__ = [
     "DataImport",
     "DataExport",
     "InvoicePDFTemplate",
+    "InvoiceHtmlTemplate",
+    "InvoiceHtmlTemplateVersion",
     "ClientPrepaidConsumption",
     "AuditLog",
     "BankTransaction",

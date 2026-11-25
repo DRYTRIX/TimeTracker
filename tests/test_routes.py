@@ -128,6 +128,43 @@ def test_projects_list_page(authenticated_client):
 
 @pytest.mark.integration
 @pytest.mark.routes
+def test_projects_list_renders_pagination(admin_authenticated_client, test_client, app):
+    """Projects list shows pagination when more than 20 projects exist (#921)."""
+    from app import db
+    from app.models import Project
+
+    with app.app_context():
+        projects = [
+            Project(
+                name=f"Pagination Project {i:02d}",
+                client_id=test_client.id,
+                description=f"Pagination test project {i}",
+                billable=True,
+                hourly_rate=Decimal("75.00"),
+                status="active",
+            )
+            for i in range(21)
+        ]
+        db.session.add_all(projects)
+        db.session.commit()
+
+        response = admin_authenticated_client.get("/projects")
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert 'aria-label="Projects pagination"' in html
+        assert "page=2" in html
+        assert "21 projects found" in html
+
+        filtered = admin_authenticated_client.get("/projects?status=active&search=Pagination")
+        assert filtered.status_code == 200
+        filtered_html = filtered.get_data(as_text=True)
+        assert 'aria-label="Projects pagination"' in filtered_html
+        assert "status=active" in filtered_html
+        assert "search=Pagination" in filtered_html
+
+
+@pytest.mark.integration
+@pytest.mark.routes
 def test_projects_create_page_contains_client_modal_trigger(admin_authenticated_client):
     """Projects create page should contain inline client creation trigger."""
     response = admin_authenticated_client.get("/projects/create")
@@ -436,6 +473,49 @@ def test_dashboard_contains_start_timer_modal(authenticated_client):
     assert 'id="openStartTimer"' in html
 
 
+@pytest.mark.integration
+@pytest.mark.routes
+def test_dashboard_recent_entries_window_and_notes(authenticated_client, app, user, project, task):
+    """Recent Entries shows last-7-days entries with task/notes; excludes older ones."""
+    from app import db
+    from app.models import TimeEntry
+
+    with app.app_context():
+        now = datetime.utcnow()
+        recent = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            task_id=task.id,
+            start_time=now - timedelta(days=1),
+            end_time=now - timedelta(days=1) + timedelta(hours=1),
+            notes="First line of notes\nSecond line ignored",
+            source="manual",
+            billable=True,
+        )
+        old = TimeEntry(
+            user_id=user.id,
+            project_id=project.id,
+            start_time=now - timedelta(days=30),
+            end_time=now - timedelta(days=30) + timedelta(hours=1),
+            notes="Old entry should not appear",
+            source="manual",
+            billable=True,
+        )
+        db.session.add_all([recent, old])
+        db.session.commit()
+
+        response = authenticated_client.get("/dashboard")
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+
+        # Recent Entries shows first notes line and task under the project
+        assert "First line of notes" in html
+        assert task.name in html
+        # Out-of-window entry notes must not appear
+        assert "Old entry should not appear" not in html
+        assert "No entries in the last 7 days." not in html
+
+
 @pytest.mark.smoke
 @pytest.mark.routes
 def test_base_layout_has_sidebar_toggle(authenticated_client):
@@ -490,6 +570,48 @@ def test_invoices_list_page(authenticated_client):
 
 @pytest.mark.integration
 @pytest.mark.routes
+def test_invoices_list_renders_pagination(admin_authenticated_client, test_client, project, admin_user, app):
+    """Invoices list shows pagination when more than 50 invoices exist (#927)."""
+    from datetime import date, timedelta
+
+    from factories import InvoiceFactory
+
+    from app import db
+
+    with app.app_context():
+        for i in range(51):
+            InvoiceFactory(
+                invoice_number=f"INV-PAGE-{i:03d}",
+                project_id=project.id,
+                client_id=test_client.id,
+                client_name=test_client.name,
+                due_date=date.today() + timedelta(days=30),
+                created_by=admin_user.id,
+                tax_rate=Decimal("20.00"),
+                status="draft",
+            )
+        db.session.commit()
+
+        response = admin_authenticated_client.get("/invoices")
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert 'aria-label="Invoices pagination"' in html
+        assert "page=2" in html
+        assert "51 invoices found" in html
+
+        page2 = admin_authenticated_client.get("/invoices?page=2")
+        assert page2.status_code == 200
+
+        filtered = admin_authenticated_client.get("/invoices?status=draft&search=INV-PAGE")
+        assert filtered.status_code == 200
+        filtered_html = filtered.get_data(as_text=True)
+        assert 'aria-label="Invoices pagination"' in filtered_html
+        assert "status=draft" in filtered_html
+        assert "search=INV-PAGE" in filtered_html
+
+
+@pytest.mark.integration
+@pytest.mark.routes
 def test_invoice_detail_page(authenticated_client, invoice, app):
     """Test invoice detail page."""
     with app.app_context():
@@ -500,8 +622,11 @@ def test_invoice_detail_page(authenticated_client, invoice, app):
 @pytest.mark.integration
 @pytest.mark.routes
 def test_invoice_create_page(authenticated_client):
-    """Test invoice creation page."""
+    """Test invoice creation page (step 1 of a new invoice; the old address redirects there)."""
     response = authenticated_client.get("/invoices/create")
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/invoices/new")
+    response = authenticated_client.get("/invoices/new")
     assert response.status_code == 200
 
 

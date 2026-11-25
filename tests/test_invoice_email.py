@@ -232,6 +232,47 @@ class TestSendInvoiceEmail:
             assert invoice is not None
             assert invoice.status == "sent"
 
+    def test_send_invoice_email_marks_linked_time_entries_paid(
+        self, app, test_user, test_project, mock_pdf_generator, mock_mail_send
+    ):
+        """First email send uses transition_status so linked time entries become paid."""
+        from app.models import TimeEntry
+        from app.services import InvoiceService
+
+        with app.app_context():
+            current_app.config["MAIL_SERVER"] = "smtp.test.com"
+            current_app.config["MAIL_DEFAULT_SENDER"] = "noreply@test.com"
+
+            entry = TimeEntry(
+                user_id=test_user.id,
+                project_id=test_project.id,
+                start_time=datetime.utcnow() - timedelta(hours=2),
+                end_time=datetime.utcnow(),
+                duration_seconds=7200,
+                billable=True,
+            )
+            db.session.add(entry)
+            test_project.hourly_rate = Decimal("100.00")
+            db.session.commit()
+
+            result = InvoiceService().create_invoice_from_time_entries(
+                project_id=test_project.id, time_entry_ids=[entry.id], created_by=test_user.id
+            )
+            assert result["success"] is True
+            invoice = result["invoice"]
+            assert invoice.status == "draft"
+
+            success, _, _ = send_invoice_email(
+                invoice=invoice, recipient_email="client@test.com", sender_user=test_user
+            )
+            assert success is True
+
+            invoice = db.session.get(Invoice, invoice.id)
+            assert invoice.status == "sent"
+            db.session.refresh(entry)
+            assert entry.paid is True
+            assert entry.invoice_number == invoice.invoice_number
+
     def test_send_invoice_email_does_not_update_non_draft_status(
         self, app, test_invoice, test_user, mock_pdf_generator, mock_mail_send
     ):

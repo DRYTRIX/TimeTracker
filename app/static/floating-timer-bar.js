@@ -191,7 +191,7 @@
                 const data = await res.json();
                 if (data.active && data.timer) {
                     this.timerData = data.timer;
-                    this.startTime = new Date(data.timer.start_time).getTime();
+                    this.startTime = (window.ttParseStart ? window.ttParseStart(data.timer.start_time) : new Date(data.timer.start_time).getTime());
                     this.render();
                     this.startElapsedUpdater();
                 } else {
@@ -266,7 +266,7 @@
         async postTimerAction(url) {
             const token = this.getCsrfToken();
             try {
-                await fetch(url, {
+                const res = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -275,8 +275,11 @@
                     },
                     body: 'csrf_token=' + encodeURIComponent(token),
                     credentials: 'same-origin',
-                    redirect: 'manual',
                 });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || data.success === false) {
+                    throw new Error(data.error || 'timer_action_failed');
+                }
                 await this.fetchStatus();
                 this.refreshDashboardTimerWidget();
             } catch (e) {

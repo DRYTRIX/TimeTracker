@@ -14,7 +14,7 @@
     </div>
     {% endif %}
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-        <div class="min-w-0">
+        <div class="min-w-0 shrink-0 md:max-w-[40%]">
             <div class="flex items-center gap-3">
                 {% if icon_class %}
                 <i class="{{ icon_class }} text-primary text-lg shrink-0" aria-hidden="true"></i>
@@ -30,7 +30,7 @@
             </div>
         </div>
         {% if actions_html %}
-        <div class="flex flex-wrap gap-2 items-center shrink-0">
+        <div class="flex flex-wrap gap-2 items-center md:justify-end min-w-0 flex-1">
             {{ actions_html|safe }}
         </div>
         {% endif %}

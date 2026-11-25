@@ -21,6 +21,7 @@
             data-hours="{{ '%.2f'|format(up.total_hours) }}"
             data-estimate="{{ '%.2f'|format(up.estimated_total) }}"
             data-currency="{{ up.currency }}"
+            data-rate-warnings="{{ (up.rate_warnings or [])|join('. ') }}"
             data-redirect-template="{{ url_for('invoices.view_invoice', invoice_id=client.id) }}"
             {% if blocked %}title="{{ _('Assign a project to direct time entries before invoicing.') }}"{% elif no_unbilled %}title="{{ _('No billable unbilled time for this client.') }}"{% endif %}>
         {% if no_unbilled %}{{ _('No unbilled time') }}{% else %}{{ _('Invoice unbilled time') }}{% endif %}
@@ -98,6 +99,7 @@
             </a>
             {% endif %}
         </div>
+        {% include "client_entities/_client_card.html" %}
         {% if client.contact_person or client.email or client.phone or client.address %}
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">{{ _('Legacy Contact Info') }}</h2>
@@ -593,7 +595,9 @@ function toggleImportant(noteId, setImportant) {
       cur +
       ' ' +
       est +
-      '. {{ _("Create a draft invoice?") }}';
+      '. ' +
+      (btn.dataset.rateWarnings ? btn.dataset.rateWarnings + '. ' : '') +
+      '{{ _("Create a draft invoice?") }}';
     const ok = await window.showConfirm(msg, {
       title: '{{ _("Invoice unbilled time") }}',
       confirmText: '{{ _("Create invoice") }}',

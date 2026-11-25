@@ -15,6 +15,7 @@
     actions_html=None
 ) }}
 
+{% if is_module_enabled('workday') %}
 <div class="mb-6 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <div>
         <h3 class="font-semibold text-text-light dark:text-text-dark">{{ _('Workday') }}</h3>
@@ -48,6 +49,7 @@
         {% endif %}
     </div>
 </div>
+{% endif %}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Main Timer Section -->
@@ -378,8 +380,10 @@
         </div>
     </div>
 </div>
+{% if is_module_enabled('workday') %}
 {% include 'workday/_overnight_clock_out_modal.html' %}
 {% include 'workday/_auto_closed_clock_out_modal.html' %}
+{% endif %}
 {% include 'components/inline_create_modals.html' %}
 {% endblock %}
 
@@ -593,11 +597,11 @@ if (startOverrideInput) {
 // Update timer display every second
 {% if active_timer %}
 let timerInterval;
-let startTime = new Date('{{ active_timer.start_time.isoformat() }}').getTime();
+let startTime = NaN; function ensureStart() { if (isNaN(startTime)) startTime = (window.ttParseStart ? window.ttParseStart('{{ active_timer.start_time.isoformat() }}') : new Date('{{ active_timer.start_time.isoformat() }}').getTime()); return startTime; }
 
 function updateTimer() {
     const now = new Date().getTime();
-    const elapsed = Math.floor((now - startTime) / 1000);
+    const elapsed = Math.floor((now - ensureStart()) / 1000);
 
     const hours = Math.floor(elapsed / 3600);
     const minutes = Math.floor((elapsed % 3600) / 60);
@@ -704,7 +708,7 @@ function formatStartDisplay(isoString) {
             if (!res.ok || !data.success) {
                 throw new Error(data.error || '{{ _("Failed to update start time") }}');
             }
-            startTime = new Date(data.start_time).getTime();
+            startTime = (window.ttParseStart ? window.ttParseStart(data.start_time) : new Date(data.start_time).getTime());
             input.setAttribute('data-start-iso', data.start_time);
             if (display) display.textContent = formatStartDisplay(data.start_time);
             form.classList.add('hidden');

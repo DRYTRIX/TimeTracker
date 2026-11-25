@@ -163,7 +163,7 @@ Designs are saved as:
 
 ### Creating a New Layout
 
-1. Navigate to **Admin → PDF Templates → Invoice PDF** (or **Quote PDF** for quote layouts)
+1. Navigate to **Admin → Invoice templates → Visual layout** (or **Quote PDF** for quote layouts)
 2. Click elements from the left sidebar to add them to the canvas
 3. Click an element to select it
 4. Use the properties panel (right) to customize:

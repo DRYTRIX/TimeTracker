@@ -1,0 +1,111 @@
+{# Expenses: each its own row on the invoice, with its status, receipt and ×; + Log an expense #}
+{% from 'invoices/_costs_macros.html' import status_badges, other_currency %}
+<section id="expenses" class="space-y-2">
+    <h2 class="text-lg font-semibold">{{ _('Expenses') }} <span class="text-sm font-normal text-text-muted-light dark:text-text-muted-dark">{{ _('billed as they are, each on its own row') }}</span></h2>
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        {% if expense_rows %}
+        <div class="overflow-x-auto p-4">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-text-muted-light dark:text-text-muted-dark">
+                        <th class="p-1">{{ _('Date') }}</th><th class="p-1">{{ _('Expense') }}</th><th class="p-1">{{ _('Person') }}</th>
+                        <th class="p-1">{{ _('Category') }}</th><th class="p-1 text-right">{{ _('Amount') }}</th><th class="p-1">{{ _('Status') }}</th>
+                        <th class="p-1">{{ _('Receipt') }}</th><th class="p-1"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in expense_rows %}
+                    {% set e = row.expense %}
+                    <tr class="border-t border-border-light dark:border-border-dark align-top" id="expense-{{ e.id }}" data-expense-id="{{ e.id }}">
+                        <td class="p-1 whitespace-nowrap">{{ e.expense_date|format_date }}</td>
+                        <td class="p-1">{{ e.title }}</td>
+                        <td class="p-1">{{ row.person }}</td>
+                        <td class="p-1">{{ e.category }}</td>
+                        <td class="p-1 text-right whitespace-nowrap">{{ money(row.amount) }} {{ e.currency_code }}{% if row.other_currency %}{{ other_currency(e.currency_code, invoice.currency_code) }}{% endif %}</td>
+                        <td class="p-1">
+                            {{ status_badges(row.statuses) }}
+                            {% if 'pending' in row.statuses and can_approve %}
+                            <form method="POST" action="{{ url_for('invoices.approve_invoice_expense', expense_id=e.id) }}" class="inline" data-draft-form>
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                                <button type="submit" class="ml-1 text-xs font-medium underline" data-approve-expense="{{ e.id }}">{{ _('Approve') }}</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                        <td class="p-1 whitespace-nowrap">
+                            {% if e.receipt_path %}<a href="{{ url_for('invoices.invoice_expense_receipt', invoice_id=invoice.id, expense_id=e.id) }}" target="_blank" rel="noopener" class="text-primary underline" data-receipt="view">{{ _('View') }}</a>{% endif %}
+                            <form method="POST" action="{{ url_for('invoices.invoice_expense_receipt', invoice_id=invoice.id, expense_id=e.id) }}" enctype="multipart/form-data" class="inline" data-draft-form data-autoupload>
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <label class="ml-1 text-xs underline cursor-pointer">{{ _('Replace') if e.receipt_path else _('Add receipt') }}
+                                    <input type="file" name="receipt_file" accept=".png,.jpg,.jpeg,.gif,.pdf" class="sr-only">
+                                </label>
+                            </form>
+                        </td>
+                        <td class="p-1 text-right">
+                            <form method="POST" action="{{ url_for('invoices.draft_remove_expense', invoice_id=invoice.id, expense_id=e.id) }}" class="inline" data-draft-form>
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="px-2 py-0.5 text-xs border border-border-light dark:border-border-dark rounded" data-expense-action="remove"
+                                        title="{{ _('Take it off the invoice; it stays as it is, unbilled') }}" aria-label="{{ _('Take the expense off the invoice') }}">&times;</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No expenses on this draft.') }}</p>
+        {% endif %}
+
+        <div class="border-t border-border-light dark:border-border-dark p-4 flex justify-between items-center">
+            <button type="button" class="btn btn-secondary" data-toggle="logExpense" aria-controls="logExpense" id="logExpenseButton">+ {{ _('Log an expense') }}</button>
+            <span class="text-lg">{{ _('Expenses') }} <strong id="expensesTotal">{{ money(expenses_total) }} {{ invoice.currency_code }}</strong></span>
+        </div>
+        <form method="POST" action="{{ url_for('invoices.draft_log_expense', invoice_id=invoice.id) }}" enctype="multipart/form-data" id="logExpense" class="hidden border-t border-border-light dark:border-border-dark p-4 grid grid-cols-12 gap-3" data-draft-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="col-span-6 md:col-span-2 text-sm">{{ _('Date') }}
+                <input type="date" name="expense_date" value="{{ default_entry_date }}" required class="form-input w-full"
+                       {% if invoice.period_start %}min="{{ invoice.period_start.isoformat() }}"{% endif %} {% if invoice.period_end %}max="{{ invoice.period_end.isoformat() }}"{% endif %}>
+            </label>
+            <label class="col-span-12 md:col-span-4 text-sm">{{ _('Description') }}
+                <input type="text" name="title" maxlength="200" required class="form-input w-full" placeholder="{{ _('e.g. Train to the client, return') }}">
+            </label>
+            <label class="col-span-6 md:col-span-2 text-sm">{{ _('Category') }}
+                <select name="category" required class="form-input w-full">
+                    {% for key in expense_categories %}<option value="{{ key }}">{{ _(key|capitalize) }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="col-span-6 md:col-span-2 text-sm">{{ _('Amount, %(currency)s', currency=invoice.currency_code) }}
+                <input type="text" inputmode="decimal" name="amount" required class="form-input w-full text-right">
+            </label>
+            <label class="col-span-6 md:col-span-2 text-sm">{{ _('Paid by') }}
+                <select name="user_id" class="form-input w-full" data-paid-by>
+                    {% for person in people %}<option value="{{ person.id }}" {% if person.id == current_user.id %}selected{% endif %}>{{ person.display_name or person.username }}</option>{% endfor %}
+                </select>
+            </label>
+            {% if draft_projects|length > 1 %}
+            <label class="col-span-6 md:col-span-4 text-sm">{{ _('Project') }}
+                <select name="project_id" class="form-input w-full">
+                    {% for project in draft_projects %}<option value="{{ project.id }}" {% if project.id == invoice.project_id %}selected{% endif %}>{{ project.name }}</option>{% endfor %}
+                </select>
+            </label>
+            {% endif %}
+            <label class="col-span-12 md:col-span-4 text-sm">{{ _('Note') }}
+                <input type="text" name="notes" class="form-input w-full">
+            </label>
+            <label class="col-span-12 md:col-span-4 text-sm">{{ _('Receipt') }}
+                <input type="file" name="receipt_file" accept=".png,.jpg,.jpeg,.gif,.pdf" class="form-input w-full">
+            </label>
+            <label class="col-span-12 md:col-span-6 text-sm flex items-center gap-2">
+                <input type="checkbox" name="reimbursable" value="1"> {{ _('Reimburse the person who paid') }}
+            </label>
+            <div class="col-span-12 md:col-span-6 flex items-end justify-end">
+                <button type="submit" class="btn btn-primary">{{ _('Log and add to the invoice') }}</button>
+            </div>
+            <p class="col-span-12 text-xs text-text-muted-light dark:text-text-muted-dark">
+                {% if can_approve %}{{ _('Saved as an approved expense.') }}{% else %}{{ _('Saved as an expense waiting for approval.') }}{% endif %}
+                {{ _('Paid every month?') }} <button type="button" class="underline" data-toggle="logCost" aria-controls="logCost">{{ _('Log it as a project cost') }}</button>
+            </p>
+        </form>
+    </div>
+</section>

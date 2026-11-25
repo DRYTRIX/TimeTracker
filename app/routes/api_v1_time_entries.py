@@ -20,6 +20,18 @@ from app.utils.error_handling import DEFAULT_CLIENT_ERROR, client_error_payload,
 api_v1_time_entries_bp = Blueprint("api_v1_time_entries", __name__, url_prefix="/api/v1")
 
 
+def _drop_dashboard_cache(user_id):
+    """the dashboard caches stats for 90 s; web routes clear it on change, API v1 did not."""
+    if not user_id:
+        return
+    try:
+        from app.utils.cache import invalidate_dashboard_for_user
+
+        invalidate_dashboard_for_user(user_id)
+    except Exception:
+        current_app.logger.debug("Could not invalidate dashboard cache", exc_info=True)
+
+
 @api_v1_time_entries_bp.route("/time-entries", methods=["GET"])
 @require_api_token("read:time_entries")
 def list_time_entries():
@@ -46,6 +58,7 @@ def list_time_entries():
     if billable is not None:
         billable_filter = billable.lower() == "true"
 
+    source = request.args.get("source")
     include_active = request.args.get("include_active") == "true"
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
@@ -65,6 +78,8 @@ def list_time_entries():
         query = query.filter(TimeEntry.start_time <= end_dt)
     if billable_filter is not None:
         query = query.filter(TimeEntry.billable == billable_filter)
+    if source:
+        query = query.filter(TimeEntry.source == source)
     if not include_active:
         query = query.filter(TimeEntry.end_time.isnot(None))
 
@@ -142,10 +157,125 @@ def bulk_time_entries():
         except (TypeError, ValueError):
             return validation_error_response(errors={"entry_ids": ["All entry ids must be integers"]})
     result = apply_bulk_time_entry_actions(ids, action, value, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
+    skipped = {"skipped": result.get("skipped", 0), "skipped_reasons": result.get("skipped_reasons", {})}
     if not result.get("success"):
         code = result.get("http_status", 400)
-        return error_response(result.get("error", "Bulk operation failed"), status_code=code)
-    return jsonify({"success": True, "affected": result.get("affected", 0)})
+        details = skipped if result.get("skipped") else None
+        return error_response(result.get("error", "Bulk operation failed"), status_code=code, details=details)
+    return jsonify({"success": True, "affected": result.get("affected", 0), **skipped})
+
+
+def _resolve_create_target_user(validated):
+    """Resolve the user_id for create/preview; admins may act for another active user."""
+    target_user_id = g.api_user.id
+    requested_user_id = validated.get("user_id")
+    if requested_user_id and requested_user_id != g.api_user.id:
+        if not g.api_user.is_admin:
+            return None, error_response("Only admins can create time entries for other users", status_code=403)
+        from app.models import User
+
+        target = User.query.filter_by(id=requested_user_id, is_active=True).first()
+        if not target:
+            return None, error_response("Selected user is invalid or inactive", status_code=400)
+        target_user_id = target.id
+    return target_user_id, None
+
+
+def _resolve_entry_times(time_tracking_service, target_user_id, validated):
+    """Resolve start/end from explicit times or date+duration placement."""
+    start_time = validated.get("start_time")
+    end_time = validated.get("end_time")
+    duration_seconds = validated.get("duration_seconds")
+    day = validated.get("date")
+
+    if start_time is None and day is not None and duration_seconds is not None:
+        placed = time_tracking_service.place_duration_entry(target_user_id, day, duration_seconds)
+        if not placed.get("success"):
+            return (
+                None,
+                None,
+                None,
+                error_response(
+                    placed.get("message", "Could not place duration entry"),
+                    status_code=400,
+                    error_code=placed.get("error"),
+                ),
+            )
+        start_time = placed["start_time"]
+        end_time = placed["end_time"]
+        return start_time, end_time, duration_seconds, None
+
+    if start_time is None:
+        return None, None, None, error_response("start_time is required", status_code=400)
+    if end_time is None:
+        end_time = start_time
+    return start_time, end_time, duration_seconds, None
+
+
+def _preview_payload(validated, target_user_id, start_time, end_time, duration_seconds, checks):
+    return {
+        "preview": True,
+        "would_write": {
+            "user_id": target_user_id,
+            "project_id": validated.get("project_id"),
+            "client_id": validated.get("client_id"),
+            "task_id": validated.get("task_id"),
+            "start_time": start_time.isoformat() if start_time else None,
+            "end_time": end_time.isoformat() if end_time else None,
+            "duration_seconds": duration_seconds
+            or (int((end_time - start_time).total_seconds()) if start_time and end_time else None),
+            "notes": validated.get("notes"),
+            "tags": validated.get("tags"),
+            "source": validated.get("source") or "api",
+            "billable": validated.get("billable", True),
+            "custom_fields": validated.get("custom_fields"),
+        },
+        "checks": checks,
+    }
+
+
+@api_v1_time_entries_bp.route("/time-entries/preview", methods=["POST"])
+@require_api_token("write:time_entries")
+def preview_time_entry():
+    """Preview what a time entry create would write (no persistence)."""
+    from app.models import TimeEntry
+    from app.services import TimeTrackingService
+
+    data = request.get_json() or {}
+    schema = TimeEntryCreateSchema()
+    try:
+        validated = schema.load(data)
+    except ValidationError as err:
+        return handle_validation_error(err)
+
+    target_user_id, err_resp = _resolve_create_target_user(validated)
+    if err_resp:
+        return err_resp
+
+    time_tracking_service = TimeTrackingService()
+    start_time, end_time, duration_seconds, err_resp = _resolve_entry_times(
+        time_tracking_service, target_user_id, validated
+    )
+    if err_resp:
+        return err_resp
+
+    checks = {"ok": True, "locked_period": False, "overlapping_entry": False, "messages": []}
+    if time_tracking_service._is_locked_period(target_user_id, start_time, end_time):
+        checks["ok"] = False
+        checks["locked_period"] = True
+        checks["messages"].append("Timesheet period is closed for the selected date range")
+    overlapping = TimeEntry.query.filter(
+        TimeEntry.user_id == target_user_id,
+        TimeEntry.start_time < end_time,
+        TimeEntry.end_time > start_time,
+        TimeEntry.end_time.isnot(None),
+    ).first()
+    if overlapping:
+        checks["ok"] = False
+        checks["overlapping_entry"] = True
+        checks["messages"].append("This time overlaps with an existing entry")
+
+    return jsonify(_preview_payload(validated, target_user_id, start_time, end_time, duration_seconds, checks))
 
 
 @api_v1_time_entries_bp.route("/time-entries", methods=["POST"])
@@ -175,29 +305,24 @@ def create_time_entry():
     except ValidationError as err:
         return handle_validation_error(err)
 
-    start_time = validated["start_time"]
-    end_time = validated.get("end_time") or start_time
-
-    # Admins may create entries for another active user (parity with calendar API)
-    target_user_id = g.api_user.id
-    requested_user_id = validated.get("user_id")
-    if requested_user_id and requested_user_id != g.api_user.id:
-        if not g.api_user.is_admin:
-            return error_response("Only admins can create time entries for other users", status_code=403)
-        from app.models import User
-
-        target = User.query.filter_by(id=requested_user_id, is_active=True).first()
-        if not target:
-            return error_response("Selected user is invalid or inactive", status_code=400)
-        target_user_id = target.id
+    target_user_id, err_resp = _resolve_create_target_user(validated)
+    if err_resp:
+        return err_resp
 
     time_tracking_service = TimeTrackingService()
+    start_time, end_time, duration_seconds, err_resp = _resolve_entry_times(
+        time_tracking_service, target_user_id, validated
+    )
+    if err_resp:
+        return err_resp
+
     result = time_tracking_service.create_manual_entry(
         user_id=target_user_id,
         project_id=validated.get("project_id"),
         client_id=validated.get("client_id"),
         start_time=start_time,
         end_time=end_time,
+        duration_seconds=duration_seconds,
         break_seconds=validated.get("break_seconds"),
         task_id=validated.get("task_id"),
         notes=validated.get("notes"),
@@ -206,6 +331,7 @@ def create_time_entry():
         paid=validated.get("paid", False),
         invoice_number=validated.get("invoice_number"),
         custom_fields=validated.get("custom_fields"),
+        source=validated.get("source") or "api",
     )
 
     if not result.get("success"):
@@ -215,6 +341,8 @@ def create_time_entry():
         )
 
     entry = result.get("entry")
+    if entry:
+        _drop_dashboard_cache(entry.user_id)
     if entry:
         from app.models import Activity
         from app.utils.audit import get_request_info
@@ -301,10 +429,10 @@ def update_time_entry(entry_id):
     )
 
     if not result.get("success"):
-        if result.get("error") == "conflict":
+        if result.get("error") in ("conflict", "time_entry_invoiced"):
             return error_response(
                 result.get("message", "Conflict"),
-                error_code="conflict",
+                error_code=result.get("error"),
                 status_code=409,
             )
         return error_response(
@@ -313,6 +441,8 @@ def update_time_entry(entry_id):
         )
 
     entry = result.get("entry")
+    if entry:
+        _drop_dashboard_cache(entry.user_id)
     if entry:
         from app.models import Activity
         from app.utils.audit import get_request_info
@@ -353,6 +483,11 @@ def delete_time_entry(entry_id):
     # Optional body — tolerate DELETE with no Content-Type set
     data = request.get_json(silent=True) or {}
     reason = data.get("reason")
+    from app import db
+    from app.models import TimeEntry
+
+    owner = db.session.get(TimeEntry, entry_id)
+    owner_id = owner.user_id if owner else None
     time_tracking_service = TimeTrackingService()
     result = time_tracking_service.delete_entry(
         entry_id=entry_id,
@@ -361,10 +496,13 @@ def delete_time_entry(entry_id):
         reason=reason,
     )
     if not result.get("success"):
+        if result.get("error") == "time_entry_invoiced":
+            return error_response(result.get("message"), error_code="time_entry_invoiced", status_code=409)
         return error_response(
             result.get("message", "Could not delete time entry"),
             status_code=400,
         )
+    _drop_dashboard_cache(owner_id)
     return jsonify({"message": "Time entry deleted successfully"})
 
 

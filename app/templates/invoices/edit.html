@@ -25,13 +25,25 @@
             <form method="POST" id="editInvoiceForm" novalidate data-validate-form data-unsaved-guard>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 min-w-0">
+                    {% if billing_enabled and not financial_locked %}
+                    {% set mode = 'edit' %}{% set current_entity_id = invoice.billing_entity_id %}{% set current_account_id = invoice.payment_account_id %}
+                    {% include 'billing_entities/_invoice_seller_fields.html' %}
+                    {% elif invoice.billing_entity_id %}
+                    <div class="md:col-span-2 min-w-0 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('From') }}: {{ (invoice.seller_snapshot or {}).get('legal_name', '') }}{% if invoice.payment_account %} · {{ _('Pay to') }}: {{ invoice.payment_account.label }}{% endif %}</div>
+                    {% endif %}
                     <div class="min-w-0">
                         <label for="client_name" class="form-label">{{ _('Client Name') }} *</label>
                         <input type="text" name="client_name" id="client_name" value="{{ invoice.client_name }}" required class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>
                     </div>
+                    {% if client_entities_enabled and not financial_locked %}
+                    {% set bill_to_mode = 'edit' %}
+                    {% include 'client_entities/_invoice_bill_to.html' %}
+                    {% elif invoice.client_entity_id and invoice.buyer_snapshot %}
+                    <div class="min-w-0 text-sm text-text-muted-light dark:text-text-muted-dark self-end">{{ _('Bill to') }}: {{ invoice.buyer_snapshot.get('legal_name', '') }}</div>
+                    {% endif %}
                     <div class="min-w-0">
                         <label for="client_email" class="form-label">{{ _('Client Email') }}</label>
-                        <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email }}" class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>
+                        <input type="email" name="client_email" id="client_email" value="{{ invoice.client_email or '' }}" class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>
                     </div>
                     <div class="min-w-0">
                         <label for="due_date" class="form-label">{{ _('Due Date') }} *</label>
@@ -40,6 +52,18 @@
                     <div class="min-w-0">
                         <label for="tax_rate" class="form-label">{{ _('Tax Rate (%)') }}</label>
                         <input type="number" name="tax_rate" id="tax_rate" value="{{ invoice.tax_rate }}" step="0.01" inputmode="decimal" class="form-input text-base min-h-[44px]" {% if financial_locked %}readonly{% endif %}>
+                    </div>
+                    <div class="min-w-0">
+                        <label for="currency_code" class="form-label">{{ _('Currency') }}</label>
+                        {% if financial_locked %}
+                        <input type="text" id="currency_code" value="{{ invoice.currency_code }}" readonly class="form-input text-base min-h-[44px]">
+                        {% else %}
+                        <select name="currency_code" id="currency_code" class="form-input text-base min-h-[44px]">
+                            {% for code in (currency_choices or [invoice.currency_code]) %}
+                            <option value="{{ code }}" {% if code == invoice.currency_code %}selected{% endif %}>{{ code }}</option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
                     </div>
                     <div class="min-w-0">
                         <label for="discount_percent" class="form-label">{{ _('Invoice Discount (%)') }}</label>
@@ -51,7 +75,7 @@
                     </div>
                     <div class="md:col-span-2">
                         <label for="client_address" class="form-label">{{ _('Client Address') }}</label>
-                        <textarea name="client_address" id="client_address" rows="3" class="form-input">{{ invoice.client_address }}</textarea>
+                        <textarea name="client_address" id="client_address" rows="3" class="form-input">{{ invoice.client_address or '' }}</textarea>
                     </div>
                     <div class="md:col-span-2 min-w-0">
                         <label for="buyer_reference" class="form-label">{{ _('Buyer reference (PEPPOL BT-10)') }}</label>
@@ -107,9 +131,14 @@
                             </h2>
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Logged work hours are added here via Generate from Time/Costs or Add Time Entries.') }}</p>
                         </div>
-                        <button type="button" id="add-item" class="btn btn-primary shadow-sm">
-                            <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}
-                        </button>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{{ url_for('invoices.generate_from_time', invoice_id=invoice.id) }}" class="btn bg-primary text-white hover:bg-primary/90 shadow-sm">
+                                <i class="fas fa-clock mr-2"></i>{{ _('Add Time Entries') }}
+                            </a>
+                            <button type="button" id="add-item" class="btn btn-primary shadow-sm">
+                                <i class="fas fa-plus mr-2"></i>{{ _('Add Item') }}
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Items header (desktop) -->
@@ -126,6 +155,7 @@
                         {% for item in invoice.items %}
                         <div class="rounded-xl md:rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row min-w-0 hover:shadow-sm transition shadow-sm md:shadow-none" data-is-time-based="{{ 'true' if item.time_entry_ids else 'false' }}">
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 md:p-3">
+                            <input type="hidden" name="item_id[]" value="{{ item.id }}">
                             <input type="hidden" name="item_stock_item_id[]" value="{{ item.stock_item_id if item.stock_item_id else '' }}">
                             <input type="hidden" name="item_warehouse_id[]" value="{{ item.warehouse_id if item.warehouse_id else '' }}">
                             <input type="hidden" name="item_time_entry_ids[]" value="{{ item.time_entry_ids or '' }}">
@@ -163,7 +193,7 @@
                             {% endif %}
                             <div class="md:col-span-3 min-w-0 flex flex-col">
                                 <span class="md:hidden text-xs font-semibold uppercase text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Description') }}</span>
-                                <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" value="{{ item.description }}" class="form-input item-description text-base min-h-[44px] md:min-h-0" data-calc-trigger>
+                                <textarea name="description[]" rows="{{ [(item.description or '').count('\n') + 1, 6]|min }}" maxlength="500" placeholder="{{ _('e.g., Web Development Services') }}" class="form-input item-description text-base min-h-[44px] md:min-h-0 resize-y" data-calc-trigger>{{ item.description }}</textarea>
                             </div>
                             <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <span class="md:hidden text-xs font-semibold uppercase text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Quantity') }}</span>
@@ -239,14 +269,9 @@
                             </h2>
                             <p class="text-sm text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Expense-module records (travel, meals, etc.) — not time entries.') }}</p>
                         </div>
-                        <div class="flex flex-wrap gap-2">
-                        <a href="{{ url_for('invoices.generate_from_time', invoice_id=invoice.id) }}" class="btn bg-primary text-white hover:bg-primary/90 shadow-sm">
-                            <i class="fas fa-clock mr-2"></i>{{ _('Add Time Entries') }}
-                        </a>
                         <button type="button" id="add-expense" class="btn bg-amber-600 text-white hover:bg-amber-700 shadow-sm">
                             <i class="fas fa-plus mr-2"></i>{{ _('Add Expense') }}
                         </button>
-                        </div>
                     </div>
 
                     <!-- Expenses header (desktop) -->
@@ -272,16 +297,16 @@
                             </div>
                             <div class="md:col-span-2 min-w-0 flex flex-col">
                                 <select name="expense_category[]" class="form-input" disabled title="{{ _('Linked expense - category cannot be edited') }}">
-                                    <option value="travel" {% if expense.category == 'travel' %}selected{% endif %}>{{ _('Travel') }}</option>
-                                    <option value="meals" {% if expense.category == 'meals' %}selected{% endif %}>{{ _('Meals') }}</option>
-                                    <option value="accommodation" {% if expense.category == 'accommodation' %}selected{% endif %}>{{ _('Accommodation') }}</option>
-                                    <option value="supplies" {% if expense.category == 'supplies' %}selected{% endif %}>{{ _('Supplies') }}</option>
-                                    <option value="software" {% if expense.category == 'software' %}selected{% endif %}>{{ _('Software') }}</option>
-                                    <option value="equipment" {% if expense.category == 'equipment' %}selected{% endif %}>{{ _('Equipment') }}</option>
-                                    <option value="services" {% if expense.category == 'services' %}selected{% endif %}>{{ _('Services') }}</option>
-                                    <option value="marketing" {% if expense.category == 'marketing' %}selected{% endif %}>{{ _('Marketing') }}</option>
-                                    <option value="training" {% if expense.category == 'training' %}selected{% endif %}>{{ _('Training') }}</option>
-                                    <option value="other" {% if expense.category == 'other' %}selected{% endif %}>{{ _('Other') }}</option>
+                                    {% set expense_key = (expense.category or '')|lower %}
+                                    {% set cat_match = namespace(found=false) %}
+                                    {% for cat in expense_categories %}
+                                    {% set is_match = expense_key and (expense_key == (cat.code or '')|lower or expense_key == cat.name|lower) %}
+                                    {% if is_match %}{% set cat_match.found = true %}{% endif %}
+                                    <option value="{{ cat.code or cat.name }}" {% if is_match %}selected{% endif %}>{{ cat.name }}</option>
+                                    {% endfor %}
+                                    {% if expense.category and not cat_match.found %}
+                                    <option value="{{ expense.category }}" selected>{{ expense.category|title }}</option>
+                                    {% endif %}
                                 </select>
                             </div>
                             <div class="md:col-span-2 min-w-0 flex flex-col">
@@ -507,7 +532,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.invoice-item-row').forEach(row => {
             const qty = parseFloat(row.querySelector('.item-quantity')?.value || 0);
             const price = parseFloat(row.querySelector('.item-price')?.value || 0);
-            if (qty > 0 && price > 0) {
+            if (qty > 0) {
                 itemsTotal += qty * price;
                 itemsCount++;
             }
@@ -530,7 +555,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.invoice-good-row').forEach(row => {
             const qty = parseFloat(row.querySelector('.good-quantity')?.value || 0);
             const price = parseFloat(row.querySelector('.good-price')?.value || 0);
-            if (qty > 0 && price > 0) {
+            if (qty > 0) {
                 goodsTotal += qty * price;
                 goodsCount++;
             }
@@ -604,7 +629,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const addBtn = document.getElementById('add-item');
     addBtn && addBtn.addEventListener('click', function() {
         const row = document.createElement('div');
-        row.className = 'grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row hover:shadow-sm transition';
+        // Same outer classes as the server-rendered row: the inner div is the 12-column grid
+        row.className = 'rounded-xl md:rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50 invoice-item-row min-w-0 hover:shadow-sm transition shadow-sm md:shadow-none';
 
         // Build stock items dropdown
         let stockItemsHtml = '<option value="">{{ _("None") }}</option>';
@@ -630,6 +656,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const newPos = existingRows.length;
         row.innerHTML = `
             <div class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3">
+            <input type="hidden" name="item_id[]" value="">
             <input type="hidden" name="item_stock_item_id[]" value="">
             <input type="hidden" name="item_warehouse_id[]" value="">
             <input type="hidden" name="item_time_entry_ids[]" value="">
@@ -645,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </select>
             </div>
             <div class="md:col-span-3 min-w-0 flex flex-col">
-                <input type="text" name="description[]" placeholder="{{ _('e.g., Web Development Services') }}" class="form-input item-description" data-calc-trigger>
+                <textarea name="description[]" rows="1" maxlength="500" placeholder="{{ _('e.g., Web Development Services') }}" class="form-input item-description resize-y" data-calc-trigger></textarea>
             </div>
             <div class="md:col-span-2 min-w-0 flex flex-col">
                 <input type="number" name="quantity[]" placeholder="{{ _('Quantity') }}" value="1" step="0.01" min="0" class="form-input item-quantity" data-calc-trigger>
@@ -889,7 +916,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-4">
           <label for="recipient_email" class="form-label">Recipient Email *</label>
-          <input type="email" id="recipient_email" name="recipient_email" value="{{ invoice.client_email }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+          <input type="email" id="recipient_email" name="recipient_email" value="{{ invoice.client_email or '' }}" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
         </div>
         <div class="mb-4">
           <label for="email_template_id" class="form-label">Email Template (Optional)</label>

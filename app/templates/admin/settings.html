@@ -437,6 +437,29 @@
             <div id="section-invoices" class="border-b border-border-light dark:border-border-dark pb-6">
                 <h2 class="text-lg font-semibold mb-4">{{ _('Invoice Defaults') }}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div id="invoice_pdf_template_field" class="md:col-span-2 scroll-mt-24 rounded-lg target:ring-2 target:ring-primary target:ring-offset-4">
+                        <label for="invoice_pdf_template" class="form-label">{{ _('Default invoice template') }}</label>
+                        <select name="invoice_pdf_template" id="invoice_pdf_template" class="form-input">
+                            {% for ref, label in invoice_template_choices() %}
+                            <option value="{{ ref }}" {% if ref == (settings.invoice_pdf_template or 'visual') %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-xs text-text-muted-light dark:text-text-muted-dark">
+                            {{ _('All invoices print with it, except legal entities that picked their own.') }}
+                            <a href="{{ url_for('invoice_templates.list_templates') }}" class="text-primary hover:underline">{{ _('Manage templates') }}</a>
+                        </p>
+                        {% set own = invoice_templates_entities_with_own() %}
+                        {% if own %}
+                        <div class="mt-3 text-sm">
+                            <div class="form-label">{{ _('Legal entities with their own template') }}</div>
+                            <ul class="divide-y divide-border-light dark:divide-border-dark border border-border-light dark:border-border-dark rounded-lg">
+                                {% for entity, ref in own %}
+                                <li class="flex justify-between gap-3 px-3 py-2"><span>{{ entity.short_name }}</span><span class="text-text-muted-light dark:text-text-muted-dark">{{ invoice_template_label(ref) }}</span></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
                     <div>
                         <label for="invoice_prefix" class="form-label">Invoice Prefix</label>
                         <input type="text" name="invoice_prefix" id="invoice_prefix" value="{{ settings.invoice_prefix }}" class="form-input">

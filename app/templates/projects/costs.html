@@ -27,10 +27,10 @@
         </div>
         <div>
             <label for="category" class="form-label">{{ _('Category') }}</label>
-            <select id="category" name="category" class="form-input">
+            <select id="category" name="category_id" class="form-input">
                 <option value="">{{ _('All Categories') }}</option>
-                {% for cat in ['travel', 'materials', 'services', 'equipment', 'software', 'other'] %}
-                <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat|capitalize }}</option>
+                {% for cat in expense_categories %}
+                <option value="{{ cat.id }}" {% if selected_category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -87,7 +87,7 @@
                     {% endif %}
                 </td>
                 <td class="px-6 py-4" data-label="{{ _('Category') }}">
-                    <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800">{{ cost.category|capitalize }}</span>
+                    <span class="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800">{{ cost.category_name }}</span>
                 </td>
                 <td class="px-6 py-4 font-medium" data-label="{{ _('Amount') }}">{{ '%.2f'|format(cost.amount) }} {{ cost.currency_code }}</td>
                 <td class="px-6 py-4" data-label="{{ _('Status') }}">
@@ -133,7 +133,7 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         {% for item in category_breakdown %}
         <div class="p-4 rounded border border-border-light dark:border-border-dark">
-            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ item.category|capitalize }}</div>
+            <div class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ item.category }}</div>
             <div class="text-xl font-bold">{{ '%.2f'|format(item.total_amount) }}</div>
             <div class="text-xs text-text-muted-light dark:text-text-muted-dark">{{ item.count }} {{ _('item(s)') }}</div>
         </div>

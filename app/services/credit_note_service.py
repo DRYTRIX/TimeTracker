@@ -88,7 +88,10 @@ class CreditNoteService:
             cls.issue_credit_note(cn)
             # Full credit → cancel the invoice
             if hasattr(invoice, "status"):
-                invoice.status = "cancelled"
+                from app.services import InvoiceService
+
+                # Full credit cancels even when the invoice is paid (map would otherwise block it).
+                InvoiceService().transition_status(invoice, "cancelled", actor_id=user_id, force=True)
 
         db.session.commit()
         cls._emit_created(cn)

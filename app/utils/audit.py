@@ -128,6 +128,9 @@ def get_request_info():
 
     ip_address = request.remote_addr
     user_agent = request.headers.get("User-Agent")
+    mcp_tool = request.headers.get("X-MCP-Tool")
+    if mcp_tool:
+        user_agent = f"{user_agent or ''} [mcp:{mcp_tool}]".strip()
     request_path = request.path
 
     return ip_address, user_agent, request_path

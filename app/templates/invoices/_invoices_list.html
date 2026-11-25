@@ -1,10 +1,14 @@
+{# invoices_project (optional): the project whose invoices are listed; scopes Export and the create link #}
+{% set _list_project_id = invoices_project.id if invoices_project else None %}
+{% from "components/ui.html" import pagination_nav %}
 <div id="invoicesListContainer">
     <div class="flex justify-between items-center mb-4">
+        {% set _invoice_count = pagination.total if pagination else (invoices|length) %}
         <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">
-            {{ invoices|length }} invoice{{ 's' if invoices|length != 1 else '' }} found
+            {{ _invoice_count }} invoice{{ 's' if _invoice_count != 1 else '' }} found
         </h3>
         <div class="flex items-center gap-2">
-            <a href="{{ url_for('invoices.export_invoices_excel') }}"
+            <a href="{{ url_for('invoices.export_invoices_excel', project_id=_list_project_id) }}"
                class="btn btn-sm bg-background-light dark:bg-background-dark hover:bg-gray-100 dark:hover:bg-gray-700 export-btn"
                title="{{ _('Export to Excel') }}"
                onclick="showExportLoading(this); return true;">
@@ -57,6 +61,10 @@
                     {% if s == 'draft' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                             <i class="fas fa-file-alt mr-1"></i>Draft
+                        </span>
+                    {% elif s == 'issued' %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">
+                            <i class="fas fa-lock mr-1"></i>Issued
                         </span>
                     {% elif s == 'sent' %}
                         <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
@@ -145,7 +153,7 @@
     {% if not invoices %}
     {% from "components/ui.html" import empty_state %}
     {% set actions %}
-        <a href="{{ url_for('invoices.create_invoice') }}" class="btn btn-primary">
+        <a href="{{ url_for('invoices.new_invoice', project_id=_list_project_id) }}" class="btn btn-primary">
             <i class="fas fa-plus mr-2"></i>Create Your First Invoice
         </a>
         <a href="{{ url_for('main.help') }}" class="btn btn-secondary">
@@ -154,8 +162,11 @@
     {% endset %}
     {% if request.args.get('search') or request.args.get('status') or request.args.get('client') %}
         {{ empty_state('fas fa-search', 'No Invoices Match Your Filters', 'Try adjusting your filters to see more results. You can clear filters or create a new invoice that matches your criteria.', actions, type='no-results') }}
+    {% elif invoices_project %}
+        {{ empty_state('fas fa-file-invoice', 'No Invoices Yet', 'This project has no invoices yet. Create the first one to bill the client for the work.', actions, type='no-data') }}
     {% else %}
         {{ empty_state('fas fa-file-invoice', 'No Invoices Yet', 'Create professional invoices to bill your clients for completed work. Create your first invoice to get started!', actions, type='no-data') }}
     {% endif %}
     {% endif %}
+    {{ pagination_nav(pagination, 'invoices.list_invoices', pagination_url_params|default({}), aria_label=_('Invoices pagination')) }}
 </div>

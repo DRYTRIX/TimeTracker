@@ -156,14 +156,14 @@
                             <input type="date" name="start_date" id="start_date" class="form-input user-date-input" value="{{ prefill_start_date or '' }}">
                         </div>
                         <div>
-                            <label for="end_date" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('End Date') }}</label>
-                            <input type="date" name="end_date" id="end_date" class="form-input user-date-input" value="{{ prefill_end_date or '' }}">
+                            <label for="start_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Start Time') }}</label>
+                            <input type="time" name="start_time" id="start_time" class="form-input user-time-input" value="{{ prefill_start_time or '' }}">
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label for="start_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('Start Time') }}</label>
-                            <input type="time" name="start_time" id="start_time" class="form-input user-time-input" value="{{ prefill_start_time or '' }}">
+                            <label for="end_date" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('End Date') }}</label>
+                            <input type="date" name="end_date" id="end_date" class="form-input user-date-input" value="{{ prefill_end_date or '' }}">
                         </div>
                         <div>
                             <label for="end_time" class="block text-sm font-medium text-text-light dark:text-text-dark">{{ _('End Time') }}</label>
@@ -329,14 +329,23 @@ document.addEventListener('DOMContentLoaded', async function(){
         return { start, end };
     }
 
+    function setFlatpickrValue(el, value) {
+        if (!el || value == null) return;
+        el.value = value;
+        const fp = el._flatpickr;
+        if (fp) {
+            try { fp.setDate(value, false); } catch (_) {}
+        }
+    }
+
     function setEndFromDate(end) {
         const yyyy = end.getFullYear();
         const mm2 = String(end.getMonth() + 1).padStart(2,'0');
         const dd = String(end.getDate()).padStart(2,'0');
         const hh2 = String(end.getHours()).padStart(2,'0');
         const mi2 = String(end.getMinutes()).padStart(2,'0');
-        if (endDate) endDate.value = `${yyyy}-${mm2}-${dd}`;
-        if (endTime) endTime.value = `${hh2}:${mi2}`;
+        if (endDate) setFlatpickrValue(endDate, `${yyyy}-${mm2}-${dd}`);
+        if (endTime) setFlatpickrValue(endTime, `${hh2}:${mi2}`);
     }
 
     function updateWorkedFromStartEnd() {
@@ -393,11 +402,32 @@ document.addEventListener('DOMContentLoaded', async function(){
         });
     }
 
+    // Track start date so same-day edits keep end_date aligned (Issue #925).
+    let lastStartDateValue = startDate ? String(startDate.value || '') : '';
+
+    function maybeSyncEndDateFromStart() {
+        if (!startDate || !endDate || !startDate.value) return;
+        const prev = lastStartDateValue;
+        const next = startDate.value;
+        // If end still matched the previous start (defaults both today), follow start.
+        if (prev && endDate.value === prev && next !== prev) {
+            setFlatpickrValue(endDate, next);
+        }
+        lastStartDateValue = next;
+    }
+
+    function isExplicitWorkedTime() {
+        if (workedTimeUserEdited) return true;
+        return !!(workedTimeMode && workedTimeMode.value === 'explicit');
+    }
+
     function onStartChange() {
         if (suppressTimeSync) return;
-        // If worked time is valid, keep duration constant and move end; otherwise just recompute worked time.
+        maybeSyncEndDateFromStart();
+        // Only keep duration and move end when the user explicitly typed worked time.
+        // Auto-filled values (e.g. stale 24:00 from yesterday→today) must not lock (Issue #925).
         const minutes = workedTime ? parseWorkedMinutes(workedTime.value) : null;
-        if (minutes != null) updateEndFromStartWorked();
+        if (isExplicitWorkedTime() && minutes != null) updateEndFromStartWorked();
         else updateWorkedFromStartEnd();
     }
 
@@ -620,6 +650,49 @@ document.addEventListener('DOMContentLoaded', async function(){
         endTime.addEventListener('input', () => { timeFieldsUserEdited = true; scheduleWorkedTimeUpdate(false); });
         endTime.addEventListener('focus', () => { if (endTime.disabled) { setDurationOnlyMode(false); ensureStartEndDefaultsIfEmpty(); } });
     }
+
+    // Flatpickr wraps these with altInput; native listeners alone can miss commits (Issues #559/#925).
+    // date-picker-init may run after this script, so poll briefly until instances exist.
+    (function hookFlatpickrWorkedTimeSync() {
+        const fields = [
+            { el: startDate, isStart: true },
+            { el: startTime, isStart: true },
+            { el: endDate, isStart: false },
+            { el: endTime, isStart: false }
+        ];
+        const hooked = new WeakSet();
+        function attachOne(el, isStart) {
+            if (!el || hooked.has(el)) return !!el && !!el._flatpickr;
+            const fp = el._flatpickr;
+            if (!fp) return false;
+            hooked.add(el);
+            const onFpChange = function() {
+                timeFieldsUserEdited = true;
+                scheduleWorkedTimeUpdate(isStart);
+            };
+            if (fp.config && Array.isArray(fp.config.onChange)) {
+                fp.config.onChange.push(onFpChange);
+            }
+            if (fp.altInput) {
+                fp.altInput.addEventListener('input', onFpChange);
+                fp.altInput.addEventListener('change', onFpChange);
+            }
+            return true;
+        }
+        function tryAttachAll() {
+            let allReady = true;
+            fields.forEach(function(f) {
+                if (f.el && !attachOne(f.el, f.isStart)) allReady = false;
+            });
+            return allReady;
+        }
+        if (tryAttachAll()) return;
+        let attempts = 0;
+        const timer = setInterval(function() {
+            attempts += 1;
+            if (tryAttachAll() || attempts >= 40) clearInterval(timer);
+        }, 50);
+    })();
 
     // Form validation: ensure either project or client is selected and validate time range / duration-only
     // Use capture phase to run before other handlers

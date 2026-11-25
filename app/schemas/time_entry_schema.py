@@ -4,7 +4,7 @@ Schemas for time entry serialization and validation.
 
 from datetime import datetime
 
-from marshmallow import Schema, ValidationError, fields, validate, validates, validates_schema
+from marshmallow import Schema, ValidationError, fields, validate, validates_schema
 
 from app.constants import TimeEntrySource
 
@@ -39,57 +39,62 @@ class TimeEntrySchema(Schema):
 
 
 class TimeEntryCreateSchema(Schema):
-    """Schema for creating a time entry"""
+    """Schema for creating a time entry.
+
+    Provide either ``start_time`` (and optional ``end_time``) or ``date`` + ``duration_seconds``
+    for duration-only placement on that day.
+    """
 
     user_id = fields.Int(allow_none=True)  # Admin-only: create on behalf of another user
     project_id = fields.Int(allow_none=True)
     client_id = fields.Int(allow_none=True)
     task_id = fields.Int(allow_none=True)
-    start_time = fields.DateTime(required=True)
+    start_time = fields.DateTime(allow_none=True)
     end_time = fields.DateTime(allow_none=True)
+    date = fields.Date(allow_none=True)
+    duration_seconds = fields.Int(allow_none=True)
     break_seconds = fields.Int(allow_none=True)
     notes = fields.Str(allow_none=True, validate=validate.Length(max=5000))
     tags = fields.Str(allow_none=True, validate=validate.Length(max=500))
+    source = fields.Str(
+        allow_none=True,
+        validate=validate.OneOf([s.value for s in TimeEntrySource]),
+        load_default=TimeEntrySource.API.value,
+    )
     billable = fields.Bool(load_default=True)
     paid = fields.Bool(load_default=False)
     invoice_number = fields.Str(allow_none=True, validate=validate.Length(max=100))
     custom_fields = fields.Dict(keys=fields.Str(), values=fields.Raw(), allow_none=True)
 
-    @validates("end_time")
-    def validate_end_time(self, value, **kwargs):
-        """Validate that end_time is after start_time"""
-        data = kwargs.get("data", {})
-        start_time = data.get("start_time")
-        if start_time and value and value <= start_time:
-            raise ValidationError("end_time must be after start_time")
+    @validates_schema
+    def validate_relations_and_times(self, data, **kwargs):
+        """Cross-field rules: project or client, task only with project, end after start.
 
-    @validates("project_id")
-    def validate_project_or_client(self, value, **kwargs):
-        """Validate that either project_id or client_id is provided"""
-        data = kwargs.get("data", {})
+        Schema-level on purpose (same as TimerStartSchema): field-level @validates hooks only get
+        data_key in marshmallow 4, never the other fields, so these rules cannot live there.
+        """
+        project_id = data.get("project_id")
         client_id = data.get("client_id")
-        if not value and not client_id:
-            # Allow entries without project or client if source is "auto" (for auto-imported entries)
-            if data.get("source") != "auto":
-                raise ValidationError("Either project_id or client_id must be provided")
-
-    @validates("client_id")
-    def validate_client_or_project(self, value, **kwargs):
-        """Validate that either project_id or client_id is provided"""
-        data = kwargs.get("data", {})
-        project_id = data.get("project_id")
-        if not value and not project_id:
-            # Allow entries without project or client if source is "auto" (for auto-imported entries)
-            if data.get("source") != "auto":
-                raise ValidationError("Either project_id or client_id must be provided")
-
-    @validates("task_id")
-    def validate_task_with_project(self, value, **kwargs):
-        """Validate that task_id is only provided when project_id is set"""
-        data = kwargs.get("data", {})
-        project_id = data.get("project_id")
-        if value and not project_id:
-            raise ValidationError("task_id can only be set when project_id is provided")
+        errors = {}
+        if not project_id and not client_id:
+            errors["project_id"] = ["Either project_id or client_id must be provided"]
+        if data.get("task_id") and not project_id:
+            errors["task_id"] = ["task_id can only be set when project_id is provided"]
+        start_time = data.get("start_time")
+        end_time = data.get("end_time")
+        date_val = data.get("date")
+        duration_seconds = data.get("duration_seconds")
+        has_range = start_time is not None
+        has_duration = date_val is not None and duration_seconds is not None
+        if not has_range and not has_duration:
+            errors["start_time"] = ["Provide start_time, or date with duration_seconds"]
+        if has_duration and (duration_seconds is None or duration_seconds <= 0):
+            errors["duration_seconds"] = ["duration_seconds must be a positive integer"]
+        same_kind = start_time and end_time and (start_time.tzinfo is None) == (end_time.tzinfo is None)
+        if same_kind and end_time <= start_time:
+            errors["end_time"] = ["end_time must be after start_time"]
+        if errors:
+            raise ValidationError(errors)
 
 
 class TimeEntryUpdateSchema(Schema):

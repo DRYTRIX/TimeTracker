@@ -130,13 +130,18 @@ def settings():
             timezone = request.form.get("timezone")
             if timezone is not None:
                 timezone = timezone.strip()
-                if timezone == "":
+                if timezone == "auto":
+                    # Follow the device: the browser reports its IANA zone on page load
+                    current_user.timezone_source = "auto"
+                elif timezone == "":
                     current_user.timezone = None
+                    current_user.timezone_source = "auto"
                 else:
                     try:
                         # Validate timezone
                         ZoneInfo(timezone)
                         current_user.timezone = timezone
+                        current_user.timezone_source = "manual"
                     except (ZoneInfoNotFoundError, KeyError):
                         flash(_("Invalid timezone selected"), "error")
                         return redirect(url_for("user.settings"))
@@ -419,6 +424,13 @@ def update_preferences():
                 except (ZoneInfoNotFoundError, KeyError):
                     return jsonify({"error": "Invalid timezone"}), 400
 
+        if "timezone_source" in data:
+            source = data["timezone_source"]
+            if source in ["auto", "manual", None, ""]:
+                current_user.timezone_source = source or "auto"
+            else:
+                return jsonify({"error": "Invalid timezone_source: must be auto or manual"}), 400
+
         for key, attr in (
             ("calendar_color_events", "calendar_color_events"),
             ("calendar_color_tasks", "calendar_color_tasks"),
@@ -496,6 +508,41 @@ def set_language():
             return jsonify({"success": True, "language": language, "message": _("Language updated successfully")})
 
         return jsonify({"error": _("Invalid language")}), 400
+
+    except Exception as e:
+        db.session.rollback()
+        return client_error_response(status=500)
+
+
+@user_bp.route("/api/timezone", methods=["POST"])
+@login_required
+def set_timezone_auto():
+    """Report the browser-detected IANA timezone.
+
+    Only applied when the user's timezone_source is 'auto' (the default);
+    a manually pinned timezone in settings is never overwritten.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        tz_name = (data.get("timezone") or "").strip()
+
+        if not tz_name:
+            return jsonify({"error": _("Missing timezone")}), 400
+
+        try:
+            ZoneInfo(tz_name)
+        except (ZoneInfoNotFoundError, KeyError):
+            return jsonify({"error": _("Invalid timezone")}), 400
+
+        if getattr(current_user, "timezone_source", "auto") != "auto":
+            return jsonify({"success": True, "timezone": current_user.timezone, "ignored": "manual"})
+
+        changed = current_user.timezone != tz_name
+        if changed:
+            current_user.timezone = tz_name
+            db.session.commit()
+
+        return jsonify({"success": True, "timezone": tz_name, "changed": changed})
 
     except Exception as e:
         db.session.rollback()

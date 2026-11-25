@@ -1,0 +1,14 @@
+{# Statuses of an expense or a project cost on an invoice, and the warning for another currency #}
+{% macro status_badges(statuses) -%}
+{% for status in statuses %}
+{% if status == 'pending' %}<span class="px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" data-status="pending">{{ _('waiting for approval') }}</span>
+{% elif status == 'non_billable' %}<span class="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200" data-status="non_billable">{{ _('was non-billable') }}</span>
+{% elif status == 'recurring' %}<span class="px-1.5 py-0.5 rounded text-xs bg-indigo-50 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-100" data-status="recurring">{{ _('recurring · fixed') }}</span>
+{% elif status == 'logged' %}<span class="px-1.5 py-0.5 rounded text-xs text-text-muted-light dark:text-text-muted-dark" data-status="logged">{{ _('logged') }}</span>
+{% endif %}
+{% endfor %}
+{%- endmacro %}
+
+{% macro other_currency(code, invoice_currency) -%}
+<span class="block text-xs text-amber-700 dark:text-amber-300" data-warning="other-currency">{{ _('in %(code)s, the invoice is in %(invoice)s: the amount is billed as it is', code=code, invoice=invoice_currency) }}</span>
+{%- endmacro %}

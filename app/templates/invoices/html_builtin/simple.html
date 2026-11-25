@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Invoice {{ invoice.invoice_number }}</title>
+{#
+  Built-in invoice template "simple".
+
+  Copy it with "Duplicate" on the Invoice templates page to make your own.
+  Fonts: any file from the app's font folder, e.g. url("fonts/LiberationSans-Regular.ttf").
+  Variables and helpers are listed on the template edit page.
+#}
+<style>
+  @font-face { font-family: "Body"; font-weight: 400; src: url("fonts/LiberationSans-Regular.ttf"); }
+  @font-face { font-family: "Body"; font-weight: 700; src: url("fonts/LiberationSans-Bold.ttf"); }
+
+  :root { --accent: #4F46E5; --muted: #6B7280; --line: #E5E7EB; }
+
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font: 400 7.5pt "Body", sans-serif;
+      color: #9CA3AF;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { font: 400 9.5pt/1.4 "Body", sans-serif; color: #111827; }
+  body { margin: 0; }
+  p { margin: 0 0 2mm; }
+  p:last-child { margin-bottom: 0; }
+  .muted { color: var(--muted); }
+  .label { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 1.5mm; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10mm; margin-bottom: 12mm; }
+  header .logo { max-height: 16mm; max-width: 55mm; margin-bottom: 4mm; }
+  header .seller-name { font-weight: 700; font-size: 11pt; }
+  header .doc { text-align: right; }
+  header .doc h1 { margin: 0 0 3mm; font-size: 22pt; font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
+  header .doc table { margin-left: auto; border-collapse: collapse; }
+  header .doc td { padding: 0.6mm 0 0.6mm 6mm; }
+  header .doc td:first-child { color: var(--muted); padding-left: 0; }
+
+  .parties { display: flex; gap: 10mm; margin-bottom: 10mm; }
+  .parties > div { flex: 1 1 0; }
+  .parties .name { font-weight: 700; }
+
+  table.lines { width: 100%; border-collapse: collapse; }
+  table.lines thead { display: table-header-group; }
+  table.lines th { text-align: left; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 400; padding: 0 2mm 2mm; border-bottom: 1.2pt solid #111827; }
+  table.lines td { padding: 2.5mm 2mm; border-bottom: 0.5pt solid var(--line); vertical-align: top; }
+  table.lines tr { page-break-inside: avoid; }
+  table.lines .num { width: 8mm; color: var(--muted); }
+  table.lines .r { text-align: right; white-space: nowrap; }
+  table.lines .hours { width: 18mm; }
+  table.lines .rate { width: 26mm; }
+  table.lines .amount { width: 30mm; }
+
+  .totals { margin: 4mm 0 0 auto; width: 75mm; border-collapse: collapse; page-break-inside: avoid; }
+  .totals td { padding: 1.2mm 2mm; }
+  .totals td:last-child { text-align: right; white-space: nowrap; }
+  .totals .grand td { border-top: 1.2pt solid #111827; padding-top: 2.5mm; font-weight: 700; font-size: 12pt; }
+
+  .bottom { display: flex; gap: 10mm; margin-top: 10mm; page-break-inside: avoid; }
+  .bottom > div { flex: 1 1 0; }
+  .pay { background: #F9FAFB; border: 0.5pt solid var(--line); border-radius: 2mm; padding: 4mm; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    {% if seller.logo %}<img class="logo" src="{{ seller.logo }}" alt="">{% endif %}
+    <div class="seller-name">{{ seller.name }}</div>
+    {% if seller.address %}<div class="muted">{{ lines(seller.address) }}</div>{% endif %}
+    {% if seller.tax_id %}<div class="muted">Tax ID: {{ seller.tax_id }}</div>{% endif %}
+    {% if seller.email %}<div class="muted">{{ seller.email }}</div>{% endif %}
+  </div>
+  <div class="doc">
+    <h1>Invoice</h1>
+    <table>
+      <tr><td>Number</td><td>{{ invoice.invoice_number }}</td></tr>
+      <tr><td>Issue date</td><td>{{ doc_date(invoice.issue_date) }}</td></tr>
+      <tr><td>Due date</td><td>{{ doc_date(invoice.due_date) }}</td></tr>
+    </table>
+  </div>
+</header>
+
+<div class="parties">
+  <div>
+    <div class="label">Bill to</div>
+    <div class="name">{{ buyer.name }}</div>
+    {% if buyer.address %}<div>{{ lines(buyer.address) }}</div>{% endif %}
+    {% if buyer.tax_id %}<div class="muted">Tax ID: {{ buyer.tax_id }}</div>{% endif %}
+    {% if buyer.email %}<div class="muted">{{ buyer.email }}</div>{% endif %}
+  </div>
+  <div>
+    {% if payment_purpose %}
+    <div class="label">Notes</div>
+    <div>{{ paragraphs(payment_purpose) }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<table class="lines">
+  <thead>
+    <tr>
+      <th class="num">#</th>
+      <th>Description</th>
+      {% if show_hours %}<th class="r hours">Hours</th><th class="r rate">Rate</th>{% endif %}
+      <th class="r amount">Amount, {{ currency }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td class="num">{{ row.number }}</td>
+      <td>{{ paragraphs(row.description) }}</td>
+      {% if show_hours %}<td class="r">{{ qty(row.quantity) }}</td><td class="r">{{ money(row.unit_price) }}</td>{% endif %}
+      <td class="r">{{ money(row.total) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<table class="totals">
+  {% if show_breakdown %}
+  <tr><td class="muted">Subtotal</td><td>{{ money(subtotal) }}</td></tr>
+  {% if discount %}<tr><td class="muted">Discount</td><td>−{{ money(discount) }}</td></tr>{% endif %}
+  {% if tax_amount %}<tr><td class="muted">VAT {{ qty(tax_rate) }}%</td><td>{{ money(tax_amount) }}</td></tr>{% endif %}
+  {% endif %}
+  <tr class="grand"><td>Total due</td><td>{{ currency }} {{ money(total) }}</td></tr>
+</table>
+
+<div class="bottom">
+  <div>
+    {% if payment_details %}
+    <div class="pay">
+      <div class="label">Payment details</div>
+      <div>{{ lines(payment_details) }}</div>
+    </div>
+    {% endif %}
+  </div>
+  <div>
+    {% if terms %}
+    <div class="label">Terms</div>
+    <div class="muted">{{ paragraphs(terms) }}</div>
+    {% endif %}
+  </div>
+</div>
+
+</body>
+</html>

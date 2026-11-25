@@ -74,6 +74,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         project_id: Optional[int] = None,
         client_id: Optional[int] = None,
         include_relations: bool = False,
+        limit: Optional[int] = None,
     ) -> List[TimeEntry]:
         """Get time entries within a date range"""
         query = self.model.query.filter(and_(TimeEntry.start_time >= start_date, TimeEntry.start_time <= end_date))
@@ -95,7 +96,12 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
                 joinedload(TimeEntry.task),
             )
 
-        return query.order_by(TimeEntry.start_time.desc()).all()
+        query = query.order_by(TimeEntry.start_time.desc())
+
+        if limit:
+            query = query.limit(limit)
+
+        return query.all()
 
     def count_for_date_range(
         self,
@@ -199,6 +205,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
         paid: bool = False,
         invoice_number: Optional[str] = None,
         custom_fields: Optional[dict] = None,
+        source: Optional[str] = None,
     ) -> TimeEntry:
         """Create a manual time entry. duration_seconds is net (worked time); break_seconds is subtracted when computing from start/end."""
         entry = self.model(
@@ -216,7 +223,7 @@ class TimeEntryRepository(BaseRepository[TimeEntry]):
             paid=paid,
             invoice_number=invoice_number,
             custom_fields=custom_fields,
-            source=TimeEntrySource.MANUAL.value,
+            source=source or TimeEntrySource.MANUAL.value,
         )
         # No override, or boundary mode (override path skips timestamp adjustment):
         # recompute so start/end and duration stay consistent.

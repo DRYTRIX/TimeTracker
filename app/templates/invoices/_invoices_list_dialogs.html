@@ -1,0 +1,107 @@
+{# Dialogs and hidden forms used by _invoices_list.html: bulk delete, bulk status, single delete.
+   Set invoices_return_url to bring the user back to that page after the action. #}
+<!-- Bulk Operations Forms (hidden) -->
+{% if current_user.is_admin %}
+<form id="confirmBulkDelete-form" method="POST" action="{{ url_for('invoices.bulk_delete_invoices') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ invoices_return_url|default('') }}">
+</form>
+
+<form id="bulkStatusForm" method="POST" action="{{ url_for('invoices.bulk_update_status') }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ invoices_return_url|default('') }}">
+    <input type="hidden" name="status" id="bulkStatusValue">
+</form>
+
+<!-- Bulk Delete Confirmation Dialog -->
+<div id="confirmBulkDelete" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-gray-900 dark:bg-opacity-75" onclick="closeBulkDeleteDialog()"></div>
+        <div class="relative bg-card-light dark:bg-card-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark max-w-md w-full p-6 zoom-in">
+            <div class="flex items-start mb-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                        <i class="fas fa-exclamation-triangle text-red-600 dark:text-red-400 text-xl"></i>
+                    </div>
+                </div>
+                <div class="ml-4 flex-1">
+                    <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ _('Delete Selected Invoices') }}</h3>
+                    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">Are you sure you want to delete the selected invoices? This action cannot be undone.</p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" class="btn btn-secondary" onclick="closeBulkDeleteDialog()">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="submitBulkDelete()">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Status Change Dialog -->
+<div id="bulkStatusDialog" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-card-light dark:bg-card-dark rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold mb-4">{{ _('Change Status for Selected Invoices') }}</h3>
+            <label for="bulkStatusSelect" class="form-label">{{ _('Select Status') }}</label>
+            <select id="bulkStatusSelect" class="form-input w-full mb-4" onchange="toggleInvoiceReferenceField()">
+                <option value="">-- {{ _('Select Status') }} --</option>
+                <option value="draft">{{ _('Draft') }}</option>
+                <option value="issued">{{ _('Issued') }}</option>
+                <option value="sent">{{ _('Sent') }}</option>
+                <option value="paid">{{ _('Paid') }}</option>
+                <option value="overdue">{{ _('Overdue') }}</option>
+                <option value="cancelled">{{ _('Cancelled') }}</option>
+            </select>
+            <div id="invoiceReferenceField" class="hidden mb-4">
+                <label for="bulkInvoiceReference" class="form-label">{{ _('Invoice Reference') }} <span class="text-text-muted-light dark:text-text-muted-dark text-xs">({{ _('Optional') }})</span></label>
+                <input type="text" id="bulkInvoiceReference" class="form-input w-full" placeholder="{{ _('e.g., Payment confirmation number') }}">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeBulkStatusDialog()" class="btn btn-secondary">Cancel</button>
+                <button type="button" onclick="submitBulkStatus()" class="btn btn-primary">{{ _('Update Status') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Invoice Modal (Single) -->
+<div id="deleteInvoiceModal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+  <div class="absolute inset-0 bg-black/50" onclick="hideDeleteModal()"></div>
+  <div class="relative max-w-lg mx-auto mt-24 bg-card-light dark:bg-card-dark text-text-light dark:text-text-dark rounded-xl shadow-xl border border-border-light dark:border-border-dark">
+    <div class="p-4 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+      <h5 id="deleteModalTitle" class="text-lg font-semibold flex items-center gap-2">
+        <i class="fas fa-trash text-red-500"></i> {{ _('Delete Invoice') }}
+      </h5>
+      <button type="button" class="px-2 py-1 hover:bg-background-light dark:hover:bg-background-dark rounded text-2xl leading-none" aria-label="{{ _('Close') }}" onclick="hideDeleteModal()">&times;</button>
+    </div>
+    <div class="p-4">
+      <div class="bg-yellow-50 dark:bg-yellow-900/30 text-yellow-900 dark:text-yellow-100 rounded-lg p-3 ring-1 ring-yellow-200/60 dark:ring-yellow-700/50 flex items-start gap-2">
+        <i class="fas fa-exclamation-triangle mt-1"></i>
+        <div>
+          <strong>{{ _('Warning:') }}</strong> {{ _('This action cannot be undone.') }}
+        </div>
+      </div>
+      <p class="mt-4">{{ _('Are you sure you want to delete invoice') }} <strong id="deleteInvoiceNumber"></strong>?</p>
+      <p class="text-text-muted-light dark:text-text-muted-dark mt-2">
+        <small>{{ _('All invoice items, extra goods, and payment records associated with this invoice will be permanently deleted.') }}</small>
+      </p>
+    </div>
+    <div class="p-4 border-t border-border-light dark:border-border-dark flex items-center justify-between">
+      <button type="button" class="btn btn-secondary" onclick="hideDeleteModal()">
+        <i class="fas fa-times"></i> {{ _('Cancel') }}
+      </button>
+      <form method="POST" id="deleteInvoiceForm" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ invoices_return_url|default('') }}">
+        <button type="submit" class="btn btn-danger">
+          <i class="fas fa-trash"></i> {{ _('Delete Invoice') }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

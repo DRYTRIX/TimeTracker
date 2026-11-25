@@ -12,14 +12,14 @@ import hmac
 from datetime import datetime
 from urllib.parse import urlencode
 
-from flask import Blueprint, current_app, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, g, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app import csrf, db, limiter
 from app.models import OAuthAccessToken, OAuthApplication, OAuthAuthorizationCode
 from app.utils.db import safe_commit
 from app.utils.permissions import admin_or_permission_required
-from app.utils.safe_redirect import match_registered_redirect
+from app.utils.safe_redirect import csp_form_action_source, match_registered_redirect
 
 oauth_server_bp = Blueprint("oauth_server", __name__)
 
@@ -120,6 +120,12 @@ def authorize():
             return render_template("oauth/authorize.html", error="PKCE code_challenge is required."), 400
         if (code_challenge_method or "S256").upper() != "S256":
             return render_template("oauth/authorize.html", error="Only S256 PKCE is supported."), 400
+
+        # Allow the validated client callback in form-action so the post-consent
+        # 302 is not blocked by CSP (browsers apply form-action to redirect chains).
+        form_action_source = csp_form_action_source(redirect_uri)
+        if form_action_source:
+            g.csp_form_action_extra = form_action_source
 
         granted_scope = _intersect_scopes(scope, app_rec.scope_list())
         return render_template(
@@ -319,20 +325,191 @@ def revoke():
 # ---------------------------------------------------------------------------
 
 
+# MCP OAuth scope presets (also documented in docs/integrations/MCP.md)
+MCP_USER_SCOPES = (
+    "read:users,read:projects,read:tasks,read:time_entries,write:time_entries,"
+    "read:time_approvals,write:time_approvals"
+)
+MCP_ADMIN_SCOPES = (
+    "read:users,read:projects,write:projects,read:tasks,write:tasks,"
+    "read:time_entries,write:time_entries,read:clients,write:clients,"
+    "read:invoices,write:invoices,read:quotes,write:quotes,"
+    "read:expenses,write:expenses,read:reports,read:time_approvals,write:time_approvals"
+)
+MCP_ADMIN_READONLY_SCOPES = (
+    "read:users,read:projects,read:tasks,read:time_entries,read:clients,"
+    "read:invoices,read:quotes,read:expenses,read:reports,read:time_approvals"
+)
+
+# Limited DCR redirect URI allowlist (hostname / scheme prefixes)
+_MCP_DCR_REDIRECT_ALLOW_PREFIXES = (
+    "http://127.0.0.1",
+    "http://localhost",
+    "https://localhost",
+    "https://claude.ai/",
+    "https://claude.com/",
+    "https://cursor.com/",
+    "https://www.cursor.com/",
+    "cursor://",
+    "vscode://",
+    "vscode-insiders://",
+)
+
+
+def _issuer_base() -> str:
+    return (current_app.config.get("APP_URL") or current_app.config.get("APP_BASE_URL") or request.url_root).rstrip("/")
+
+
+def _redirect_uri_allowed_for_dcr(uri: str) -> bool:
+    u = (uri or "").strip()
+    if not u:
+        return False
+    return any(u.startswith(prefix) for prefix in _MCP_DCR_REDIRECT_ALLOW_PREFIXES)
+
+
+def _dcr_owner_user_id() -> int | None:
+    """Pick an admin to own dynamically registered public MCP clients."""
+    from app.models import User
+
+    admin = User.query.filter_by(is_active=True, role="admin").order_by(User.id.asc()).first()
+    if admin:
+        return admin.id
+    for user in User.query.filter_by(is_active=True).order_by(User.id.asc()).limit(50):
+        if user.is_admin:
+            return user.id
+    first = User.query.filter_by(is_active=True).order_by(User.id.asc()).first()
+    return first.id if first else None
+
+
 @oauth_server_bp.route("/.well-known/oauth-authorization-server", methods=["GET"])
 def well_known():
-    issuer = current_app.config.get("APP_URL") or request.url_root.rstrip("/")
+    issuer = _issuer_base()
     return jsonify(
         {
             "issuer": issuer,
             "authorization_endpoint": url_for("oauth_server.authorize", _external=True),
             "token_endpoint": url_for("oauth_server.token", _external=True),
             "revocation_endpoint": url_for("oauth_server.revoke", _external=True),
+            "registration_endpoint": url_for("oauth_server.dynamic_client_register", _external=True),
             "response_types_supported": ["code"],
             "grant_types_supported": ["authorization_code", "refresh_token"],
             "code_challenge_methods_supported": ["S256"],
             "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post", "none"],
+            "scopes_supported": sorted(
+                set(
+                    s.strip()
+                    for chunk in (MCP_USER_SCOPES, MCP_ADMIN_SCOPES, MCP_ADMIN_READONLY_SCOPES)
+                    for s in chunk.split(",")
+                    if s.strip()
+                )
+            ),
         }
+    )
+
+
+@oauth_server_bp.route("/.well-known/oauth-protected-resource", methods=["GET"])
+def well_known_protected_resource():
+    """RFC 9728 protected resource metadata for MCP / API clients."""
+    issuer = _issuer_base()
+    mcp_resource = current_app.config.get("MCP_RESOURCE_URL") or f"{issuer}/mcp"
+    return jsonify(
+        {
+            "resource": mcp_resource,
+            "authorization_servers": [issuer],
+            "bearer_methods_supported": ["header"],
+            "scopes_supported": sorted(
+                set(
+                    s.strip()
+                    for chunk in (MCP_USER_SCOPES, MCP_ADMIN_SCOPES, MCP_ADMIN_READONLY_SCOPES)
+                    for s in chunk.split(",")
+                    if s.strip()
+                )
+            ),
+            "resource_documentation": f"{issuer}/docs/integrations/MCP.md",
+        }
+    )
+
+
+@oauth_server_bp.route("/oauth/register", methods=["POST"])
+@csrf.exempt
+@limiter.limit("30 per hour")
+def dynamic_client_register():
+    """Limited RFC 7591 dynamic client registration for public MCP clients."""
+    data = request.get_json(silent=True) or {}
+    redirect_uris = data.get("redirect_uris") or []
+    if not isinstance(redirect_uris, list) or not redirect_uris:
+        return jsonify({"error": "invalid_client_metadata", "error_description": "redirect_uris required"}), 400
+    if not all(isinstance(u, str) and _redirect_uri_allowed_for_dcr(u) for u in redirect_uris):
+        return (
+            jsonify(
+                {
+                    "error": "invalid_redirect_uri",
+                    "error_description": "One or more redirect_uris are not allowed for dynamic registration",
+                }
+            ),
+            400,
+        )
+
+    token_endpoint_auth_method = (data.get("token_endpoint_auth_method") or "none").strip()
+    if token_endpoint_auth_method != "none":
+        return (
+            jsonify(
+                {
+                    "error": "invalid_client_metadata",
+                    "error_description": "Only public clients (token_endpoint_auth_method=none) are supported",
+                }
+            ),
+            400,
+        )
+
+    owner_id = _dcr_owner_user_id()
+    if not owner_id:
+        return jsonify({"error": "server_error", "error_description": "No user available to own the client"}), 500
+
+    preset = (data.get("scope_preset") or data.get("timetracker_scope_preset") or "user").strip().lower()
+    if preset in ("admin_readonly", "admin-readonly", "readonly"):
+        allowed = MCP_ADMIN_READONLY_SCOPES
+    elif preset == "admin":
+        allowed = MCP_ADMIN_SCOPES
+    else:
+        allowed = MCP_USER_SCOPES
+
+    requested_scope = (data.get("scope") or "").replace(",", " ")
+    if requested_scope.strip():
+        allowed_set = set(s.strip() for s in allowed.split(",") if s.strip())
+        granted = [s for s in requested_scope.split() if s in allowed_set]
+        allowed_scopes = ",".join(granted) if granted else allowed
+    else:
+        allowed_scopes = allowed
+
+    client_name = (data.get("client_name") or "MCP Client").strip()[:200] or "MCP Client"
+    app_rec, _plain = OAuthApplication.create_application(
+        owner_user_id=owner_id,
+        name=client_name,
+        redirect_uris=redirect_uris,
+        description=(data.get("client_uri") or data.get("software_id") or "Dynamically registered MCP client")[:500],
+        allowed_scopes=allowed_scopes,
+        is_confidential=False,
+    )
+    app_rec.grant_types = ["authorization_code", "refresh_token"]
+    db.session.add(app_rec)
+    if not safe_commit("oauth_dcr.created", {"name": client_name}):
+        return jsonify({"error": "server_error", "error_description": "Could not register client"}), 500
+
+    return (
+        jsonify(
+            {
+                "client_id": app_rec.client_id,
+                "client_id_issued_at": int(app_rec.created_at.timestamp()) if app_rec.created_at else None,
+                "client_name": app_rec.name,
+                "redirect_uris": app_rec.redirect_uri_list(),
+                "grant_types": app_rec.grant_types,
+                "response_types": ["code"],
+                "token_endpoint_auth_method": "none",
+                "scope": " ".join(app_rec.scope_list()),
+            }
+        ),
+        201,
     )
 
 

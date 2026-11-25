@@ -56,8 +56,19 @@ class ExpenseCategory(db.Model):
         """Get total amount spent in this category for date range"""
         from app.models.expense import Expense
 
+        # Expenses store lowercase form values ("travel"); categories use display
+        # names ("Travel") and optional codes. Match all known keys case-insensitively.
+        match_keys = {self.legacy_key}
+        if self.name:
+            match_keys.add(self.name.strip().lower())
+        if self.code:
+            match_keys.add(self.code.strip().lower())
+        match_keys.discard("")
+
+        category_match = db.func.lower(Expense.category).in_(list(match_keys)) if match_keys else False
+
         query = db.session.query(db.func.sum(Expense.amount + db.func.coalesce(Expense.tax_amount, 0))).filter(
-            Expense.category == self.name,
+            category_match,
             Expense.status.in_(["approved", "reimbursed"]),
             Expense.expense_date >= start_date,
             Expense.expense_date <= end_date,
@@ -125,6 +136,35 @@ class ExpenseCategory(db.Model):
     def get_active_categories(cls):
         """Get all active categories"""
         return cls.query.filter_by(is_active=True).order_by(cls.name).all()
+
+    @property
+    def legacy_key(self):
+        """String stored in the legacy ``category`` column of records that reference this category.
+
+        The lowercased name matches the values the old hard-coded lists used ("travel", "equipment").
+        """
+        return (self.name or "").lower()[:50]
+
+    @classmethod
+    def find_by_key(cls, value):
+        """Find a category by code or name, ignoring case. Returns None when nothing matches."""
+        key = (value or "").strip().lower()
+        if not key:
+            return None
+        match = cls.query.filter(db.func.lower(cls.code) == key).first()
+        if match is None:
+            match = cls.query.filter(db.func.lower(cls.name) == key).first()
+        return match
+
+    @classmethod
+    def get_choices(cls, include_id=None):
+        """Active categories for a select, plus the category ``include_id`` even when it is inactive."""
+        categories = cls.get_active_categories()
+        if include_id and not any(c.id == include_id for c in categories):
+            current = cls.query.get(include_id)
+            if current is not None:
+                categories = sorted(categories + [current], key=lambda c: c.name.lower())
+        return categories
 
     @classmethod
     def get_categories_over_budget(cls, period="monthly"):

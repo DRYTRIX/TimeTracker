@@ -43,6 +43,20 @@
         <i class="fas fa-flag"></i>
         {{ _('Milestones') }}
     </a>
+    <a href="{{ url_for('projects.list_costs', project_id=project.id) }}" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition">
+        <i class="fas fa-receipt"></i>
+        {{ _('Costs') }}
+    </a>
+    <a href="{{ url_for('projects.list_rates', project_id=project.id) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition">
+        <i class="fas fa-percentage"></i>
+        {{ _('Rates') }}
+    </a>
+    {% if is_module_enabled('invoices') %}
+    <a href="{{ url_for('invoices.project_invoices', project_id=project.id) }}" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition">
+        <i class="fas fa-file-invoice-dollar"></i>
+        {{ _('Invoices') }}
+    </a>
+    {% endif %}
     {% if project.budget_amount and (current_user.is_admin or has_any_permission('edit_projects', 'archive_projects')) %}
     <a href="{{ url_for('budget_alerts.project_budget_detail', project_id=project.id) }}" class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition shadow-lg">
         <i class="fas fa-wallet"></i>
@@ -155,6 +169,9 @@
                 <div>
                     <h3 class="text-sm font-medium text-text-muted-light dark:text-text-muted-dark">Billing</h3>
                     <p>{{ 'Billable' if project.billable else 'Not Billable' }} {% if project.hourly_rate %}({{ "%.2f"|format(project.hourly_rate) }}/hr){% endif %}</p>
+                    {% if current_user.is_admin or has_any_permission('edit_projects', 'edit_all_projects', 'edit_own_projects') %}
+                    <a href="{{ url_for('projects.list_rates', project_id=project.id) }}" class="text-sm text-primary hover:underline">{{ _('Manage rate overrides') }}</a>
+                    {% endif %}
                 </div>
                 {% if project.is_archived and project.archived_at %}
                 <div class="pt-4 border-t border-border-light dark:border-border-dark">
@@ -334,6 +351,86 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- Project Costs & Expenses Card -->
+        <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm animated-card">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold flex items-center">
+                    <i class="fas fa-receipt mr-2 text-rose-500"></i>
+                    {{ _('Project Costs & Expenses') }}
+                </h2>
+                <a href="{{ url_for('projects.list_costs', project_id=project.id) }}"
+                   class="text-primary hover:text-primary-dark text-sm flex items-center gap-1 transition">
+                    {{ _('View all') }} <i class="fas fa-arrow-right text-xs"></i>
+                </a>
+            </div>
+
+            {% if total_costs_count and total_costs_count > 0 %}
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-rose-50 dark:bg-rose-900/20 p-3 rounded-lg">
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Costs') }}</div>
+                    <div class="text-lg font-bold text-rose-600 dark:text-rose-400">{{ project.total_costs|format_currency }}</div>
+                </div>
+                <div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg">
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Billable Costs') }}</div>
+                    <div class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ project.total_billable_costs|format_currency }}</div>
+                </div>
+                <div class="bg-sky-50 dark:bg-sky-900/20 p-3 rounded-lg">
+                    <div class="text-xs text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Total Project Value') }}</div>
+                    <div class="text-lg font-bold text-sky-600 dark:text-sky-400">{{ project.total_project_value|format_currency }}</div>
+                </div>
+            </div>
+
+            <ul class="divide-y divide-border-light dark:divide-border-dark mb-4">
+                {% for cost in recent_costs %}
+                <li class="py-3 flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-medium truncate">{{ cost.description or _('No description') }}</span>
+                            <span class="px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">{{ cost.category_name or cost.category or _('Other') }}</span>
+                            {% if cost.billable %}
+                            <span class="px-2 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">{{ _('Billable') }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
+                            {{ cost.cost_date|format_date if cost.cost_date else '—' }}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="text-sm font-semibold">{{ cost.amount|format_currency }}</span>
+                        <a href="{{ url_for('projects.edit_cost', project_id=project.id, cost_id=cost.id) }}"
+                           class="text-primary hover:text-primary/80" title="{{ _('Edit') }}">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+
+            {% if total_costs_count > 5 %}
+            <a href="{{ url_for('projects.list_costs', project_id=project.id) }}"
+               class="block text-center text-sm text-primary hover:underline mb-4">
+                {{ _('View All Costs') }} ({{ total_costs_count }})
+            </a>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-6 mb-4">
+                <i class="fas fa-receipt text-3xl text-text-muted-light dark:text-text-muted-dark mb-3"></i>
+                <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No costs recorded yet') }}</p>
+            </div>
+            {% endif %}
+
+            <div class="pt-4 border-t border-border-light dark:border-border-dark flex flex-wrap gap-2">
+                <a href="{{ url_for('projects.add_cost', project_id=project.id) }}"
+                   class="inline-flex items-center gap-2 bg-primary text-white px-3 py-1.5 rounded-lg text-sm transition hover:bg-primary-dark">
+                    <i class="fas fa-plus"></i>{{ _('Add Cost') }}
+                </a>
+                <a href="{{ url_for('projects.list_recurring_costs', project_id=project.id) }}"
+                   class="inline-flex items-center gap-2 bg-gray-200 dark:bg-gray-700 px-3 py-1.5 rounded-lg text-sm transition hover:bg-gray-300 dark:hover:bg-gray-600">
+                    <i class="fas fa-sync-alt"></i>{{ _('Recurring Costs') }}
+                </a>
+            </div>
+        </div>
 
         <div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm">
             <h2 class="text-lg font-semibold mb-4">User Contributions</h2>

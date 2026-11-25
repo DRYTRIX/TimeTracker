@@ -23,10 +23,10 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label for="category" class="form-label">{{ _('Category') }} *</label>
-                    <select id="category" name="category" class="form-input" required>
+                    <select id="category" name="category_id" class="form-input" required>
                         <option value="">{{ _('Select category') }}</option>
-                        {% for cat in ['travel', 'materials', 'services', 'equipment', 'software', 'other'] %}
-                        <option value="{{ cat }}" {% if recurring and recurring.category == cat %}selected{% endif %}>{{ cat|capitalize }}</option>
+                        {% for cat in expense_categories %}
+                        <option value="{{ cat.id }}" {% if recurring and recurring.category_id == cat.id %}selected{% endif %}>{{ cat.name }}{% if not cat.is_active %} ({{ _('inactive') }}){% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>

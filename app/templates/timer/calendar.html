@@ -384,6 +384,35 @@ document.addEventListener('DOMContentLoaded', function() {
     return (typeof color === 'string' && /^#[0-9A-Fa-f]{3,8}$/.test(color)) ? color : '#6b7280';
   }
 
+  // Snap create/move/resize to the user's rounding interval (server-provided; default 15).
+  window.calendarPrefs = {
+    snapMinutes: {{ calendar_snap_minutes|default(15)|int }}
+  };
+
+  function formatSnapDuration(minutes) {
+    const mins = Math.max(1, parseInt(minutes, 10) || 15);
+    const hours = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return String(hours).padStart(2, '0') + ':' + String(rem).padStart(2, '0') + ':00';
+  }
+
+  const snapMinutes = window.calendarPrefs.snapMinutes;
+  // Keep the visible grid readable: 5/10-minute rounding still snaps finely,
+  // but slot lines stay at least 15 minutes so the week view is usable.
+  const slotMinutes = snapMinutes >= 15 ? snapMinutes : 15;
+  const snapDurationStr = formatSnapDuration(snapMinutes);
+  const slotDurationStr = formatSnapDuration(slotMinutes);
+
+  function isTimeEntryEvent(event) {
+    const props = (event && event.extendedProps) || {};
+    const itemType = props.item_type || props.type || null;
+    if (itemType === 'time_entry') return true;
+    if (itemType && itemType !== 'time_entry') return false;
+    // Infer time entry when type is missing but duration/source/project are present
+    return props.duration_hours != null || props.source != null ||
+      (props.projectId != null && event && !event.allDay);
+  }
+
   // Initialize FullCalendar
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: 'timeGridWeek',
@@ -394,11 +423,15 @@ document.addEventListener('DOMContentLoaded', function() {
     nowIndicator: true,
     firstDay: (window.userPrefs && window.userPrefs.weekStartDay !== undefined) ? window.userPrefs.weekStartDay : 1,
     timeZone: 'local',
-    slotDuration: '00:30:00',
+    slotDuration: slotDurationStr,
+    snapDuration: snapDurationStr,
     slotMinTime: '06:00:00',
     slotMaxTime: '22:00:00',
     height: 'auto',
     eventResizableFromStart: true,
+    eventAllow: function(dropInfo, draggedEvent) {
+      return isTimeEntryEvent(draggedEvent);
+    },
     eventTimeFormat: {
       hour: '2-digit',
       minute: '2-digit',
@@ -480,13 +513,21 @@ document.addEventListener('DOMContentLoaded', function() {
     },
 
     eventDrop: async function(info) {
-      await updateEventTime(info.event);
+      if (!isTimeEntryEvent(info.event)) {
+        info.revert();
+        return;
+      }
+      await updateEventTime(info.event, info);
       // Clear any loading states immediately after drag
       resetAllButtonStates();
     },
 
     eventResize: async function(info) {
-      await updateEventTime(info.event);
+      if (!isTimeEntryEvent(info.event)) {
+        info.revert();
+        return;
+      }
+      await updateEventTime(info.event, info);
       // Clear any loading states immediately after resize
       resetAllButtonStates();
     }
@@ -770,7 +811,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  async function updateEventTime(event) {
+  async function updateEventTime(event, info) {
     try {
       const res = await fetch(`/api/entry/${event.id}`, {
         method: 'PUT',
@@ -792,7 +833,11 @@ document.addEventListener('DOMContentLoaded', function() {
       resetAllButtonStates();
     } catch(e) {
       showToast(e.message || '{{ _("Failed to update entry") }}', 'danger');
-      calendar.refetchEvents();
+      if (info && typeof info.revert === 'function') {
+        info.revert();
+      } else {
+        calendar.refetchEvents();
+      }
       // Clear loading states even on error
       resetAllButtonStates();
     }
@@ -911,7 +956,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         <div class="event-detail-row">
           <div class="event-detail-label">{{ _("Source") }}</div>
-          <div class="event-detail-value">${props.source === 'auto' ? '{{ _("Automatic Timer") }}' : '{{ _("Manual Entry") }}'}</div>
+          <div class="event-detail-value">${props.source === 'auto' ? '{{ _("Automatic Timer") }}' : props.source === 'agent' ? '{{ _("Agent") }}' : props.source === 'api' ? '{{ _("API") }}' : '{{ _("Manual Entry") }}'}</div>
         </div>
         ` : ''}
       `;

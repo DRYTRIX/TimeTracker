@@ -14,8 +14,13 @@ Models and design are in place. Authlib is already pinned in `requirements.txt` 
 ## Non-goals (phase 1)
 
 - Client credentials grant for machine-only apps (phase 2; can reuse `OAuthApplication` with `grant_types`).
-- Dynamic client registration (RFC 7591).
 - OpenID Connect identity layer on top of our authorization server.
+
+## Limited dynamic client registration (MCP)
+
+`POST /oauth/register` implements a **restricted** RFC 7591 flow for public MCP clients only (`token_endpoint_auth_method=none`), with redirect URIs limited to localhost and known assistant hosts (Cursor, Claude, VS Code). Scope presets: user / admin / admin_readonly (see `app/routes/oauth_server.py`). Full open DCR remains out of scope.
+
+Protected resource metadata: `GET /.well-known/oauth-protected-resource` (RFC 9728).
 
 ## Library
 

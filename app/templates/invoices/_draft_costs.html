@@ -1,0 +1,76 @@
+{# Project costs: the cost lines, each with its costs; Regroup costs; + Log a cost #}
+<section id="costs" class="space-y-2">
+    <h2 class="text-lg font-semibold">{{ _('Project costs') }} <span class="text-sm font-normal text-text-muted-light dark:text-text-muted-dark">{{ _('lines from project costs') }}</span></h2>
+    <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        {% if cost_lines %}
+        <form method="POST" action="{{ url_for('invoices.draft_regroup_costs', invoice_id=invoice.id) }}" class="p-4 flex flex-wrap items-end gap-3" data-draft-form id="costsLayoutForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="text-sm font-medium">{{ _('Regroup costs') }}
+                <select id="costsLayout" name="costs_layout" class="form-input w-full font-normal">
+                    {% for key, label in costs_layouts %}<option value="{{ key }}" {% if key == costs_layout %}selected{% endif %}>{{ _(label) }}</option>{% endfor %}
+                </select>
+            </label>
+            <button type="submit" class="btn btn-secondary" id="regroupCosts">{{ _('Regroup') }}</button>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark w-full">{{ _('Every cost stays on the invoice; only the lines are rebuilt.') }}</p>
+            {% if edited_cost_lines %}
+            <fieldset class="w-full text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3" id="keepEditedCosts">
+                <legend class="sr-only">{{ _('Cost lines edited by hand') }}</legend>
+                <p class="mb-1">{{ ngettext('%(num)d cost line was edited by hand: keep it or rebuild it?', '%(num)d cost lines were edited by hand: keep them or rebuild them?', edited_cost_lines|length) }}</p>
+                <label class="mr-4"><input type="radio" name="keep_edited" value="keep" checked> {{ _('Keep my edits') }}</label>
+                <label><input type="radio" name="keep_edited" value="rebuild"> {{ _('Rebuild them too') }}</label>
+            </fieldset>
+            {% endif %}
+        </form>
+        {% endif %}
+
+        {% for line in cost_lines %}
+            {% include 'invoices/_draft_line.html' %}
+        {% else %}
+        <p class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No project costs on this draft.') }}</p>
+        {% endfor %}
+
+        <div class="border-t border-border-light dark:border-border-dark p-4 flex justify-between items-center">
+            <button type="button" class="btn btn-secondary" data-toggle="logCost" aria-controls="logCost" id="logCostButton">+ {{ _('Log a cost') }}</button>
+            <span class="text-lg">{{ _('Project costs') }} <strong id="costsTotal">{{ money(costs_total) }} {{ invoice.currency_code }}</strong></span>
+        </div>
+        <form method="POST" action="{{ url_for('invoices.draft_log_cost', invoice_id=invoice.id) }}" enctype="multipart/form-data" id="logCost" class="hidden border-t border-border-light dark:border-border-dark p-4 grid grid-cols-12 gap-3" data-draft-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="col-span-6 md:col-span-2 text-sm">{{ _('Date') }}
+                <input type="date" name="cost_date" value="{{ default_entry_date }}" required class="form-input w-full"
+                       {% if invoice.period_start %}min="{{ invoice.period_start.isoformat() }}"{% endif %} {% if invoice.period_end %}max="{{ invoice.period_end.isoformat() }}"{% endif %}>
+            </label>
+            <label class="col-span-12 md:col-span-4 text-sm">{{ _('Description') }}
+                <input type="text" name="description" maxlength="500" required class="form-input w-full" placeholder="{{ _('e.g. Hosting') }}">
+            </label>
+            <label class="col-span-6 md:col-span-3 text-sm">{{ _('Category') }}
+                <select name="category_id" required class="form-input w-full">
+                    {% for category in cost_categories %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="col-span-6 md:col-span-3 text-sm">{{ _('Amount, %(currency)s', currency=invoice.currency_code) }}
+                <input type="text" inputmode="decimal" name="amount" required class="form-input w-full text-right">
+            </label>
+            {% if draft_projects|length > 1 %}
+            <label class="col-span-6 md:col-span-4 text-sm">{{ _('Project') }}
+                <select name="project_id" class="form-input w-full">
+                    {% for project in draft_projects %}<option value="{{ project.id }}" {% if project.id == invoice.project_id %}selected{% endif %}>{{ project.name }}</option>{% endfor %}
+                </select>
+            </label>
+            {% endif %}
+            <label class="col-span-12 md:col-span-4 text-sm">{{ _('Note') }}
+                <input type="text" name="notes" class="form-input w-full">
+            </label>
+            <label class="col-span-12 md:col-span-4 text-sm">{{ _("Supplier's bill") }}
+                <input type="file" name="receipt_file" accept=".png,.jpg,.jpeg,.gif,.pdf" class="form-input w-full">
+            </label>
+            <fieldset class="col-span-12 md:col-span-8 text-sm flex flex-wrap items-center gap-x-4 gap-y-1">
+                <legend class="font-medium mr-2 float-left">{{ _('Repeat') }}</legend>
+                <label class="flex items-center gap-1"><input type="radio" name="repeat" value="once" checked> {{ _('only now') }}</label>
+                <label class="flex items-center gap-1"><input type="radio" name="repeat" value="monthly"> {{ _('every month, same amount') }}</label>
+            </fieldset>
+            <div class="col-span-12 md:col-span-4 flex items-end justify-end">
+                <button type="submit" class="btn btn-primary">{{ _('Log and add to the invoice') }}</button>
+            </div>
+        </form>
+    </div>
+</section>

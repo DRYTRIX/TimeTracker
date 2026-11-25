@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import page_header %}
+
+{% block content %}
+{% set client_url = url_for('clients.view_client', client_id=client.id) %}
+{% set actions %}
+<a href="{{ client_url }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> {{ _('Back to client') }}</a>
+{% endset %}
+{% set saved = entity and entity.id %}
+{% set title = entity.legal_name if saved else _('Add legal entity') %}
+{{ page_header('fas fa-building-user', title, subtitle_text=_('Legal entity of %(client)s', client=client.name), actions_html=actions, breadcrumbs=[{'text': _('Clients'), 'url': url_for('clients.list_clients')}, {'text': client.name, 'url': client_url}, {'text': entity.legal_name if saved else _('Add legal entity')}]) }}
+
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
+    <form method="POST" action="{{ url_for('client_entities.edit_entity', client_id=client.id, entity_id=entity.id) if saved else url_for('client_entities.new_entity', client_id=client.id) }}" class="lg:col-span-3 min-w-0 bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+        <div class="p-4 sm:p-6">
+            <h3 class="text-lg font-semibold">{{ _('Bill to') }}</h3>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mb-4">{{ _('Printed in the "Bill to" block of the invoice. What exactly is printed depends on the PDF template.') }}</p>
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div class="md:col-span-6">
+                    <label for="legal_name" class="form-label">{{ _('Legal name') }} *</label>
+                    <input type="text" name="legal_name" id="legal_name" required maxlength="255" value="{{ entity.legal_name or '' if entity else '' }}" class="form-input min-h-[44px]">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="registration_number" class="form-label">{{ _('Registration number') }}</label>
+                    <input type="text" name="registration_number" id="registration_number" value="{{ entity.registration_number or '' if entity else '' }}" class="form-input min-h-[44px]">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="vat_number" class="form-label">{{ _('VAT no.') }}</label>
+                    <input type="text" name="vat_number" id="vat_number" value="{{ entity.vat_number or '' if entity else '' }}" class="form-input min-h-[44px]" placeholder="{{ _('if registered') }}">
+                </div>
+                <div class="md:col-span-2">
+                    <label for="country" class="form-label">{{ _('Country code') }}</label>
+                    <input type="text" name="country" id="country" maxlength="2" value="{{ entity.country or '' if entity else '' }}" class="form-input min-h-[44px] uppercase" aria-describedby="country_hint">
+                    <p id="country_hint" class="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">{{ _('Two letters, ISO 3166') }}</p>
+                </div>
+                <div class="md:col-span-6">
+                    <label for="address" class="form-label">{{ _('Address') }}</label>
+                    <textarea name="address" id="address" rows="2" class="form-input">{{ entity.address or '' if entity else '' }}</textarea>
+                </div>
+                <div class="md:col-span-3">
+                    <label for="email" class="form-label">{{ _('E-mail for invoices') }}</label>
+                    <input type="email" name="email" id="email" value="{{ entity.email or '' if entity else '' }}" class="form-input min-h-[44px]">
+                </div>
+                <div class="md:col-span-3">
+                    {% set status = entity.status if entity else 'active' %}
+                    <label for="status" class="form-label">{{ _('Status') }}</label>
+                    <select name="status" id="status" class="form-input min-h-[44px]">
+                        <option value="active" {% if status == 'active' %}selected{% endif %}>{{ _('Active') }}</option>
+                        <option value="archived" {% if status == 'archived' %}selected{% endif %}>{{ _('Archived') }}</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-4 sm:px-6 py-4 border-t border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40 rounded-b-xl flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if saved %}
+            <details class="relative">
+                <summary class="list-none cursor-pointer inline-flex items-center justify-center w-11 h-11 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark hover:bg-background-light dark:hover:bg-background-dark" aria-label="{{ _('More actions') }}" title="{{ _('More actions') }}"><i class="fas fa-ellipsis-v" aria-hidden="true"></i></summary>
+                <div class="absolute left-0 bottom-full mb-2 z-20 w-64 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-lg p-1">
+                    <button type="submit" form="entityArchiveForm" class="w-full text-left px-3 py-2 rounded hover:bg-background-light dark:hover:bg-background-dark text-sm">{{ _('Restore') if not entity.is_active else _('Archive') }}</button>
+                    {% if entity.is_used() %}
+                    <button type="button" disabled class="w-full text-left px-3 py-2 text-sm text-text-muted-light dark:text-text-muted-dark cursor-not-allowed">{{ _('Delete') }}<span class="block text-xs">{{ _('Used on invoices, archive it instead') }}</span></button>
+                    {% else %}
+                    <button type="submit" form="entityDeleteForm" class="w-full text-left px-3 py-2 rounded hover:bg-background-light dark:hover:bg-background-dark text-sm text-red-600 dark:text-red-400">{{ _('Delete') }}</button>
+                    {% endif %}
+                </div>
+            </details>
+            {% else %}
+            <span></span>
+            {% endif %}
+            <div class="flex flex-col-reverse sm:flex-row gap-3">
+                <a href="{{ client_url }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+                <button type="submit" class="btn btn-primary">{{ _('Save') }}</button>
+            </div>
+        </div>
+    </form>
+
+    <aside class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm text-sm leading-relaxed space-y-3" aria-label="{{ _('Help') }}">
+        <h3 class="text-lg font-semibold">{{ _('Help') }}</h3>
+        <p>{{ _('The client is the brand; its legal entities are who you actually bill. Pick one as Bill to on an invoice.') }}</p>
+        <p>{{ _('A client without legal entities is billed with its own details, as before.') }}</p>
+        <p>{{ _('An entity can be deleted until it is used on an invoice. After that, archive it.') }}</p>
+    </aside>
+</div>
+
+{% if saved %}
+<form method="POST" id="entityArchiveForm" action="{{ url_for('client_entities.toggle_archive', client_id=client.id, entity_id=entity.id) }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% if not entity.is_used() %}
+<form method="POST" id="entityDeleteForm" action="{{ url_for('client_entities.delete_entity', client_id=client.id, entity_id=entity.id) }}" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}
