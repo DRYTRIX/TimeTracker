@@ -1,0 +1,45 @@
+{# Step 1: project costs of the selected projects in the period, and how they become lines. #}
+{% from 'invoices/_costs_macros.html' import status_badges, other_currency %}
+<div id="stepOneCostList">
+    {% if summary.costs %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-text-muted-light dark:text-text-muted-dark">
+                    <th class="p-1 w-8"><span class="sr-only">{{ _('Bill') }}</span></th>
+                    <th class="p-1">{{ _('Date') }}</th><th class="p-1">{{ _('Cost') }}</th><th class="p-1">{{ _('Category') }}</th>
+                    <th class="p-1 text-right">{{ _('Amount') }}</th><th class="p-1">{{ _('Status') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in summary.costs %}
+                <tr class="border-t border-border-light dark:border-border-dark align-top" data-cost-id="{{ c.id }}">
+                    <td class="p-1">
+                        <input type="hidden" name="cost_seen" value="{{ c.id }}">
+                        <input type="checkbox" class="js-cost" name="cost_ids" value="{{ c.id }}" aria-label="{{ _('Bill %(title)s', title=c.description) }}"{% if c.checked %} checked{% endif %}>
+                    </td>
+                    <td class="p-1 whitespace-nowrap">{{ c.date|format_date }}</td>
+                    <td class="p-1">{{ c.description }}</td>
+                    <td class="p-1">{{ c.category or '' }}</td>
+                    <td class="p-1 text-right whitespace-nowrap">{{ "%.2f"|format(c.amount) }} {{ c.currency }}{% if c.other_currency %}{{ other_currency(c.currency, currency) }}{% endif %}</td>
+                    <td class="p-1">{{ status_badges(c.statuses) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <fieldset class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <legend class="sr-only">{{ _('Show costs as') }}</legend>
+            <span class="font-medium">{{ _('Show costs as') }}</span>
+            {% for key, label in costs_layouts %}
+            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" class="js-costs-layout" name="costs_layout" value="{{ key }}"{% if summary.costs_layout == key %} checked{% endif %}> {{ _(label) }}</label>
+            {% endfor %}
+        </fieldset>
+        <p class="text-sm">{{ ngettext('Ticked costs, %(num)d line', 'Ticked costs, %(num)d lines', summary.cost_lines) }} <strong class="tabular-nums" data-costs-total>{{ "%.2f"|format(summary.costs_total) }} {{ currency }}</strong></p>
+    </div>
+    {% else %}
+    <input type="hidden" name="costs_layout" value="{{ summary.costs_layout }}">
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No unbilled project costs on the selected projects in this period.') }}</p>
+    {% endif %}
+</div>

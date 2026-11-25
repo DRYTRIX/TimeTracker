@@ -1507,6 +1507,9 @@ class InvoiceService:
         # price changes is marked as edited by hand.
         previous_lines = time_links.snapshot_lines(invoice)
         previous_hours = time_links.detach_lines(invoice)
+        from app.services.invoice_costs_service import InvoiceCostsService
+
+        cost_lines = InvoiceCostsService.snapshot_cost_lines(invoice)
         invoice.items.delete()
         new_items: List[InvoiceItem] = []
         row_ids: List[Any] = []
@@ -1564,6 +1567,8 @@ class InvoiceService:
             return {"success": False, "message": str(exc), "error": exc.code}
         for item, row_id in zip(new_items, row_ids):
             time_links.carry_line_state(previous_lines, item, row_id)
+        # A row with the id of a cost line keeps its project costs; the costs of a line left out are unbilled
+        InvoiceCostsService().carry_cost_lines(invoice, cost_lines, new_items, row_ids)
         # Entries no line keeps any more give back the prepaid hours they used on this draft
         time_links.release_dropped_prepaid(invoice, previous_hours.keys())
 

@@ -26,6 +26,7 @@
 <form method="POST" id="stepOneForm" novalidate data-step-one
       data-mode="{{ 'edit' if invoice else 'create' }}"
       data-summary-url="{{ url_for('invoices.step_one_summary') }}"
+      data-approve-url="{{ url_for('invoices.approve_invoice_expense', expense_id=0) }}"
       data-invoice-id="{{ invoice.id if invoice else '' }}"
       data-company="{{ settings.company_name or '' }}"
       class="space-y-6 pb-24 sm:pb-6">
@@ -238,6 +239,16 @@
                 </p>
             </div>
         </div>
+    </section>
+
+    {# 3a. Expenses and project costs of the period: all ticked, untick to leave one unbilled #}
+    <section class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" id="stepOneExpenses">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Expenses') }}</h2>
+        <div id="stepOneExpensesParts" aria-live="polite">{% if parts %}{{ parts.expenses | safe }}{% endif %}</div>
+    </section>
+    <section class="bg-card-light dark:bg-card-dark p-4 sm:p-6 rounded-xl border border-border-light dark:border-border-dark shadow-sm" id="stepOneCosts">
+        <h2 class="text-lg font-semibold mb-4">{{ _('Project costs') }}</h2>
+        <div id="stepOneCostsParts" aria-live="polite">{% if parts %}{{ parts.costs | safe }}{% endif %}</div>
     </section>
 
     {# 4. Before you create #}
@@ -495,6 +506,33 @@ document.addEventListener('DOMContentLoaded', function () {
         schedule();
     });
 
+    function values(selector) {
+        return Array.prototype.map.call(form.querySelectorAll(selector), function (el) { return el.value; });
+    }
+    // Expenses and costs: a tick, an untick or another way to show costs changes the summary
+    form.addEventListener('change', function (e) {
+        var t = e.target;
+        if (t && t.classList && (t.classList.contains('js-expense') || t.classList.contains('js-cost') || t.classList.contains('js-costs-layout'))) schedule();
+    });
+    // Approve an expense waiting for approval, then show step 1 again
+    form.addEventListener('click', function (e) {
+        var btn = e.target.closest ? e.target.closest('[data-approve-expense]') : null;
+        if (!btn) return;
+        btn.disabled = true;
+        fetch(form.dataset.approveUrl.replace('/0/', '/' + btn.dataset.approveExpense + '/'), {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf ? csrf.value : '' }
+        }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); }).then(function (res) {
+            if (!res.ok || res.data.success === false) {
+                btn.disabled = false;
+                if (window.showToast) window.showToast(res.data.message || '', 'error');
+                return;
+            }
+            if (window.showToast) window.showToast(res.data.message || '', 'success');
+            refresh();
+        }).catch(function () { btn.disabled = false; });
+    });
+
     function body() {
         var b = {
             client_id: clientId(),
@@ -510,7 +548,14 @@ document.addEventListener('DOMContentLoaded', function () {
             line_template: templateInput ? templateInput.value : '',
             currency_code: currencySel ? currencySel.value : '',
             issue_date: issueEl && touched(issueEl) ? issueEl.value : '',
-            remove_line_ids: Array.from(removeLines)
+            remove_line_ids: Array.from(removeLines),
+            expenses_costs_shown: form.querySelector('input[name="expenses_costs_shown"]') ? '1' : '',
+            expenses_costs_scope: (form.querySelector('input[name="expenses_costs_scope"]') || {}).value || '',
+            expense_ids: values('.js-expense:checked'),
+            expense_seen: values('input[name="expense_seen"]'),
+            cost_ids: values('.js-cost:checked'),
+            cost_seen: values('input[name="cost_seen"]'),
+            costs_layout: (form.querySelector('.js-costs-layout:checked') || form.querySelector('input[name="costs_layout"]') || {}).value || ''
         };
         return b;
     }
@@ -534,6 +579,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!res || mine !== seq) return;
             setPart('stepOneProjects', res.html.projects);
             setPart('stepOneHoursParts', res.html.hours);
+            setPart('stepOneExpensesParts', res.html.expenses);
+            setPart('stepOneCostsParts', res.html.costs);
             setPart('stepOneWarnings', res.html.warnings);
             setPart('stepOneSummary', res.html.summary);
             setExamples(res.examples);

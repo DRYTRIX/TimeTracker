@@ -22,14 +22,25 @@ from app import db
 from app.models import (
     Client,
     ClientPrepaidConsumption,
+    Expense,
     Invoice,
     InvoiceTimeLink,
     Project,
+    ProjectCost,
     RateOverride,
     TimeEntry,
     User,
 )
-from app.services.invoice_time_service import InvoiceTimeService
+from app.services.invoice_costs_service import (
+    COSTS_BY_COST,
+    InvoiceCostsService,
+    cost_amount,
+    cost_statuses,
+    expense_amount,
+    expense_statuses,
+    normalize_costs_layout,
+)
+from app.services.invoice_time_service import LINE_KIND_MANUAL, LINE_KIND_MANUAL_HOURS, InvoiceTimeService
 from app.utils.invoice_time_entry_items import (
     LAYOUT_NONE,
     BillableTimeEntry,
@@ -51,6 +62,8 @@ PERIOD_KINDS = (PERIOD_LAST_MONTH, PERIOD_THIS_MONTH, PERIOD_CUSTOM, PERIOD_ALL)
 
 HOURS = Decimal("0.01")
 SECONDS_IN_HOUR = Decimal("3600")
+# Lines added by hand on a draft; hours lines and cost lines are collected by step 1
+BY_HAND_KINDS = (LINE_KIND_MANUAL, LINE_KIND_MANUAL_HOURS)
 
 
 class StepOneError(ValueError):
@@ -207,6 +220,13 @@ class StepOneSelection:
     # False for a user limited to their own or assigned projects: time logged on the client without
     # a project is not theirs to see or bill
     client_entries_allowed: bool = True
+    # Expenses and project costs ticked on the page (None: the page posted none, defaults apply) and
+    # those it showed: one it did not show yet is ticked by default (see ``expenses_and_costs``)
+    expense_ids: Optional[List[int]] = None
+    expense_seen: List[int] = field(default_factory=list)
+    cost_ids: Optional[List[int]] = None
+    cost_seen: List[int] = field(default_factory=list)
+    costs_layout: Optional[str] = None
 
     def __post_init__(self):
         if not self.client_entries_allowed:
@@ -238,6 +258,26 @@ class StepOneSummary:
     draft: Optional[Dict] = None
     first_entry_date: Optional[date] = None
     last_entry_date: Optional[date] = None
+    # Expenses and project costs of the period: every one listed, with ``checked`` for those billed
+    expenses: List[Dict] = field(default_factory=list)
+    costs: List[Dict] = field(default_factory=list)
+    expenses_total: Decimal = Decimal("0")
+    costs_total: Decimal = Decimal("0")
+    costs_layout: str = COSTS_BY_COST
+    cost_lines: int = 0
+
+
+@dataclass
+class ExpensesAndCosts:
+    """What step 1 bills besides hours: every expense and cost listed, and those ticked."""
+
+    expenses: List[Expense] = field(default_factory=list)
+    chosen_expenses: List[Expense] = field(default_factory=list)
+    costs: List[ProjectCost] = field(default_factory=list)
+    chosen_costs: List[ProjectCost] = field(default_factory=list)
+    layout: str = COSTS_BY_COST
+    # Step 1 of a draft: the costs and their layout are those the draft already bills
+    costs_unchanged: bool = False
 
 
 class InvoiceStepOneService:
@@ -245,6 +285,7 @@ class InvoiceStepOneService:
 
     def __init__(self):
         self.time_links = InvoiceTimeService()
+        self.costs = InvoiceCostsService()
 
     # ------------------------------------------------------------------
     # Which entries step 1 may bill
@@ -555,6 +596,7 @@ class InvoiceStepOneService:
                     ],
                 }
             )
+        self._fill_expenses_and_costs(result, selection)
         if invoice is not None:
             if not self.hours_changed(self.draft_selection(invoice), selection):
                 # Same hours: Save leaves the hours lines as they are, edits included
@@ -566,43 +608,189 @@ class InvoiceStepOneService:
                     (Decimal(link.hours) for link in invoice.time_links.all() if link.invoice_item_id is None),
                     Decimal("0"),
                 )
-            result.draft = self.draft_amount(invoice, result.amount, remove_line_ids)
+            result.draft = self.draft_amount(
+                invoice, result.amount, remove_line_ids, result.expenses_total, result.costs_total
+            )
         return result
 
     @staticmethod
     def manual_lines(invoice: Invoice) -> List:
-        """A draft's lines that are not hours lines (added by hand, fixed fees, hours lines typed in):
-        saving step 1 keeps them."""
+        """A draft's lines added by hand (fixed fees, hours lines typed in): saving step 1 keeps them.
+
+        Hours lines and cost lines are not among them: step 1 collects those.
+        """
         if invoice is None or invoice.id is None:
             return []
         return sorted(
-            (item for item in invoice.items.all() if item.kind != "time"),
+            (item for item in invoice.items.all() if (item.kind or LINE_KIND_MANUAL) in BY_HAND_KINDS),
             key=lambda i: (i.position or 0, i.id or 0),
         )
 
-    def draft_amount(self, invoice: Invoice, hours_net: Decimal, remove_line_ids: Iterable[int] = ()) -> Dict:
+    def draft_amount(
+        self,
+        invoice: Invoice,
+        hours_net: Decimal,
+        remove_line_ids: Iterable[int] = (),
+        expenses_net: Optional[Decimal] = None,
+        costs_net: Optional[Decimal] = None,
+    ) -> Dict:
         """The draft's amount before tax after Save, counted as ``Invoice.calculate_totals`` does.
 
-        ``hours_net``: the hours lines after Save (as they are, or collected again). Lines added by
-        hand marked Remove are left out; goods, expenses and the invoice discount count as on the draft.
+        ``hours_net``: the hours lines after Save (as they are, or collected again); ``expenses_net``
+        and ``costs_net``: the expenses and cost lines after Save (None: as on the draft). Lines added
+        by hand marked Remove are left out; goods and the invoice discount count as on the draft.
         """
         remove = set(remove_line_ids or ())
         by_hand = sum(
             (Decimal(item.line_net) for item in self.manual_lines(invoice) if item.id not in remove), Decimal("0")
         )
         goods = sum((Decimal(str(g.total_amount or 0)) for g in invoice.extra_goods), Decimal("0"))
-        expenses = sum((Decimal(str(e.total_amount or 0)) for e in invoice.expenses), Decimal("0"))
-        combined = Decimal(hours_net) + by_hand + goods + expenses
+        if expenses_net is None:
+            expenses_net = sum((Decimal(str(e.total_amount or 0)) for e in invoice.expenses), Decimal("0"))
+        if costs_net is None:
+            costs_net = sum((Decimal(i.line_net) for i in self.costs.cost_lines(invoice)), Decimal("0"))
+        combined = Decimal(hours_net) + by_hand + goods + Decimal(expenses_net) + Decimal(costs_net)
         discount = Decimal(str(invoice.discount_amount or 0))
         if not discount and invoice.discount_percent and combined:
             discount = combined * (Decimal(str(invoice.discount_percent)) / 100)
         return {
             "hours": Decimal(hours_net).quantize(HOURS),
             "by_hand": by_hand.quantize(HOURS),
-            "other": (goods + expenses).quantize(HOURS),
+            "expenses": Decimal(expenses_net).quantize(HOURS),
+            "costs": Decimal(costs_net).quantize(HOURS),
+            "other": goods.quantize(HOURS),
             "discount": discount.quantize(HOURS),
             "total": (combined - discount).quantize(HOURS),
         }
+
+    # ------------------------------------------------------------------
+    # Expenses and project costs
+    # ------------------------------------------------------------------
+    @staticmethod
+    def scope_changed(before: StepOneSelection, after: StepOneSelection) -> bool:
+        """Whether a draft's expenses and costs are collected again: another period or other projects."""
+        return (
+            (before.period.start, before.period.end) != (after.period.start, after.period.end)
+            or sorted(set(before.project_ids)) != sorted(set(after.project_ids))
+            or bool(before.client_entries) != bool(after.client_entries)
+        )
+
+    def expenses_and_costs(self, selection: StepOneSelection) -> ExpensesAndCosts:
+        """Expenses and project costs step 1 lists for the selection, and those it bills.
+
+        A new invoice ticks every one (rejected expenses are not listed). Step 1 of a draft with the
+        same period and projects lists what the draft bills (ticked) and the rest of the period (not
+        ticked, as for hours: Save changes nothing); with another period or other projects everything
+        of the new period is ticked, and what the draft billed outside it is let go.
+        """
+        invoice = selection.invoice
+        draft = invoice is not None and invoice.id is not None
+        changed = not draft or self.scope_changed(self.draft_selection(invoice), selection)
+        start, end = selection.period.start, selection.period.end
+        expenses = self.costs.period_expenses(
+            selection.client.id,
+            selection.project_ids,
+            start,
+            end,
+            client_entries=selection.client_entries and selection.client_entries_allowed,
+            invoice=invoice,
+            keep_own=not changed,
+        )
+        costs = self.costs.period_costs(selection.project_ids, start, end, invoice=invoice, keep_own=not changed)
+
+        def default(item):
+            return changed or item.invoice_id == invoice.id
+
+        layout = normalize_costs_layout(selection.costs_layout)
+        if layout is None:
+            layout = self.costs.invoice_layout(invoice) if draft else COSTS_BY_COST
+        result = ExpensesAndCosts(
+            expenses=expenses,
+            chosen_expenses=self.costs.choose(expenses, selection.expense_ids, selection.expense_seen, default),
+            costs=costs,
+            chosen_costs=self.costs.choose(costs, selection.cost_ids, selection.cost_seen, default),
+            layout=layout,
+        )
+        if draft:
+            linked = {c.id for c in self.costs.invoice_costs(invoice) if c.invoice_item_id}
+            result.costs_unchanged = {c.id for c in result.chosen_costs} == linked and (
+                layout == self.costs.invoice_layout(invoice)
+            )
+        return result
+
+    def _fill_expenses_and_costs(self, result: StepOneSummary, selection: StepOneSelection) -> None:
+        extra = self.expenses_and_costs(selection)
+        currency = selection.currency
+        chosen_expenses = {e.id for e in extra.chosen_expenses}
+        chosen_costs = {c.id for c in extra.chosen_costs}
+        for expense in extra.expenses:
+            person = (expense.user.display_name or expense.user.username) if expense.user else ""
+            result.expenses.append(
+                {
+                    "id": expense.id,
+                    "date": expense.expense_date,
+                    "title": expense.title,
+                    "category": expense.category,
+                    "person": person,
+                    "project": expense.project.name if expense.project else None,
+                    "amount": expense_amount(expense),
+                    "currency": expense.currency_code,
+                    "other_currency": bool(currency) and expense.currency_code != currency,
+                    "statuses": expense_statuses(expense),
+                    "checked": expense.id in chosen_expenses,
+                }
+            )
+        for cost in extra.costs:
+            result.costs.append(
+                {
+                    "id": cost.id,
+                    "date": cost.cost_date,
+                    "description": cost.description,
+                    "category": cost.category_name,
+                    "amount": cost_amount(cost),
+                    "currency": cost.currency_code,
+                    "other_currency": bool(currency) and cost.currency_code != currency,
+                    "statuses": cost_statuses(cost),
+                    "checked": cost.id in chosen_costs,
+                }
+            )
+        result.expenses_total = sum((expense_amount(e) for e in extra.chosen_expenses), Decimal("0"))
+        result.costs_layout = extra.layout
+        if extra.costs_unchanged:
+            current = self.costs.cost_lines(selection.invoice)
+            result.costs_total = sum((Decimal(item.line_net) for item in current), Decimal("0"))
+            result.cost_lines = len(current)
+        else:
+            result.costs_total = sum((cost_amount(c) for c in extra.chosen_costs), Decimal("0"))
+            result.cost_lines = len(self.costs.group_costs(extra.chosen_costs, extra.layout))
+
+        pending = [e for e in extra.chosen_expenses if e.status == "pending"]
+        if pending:
+            result.warnings.append(
+                {
+                    "kind": "expenses_pending",
+                    "expenses": [{"id": e.id, "title": e.title, "amount": expense_amount(e)} for e in pending],
+                }
+            )
+        non_billable = [
+            {"kind": "expense", "id": e.id, "title": e.title, "amount": expense_amount(e)}
+            for e in extra.chosen_expenses
+            if not e.billable
+        ] + [
+            {"kind": "cost", "id": c.id, "title": c.description, "amount": cost_amount(c)}
+            for c in extra.chosen_costs
+            if not c.billable
+        ]
+        if non_billable:
+            result.warnings.append({"kind": "was_non_billable", "items": non_billable})
+
+    def add_expenses_and_costs(self, invoice: Invoice, extra: ExpensesAndCosts) -> Dict[str, int]:
+        """Bill the ticked expenses and costs on a new draft. The caller commits."""
+        return self.costs.add_to_draft(invoice, extra.chosen_expenses, extra.chosen_costs, extra.layout)
+
+    def sync_expenses_and_costs(self, invoice: Invoice, extra: ExpensesAndCosts) -> Dict[str, int]:
+        """Step 1 of a draft saved: it bills the ticked expenses and costs. The caller commits."""
+        return self.costs.sync_draft(invoice, extra.chosen_expenses, extra.chosen_costs, extra.layout)
 
     def remove_manual_lines(self, invoice: Invoice, item_ids: Iterable[int]) -> int:
         """Delete the draft's lines added by hand that step 1 marked Remove. The caller commits."""

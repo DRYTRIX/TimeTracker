@@ -9,6 +9,18 @@
                 {{ w.text }}
                 {% if w.link %}<a href="{{ w.link.url }}" target="_blank" rel="noopener" class="font-medium underline ml-1">{{ w.link.label }}</a>{% endif %}
                 {% if w.action %}<button type="button" class="font-medium underline ml-1" data-include-from="{{ w.action.start }}">{{ w.action.label }}</button>{% endif %}
+                {% if w.expenses %}
+                <ul class="mt-1 ml-4 space-y-1">
+                    {% for e in w.expenses %}
+                    <li data-pending-expense="{{ e.id }}">{{ e.text }}{% if w.can_approve %}<button type="button" class="font-medium underline ml-1" data-approve-expense="{{ e.id }}">{{ _('Approve') }}</button>{% endif %}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if w.listed %}
+                <ul class="mt-1 ml-4 space-y-1 list-disc list-inside">
+                    {% for text in w.listed %}<li>{{ text }}</li>{% endfor %}
+                </ul>
+                {% endif %}
                 {% if w.lines %}
                 <ul class="mt-1 ml-4 space-y-1">
                     {% for line in w.lines %}

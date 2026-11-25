@@ -1,0 +1,41 @@
+{# Step 1: expenses of the selected projects in the period. Every one comes ticked; untick to leave it unbilled. #}
+{% from 'invoices/_costs_macros.html' import status_badges, other_currency %}
+<div id="stepOneExpenseList">
+    <input type="hidden" name="expenses_costs_shown" value="1">
+    <input type="hidden" name="expenses_costs_scope" value="{{ expenses_costs_scope }}">
+    {% if summary.expenses %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-text-muted-light dark:text-text-muted-dark">
+                    <th class="p-1 w-8"><span class="sr-only">{{ _('Bill') }}</span></th>
+                    <th class="p-1">{{ _('Date') }}</th><th class="p-1">{{ _('Expense') }}</th><th class="p-1">{{ _('Category') }}</th>
+                    <th class="p-1">{{ _('Person') }}</th><th class="p-1 text-right">{{ _('Amount') }}</th><th class="p-1">{{ _('Status') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in summary.expenses %}
+                <tr class="border-t border-border-light dark:border-border-dark align-top" data-expense-id="{{ e.id }}">
+                    <td class="p-1">
+                        <input type="hidden" name="expense_seen" value="{{ e.id }}">
+                        <input type="checkbox" class="js-expense" name="expense_ids" value="{{ e.id }}" aria-label="{{ _('Bill %(title)s', title=e.title) }}"{% if e.checked %} checked{% endif %}>
+                    </td>
+                    <td class="p-1 whitespace-nowrap">{{ e.date|format_date }}</td>
+                    <td class="p-1">{{ e.title }}{% if e.project %} <span class="text-text-muted-light dark:text-text-muted-dark">· {{ e.project }}</span>{% endif %}</td>
+                    <td class="p-1">{{ e.category }}</td>
+                    <td class="p-1">{{ e.person }}</td>
+                    <td class="p-1 text-right whitespace-nowrap">{{ "%.2f"|format(e.amount) }} {{ e.currency }}{% if e.other_currency %}{{ other_currency(e.currency, currency) }}{% endif %}</td>
+                    <td class="p-1">
+                        {{ status_badges(e.statuses) }}
+                        {% if 'pending' in e.statuses and can_approve %}<button type="button" class="ml-1 text-xs font-medium underline" data-approve-expense="{{ e.id }}">{{ _('Approve') }}</button>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="text-sm text-right mt-2">{{ _('Ticked expenses') }} <strong class="tabular-nums" data-expenses-total>{{ "%.2f"|format(summary.expenses_total) }} {{ currency }}</strong></p>
+    {% else %}
+    <p class="text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No unbilled expenses on the selected projects in this period.') }}</p>
+    {% endif %}
+</div>

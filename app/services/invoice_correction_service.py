@@ -149,7 +149,8 @@ class InvoiceCorrectionService:
         the invoice used move to the draft as they are.
         """
         from app.models import ClientPrepaidConsumption, ProjectCost
-        from app.services.invoice_time_service import InvoiceTimeService
+        from app.services.invoice_costs_service import InvoiceCostsService
+        from app.services.invoice_time_service import LINE_KIND_COST, InvoiceTimeService
 
         reason = self._require(invoice, reason)
         times = InvoiceTimeService()
@@ -192,9 +193,9 @@ class InvoiceCorrectionService:
         self._copy_extra_goods(invoice, draft, user_id)
         db.session.flush()
 
-        # Move what stays billed to the draft, so cancelling the invoice does not release it
-        for cost in costs:
-            cost.mark_as_invoiced(draft.id)
+        # Move what stays billed to the draft, so cancelling the invoice does not release it. A cost
+        # points at the copy of its line
+        InvoiceCostsService.move_costs(costs, draft, new_items)
         for expense in expenses:
             expense.mark_as_invoiced(draft.id)
         for consumption in consumptions:

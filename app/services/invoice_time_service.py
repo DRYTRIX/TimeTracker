@@ -47,6 +47,8 @@ LINE_KIND_TIME = "time"
 LINE_KIND_MANUAL = "manual"
 LINE_KIND_MANUAL_HOURS = "manual_hours"
 HOURS_LINE_KINDS = (LINE_KIND_TIME, LINE_KIND_MANUAL_HOURS)
+# A cost line bills project costs (``ProjectCost.invoice_item_id``); see InvoiceCostsService
+LINE_KIND_COST = "cost"
 VAT_CATEGORIES = ("S", "Z", "E", "AE", "K", "G", "O", "L", "M")
 
 # Statuses of an invoice that has left draft and was not cancelled: its lines are locked and its time
@@ -1180,11 +1182,12 @@ class InvoiceTimeService:
 
         Keys: ``description``, ``quantity``, ``unit_price``, ``tax_rate`` (empty: the invoice's),
         ``vat_category`` (empty: the invoice's), ``discount_percent``, ``discount_amount``,
-        ``position``. A time line whose description, quantity or price changes is marked as edited
-        by hand, as in the edit form. The caller commits.
+        ``position``. A time or cost line whose description, quantity or price changes is marked as
+        edited by hand, as in the edit form. The caller commits.
         """
         self._require_draft(invoice)
-        is_time = item.kind == LINE_KIND_TIME
+        # Time lines and cost lines remember what was changed by hand (Regroup keeps or rebuilds them)
+        is_time = item.kind in (LINE_KIND_TIME, LINE_KIND_COST)
         if "description" in values:
             text = self.normalize_description(values["description"])
             if not text:
@@ -1235,13 +1238,19 @@ class InvoiceTimeService:
         return item
 
     def delete_line(self, invoice: Invoice, item: InvoiceItem) -> Dict:
-        """Delete a draft line; its time entries go back to Unbilled with the prepaid hours they used here.
+        """Delete a draft line; its time entries go back to Unbilled with the prepaid hours they used here,
+        its project costs (a cost line) are unbilled again.
 
         Returns ``entries`` (how many the line had) and ``prepaid_freed`` (prepaid hours given back).
         """
         self._require_draft(invoice)
         hours = self.detach_lines(invoice, [item])
         freed = self.release_dropped_prepaid(invoice, hours.keys())
+        # A cost line's project costs are unbilled again with it
+        from app.models import ProjectCost
+
+        for cost in ProjectCost.query.filter(ProjectCost.invoice_item_id == item.id).all():
+            cost.unmark_as_invoiced()
         db.session.delete(item)
         db.session.flush()
         invoice.calculate_totals()

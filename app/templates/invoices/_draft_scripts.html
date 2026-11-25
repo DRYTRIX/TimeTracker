@@ -44,7 +44,7 @@
       button.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
   }
-  openPanels().forEach(function (id) { if (id.indexOf('entries-') === 0) setPanel(id, true); });
+  openPanels().forEach(function (id) { if (id.indexOf('entries-') === 0 || id.indexOf('costs-') === 0) setPanel(id, true); });
   try {
     const scroll = sessionStorage.getItem(SCROLL_KEY);
     if (scroll) { sessionStorage.removeItem(SCROLL_KEY); window.scrollTo(0, parseInt(scroll, 10) || 0); }
@@ -158,6 +158,12 @@
         toast(error.message, 'error');
       }
     });
+  });
+
+  // A receipt or a bill is uploaded as soon as a file is chosen
+  document.querySelectorAll('form[data-autoupload]').forEach(function (form) {
+    const input = form.querySelector('input[type="file"]');
+    if (input) input.addEventListener('change', function () { if (input.files.length) form.requestSubmit(); });
   });
 
   // Notes and Terms save themselves when you leave the field

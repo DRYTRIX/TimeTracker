@@ -18,10 +18,12 @@ from flask import (
     render_template,
     request,
     send_file,
+    send_from_directory,
     url_for,
 )
 from flask_babel import gettext as _
 from flask_login import current_user, login_required
+from sqlalchemy.orm import joinedload
 
 from app import db, log_event, track_event
 from app.models import (
@@ -513,9 +515,17 @@ def _step_one_selection(data, client, projects, invoice=None):
         else:
             project_ids = [pid for pid in offered if by_project.get(pid, (0, 0))[1]] or offered[:1]
         client_entries = from_project_id not in offered and bool(by_project.get(None, (0, 0))[1])
+    from app.services.invoice_costs_service import normalize_costs_layout
+
+    # Expenses and costs: the ticks count only when the page showed its blocks for this period and these
+    # projects; with another period or other projects everything of them comes ticked again
+    project_ids = [pid for pid in offered if pid in project_ids]
+    shown = data.flag("expenses_costs_shown") and data.get("expenses_costs_scope") == _expenses_costs_scope(
+        period, project_ids, client_entries
+    )
     return StepOneSelection(
         client=client,
-        project_ids=[pid for pid in offered if pid in project_ids],
+        project_ids=project_ids,
         period=period,
         layout=normalize_layout(data.get("hours_layout")),
         template=(data.get("line_template") or None),
@@ -524,6 +534,21 @@ def _step_one_selection(data, client, projects, invoice=None):
         invoice=invoice,
         primary_project_id=from_project_id if invoice is None else invoice.project_id,
         client_entries_allowed=allowed,
+        expense_ids=data.get_ids("expense_ids") if shown else None,
+        expense_seen=data.get_ids("expense_seen") if shown else [],
+        cost_ids=data.get_ids("cost_ids") if shown else None,
+        cost_seen=data.get_ids("cost_seen") if shown else [],
+        costs_layout=normalize_costs_layout(data.get("costs_layout")),
+    )
+
+
+def _expenses_costs_scope(period, project_ids, client_entries):
+    """What the expenses and costs blocks were shown for: the period, the projects, time on the client."""
+    return "%s|%s|%s|%s" % (
+        period.start.isoformat() if period.start else "",
+        period.end.isoformat() if period.end else "",
+        ",".join(str(pid) for pid in sorted(project_ids)),
+        "1" if client_entries else "",
     )
 
 
@@ -688,6 +713,28 @@ def _step_one_warning_texts(summary, currency):
                 w["entries"],
                 hours=_hours_label(w["hours"]),
             )
+        elif kind == "expenses_pending":
+            item["text"] = ngettext(
+                "%(num)d expense is waiting for approval.",
+                "%(num)d expenses are waiting for approval.",
+                len(w["expenses"]),
+            )
+            item["expenses"] = [
+                {
+                    "id": e["id"],
+                    "text": "%s – %s %s" % (e["title"], "%.2f" % e["amount"], currency or ""),
+                }
+                for e in w["expenses"]
+            ]
+            item["can_approve"] = _can_approve_invoice_expenses()
+        elif kind == "was_non_billable":
+            item["text"] = ngettext(
+                "%(num)d item was non-billable. Leave it ticked to bill it, untick it to keep it off the invoice.",
+                "%(num)d items were non-billable. Leave them ticked to bill them, untick them to keep them off "
+                "the invoice.",
+                len(w["items"]),
+            )
+            item["listed"] = ["%s – %s %s" % (i["title"], "%.2f" % i["amount"], currency or "") for i in w["items"]]
         elif kind == "manual_lines":
             item["text"] = ngettext(
                 "%(num)d line added by hand. Saving step 1 keeps it unless you remove it.",
@@ -713,7 +760,14 @@ def _step_one_parts(selection, projects, summary, remove_line_ids=()):
 
     primary = InvoiceStepOneService.primary_project(selection, projects)
     remove = set(remove_line_ids or ())
+    from app.services.invoice_costs_service import COSTS_LAYOUT_LABELS
+
     context = {
+        "expenses_costs_scope": _expenses_costs_scope(
+            selection.period, selection.project_ids, selection.client_entries
+        ),
+        "costs_layouts": list(COSTS_LAYOUT_LABELS.items()),
+        "can_approve": _can_approve_invoice_expenses(),
         "remove_line_ids": remove,
         "invoice": selection.invoice,
         "primary_id": primary.id if primary is not None else "",
@@ -728,9 +782,18 @@ def _step_one_parts(selection, projects, summary, remove_line_ids=()):
     return {
         "projects": render_template("invoices/_step1_projects.html", **context),
         "hours": render_template("invoices/_step1_hours.html", **context),
+        "expenses": render_template("invoices/_step1_expenses.html", **context),
+        "costs": render_template("invoices/_step1_costs.html", **context),
         "warnings": render_template("invoices/_step1_warnings.html", **context),
         "summary": render_template("invoices/_step1_summary.html", **context),
     }
+
+
+def _can_approve_invoice_expenses():
+    """Whether the user may approve expenses: the same check as on the expenses pages."""
+    from app.routes.expenses import _can_approve_expenses
+
+    return _can_approve_expenses(current_user)
 
 
 def _step_one_payload(selection, projects, summary, remove_line_ids=()):
@@ -1013,10 +1076,12 @@ def new_invoice():
             return _render_step_one(form=form, selection=selection, status=400)
         bill_to.apply_to_invoice(invoice, bill_to_entity)
 
+    extra = service.expenses_and_costs(selection)
     db.session.add(invoice)
     try:
         db.session.flush()
         lines = service.add_hours(invoice, selection, projects, current_user.id)
+        service.add_expenses_and_costs(invoice, extra)
     except InvoiceTimeError as exc:
         db.session.rollback()
         flash(_("Could not add the time entries: %(error)s", error=str(exc)), "error")
@@ -1027,7 +1092,7 @@ def new_invoice():
         return _render_step_one(form=form, selection=selection, status=500)
 
     _announce_new_invoice(invoice, _t0)
-    count = len(lines.items) if lines is not None else 0
+    count = (len(lines.items) if lines is not None else 0) + len(service.costs.cost_lines(invoice))
     flash(_("Draft %(number)s created with %(count)s lines", number=invoice.invoice_number, count=count), "success")
     return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
 
@@ -1112,6 +1177,8 @@ def edit_step_one(invoice_id):
         flash(_("Select at least one project: the invoice needs one"), "error")
         return _render_step_one(invoice, selection=selection, form=form, status=400)
     before = service.draft_selection(invoice)
+    # Expenses and costs to bill after Save, decided before the draft changes
+    extra = service.expenses_and_costs(selection)
 
     # The number may change on a draft; another invoice's number is refused. {YYYY} and {MM} are
     # the month the invoice bills and {DD} its issue day, as for a new invoice
@@ -1178,6 +1245,8 @@ def edit_step_one(invoice_id):
                 # Hours lines name their rate with the currency ("- 40.00 EUR/h"): write them again
                 InvoiceTimeService().apply_template(invoice, invoice.line_template, keep_edited=True)
             invoice.calculate_totals()
+        # Unticked expenses and costs are let go, new ones billed; nothing changes when nothing did
+        synced = service.sync_expenses_and_costs(invoice, extra)
     except InvoiceTimeError as exc:
         db.session.rollback()
         flash(_("Could not add the time entries: %(error)s", error=str(exc)), "error")
@@ -1189,6 +1258,8 @@ def edit_step_one(invoice_id):
     if collected:
         count = len(lines.items) if lines is not None else 0
         flash(_("Hours collected again: %(count)s lines", count=count), "success")
+    elif synced["expenses_released"] or synced["expenses_added"] or synced["costs_rebuilt"]:
+        flash(_("Invoice details saved; expenses and project costs updated"), "success")
     elif removed:
         flash(_("Invoice details saved; the hours lines did not change"), "success")
     else:
@@ -1736,6 +1807,9 @@ def edit_invoice(invoice_id):
         # A time line whose description, quantity or price changes is marked as edited by hand
         previous_lines = time_links.snapshot_lines(invoice)
         previous_hours = time_links.detach_lines(invoice)
+        from app.services.invoice_costs_service import InvoiceCostsService
+
+        cost_lines = InvoiceCostsService.snapshot_cost_lines(invoice)
         invoice.items.delete()
         new_items = []
         new_item_ids = []
@@ -1833,6 +1907,8 @@ def edit_invoice(invoice_id):
             return redirect(url_for("invoices.edit_invoice", invoice_id=invoice.id))
         for item, row_item_id in zip(new_items, new_item_ids):
             time_links.carry_line_state(previous_lines, item, row_item_id)
+        # A cost line sent again keeps its project costs; the costs of a removed one are unbilled again
+        InvoiceCostsService().carry_cost_lines(invoice, cost_lines, new_items, new_item_ids)
         # Entries no line keeps any more give back the prepaid hours they used on this draft
         if time_links.release_dropped_prepaid(invoice, previous_hours.keys()):
             flash(_(PREPAID_FREED_WARNING), "warning")
@@ -2449,18 +2525,11 @@ def generate_from_time(invoice_id):
             # A cost already on this invoice keeps its line; a resubmitted form must not add a second one
             costs = [cost for cost in costs if cost.invoice_id != invoice.id]
 
-            for cost in costs:
-                # Create invoice item for each cost
-                item = InvoiceItem(
-                    invoice_id=invoice.id,
-                    description=f"{cost.description} ({cost.category_name})",
-                    quantity=1,  # Costs are typically a single unit
-                    unit_price=cost.amount,
-                )
-                db.session.add(item)
+            if costs:
+                # A cost line for each cost, linked to it (kind "cost"), after the other lines
+                from app.services.invoice_costs_service import COSTS_BY_COST, InvoiceCostsService
 
-                # Mark cost as invoiced
-                cost.mark_as_invoiced(invoice.id)
+                InvoiceCostsService().add_cost_lines(invoice, costs, COSTS_BY_COST)
 
         # Process expenses
         if selected_expenses:
@@ -3765,7 +3834,7 @@ def _draft_page_context(invoice):
     """Everything the draft page shows, read in a few queries."""
     from flask import session
 
-    from app.services.invoice_time_service import HOURS_LINE_KINDS, LINE_KIND_TIME, InvoiceTimeService
+    from app.services.invoice_time_service import HOURS_LINE_KINDS, LINE_KIND_COST, LINE_KIND_TIME, InvoiceTimeService
     from app.utils.billing_entities import seller_settings_for
     from app.utils.client_entities import buyer_lines
     from app.utils.invoice_time_entry_items import (
@@ -3794,8 +3863,11 @@ def _draft_page_context(invoice):
             for _link, entry in row["entries"]:
                 rate_by_entry[entry.id] = resolve_entry_rate(entry).rate
 
-    hours_lines, other_lines = [], []
+    hours_lines, other_lines, cost_rows = [], [], []
     for row in rows:
+        if row["kind"] == LINE_KIND_COST:
+            cost_rows.append(row)
+            continue
         view = _draft_line_view(row, added.get(row["item"].id), rate_by_entry)
         (hours_lines if row["kind"] in HOURS_LINE_KINDS else other_lines).append(view)
 
@@ -3804,9 +3876,14 @@ def _draft_page_context(invoice):
     other_total = sum((Decimal(str(v["item"].total_amount or 0)) for v in other_lines), Decimal("0"))
     goods = invoice.extra_goods.all()
     goods_total = sum((Decimal(str(g.total_amount or 0)) for g in goods), Decimal("0"))
-    expenses = invoice.expenses.all()
-    expenses_total = sum((Decimal(str(e.total_amount or 0)) for e in expenses), Decimal("0"))
-    costs_count = ProjectCost.query.filter(ProjectCost.invoice_id == invoice.id).count()
+    costs_context = _draft_costs_context(invoice, cost_rows)
+    expenses = costs_context["expenses"]
+    expenses_total = costs_context["expenses_total"]
+    costs_total = costs_context["costs_total"]
+    # Costs billed by an old line not linked to them (made before cost lines existed)
+    costs_count = ProjectCost.query.filter(
+        ProjectCost.invoice_id == invoice.id, ProjectCost.invoice_item_id.is_(None)
+    ).count()
     edited_lines = [v["item"] for v in hours_lines if v["is_time"] and v["item"].is_edited]
 
     layout = normalize_layout(invoice.hours_layout)
@@ -3831,10 +3908,11 @@ def _draft_page_context(invoice):
     discount = Decimal(str(invoice.discount_amount or 0))
     discount_percent = Decimal(str(invoice.discount_percent or 0))
     if not discount and discount_percent:
-        base = hours_total + other_total + goods_total + expenses_total
+        base = hours_total + other_total + goods_total + expenses_total + costs_total
         discount = (base * discount_percent / 100).quantize(Decimal("0.01"))
 
     return {
+        **costs_context,
         "invoice": invoice,
         "seller": seller,
         "pay_to": pay_to,
@@ -3842,14 +3920,14 @@ def _draft_page_context(invoice):
         "hours_lines": hours_lines,
         "other_lines": other_lines,
         "goods": goods,
-        "expenses": expenses,
-        "expenses_total": expenses_total,
         "costs_count": costs_count,
         "hours_total": hours_total,
         "hours_billed": hours_billed,
         "hours_billed_text": _hours_text(hours_billed),
         "other_total": other_total + goods_total,
         "line_count": len(rows) + len(goods),
+        "hours_line_count": len(hours_lines),
+        "other_line_count": len(other_lines) + len(goods),
         "edited_lines": edited_lines,
         "hours_layout": layout,
         "hours_layouts": [(key, label) for key, label in HOURS_LAYOUT_LABELS.items() if key != LAYOUT_NONE],
@@ -3868,6 +3946,95 @@ def _draft_page_context(invoice):
         "reissue_of": issue_context["reissue_of"],
         "vat_categories": ("S", "Z", "E", "AE", "K", "G", "O", "L", "M"),
         "money": _money_text,
+    }
+
+
+def _draft_costs_context(invoice, cost_rows):
+    """What the Expenses and Project costs blocks of the draft page show."""
+    from app.services.invoice_costs_service import (
+        COSTS_LAYOUT_LABELS,
+        InvoiceCostsService,
+        cost_amount,
+        cost_statuses,
+        expense_amount,
+        expense_statuses,
+    )
+
+    service = InvoiceCostsService()
+    currency = invoice.currency_code
+    can_approve = _can_approve_invoice_expenses()
+    expense_rows = []
+    for expense in (
+        invoice.expenses.options(joinedload(Expense.user)).order_by(Expense.expense_date.asc(), Expense.id.asc()).all()
+    ):
+        expense_rows.append(
+            {
+                "expense": expense,
+                "person": (expense.user.display_name or expense.user.username) if expense.user else "",
+                "amount": expense_amount(expense),
+                "statuses": expense_statuses(expense),
+                "other_currency": expense.currency_code != currency,
+            }
+        )
+    by_line = service.costs_by_line(invoice)
+    cost_lines = []
+    for row in cost_rows:
+        item = row["item"]
+        costs = [
+            {
+                "cost": cost,
+                "amount": cost_amount(cost),
+                "statuses": cost_statuses(cost),
+                "other_currency": cost.currency_code != currency,
+            }
+            for cost in by_line.get(item.id, [])
+        ]
+        cost_lines.append(
+            {
+                "item": item,
+                "kind": row["kind"],
+                "is_time": False,
+                "is_manual_hours": False,
+                "entries": [],
+                "entry_count": 0,
+                "tracked": Decimal("0"),
+                "tracked_text": "",
+                "quantity_note": "",
+                "price_note": _("edited") if item.price_edited else _("sum of its costs"),
+                "added_text": None,
+                "costs": costs,
+                "count": len(costs),
+            }
+        )
+    pending = [row for row in expense_rows if "pending" in row["statuses"]]
+    non_billable = [
+        {"kind": "expense", "title": row["expense"].title, "anchor": "expenses"}
+        for row in expense_rows
+        if "non_billable" in row["statuses"]
+    ] + [
+        {"kind": "cost", "title": c["cost"].description, "anchor": "line-%d" % line["item"].id}
+        for line in cost_lines
+        for c in line["costs"]
+        if "non_billable" in c["statuses"]
+    ]
+    projects = sorted(_draft_costs_context_projects(invoice), key=lambda p: ((p.name or "").lower(), p.id))
+    return {
+        "expense_rows": expense_rows,
+        "expenses": [row["expense"] for row in expense_rows],
+        "expenses_total": sum((row["amount"] for row in expense_rows), Decimal("0")),
+        "cost_lines": cost_lines,
+        "costs_total": sum((Decimal(str(line["item"].total_amount or 0)) for line in cost_lines), Decimal("0")),
+        "costs_layout": service.invoice_layout(invoice),
+        "costs_layouts": list(COSTS_LAYOUT_LABELS.items()),
+        "edited_cost_lines": service.edited_cost_lines(invoice),
+        "pending_expenses": pending,
+        "non_billable_items": non_billable,
+        "can_approve": can_approve,
+        "expense_categories": Expense.get_expense_categories(),
+        "cost_categories": ExpenseCategory.get_choices(),
+        "draft_projects": projects,
+        "people": User.query.filter_by(is_active=True).order_by(User.username.asc()).all(),
+        "default_entry_date": (invoice.period_end or date.today()).isoformat(),
     }
 
 
@@ -4193,6 +4360,8 @@ def draft_update_line(invoice_id, item_id):
             _("edited · %(hours)s h tracked", hours=_hours_text(tracked)) if item.quantity_edited else _("= tracked")
         )
         line["price_note"] = _("edited") if item.price_edited else _("entries' rate")
+    elif item.kind == "cost":
+        line["price_note"] = _("edited") if item.price_edited else _("sum of its costs")
     return _draft_done(invoice, _("Line saved."), data={"line": line}, anchor=f"line-{item.id}", reload=False)
 
 
@@ -4325,3 +4494,290 @@ def draft_discount(invoice_id):
         return failed
     message = _("Discount removed.") if not value else _("Discount saved.")
     return _draft_done(invoice, message, anchor="total")
+
+
+# ----------------------------------------------------------------------
+# Expenses and project costs on step 1 and the draft page
+# ----------------------------------------------------------------------
+def _expense_visible(expense):
+    """Whether the user sees the expense's project (an expense without a project: the client's)."""
+    from app.utils.scope_filter import get_allowed_project_ids
+
+    allowed = get_allowed_project_ids(current_user)
+    if allowed is None:
+        return True
+    if expense.project_id is not None:
+        return expense.project_id in set(allowed)
+    return expense.user_id == current_user.id
+
+
+def _parse_entry_day(value):
+    from app.services.invoice_costs_service import InvoiceCostsError
+
+    day = _parse_iso_day(value)
+    if day is None:
+        raise InvoiceCostsError(_("Enter a date"))
+    return day
+
+
+def _uploaded(name):
+    file = request.files.get(name)
+    return file if file is not None and file.filename else None
+
+
+@invoices_bp.route("/invoices/expenses/<int:expense_id>/approve", methods=["POST"])
+@login_required
+def approve_invoice_expense(expense_id):
+    """Approve an expense waiting for approval, from step 1 or the draft page (same check as the expenses pages)."""
+    expense = Expense.query.get_or_404(expense_id)
+    back = request.form.get("invoice_id", type=int)
+
+    def refuse(message, status, code):
+        if back is None:
+            return jsonify({"success": False, "error": code, "message": message}), status
+        return _draft_failed(back, message, status, code)
+
+    if not _can_approve_invoice_expenses() or not _expense_visible(expense):
+        return refuse(_("Only administrators can approve expenses"), 403, "forbidden")
+    if expense.status != "pending":
+        return refuse(_("Only pending expenses can be approved"), 400, "invalid_status")
+    expense.approve(current_user.id)
+    if not safe_commit("invoice_approve_expense", {"expense_id": expense.id}):
+        return refuse(_("Could not approve the expense due to a database error."), 500, "db_error")
+    log_event("expense_approved", user_id=current_user.id, expense_id=expense.id)
+    message = _("Expense approved.")
+    if _wants_json() or back is None:
+        return jsonify({"success": True, "message": message, "reload": True})
+    flash(message, "success")
+    return redirect(url_for("invoices.view_invoice", invoice_id=back) + "#expenses")
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/expenses/<int:expense_id>/remove", methods=["POST"])
+@login_required
+def draft_remove_expense(invoice_id, expense_id):
+    """× on an expense: off the invoice, unbilled again (it keeps its billable flag)."""
+    from app.services.invoice_costs_service import InvoiceCostsService
+    from app.services.invoice_time_service import InvoiceTimeError
+
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    expense = Expense.query.filter_by(id=expense_id, invoice_id=invoice.id).first_or_404()
+    try:
+        InvoiceCostsService().remove_expense(invoice, expense)
+    except InvoiceTimeError as exc:
+        return _draft_error(invoice, exc)
+    failed = _draft_commit(invoice, "remove_expense")
+    if failed is not None:
+        return failed
+    return _draft_done(invoice, _("Expense taken off the invoice."), anchor="expenses")
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/expenses", methods=["POST"])
+@login_required
+def draft_log_expense(invoice_id):
+    """+ Log an expense: a new expense, billed on the draft at once (approved when the user may approve)."""
+    from app.services.invoice_costs_service import InvoiceCostsService
+    from app.services.invoice_time_service import InvoiceTimeError
+    from app.utils.invoice_receipts import ReceiptUploadError, save_receipt
+
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    form = request.form
+    paid_by = form.get("user_id", type=int) or current_user.id
+    if User.query.get(paid_by) is None:
+        paid_by = current_user.id
+    project_id = form.get("project_id", type=int)
+    if project_id and not any(p.id == project_id for p in _draft_costs_context_projects(invoice)):
+        project_id = None
+    try:
+        expense = InvoiceCostsService().log_expense(
+            invoice,
+            user_id=paid_by,
+            project_id=project_id or invoice.project_id,
+            title=form.get("title"),
+            category=form.get("category"),
+            amount=form.get("amount"),
+            expense_date=_parse_entry_day(form.get("expense_date")),
+            notes=(form.get("notes") or "").strip() or None,
+            reimbursable=form.get("reimbursable") in ("1", "on", "true"),
+            approver_id=current_user.id if _can_approve_invoice_expenses() else None,
+        )
+        # The file is stored once the expense is valid
+        receipt = _uploaded("receipt_file")
+        if receipt is not None:
+            expense.receipt_path = save_receipt(receipt)
+    except (InvoiceTimeError, ReceiptUploadError) as exc:
+        return _draft_error(invoice, exc)
+    failed = _draft_commit(invoice, "log_expense")
+    if failed is not None:
+        return failed
+    log_event("expense_created", user_id=current_user.id, expense_id=expense.id)
+    if expense.status == "pending":
+        message = _("Expense logged and added to the invoice; it is waiting for approval.")
+    else:
+        message = _("Expense logged and added to the invoice.")
+    return _draft_done(invoice, message, anchor="expenses")
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/expenses/<int:expense_id>/receipt", methods=["GET", "POST"])
+@login_required
+def invoice_expense_receipt(invoice_id, expense_id):
+    """View the receipt of an expense on the invoice; on a draft, add or replace it."""
+    from app.utils.invoice_receipts import ReceiptUploadError, receipt_location, save_receipt
+
+    if request.method == "GET":
+        invoice = Invoice.query.get_or_404(invoice_id)
+        if not current_user.is_admin and invoice.created_by != current_user.id:
+            abort(403)
+        expense = Expense.query.filter_by(id=expense_id, invoice_id=invoice.id).first_or_404()
+        location = receipt_location(expense.receipt_path)
+        if location is None:
+            abort(404)
+        return send_from_directory(*location)
+
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    expense = Expense.query.filter_by(id=expense_id, invoice_id=invoice.id).first_or_404()
+    try:
+        expense.receipt_path = save_receipt(_uploaded("receipt_file"))
+    except ReceiptUploadError as exc:
+        return _draft_error(invoice, exc)
+    failed = _draft_commit(invoice, "expense_receipt")
+    if failed is not None:
+        return failed
+    return _draft_done(invoice, _("Receipt saved."), anchor="expenses")
+
+
+def _draft_costs_context_projects(invoice):
+    """Projects an expense or a cost logged on the draft may belong to: the draft's own."""
+    from app.services.invoice_step_one_service import InvoiceStepOneService
+
+    ids = set(InvoiceStepOneService().draft_selection(invoice).project_ids)
+    ids.add(invoice.project_id)
+    return Project.query.filter(Project.id.in_(ids)).all()
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/costs/<int:cost_id>/remove", methods=["POST"])
+@login_required
+def draft_remove_cost(invoice_id, cost_id):
+    """× on a cost: off the invoice, unbilled again; its line is recalculated (deleted when it has no cost left)."""
+    from app.services.invoice_costs_service import InvoiceCostsService
+    from app.services.invoice_time_service import InvoiceTimeError
+
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    cost = ProjectCost.query.filter_by(id=cost_id, invoice_id=invoice.id).first_or_404()
+    try:
+        InvoiceCostsService().remove_cost(invoice, cost)
+    except InvoiceTimeError as exc:
+        return _draft_error(invoice, exc)
+    failed = _draft_commit(invoice, "remove_cost")
+    if failed is not None:
+        return failed
+    return _draft_done(invoice, _("Cost taken off the invoice."), anchor="costs")
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/costs/regroup", methods=["POST"])
+@login_required
+def draft_regroup_costs(invoice_id):
+    """Regroup costs: the cost lines are built again by cost, by category or as one line."""
+    from app.services.invoice_costs_service import COSTS_LAYOUT_LABELS, InvoiceCostsService, normalize_costs_layout
+    from app.services.invoice_time_service import InvoiceTimeError
+
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    layout = normalize_costs_layout(request.form.get("costs_layout"))
+    if layout is None:
+        return _draft_failed(invoice.id, _("Choose how to show the costs."), 400, "invalid_costs_layout")
+    try:
+        InvoiceCostsService().regroup_costs(invoice, layout, keep_edited=_keep_edited())
+    except InvoiceTimeError as exc:
+        return _draft_error(invoice, exc)
+    failed = _draft_commit(invoice, "regroup_costs")
+    if failed is not None:
+        return failed
+    message = _("Costs regrouped: %(layout)s.", layout=_(COSTS_LAYOUT_LABELS[layout]))
+    return _draft_done(invoice, message, anchor="costs")
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/costs", methods=["POST"])
+@login_required
+def draft_log_cost(invoice_id):
+    """+ Log a cost: a new project cost billed on the draft at once; Repeat every month makes it recurring."""
+    from app.services.invoice_costs_service import InvoiceCostsService
+    from app.services.invoice_time_service import InvoiceTimeError
+    from app.utils.invoice_receipts import ReceiptUploadError, save_receipt
+
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    form = request.form
+    projects = _draft_costs_context_projects(invoice)
+    project_id = form.get("project_id", type=int)
+    if not any(p.id == project_id for p in projects):
+        project_id = invoice.project_id
+    category = ExpenseCategory.query.get(form.get("category_id", type=int) or 0)
+    if category is not None and not category.is_active:
+        category = None
+    repeat = (form.get("repeat") or "once").strip()
+    try:
+        cost = InvoiceCostsService().log_cost(
+            invoice,
+            user_id=current_user.id,
+            project_id=project_id,
+            description=form.get("description"),
+            expense_category=category,
+            amount=form.get("amount"),
+            cost_date=_parse_entry_day(form.get("cost_date")),
+            notes=(form.get("notes") or "").strip() or None,
+            repeat_monthly=repeat == "monthly",
+        )
+        # The file is stored once the cost is valid
+        bill = _uploaded("receipt_file")
+        if bill is not None:
+            cost.receipt_path = save_receipt(bill, prefix="cost_")
+    except (InvoiceTimeError, ReceiptUploadError) as exc:
+        return _draft_error(invoice, exc)
+    failed = _draft_commit(invoice, "log_cost")
+    if failed is not None:
+        return failed
+    if repeat == "monthly":
+        message = _("Cost logged and added to the invoice; it repeats every month with the same amount.")
+    else:
+        message = _("Cost logged and added to the invoice.")
+    return _draft_done(invoice, message, anchor="costs")
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/costs/<int:cost_id>/bill", methods=["GET", "POST"])
+@login_required
+def invoice_cost_bill(invoice_id, cost_id):
+    """View the supplier's bill of a cost on the invoice; on a draft, add or replace it."""
+    from app.utils.invoice_receipts import ReceiptUploadError, receipt_location, save_receipt
+
+    if request.method == "GET":
+        invoice = Invoice.query.get_or_404(invoice_id)
+        if not current_user.is_admin and invoice.created_by != current_user.id:
+            abort(403)
+        cost = ProjectCost.query.filter_by(id=cost_id, invoice_id=invoice.id).first_or_404()
+        location = receipt_location(cost.receipt_path)
+        if location is None:
+            abort(404)
+        return send_from_directory(*location)
+
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    cost = ProjectCost.query.filter_by(id=cost_id, invoice_id=invoice.id).first_or_404()
+    try:
+        cost.receipt_path = save_receipt(_uploaded("receipt_file"), prefix="cost_")
+    except ReceiptUploadError as exc:
+        return _draft_error(invoice, exc)
+    failed = _draft_commit(invoice, "cost_bill")
+    if failed is not None:
+        return failed
+    return _draft_done(invoice, _("Bill saved."), anchor="costs")

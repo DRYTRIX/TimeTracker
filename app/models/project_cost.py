@@ -25,6 +25,14 @@ class ProjectCost(ExpenseCategoryLinkMixin, db.Model):
     billable = db.Column(db.Boolean, default=True, nullable=False)
     invoiced = db.Column(db.Boolean, default=False, nullable=False)
     invoice_id = db.Column(db.Integer, db.ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True, index=True)
+    # The invoice line (kind "cost") that bills this cost; one line may bill several costs
+    invoice_item_id = db.Column(
+        db.Integer, db.ForeignKey("invoice_items.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # The recurring cost this cost was generated from
+    recurring_cost_id = db.Column(
+        db.Integer, db.ForeignKey("recurring_project_costs.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     # Date and metadata
     cost_date = db.Column(db.Date, nullable=False, index=True)
@@ -81,6 +89,7 @@ class ProjectCost(ExpenseCategoryLinkMixin, db.Model):
         """Unmark this cost as invoiced (e.g., if invoice is deleted)"""
         self.invoiced = False
         self.invoice_id = None
+        self.invoice_item_id = None
         self.updated_at = datetime.utcnow()
 
     def to_dict(self):
@@ -98,6 +107,8 @@ class ProjectCost(ExpenseCategoryLinkMixin, db.Model):
             "billable": self.billable,
             "invoiced": self.invoiced,
             "invoice_id": self.invoice_id,
+            "invoice_item_id": self.invoice_item_id,
+            "recurring_cost_id": self.recurring_cost_id,
             "cost_date": self.cost_date.isoformat() if self.cost_date else None,
             "notes": self.notes,
             "receipt_path": self.receipt_path,
