@@ -1592,7 +1592,7 @@ class InvoiceService:
         ``hours_layout`` and ``line_template`` say how the hours become lines; by default the
         project's last ones (``group`` is the older switch: False means one line per entry).
         """
-        from app.utils.invoice_time_entry_items import legacy_layout
+        from app.utils.invoice_time_entry_items import BillableTimeEntry, legacy_layout
 
         invoice = self.invoice_repo.get_by_id(invoice_id)
         if not invoice:
@@ -1647,9 +1647,15 @@ class InvoiceService:
 
         if hours_layout is None and group is not None:
             hours_layout = legacy_layout(group)
+        # An entry that stays keeps the hours its old line billed: what prepaid hours did not cover.
+        # Its full duration would bill the prepaid part a second time.
+        to_bill = [
+            BillableTimeEntry(entry=e, billable_hours=previous_hours[e.id]) if e.id in previous_hours else e
+            for e in entries
+        ]
         lines = time_links.add_entries(
             invoice,
-            entries,
+            to_bill,
             hours_layout,
             line_template,
             hours_by_entry=previous_hours,
