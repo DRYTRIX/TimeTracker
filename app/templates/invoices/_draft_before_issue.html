@@ -1,0 +1,28 @@
+{# Before you issue: only what needs attention, each with a link to its block #}
+{% set attention = zero_rate_lines|length + running_entries|length + (1 if new_entries else 0) %}
+{% if attention %}
+<section id="beforeIssue" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-900 dark:text-amber-100">
+    <h2 class="font-semibold mb-2">{{ ngettext('Before you issue · %(num)d thing to look at', 'Before you issue · %(num)d things to look at', attention) }}</h2>
+    <ul class="space-y-1">
+        {% for item in zero_rate_lines %}
+        <li class="flex justify-between gap-4" data-warning="zero-rate">
+            <span><i class="fas fa-exclamation-triangle mr-1"></i>{{ _('"%(line)s" is billed at a rate of 0.', line=item.description|truncate(60)) }}</span>
+            <a href="#line-{{ item.id }}" class="underline whitespace-nowrap">{{ _('Go to the line') }}</a>
+        </li>
+        {% endfor %}
+        {% for entry in running_entries %}
+        <li class="flex justify-between gap-4" data-warning="running-timer">
+            <span><i class="fas fa-exclamation-triangle mr-1"></i>{{ _('A timer is still running in this period: %(person)s, since %(start)s.', person=entry.user.display_name if entry.user else '', start=entry.start_time|format_date) }}</span>
+            <a href="{{ url_for('timer.edit_timer', timer_id=entry.id) }}" class="underline whitespace-nowrap">{{ _('Open the entry') }}</a>
+        </li>
+        {% endfor %}
+        {% if new_entries %}
+        <li class="flex justify-between gap-4" data-warning="new-entries">
+            <span><i class="fas fa-exclamation-triangle mr-1"></i>{{ ngettext('%(num)d entry of this period is not on the invoice yet.', '%(num)d entries of this period are not on the invoice yet.', new_entries|length) }}</span>
+            <a href="#newEntries" class="underline whitespace-nowrap">{{ _('Go to new entries') }}</a>
+        </li>
+        {% endif %}
+    </ul>
+    <p class="text-xs mt-2">{{ _('None of these stop you from issuing.') }}</p>
+</section>
+{% endif %}
