@@ -14,7 +14,17 @@ from werkzeug.utils import secure_filename
 
 
 class ReceiptUploadError(ValueError):
-    """The file cannot be stored as a receipt (no file, a type that is not allowed, a disk error)."""
+    """The file cannot be stored as a receipt.
+
+    ``problem``: ``no_file``, ``file_type`` (not PNG, JPG, GIF or PDF), ``file_name`` or ``not_saved``,
+    so a page can say it in its own words.
+    """
+
+    code = "receipt_not_saved"
+
+    def __init__(self, problem: str):
+        self.problem = problem
+        super().__init__(problem)
 
 
 def save_receipt(file, prefix: str = "") -> str:
@@ -22,18 +32,18 @@ def save_receipt(file, prefix: str = "") -> str:
     from app.routes.expenses import UPLOAD_FOLDER, allowed_file, get_receipt_upload_folder
 
     if file is None or not getattr(file, "filename", ""):
-        raise ReceiptUploadError("Choose a file")
+        raise ReceiptUploadError("no_file")
     if not allowed_file(file.filename):
-        raise ReceiptUploadError("Receipts can be PNG, JPG, GIF or PDF files")
+        raise ReceiptUploadError("file_type")
     name = secure_filename(file.filename)
     if not name:
-        raise ReceiptUploadError("Invalid file name")
+        raise ReceiptUploadError("file_name")
     name = f"{prefix}{datetime.now().strftime('%Y%m%d_%H%M%S')}_{name}"
     try:
         folder = get_receipt_upload_folder()
         file.save(os.path.join(folder, name))
     except OSError as exc:
-        raise ReceiptUploadError("Could not save the file") from exc
+        raise ReceiptUploadError("not_saved") from exc
     return os.path.join(UPLOAD_FOLDER, name).replace("\\", "/")
 
 

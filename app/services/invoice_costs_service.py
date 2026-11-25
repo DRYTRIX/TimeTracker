@@ -19,7 +19,12 @@ from sqlalchemy.orm import joinedload
 
 from app import db
 from app.models import Expense, Invoice, InvoiceItem, ProjectCost, RecurringProjectCost
-from app.services.invoice_time_service import LINE_KIND_COST, InvoiceTimeError, InvoiceTimeService
+from app.services.invoice_time_service import (
+    LINE_KIND_COST,
+    InvalidLineValueError,
+    InvoiceTimeError,
+    InvoiceTimeService,
+)
 
 COSTS_BY_COST = "cost"
 COSTS_BY_CATEGORY = "category"
@@ -44,6 +49,34 @@ class InvoiceCostsError(InvoiceTimeError):
     """An expense or a cost cannot be changed on this invoice as asked."""
 
     code = "invalid_cost"
+
+
+class ExpenseNotOnInvoiceError(InvoiceCostsError):
+    """The expense is not on this invoice."""
+
+    code = "expense_not_on_invoice"
+
+
+class CostNotOnInvoiceError(InvoiceCostsError):
+    """The project cost is not on this invoice."""
+
+    code = "cost_not_on_invoice"
+
+
+class InvalidCostsLayoutError(InvoiceCostsError):
+    """Not one of the ways to show costs (by cost, by category, one line)."""
+
+    code = "invalid_costs_layout"
+
+
+class DateOutsidePeriodError(InvoiceCostsError):
+    """The date is before (``side`` "before") or after (``side`` "after") the invoice's period."""
+
+    code = "date_outside_period"
+
+    def __init__(self, side: str):
+        self.side = side
+        super().__init__(f"date {side} the period")
 
 
 def normalize_costs_layout(value) -> Optional[str]:
@@ -347,7 +380,7 @@ class InvoiceCostsService:
 
     def remove_cost(self, invoice: Invoice, cost: ProjectCost) -> None:
         if cost.invoice_id != invoice.id:
-            raise InvoiceCostsError("This cost is not on the invoice")
+            raise CostNotOnInvoiceError()
         self.release_costs(invoice, [cost])
 
     def release_line_costs(self, invoice: Invoice, item: InvoiceItem) -> int:
@@ -367,7 +400,7 @@ class InvoiceCostsService:
         self.times._require_draft(invoice)
         layout = normalize_costs_layout(layout)
         if layout is None:
-            raise InvoiceCostsError("Choose how to show the costs")
+            raise InvalidCostsLayoutError()
         lines = self.cost_lines(invoice)
         by_line = self.costs_by_line(invoice)
         rebuilt = [i for i in lines if not (keep_edited and self.line_edited(i))]
@@ -476,7 +509,7 @@ class InvoiceCostsService:
     def remove_expense(self, invoice: Invoice, expense: Expense) -> None:
         self.times._require_draft(invoice)
         if expense.invoice_id != invoice.id:
-            raise InvoiceCostsError("This expense is not on the invoice")
+            raise ExpenseNotOnInvoiceError()
         expense.unmark_as_invoiced()
         db.session.flush()
         invoice.calculate_totals()
@@ -503,10 +536,10 @@ class InvoiceCostsService:
         self.times._require_draft(invoice)
         title = (title or "").strip()
         if not title:
-            raise InvoiceCostsError("Description is required")
+            raise InvalidLineValueError("title", "required")
         if not (category or "").strip():
-            raise InvoiceCostsError("Category is required")
-        amount = self.times.parse_amount(amount, "Amount", minimum=Decimal("0.01")).quantize(MONEY)
+            raise InvalidLineValueError("category", "required")
+        amount = self.parse_positive_amount(amount)
         self._require_in_period(invoice, expense_date)
         expense = Expense(
             user_id=user_id,
@@ -552,10 +585,10 @@ class InvoiceCostsService:
         self.times._require_draft(invoice)
         description = (description or "").strip()
         if not description:
-            raise InvoiceCostsError("Description is required")
+            raise InvalidLineValueError("description", "required")
         if expense_category is None:
-            raise InvoiceCostsError("Category is required")
-        amount = self.times.parse_amount(amount, "Amount", minimum=Decimal("0.01")).quantize(MONEY)
+            raise InvalidLineValueError("category", "required")
+        amount = self.parse_positive_amount(amount)
         self._require_in_period(invoice, cost_date)
         cost = ProjectCost(
             project_id=project_id,
@@ -593,14 +626,21 @@ class InvoiceCostsService:
         invoice.calculate_totals()
         return cost
 
+    def parse_positive_amount(self, value) -> Decimal:
+        """An amount typed in a draft form: a number above 0, to the cent."""
+        amount = self.times.parse_amount(value, "amount")
+        if amount <= 0:
+            raise InvalidLineValueError("amount", "not_positive")
+        return amount.quantize(MONEY)
+
     @staticmethod
     def _require_in_period(invoice: Invoice, day: Optional[date]) -> None:
         if day is None:
-            raise InvoiceCostsError("Date is required")
+            raise InvalidLineValueError("date", "required")
         if invoice.period_start and day < invoice.period_start:
-            raise InvoiceCostsError("The date is before the invoice's period")
+            raise DateOutsidePeriodError("before")
         if invoice.period_end and day > invoice.period_end:
-            raise InvoiceCostsError("The date is after the invoice's period")
+            raise DateOutsidePeriodError("after")
 
     # ------------------------------------------------------------------
     # Lines replaced by the edit form or the API
@@ -698,6 +738,10 @@ __all__ = [
     "COSTS_LAYOUTS",
     "COSTS_LAYOUT_LABELS",
     "COSTS_ONE_LINE",
+    "CostNotOnInvoiceError",
+    "DateOutsidePeriodError",
+    "ExpenseNotOnInvoiceError",
+    "InvalidCostsLayoutError",
     "InvoiceCostsError",
     "InvoiceCostsService",
     "LINE_KIND_COST",

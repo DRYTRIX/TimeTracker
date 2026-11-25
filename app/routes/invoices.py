@@ -4188,6 +4188,10 @@ DRAFT_FIELD_LABELS = {
     "discount_amount": "Line discount amount",
     "position": "Position",
     "discount": "Discount",
+    "title": "Description",
+    "category": "Category",
+    "amount": "Amount",
+    "date": "Date",
 }
 DRAFT_VALUE_PROBLEMS = {
     "required": "%(field)s is required.",
@@ -4195,6 +4199,14 @@ DRAFT_VALUE_PROBLEMS = {
     "too_low": "%(field)s cannot be below 0.",
     "too_high": "%(field)s cannot be above 100%%.",
     "unknown": "%(field)s is not one of the allowed values.",
+    "not_positive": "%(field)s must be above 0.",
+    "not_a_date": "%(field)s must be a date.",
+}
+RECEIPT_PROBLEMS = {
+    "no_file": "Choose a file.",
+    "file_type": "Receipts and bills can be PNG, JPG, GIF or PDF files.",
+    "file_name": "The file name cannot be used; rename the file and try again.",
+    "not_saved": "The file could not be saved. Try again.",
 }
 
 
@@ -4224,7 +4236,38 @@ def _draft_error_answer(exc):
                 if exc.problem == problem:
                     return "invalid_value", _(text, field=_(label))
         return "invalid_value", _("A value is not valid.")
+    answer = _costs_error_answer(exc)
+    if answer is not None:
+        return answer
     return "invalid", _("This change could not be made to the draft.")
+
+
+def _costs_error_answer(exc):
+    """The error code and fixed message for an expense, a cost or a receipt the draft refused, or None."""
+    from app.services.invoice_costs_service import (
+        CostNotOnInvoiceError,
+        DateOutsidePeriodError,
+        ExpenseNotOnInvoiceError,
+        InvalidCostsLayoutError,
+    )
+    from app.utils.invoice_receipts import ReceiptUploadError
+
+    if isinstance(exc, ExpenseNotOnInvoiceError):
+        return exc.code, _("This expense is not on this invoice.")
+    if isinstance(exc, CostNotOnInvoiceError):
+        return exc.code, _("This cost is not on this invoice.")
+    if isinstance(exc, InvalidCostsLayoutError):
+        return exc.code, _("Choose how to show the costs.")
+    if isinstance(exc, DateOutsidePeriodError):
+        if exc.side == "before":
+            return exc.code, _("The date is before the invoice's period.")
+        return exc.code, _("The date is after the invoice's period.")
+    if isinstance(exc, ReceiptUploadError):
+        for problem, text in RECEIPT_PROBLEMS.items():
+            if exc.problem == problem:
+                return exc.code, _(text)
+        return exc.code, _("The file could not be saved. Try again.")
+    return None
 
 
 def _draft_error(invoice, exc):
@@ -4559,11 +4602,13 @@ def _expense_visible(expense):
 
 
 def _parse_entry_day(value):
-    from app.services.invoice_costs_service import InvoiceCostsError
+    from app.services.invoice_time_service import InvalidLineValueError
 
+    if not (value or "").strip():
+        raise InvalidLineValueError("date", "required")
     day = _parse_iso_day(value)
     if day is None:
-        raise InvoiceCostsError(_("Enter a date"))
+        raise InvalidLineValueError("date", "not_a_date")
     return day
 
 

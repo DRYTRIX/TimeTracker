@@ -917,3 +917,101 @@ def test_api_put_items_refuses_a_line_id_sent_twice(app, client, user, setup):
     db.session.rollback()
     assert [item.id for item in _cost_lines(invoice)] == [line.id]
     assert Decimal(_reload(invoice).subtotal) == Decimal("80") + 200
+
+
+@pytest.mark.parametrize(
+    "path,data,code,message",
+    [
+        (
+            "expenses",
+            {"title": "", "category": "travel", "amount": "5", "expense_date": "D"},
+            "invalid_value",
+            "Description is required.",
+        ),
+        (
+            "expenses",
+            {"title": "Fuel", "category": "travel", "amount": "abc", "expense_date": "D"},
+            "invalid_value",
+            "Amount must be a number.",
+        ),
+        (
+            "expenses",
+            {"title": "Fuel", "category": "travel", "amount": "0", "expense_date": "D"},
+            "invalid_value",
+            "Amount must be above 0.",
+        ),
+        (
+            "expenses",
+            {"title": "Fuel", "category": "travel", "amount": "5", "expense_date": ""},
+            "invalid_value",
+            "Date is required.",
+        ),
+        (
+            "expenses",
+            {"title": "Fuel", "category": "travel", "amount": "5", "expense_date": "soon"},
+            "invalid_value",
+            "Date must be a date.",
+        ),
+        (
+            "expenses",
+            {"title": "Fuel", "category": "travel", "amount": "5", "expense_date": "AFTER"},
+            "date_outside_period",
+            "The date is after the invoice's period.",
+        ),
+        (
+            "expenses",
+            {"title": "Fuel", "category": "travel", "amount": "5", "expense_date": "BEFORE"},
+            "date_outside_period",
+            "The date is before the invoice's period.",
+        ),
+        (
+            "costs",
+            {"description": "Hosting", "category_id": "", "amount": "5", "cost_date": "D"},
+            "invalid_value",
+            "Category is required.",
+        ),
+        (
+            "costs",
+            {"description": "", "category_id": "SW", "amount": "5", "cost_date": "D"},
+            "invalid_value",
+            "Description is required.",
+        ),
+        ("costs/regroup", {"costs_layout": "sideways"}, "invalid_costs_layout", "Choose how to show the costs."),
+    ],
+)
+def test_draft_errors_answer_with_fixed_texts(client, user, setup, path, data, code, message):
+    _login(client, user)
+    invoice = _create(client, setup, expenses=(), costs=("looker",))
+    days = {"D": _day(12).isoformat(), "AFTER": (LAST.end + timedelta(days=1)).isoformat()}
+    days["BEFORE"] = (LAST.start - timedelta(days=1)).isoformat()
+    form = {k: days.get(v, v) if k.endswith("date") else v for k, v in data.items()}
+    if form.get("category_id") == "SW":
+        form["category_id"] = setup["software"].id
+    resp = client.post(f"/invoices/{invoice.id}/{path}", data=form, headers=JSON)
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert (body["error"], body["message"]) == (code, message)
+
+
+@pytest.mark.parametrize(
+    "upload,message",
+    [
+        (None, "Choose a file."),
+        (("script.exe", b"x"), "Receipts and bills can be PNG, JPG, GIF or PDF files."),
+    ],
+)
+def test_receipt_errors_answer_with_fixed_texts(client, user, setup, app, tmp_path, upload, message):
+    import io
+
+    app.config["UPLOAD_FOLDER"] = str(tmp_path)
+    _login(client, user)
+    invoice = _create(client, setup, expenses=("train",), costs=())
+    data = {} if upload is None else {"receipt_file": (io.BytesIO(upload[1]), upload[0])}
+    resp = client.post(
+        f"/invoices/{invoice.id}/expenses/{setup['expenses']['train'].id}/receipt",
+        data=data,
+        content_type="multipart/form-data",
+        headers=JSON,
+    )
+    assert resp.status_code == 400
+    assert resp.get_json() == {"success": False, "error": "receipt_not_saved", "message": message}
