@@ -1392,6 +1392,11 @@ def invoice_pdf(invoice_id):
             flash(_("PDF generation failed. Please try again later."), "error")
             return redirect(url_for("client_portal.view_invoice", invoice_id=invoice_id))
 
+    # The receipts and bills the invoice is set to attach follow it in the same PDF
+    from app.utils.invoice_receipts import attach_invoice_files
+
+    pdf_bytes, _attached = attach_invoice_files(pdf_bytes, invoice, "client portal")
+
     filename = f"{invoice.invoice_number or invoice_id}.pdf"
     return send_file(io.BytesIO(pdf_bytes), mimetype="application/pdf", as_attachment=True, download_name=filename)
 

@@ -150,7 +150,7 @@ class InvoiceCorrectionService:
         """
         from app.models import ClientPrepaidConsumption, ProjectCost
         from app.services.invoice_costs_service import InvoiceCostsService
-        from app.services.invoice_time_service import LINE_KIND_COST, InvoiceTimeService
+        from app.services.invoice_time_service import InvoiceTimeService
 
         reason = self._require(invoice, reason)
         times = InvoiceTimeService()

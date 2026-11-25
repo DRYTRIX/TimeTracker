@@ -107,6 +107,9 @@ class Invoice(db.Model):
     line_template = db.Column(db.String(255), nullable=True)
     # How project costs become lines: "cost" (a line per cost), "category" or "one_line"; None: per cost
     costs_layout = db.Column(db.String(20), nullable=True)
+    # The invoice PDF is followed by the expenses' receipts / the project costs' supplier bills
+    attach_receipts = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    attach_bills = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
 
     # Relationships
     project = db.relationship("Project", backref="invoices")

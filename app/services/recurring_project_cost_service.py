@@ -40,8 +40,10 @@ class RecurringProjectCostService:
     def generate_due_recurring_costs(self) -> int:
         """Generate project costs for all due recurring templates."""
         today = datetime.utcnow().date()
+        # A recurring cost that asks for the amount makes no cost: each draft of its period asks for it
         recurring_costs = RecurringProjectCost.query.filter(
             RecurringProjectCost.is_active == True,
+            RecurringProjectCost.ask_amount == False,  # noqa: E712
             RecurringProjectCost.next_run_date <= today,
         ).all()
 

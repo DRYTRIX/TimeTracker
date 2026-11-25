@@ -2912,6 +2912,21 @@ def _posted_ids(values):
     return ids
 
 
+def _with_attached_files(pdf_bytes, invoice):
+    """The invoice PDF followed by the receipts and bills it is set to attach; what could not be added is named."""
+    from app.utils.invoice_receipts import attach_invoice_files
+
+    pdf_bytes, report = attach_invoice_files(pdf_bytes, invoice, "download")
+    if report is None:
+        flash(_("Receipts and bills could not be attached to the PDF."), "warning")
+        return pdf_bytes
+    if report.missing:
+        flash(_("Not attached, no file: %(names)s", names=", ".join(report.missing)), "warning")
+    if report.unreadable:
+        flash(_("Not attached, the file could not be read: %(names)s", names=", ".join(report.unreadable)), "warning")
+    return pdf_bytes
+
+
 @invoices_bp.route("/invoices/<int:invoice_id>/export/pdf")
 @login_required
 def export_invoice_pdf(invoice_id):
@@ -2997,6 +3012,7 @@ def export_invoice_pdf(invoice_id):
             pdf_bytes = pdf_generator.generate_pdf()
             trace.get_current_span().set_attribute("pdf_size_bytes", len(pdf_bytes))
         record_invoice_duration_seconds(time.monotonic() - _pdf_t0, "pdf")
+        pdf_bytes = _with_attached_files(pdf_bytes, invoice)
         from app.utils.invoice_pdf_postprocess import postprocess_invoice_pdf_bytes
 
         pdf_bytes, embed_err, pdfa_err = postprocess_invoice_pdf_bytes(pdf_bytes, invoice, settings)
@@ -3075,6 +3091,7 @@ def export_invoice_pdf(invoice_id):
             ):
                 pdf_bytes = pdf_generator.generate_pdf()
                 trace.get_current_span().set_attribute("pdf_size_bytes", len(pdf_bytes))
+            pdf_bytes = _with_attached_files(pdf_bytes, invoice)
             record_invoice_duration_seconds(time.monotonic() - _pdf_t0, "pdf")
             from app.utils.invoice_pdf_postprocess import postprocess_invoice_pdf_bytes
 
@@ -4065,7 +4082,22 @@ def _draft_costs_context(invoice, cost_rows):
         if "non_billable" in c["statuses"]
     ]
     projects = sorted(_draft_costs_context_projects(invoice), key=lambda p: ((p.name or "").lower(), p.id))
+    names = {p.id: p.name for p in projects}
+    not_logged = service.not_logged(invoice, list(names))
+    for row in not_logged:
+        row["project"] = names.get(row["project_id"])
+    missing_receipts = (
+        [row["expense"] for row in expense_rows if not row["expense"].receipt_path] if invoice.attach_receipts else []
+    )
+    missing_bills = (
+        [c["cost"] for line in cost_lines for c in line["costs"] if not c["cost"].receipt_path]
+        if invoice.attach_bills
+        else []
+    )
     return {
+        "not_logged": not_logged,
+        "missing_receipts": missing_receipts,
+        "missing_bills": missing_bills,
         "expense_rows": expense_rows,
         "expenses": [row["expense"] for row in expense_rows],
         "expenses_total": sum((row["amount"] for row in expense_rows), Decimal("0")),
@@ -4245,10 +4277,14 @@ def _draft_error_answer(exc):
 def _costs_error_answer(exc):
     """The error code and fixed message for an expense, a cost or a receipt the draft refused, or None."""
     from app.services.invoice_costs_service import (
+        AlreadyRecurringError,
+        CostAlreadyLoggedError,
         CostNotOnInvoiceError,
         DateOutsidePeriodError,
         ExpenseNotOnInvoiceError,
         InvalidCostsLayoutError,
+        InvoiceHasNoPeriodError,
+        ProjectNotOnInvoiceError,
     )
     from app.utils.invoice_receipts import ReceiptUploadError
 
@@ -4258,6 +4294,16 @@ def _costs_error_answer(exc):
         return exc.code, _("This cost is not on this invoice.")
     if isinstance(exc, InvalidCostsLayoutError):
         return exc.code, _("Choose how to show the costs.")
+    if isinstance(exc, CostAlreadyLoggedError):
+        return exc.code, _("This cost is already logged for this period.")
+    if isinstance(exc, AlreadyRecurringError):
+        return exc.code, _(
+            "This cost already repeats: the project has a recurring cost with this category and description."
+        )
+    if isinstance(exc, ProjectNotOnInvoiceError):
+        return exc.code, _("This cost belongs to a project the invoice does not bill.")
+    if isinstance(exc, InvoiceHasNoPeriodError):
+        return exc.code, _("The invoice has no period: set one in step 1 first.")
     if isinstance(exc, DateOutsidePeriodError):
         if exc.side == "before":
             return exc.code, _("The date is before the invoice's period.")
@@ -4818,6 +4864,8 @@ def draft_log_cost(invoice_id):
     if category is not None and not category.is_active:
         category = None
     repeat = (form.get("repeat") or "once").strip()
+    if repeat not in ("once", "monthly", "monthly_ask"):
+        repeat = "once"
     try:
         cost = InvoiceCostsService().log_cost(
             invoice,
@@ -4828,7 +4876,8 @@ def draft_log_cost(invoice_id):
             amount=form.get("amount"),
             cost_date=_parse_entry_day(form.get("cost_date")),
             notes=(form.get("notes") or "").strip() or None,
-            repeat_monthly=repeat == "monthly",
+            repeat_monthly=repeat in ("monthly", "monthly_ask"),
+            ask_amount=repeat == "monthly_ask",
         )
         # The file is stored once the cost is valid
         bill = _uploaded("receipt_file")
@@ -4841,6 +4890,8 @@ def draft_log_cost(invoice_id):
         return failed
     if repeat == "monthly":
         message = _("Cost logged and added to the invoice; it repeats every month with the same amount.")
+    elif repeat == "monthly_ask":
+        message = _("Cost logged and added to the invoice; every month's draft will ask for its amount.")
     else:
         message = _("Cost logged and added to the invoice.")
     return _draft_done(invoice, message, anchor="costs")
@@ -4874,3 +4925,149 @@ def invoice_cost_bill(invoice_id, cost_id):
     if failed is not None:
         return failed
     return _draft_done(invoice, _("Bill saved."), anchor="costs")
+
+
+def _not_logged_row(invoice):
+    """The Not logged yet row a form names: its description, category and project, checked again."""
+    from app.services.invoice_costs_service import ProjectNotOnInvoiceError
+
+    form = request.form
+    description = (form.get("description") or "").strip()
+    projects = {p.id for p in _draft_costs_context_projects(invoice)}
+    project_id = form.get("project_id", type=int)
+    if project_id not in projects:
+        raise ProjectNotOnInvoiceError()
+    category = ExpenseCategory.query.get(form.get("category_id", type=int) or 0)
+    return {
+        "description": description,
+        "project_id": project_id,
+        "category": category,
+        "category_id": category.id if category is not None else None,
+        "legacy_category": None if category is not None else (form.get("category") or "").strip(),
+        "recurring_cost_id": form.get("recurring_cost_id", type=int),
+    }
+
+
+def _still_not_logged(invoice, row):
+    """Whether the period still misses the cost a Not logged yet form names (a second "+" finds it logged)."""
+    from app.services.invoice_costs_service import InvoiceCostsService
+
+    service = InvoiceCostsService()
+    return any(
+        service.same_kind(
+            missing,
+            recurring_cost_id=row["recurring_cost_id"],
+            category_id=row["category_id"],
+            legacy_category=row["legacy_category"],
+            description=row["description"],
+        )
+        for missing in service.not_logged(invoice, [row["project_id"]])
+    )
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/costs/not-logged", methods=["POST"])
+@login_required
+def draft_log_missing_cost(invoice_id):
+    """+ on a Not logged yet row: the cost is logged on the period's last day and billed on the draft.
+
+    Only while the period still misses it: a second "+" for the same row is refused.
+    """
+    from app.services.invoice_costs_service import CostAlreadyLoggedError, InvoiceCostsService, InvoiceHasNoPeriodError
+    from app.services.invoice_time_service import InvoiceTimeError
+    from app.utils.invoice_receipts import ReceiptUploadError, save_receipt
+
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    try:
+        if invoice.period_end is None:
+            raise InvoiceHasNoPeriodError()
+        row = _not_logged_row(invoice)
+        if not _still_not_logged(invoice, row):
+            raise CostAlreadyLoggedError()
+        cost = InvoiceCostsService().log_cost(
+            invoice,
+            user_id=current_user.id,
+            project_id=row["project_id"],
+            description=row["description"],
+            expense_category=row["category"],
+            legacy_category=row["legacy_category"],
+            amount=request.form.get("amount"),
+            cost_date=invoice.period_end,
+            recurring_cost_id=row["recurring_cost_id"],
+        )
+        bill = _uploaded("receipt_file")
+        if bill is not None:
+            cost.receipt_path = save_receipt(bill, prefix="cost_")
+    except (InvoiceTimeError, ReceiptUploadError) as exc:
+        return _draft_error(invoice, exc)
+    failed = _draft_commit(invoice, "log_missing_cost")
+    if failed is not None:
+        return failed
+    return _draft_done(invoice, _("Cost logged and added to the invoice."), anchor="costs")
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/costs/not-logged/recurring", methods=["POST"])
+@login_required
+def draft_make_cost_recurring(invoice_id):
+    """Make it recurring: a Not logged yet row becomes a monthly recurring cost, from the next period on.
+
+    Refused when the project already has an active recurring cost with that category and description.
+    """
+    from dateutil.relativedelta import relativedelta
+
+    from app.services.invoice_costs_service import AlreadyRecurringError, InvoiceCostsService, InvoiceHasNoPeriodError
+    from app.services.invoice_time_service import InvalidLineValueError, InvoiceTimeError
+
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    try:
+        if invoice.period_end is None:
+            raise InvoiceHasNoPeriodError()
+        row = _not_logged_row(invoice)
+        if not row["description"]:
+            raise InvalidLineValueError("description", "required")
+        # Once only: a second recurring cost would bill the same cost twice every month
+        if row["recurring_cost_id"] or InvoiceCostsService.active_recurring_like(
+            row["project_id"], row["category_id"], row["legacy_category"], row["description"]
+        ):
+            raise AlreadyRecurringError()
+        amount = InvoiceCostsService().parse_positive_amount(
+            request.form.get("amount") or request.form.get("last_amount")
+        )
+        category = row["category"]
+        InvoiceCostsService.make_recurring(
+            project_id=row["project_id"],
+            user_id=current_user.id,
+            description=row["description"],
+            category=category.legacy_key if category is not None else row["legacy_category"],
+            category_id=category.id if category is not None else None,
+            amount=amount,
+            next_run_date=invoice.period_end + relativedelta(months=1),
+            currency_code=invoice.currency_code,
+        )
+    except InvoiceTimeError as exc:
+        return _draft_error(invoice, exc)
+    failed = _draft_commit(invoice, "make_cost_recurring")
+    if failed is not None:
+        return failed
+    message = _("It now repeats every month from the next period; log this period's cost with +.")
+    return _draft_done(invoice, message, anchor="costs")
+
+
+@invoices_bp.route("/invoices/<int:invoice_id>/attachments", methods=["POST"])
+@login_required
+def draft_pdf_attachments(invoice_id):
+    """Attach receipts / bills to the invoice PDF: on or off."""
+    invoice, refusal = _draft_for_action(invoice_id)
+    if refusal is not None:
+        return refusal
+    field = request.form.get("field")
+    if field not in ("attach_receipts", "attach_bills"):
+        return _draft_failed(invoice.id, _("Unknown setting"), 400)
+    setattr(invoice, field, request.form.get("value") in ("1", "on", "true"))
+    failed = _draft_commit(invoice, "pdf_attachments")
+    if failed is not None:
+        return failed
+    return _draft_done(invoice, _("Saved."), anchor="expenses" if field == "attach_receipts" else "costs")

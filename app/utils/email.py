@@ -754,6 +754,11 @@ def _build_invoice_email_payload(invoice, email_template_id=None, custom_message
     if not pdf_bytes:
         raise ValueError("PDF generation returned empty result")
 
+    # The receipts and bills the invoice is set to attach follow it in the same PDF
+    from app.utils.invoice_receipts import attach_invoice_files
+
+    pdf_bytes, _attached = attach_invoice_files(pdf_bytes, invoice, "email")
+
     settings = Settings.get_settings()
     from app.utils.invoice_pdf_postprocess import postprocess_invoice_pdf_bytes
 

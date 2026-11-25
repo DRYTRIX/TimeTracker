@@ -176,6 +176,29 @@ class ExpenseService:
         if not is_admin and expense.user_id != user_id:
             return {"success": False, "message": "Access denied", "error": "access_denied"}
 
+        # An issued invoice bills this expense: its amount, date and billable flag stay
+        from app.services.invoice_costs_service import InvoiceCostsService
+
+        locked_fields = {
+            name: kwargs[key]
+            for key, name in (
+                ("amount", "amount"),
+                ("expense_date", "date"),
+                ("billable", "billable"),
+                ("currency_code", "currency_code"),
+            )
+            if key in kwargs
+        }
+        if kwargs.get("_allow_privileged") and kwargs.get("status") == "rejected":
+            locked_fields["delete"] = True
+        locked = InvoiceCostsService().edit_lock(expense, **locked_fields)
+        if locked:
+            return {
+                "success": False,
+                "message": InvoiceCostsService.lock_message(expense, locked),
+                "error": "expense_invoiced",
+            }
+
         # Update fields (status/reimbursed/invoiced require dedicated approve/reject flows)
         for field in ("title", "description", "category", "currency_code", "payment_method", "tags", "notes"):
             if field in kwargs:
@@ -219,6 +242,17 @@ class ExpenseService:
         # Check permissions
         if not is_admin and expense.user_id != user_id:
             return {"success": False, "message": "Access denied", "error": "access_denied"}
+
+        # An expense an issued invoice bills is not rejected
+        from app.services.invoice_costs_service import InvoiceCostsService
+
+        locked = InvoiceCostsService().edit_lock(expense, delete=True)
+        if locked:
+            return {
+                "success": False,
+                "message": InvoiceCostsService.lock_message(expense, locked),
+                "error": "expense_invoiced",
+            }
 
         # Soft delete by setting status to rejected
         expense.status = "rejected"

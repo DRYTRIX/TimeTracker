@@ -29,11 +29,54 @@
         <p class="p-4 text-sm text-text-muted-light dark:text-text-muted-dark">{{ _('No project costs on this draft.') }}</p>
         {% endfor %}
 
-        <div class="border-t border-border-light dark:border-border-dark p-4 flex justify-between items-center">
+        {% if not_logged %}
+        <div class="border-t border-border-light dark:border-border-dark p-4" id="notLoggedYet">
+            <h3 class="text-sm font-semibold">{{ _('Not logged yet') }} <span class="font-normal text-text-muted-light dark:text-text-muted-dark">{{ _('on earlier invoices, not in this period') }}</span></h3>
+            <div class="mt-2 space-y-2">
+                {% for row in not_logged %}
+                <form method="POST" action="{{ url_for('invoices.draft_log_missing_cost', invoice_id=invoice.id) }}" enctype="multipart/form-data"
+                      class="grid grid-cols-12 gap-2 items-center text-sm" data-draft-form data-once data-not-logged="{{ row.key }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="description" value="{{ row.description }}">
+                    <input type="hidden" name="project_id" value="{{ row.project_id }}">
+                    <input type="hidden" name="category_id" value="{{ row.category_id or '' }}">
+                    <input type="hidden" name="category" value="{{ row.category or '' }}">
+                    <input type="hidden" name="recurring_cost_id" value="{{ row.recurring_cost_id or '' }}">
+                    <input type="hidden" name="last_amount" value="{{ money(row.last_amount) }}">
+                    <div class="col-span-12 md:col-span-4">
+                        {{ row.description }} <span class="text-text-muted-light dark:text-text-muted-dark">· {{ row.category_name or '' }}{% if draft_projects|length > 1 %} · {{ row.project }}{% endif %}</span>
+                        {% if row.ask_amount %}<span class="block text-xs text-indigo-700 dark:text-indigo-300">{{ _('recurring · asks for the amount') }}</span>{% endif %}
+                    </div>
+                    <div class="col-span-4 md:col-span-2 text-right text-text-muted-light dark:text-text-muted-dark" data-last-amount>{{ _('last time %(amount)s', amount=money(row.last_amount)) }}</div>
+                    <label class="col-span-4 md:col-span-2"><span class="sr-only">{{ _('Amount, %(currency)s', currency=invoice.currency_code) }}</span>
+                        <input type="text" inputmode="decimal" name="amount" required class="form-input w-full text-right" placeholder="{{ money(row.last_amount) }}">
+                    </label>
+                    <div class="col-span-4 md:col-span-4 flex flex-wrap items-center gap-2 justify-end">
+                        <button type="submit" class="btn btn-secondary btn-sm" title="{{ _('Log it on the last day of the period and add it to the invoice') }}" aria-label="{{ _('Log it and add it to the invoice') }}">+</button>
+                        <label class="text-xs underline cursor-pointer">{{ _('Add bill') }}<input type="file" name="receipt_file" accept=".png,.jpg,.jpeg,.gif,.pdf" class="sr-only"></label>
+                        {% if not row.recurring_cost_id %}
+                        <button type="submit" formaction="{{ url_for('invoices.draft_make_cost_recurring', invoice_id=invoice.id) }}" formnovalidate class="text-xs underline">{{ _('Make it recurring') }}</button>
+                        {% endif %}
+                    </div>
+                </form>
+                {% endfor %}
+            </div>
+            <p class="text-xs text-text-muted-light dark:text-text-muted-dark mt-2">{{ _('+ logs the cost on the last day of the period and adds it here. Make it recurring repeats it every month from the next period.') }}</p>
+        </div>
+        {% endif %}
+
+        <div class="border-t border-border-light dark:border-border-dark p-4 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex flex-wrap items-center gap-4">
             <button type="button" class="btn btn-secondary" data-toggle="logCost" aria-controls="logCost" id="logCostButton">+ {{ _('Log a cost') }}</button>
+            <form method="POST" action="{{ url_for('invoices.draft_pdf_attachments', invoice_id=invoice.id) }}" class="text-sm" data-draft-form data-autoupload id="attachBillsForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="field" value="attach_bills">
+                <label class="flex items-center gap-2"><input type="checkbox" name="value" value="1" {% if invoice.attach_bills %}checked{% endif %}> {{ _('Attach bills to the invoice PDF') }}</label>
+            </form>
+            </div>
             <span class="text-lg">{{ _('Project costs') }} <strong id="costsTotal">{{ money(costs_total) }} {{ invoice.currency_code }}</strong></span>
         </div>
-        <form method="POST" action="{{ url_for('invoices.draft_log_cost', invoice_id=invoice.id) }}" enctype="multipart/form-data" id="logCost" class="hidden border-t border-border-light dark:border-border-dark p-4 grid grid-cols-12 gap-3" data-draft-form>
+        <form method="POST" action="{{ url_for('invoices.draft_log_cost', invoice_id=invoice.id) }}" enctype="multipart/form-data" id="logCost" class="hidden border-t border-border-light dark:border-border-dark p-4 grid grid-cols-12 gap-3" data-draft-form data-once>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label class="col-span-6 md:col-span-2 text-sm">{{ _('Date') }}
                 <input type="date" name="cost_date" value="{{ default_entry_date }}" required class="form-input w-full"
@@ -67,6 +110,7 @@
                 <legend class="font-medium mr-2 float-left">{{ _('Repeat') }}</legend>
                 <label class="flex items-center gap-1"><input type="radio" name="repeat" value="once" checked> {{ _('only now') }}</label>
                 <label class="flex items-center gap-1"><input type="radio" name="repeat" value="monthly"> {{ _('every month, same amount') }}</label>
+                <label class="flex items-center gap-1"><input type="radio" name="repeat" value="monthly_ask"> {{ _('every month, ask for the amount') }}</label>
             </fieldset>
             <div class="col-span-12 md:col-span-4 flex items-end justify-end">
                 <button type="submit" class="btn btn-primary">{{ _('Log and add to the invoice') }}</button>
