@@ -101,15 +101,25 @@ def kiosk_login():
 
     # Get authentication method
     from app.config import Config
-    from app.utils.auth_method import normalize_auth_method, requires_password_form
+    from app.utils.auth_method import (
+        allows_passwordless_login,
+        normalize_auth_method,
+        requires_password_form,
+    )
 
     try:
         auth_method = normalize_auth_method(getattr(Config, "AUTH_METHOD", "local"))
     except Exception:
         auth_method = "local"
 
-    # Determine if password authentication is required (kiosk doesn't support OIDC/LDAP flows)
+    # Kiosk only supports local password (or AUTH_METHOD=none). SSO-only modes have no
+    # password check path — refusing them prevents unauthenticated account takeover.
+    if auth_method in ("oidc", "saml"):
+        flash(_("Kiosk login is not available with SSO-only authentication."), "error")
+        return redirect(url_for("auth.login"))
+
     requires_password = requires_password_form(auth_method)
+    passwordless_ok = allows_passwordless_login(auth_method)
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -124,11 +134,8 @@ def kiosk_login():
             flash(_("Invalid username or password"), "error")
             return redirect(url_for("kiosk.kiosk_login"))
 
-        # Handle password authentication based on mode
-        if requires_password:
-            # Password authentication is required
+        if requires_password or not passwordless_ok:
             if user.has_password:
-                # User has password set - verify it
                 if not password:
                     flash(_("Password is required"), "error")
                     return redirect(url_for("kiosk.kiosk_login"))
@@ -137,11 +144,13 @@ def kiosk_login():
                     flash(_("Invalid username or password"), "error")
                     return redirect(url_for("kiosk.kiosk_login"))
             else:
-                # User doesn't have password set - deny access in kiosk mode
                 flash(_("No password is set for this account. Please set a password in your profile first."), "error")
                 return redirect(url_for("kiosk.kiosk_login"))
+        elif getattr(user, "is_admin", False) and not user.has_password:
+            # Even AUTH_METHOD=none: never passwordless-login admin accounts in kiosk
+            flash(_("Administrator accounts require a password before kiosk login."), "error")
+            return redirect(url_for("kiosk.kiosk_login"))
 
-        # For 'none' mode, no password check needed - just log in
         login_user(user, remember=False)  # Don't remember in kiosk mode
         log_event("auth.kiosk_login", user_id=user.id)
         return redirect(url_for("kiosk.kiosk_dashboard"))
@@ -151,7 +160,11 @@ def kiosk_login():
 
     user_repo = UserRepository()
     users = user_repo.query().filter_by(is_active=True).order_by(User.username).all()
-    return render_template("kiosk/login.html", users=users, requires_password=requires_password)
+    return render_template(
+        "kiosk/login.html",
+        users=users,
+        requires_password=requires_password or not passwordless_ok,
+    )
 
 
 @kiosk_bp.route("/kiosk/logout", methods=["GET", "POST"])

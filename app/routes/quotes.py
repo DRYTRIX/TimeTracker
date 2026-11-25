@@ -1182,7 +1182,7 @@ def upload_attachment(quote_id):
 
     # File upload configuration
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar"}
-    UPLOAD_FOLDER = "app/static/uploads/quote_attachments"
+    UPLOAD_FOLDER = "uploads/quote_attachments"
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
     def allowed_file(filename):
@@ -2071,7 +2071,7 @@ def upload_quote_image(quote_id):
 
     # File upload configuration - only images
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-    UPLOAD_FOLDER = "app/static/uploads/quote_images"
+    UPLOAD_FOLDER = "uploads/quote_images"
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
     def allowed_file(filename):

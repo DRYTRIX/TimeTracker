@@ -270,13 +270,22 @@ def api_messages(channel_id):
             return jsonify({"error": "Invalid JSON", "error_code": "validation_error"}), 400
 
         # Validate attachment fields if present (API may send attachment_url, attachment_filename, attachment_size)
+        from app.utils.attachment_url import sanitize_attachment_url
+
         attachment_url = data.get("attachment_url")
         attachment_filename = data.get("attachment_filename")
         attachment_size = data.get("attachment_size")
         if attachment_url is not None or attachment_filename is not None or attachment_size is not None:
             errors = {}
-            if attachment_url is not None and not isinstance(attachment_url, str):
-                errors.setdefault("attachment_url", []).append("Must be a string.")
+            if attachment_url is not None:
+                if not isinstance(attachment_url, str):
+                    errors.setdefault("attachment_url", []).append("Must be a string.")
+                else:
+                    cleaned = sanitize_attachment_url(attachment_url)
+                    if cleaned is None:
+                        errors.setdefault("attachment_url", []).append("Invalid or unsafe attachment path.")
+                    else:
+                        attachment_url = cleaned
             if attachment_filename is not None and not isinstance(attachment_filename, str):
                 errors.setdefault("attachment_filename", []).append("Must be a string.")
             if attachment_size is not None:

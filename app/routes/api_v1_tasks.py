@@ -58,6 +58,8 @@ def parse_task_status_filter(status_raw):
 def list_tasks():
     """List tasks."""
     from app.services import TaskService
+    from app.utils.api_object_auth import api_user_is_admin, require_project_access
+    from app.utils.scope_filter import get_allowed_project_ids
 
     project_id = request.args.get("project_id", type=int)
     milestone_id = request.args.get("milestone_id", type=int)
@@ -67,9 +69,36 @@ def list_tasks():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
+    project_ids = None
+    if project_id:
+        err = require_project_access(project_id)
+        if err:
+            return err
+    elif not api_user_is_admin():
+        allowed = get_allowed_project_ids(g.api_user)
+        if allowed is not None:
+            if len(allowed) == 0:
+                return jsonify(
+                    {
+                        "tasks": [],
+                        "pagination": {
+                            "page": page,
+                            "per_page": per_page,
+                            "total": 0,
+                            "pages": 0,
+                            "has_next": False,
+                            "has_prev": False,
+                            "next_page": None,
+                            "prev_page": None,
+                        },
+                    }
+                )
+            project_ids = list(allowed)
+
     task_service = TaskService()
     result = task_service.list_tasks(
         project_id=project_id,
+        project_ids=project_ids,
         milestone_id=milestone_id,
         status=status,
         statuses=statuses,
@@ -99,6 +128,7 @@ def get_task(task_id):
     from sqlalchemy.orm import joinedload, selectinload
 
     from app.models import Task, TaskAssignee
+    from app.utils.api_object_auth import not_found, require_project_access
 
     task = (
         Task.query.options(
@@ -107,8 +137,13 @@ def get_task(task_id):
             joinedload(Task.creator),
         )
         .filter_by(id=task_id)
-        .first_or_404()
+        .first()
     )
+    if not task:
+        return not_found("Task not found")
+    err = require_project_access(task.project_id)
+    if err:
+        return err
     return jsonify({"task": task.to_dict()})
 
 
@@ -117,6 +152,7 @@ def get_task(task_id):
 def create_task():
     """Create a new task."""
     from app.services import TaskService
+    from app.utils.api_object_auth import require_project_access
 
     data = request.get_json() or {}
     errors = {}
@@ -126,6 +162,9 @@ def create_task():
         errors["project_id"] = ["project_id is required"]
     if errors:
         return validation_error_response(errors=errors, message="Validation failed")
+    err = require_project_access(data.get("project_id"), edit=True)
+    if err:
+        return err
 
     task_service = TaskService()
     result = task_service.create_task(
@@ -150,7 +189,16 @@ def create_task():
 @require_api_token("write:tasks")
 def update_task(task_id):
     """Update a task."""
+    from app.models import Task
     from app.services import TaskService
+    from app.utils.api_object_auth import not_found, require_project_access
+
+    task = Task.query.get(task_id)
+    if not task:
+        return not_found("Task not found")
+    err = require_project_access(task.project_id, edit=True)
+    if err:
+        return err
 
     data = request.get_json() or {}
     task_service = TaskService()
@@ -191,11 +239,15 @@ def update_task(task_id):
 def delete_task(task_id):
     """Delete a task."""
     from app.repositories import TaskRepository
+    from app.utils.api_object_auth import not_found, require_project_access
 
     task_repo = TaskRepository()
     task = task_repo.get_by_id(task_id)
     if not task:
         return not_found_response("Task", task_id)
+    err = require_project_access(task.project_id, edit=True)
+    if err:
+        return err
     db.session.delete(task)
     db.session.commit()
     return jsonify({"message": "Task deleted successfully"})

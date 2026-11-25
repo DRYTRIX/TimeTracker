@@ -1194,10 +1194,13 @@ def bulk_status_change():
 @login_required
 def export_clients():
     """Export clients to CSV with custom fields and contacts"""
+    from app.utils.scope_filter import apply_client_scope
+
     status = request.args.get("status", "active")
     search = request.args.get("search", "").strip()
 
     query = Client.query.options(joinedload(Client.contacts))
+    query = apply_client_scope(Client, query, current_user)
     if status == "active":
         query = query.filter_by(status="active")
     elif status == "inactive":
@@ -1365,7 +1368,8 @@ def upload_client_attachment(client_id):
 
     # File upload configuration
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "doc", "docx", "txt", "xls", "xlsx", "zip", "rar"}
-    UPLOAD_FOLDER = "app/static/uploads/client_attachments"
+    # Private attachments live outside the public /static/ tree
+    UPLOAD_FOLDER = "uploads/client_attachments"
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
     def allowed_file(filename):

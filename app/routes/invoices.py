@@ -3455,7 +3455,7 @@ def upload_invoice_image(invoice_id):
 
     # File upload configuration - only images
     ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
-    UPLOAD_FOLDER = "app/static/uploads/invoice_images"
+    UPLOAD_FOLDER = "uploads/invoice_images"
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
     def allowed_file(filename):

@@ -683,6 +683,13 @@ class InvoiceService:
         if not invoice:
             return {"success": False, "message": "Invoice not found", "error": "not_found"}
 
+        from app.models import User
+
+        actor = User.query.get(user_id) if user_id else None
+        is_admin = bool(actor and getattr(actor, "is_admin", False))
+        if not self.user_can_access_invoice(invoice, user_id, is_admin):
+            return {"success": False, "message": "Permission denied", "error": "forbidden"}
+
         # Update fields
         if "client_name" in kwargs:
             invoice.client_name = kwargs["client_name"]

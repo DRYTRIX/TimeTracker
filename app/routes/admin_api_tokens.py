@@ -45,8 +45,15 @@ def create_api_token():
     user = User.query.get(data["user_id"])
     if not user:
         return jsonify({"error": "User not found"}), 404
-    if not user:
-        return jsonify({"error": "Invalid user"}), 400
+
+    from app.utils.api_object_auth import scopes_allowed_for_token_owner
+
+    scopes_raw = data["scopes"]
+    if isinstance(scopes_raw, list):
+        scopes_raw = ",".join(str(s).strip() for s in scopes_raw if str(s).strip())
+    ok, scope_err, capped_scopes = scopes_allowed_for_token_owner(current_user, user, scopes_raw or "")
+    if not ok:
+        return jsonify({"error": scope_err}), 400
 
     # Create token
     try:
@@ -54,7 +61,7 @@ def create_api_token():
             user_id=data["user_id"],
             name=data["name"],
             description=data.get("description", ""),
-            scopes=data["scopes"],
+            scopes=capped_scopes,
             expires_days=data.get("expires_days"),
         )
 

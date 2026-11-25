@@ -253,8 +253,10 @@ def health_check():
 
 
 def _issue_app_login_api_token(user: User) -> str:
-    """Mint a broad-scope API token for desktop/mobile/extension login."""
-    scopes = "admin:all" if user.is_admin else "read:*,write:*"
+    """Mint an API token for desktop/mobile/extension login (no wildcards)."""
+    from app.utils.api_object_auth import default_app_login_scopes
+
+    scopes = default_app_login_scopes(user)
     expiry_days = current_app.config.get("API_TOKEN_DEFAULT_EXPIRY_DAYS", 90)
     api_token, plain_token = ApiToken.create_token(
         user_id=user.id,
@@ -1743,6 +1745,12 @@ def list_client_notes(client_id):
         return blocked
     from sqlalchemy.orm import joinedload
 
+    from app.utils.api_object_auth import require_client_access
+
+    err = require_client_access(client_id)
+    if err:
+        return err
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
@@ -1772,6 +1780,11 @@ def create_client_note(client_id):
     blocked = _require_module_enabled_for_api("clients")
     if blocked:
         return blocked
+    from app.utils.api_object_auth import require_client_access
+
+    err = require_client_access(client_id, edit=True)
+    if err:
+        return err
     data = request.get_json() or {}
     content = (data.get("content") or "").strip()
     if not content:
@@ -1792,11 +1805,18 @@ def get_client_note(note_id):
         return blocked
     from sqlalchemy.orm import joinedload
 
+    from app.utils.api_object_auth import not_found, require_client_access
+
     note = (
         ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.author))
         .filter_by(id=note_id)
-        .first_or_404()
+        .first()
     )
+    if not note:
+        return not_found("Note not found")
+    err = require_client_access(note.client_id)
+    if err:
+        return err
 
     return jsonify({"note": note.to_dict()})
 
@@ -1809,11 +1829,18 @@ def update_client_note(note_id):
         return blocked
     from sqlalchemy.orm import joinedload
 
+    from app.utils.api_object_auth import not_found, require_client_access
+
     note = (
         ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.author))
         .filter_by(id=note_id)
-        .first_or_404()
+        .first()
     )
+    if not note:
+        return not_found("Note not found")
+    err = require_client_access(note.client_id, edit=True)
+    if err:
+        return err
 
     data = request.get_json() or {}
     new_content = (data.get("content") or "").strip()
@@ -1836,11 +1863,18 @@ def delete_client_note(note_id):
         return blocked
     from sqlalchemy.orm import joinedload
 
+    from app.utils.api_object_auth import not_found, require_client_access
+
     note = (
         ClientNote.query.options(joinedload(ClientNote.client), joinedload(ClientNote.author))
         .filter_by(id=note_id)
-        .first_or_404()
+        .first()
     )
+    if not note:
+        return not_found("Note not found")
+    err = require_client_access(note.client_id, edit=True)
+    if err:
+        return err
 
     if not (g.api_user.is_admin or note.user_id == g.api_user.id):
         return forbidden_response("Access denied")
@@ -1857,6 +1891,11 @@ def delete_client_note(note_id):
 @require_api_token("read:projects")
 def list_project_costs(project_id):
     """List project costs (paginated)"""
+    from app.utils.api_object_auth import require_project_access
+
+    err = require_project_access(project_id)
+    if err:
+        return err
     start_date = _parse_date(request.args.get("start_date"))
     end_date = _parse_date(request.args.get("end_date"))
     user_id = request.args.get("user_id", type=int)
@@ -1899,6 +1938,11 @@ def list_project_costs(project_id):
 @require_api_token("write:projects")
 def create_project_cost(project_id):
     """Create project cost"""
+    from app.utils.api_object_auth import require_project_access
+
+    err = require_project_access(project_id, edit=True)
+    if err:
+        return err
     data = request.get_json() or {}
     required = ["description", "amount", "cost_date"]
     missing = [f for f in required if not data.get(f)]
@@ -1939,11 +1983,18 @@ def create_project_cost(project_id):
 def get_project_cost(cost_id):
     from sqlalchemy.orm import joinedload
 
+    from app.utils.api_object_auth import not_found, require_project_access
+
     cost = (
         ProjectCost.query.options(joinedload(ProjectCost.project), joinedload(ProjectCost.user))
         .filter_by(id=cost_id)
-        .first_or_404()
+        .first()
     )
+    if not cost:
+        return not_found("Project cost not found")
+    err = require_project_access(cost.project_id)
+    if err:
+        return err
 
     return jsonify({"cost": cost.to_dict()})
 
@@ -1953,11 +2004,18 @@ def get_project_cost(cost_id):
 def update_project_cost(cost_id):
     from sqlalchemy.orm import joinedload
 
+    from app.utils.api_object_auth import not_found, require_project_access
+
     cost = (
         ProjectCost.query.options(joinedload(ProjectCost.project), joinedload(ProjectCost.user))
         .filter_by(id=cost_id)
-        .first_or_404()
+        .first()
     )
+    if not cost:
+        return not_found("Project cost not found")
+    err = require_project_access(cost.project_id, edit=True)
+    if err:
+        return err
     data = request.get_json() or {}
     for field in ("description", "currency_code", "notes", "billable"):
         if field in data:
@@ -1986,11 +2044,18 @@ def update_project_cost(cost_id):
 def delete_project_cost(cost_id):
     from sqlalchemy.orm import joinedload
 
+    from app.utils.api_object_auth import not_found, require_project_access
+
     cost = (
         ProjectCost.query.options(joinedload(ProjectCost.project), joinedload(ProjectCost.user))
         .filter_by(id=cost_id)
-        .first_or_404()
+        .first()
     )
+    if not cost:
+        return not_found("Project cost not found")
+    err = require_project_access(cost.project_id, edit=True)
+    if err:
+        return err
 
     db.session.delete(cost)
     db.session.commit()
@@ -2832,6 +2897,8 @@ def list_credit_notes():
     """
     from sqlalchemy.orm import joinedload
 
+    from app.utils.api_object_auth import filter_credit_notes_query, require_invoice_access
+
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
@@ -2839,8 +2906,13 @@ def list_credit_notes():
 
     invoice_id = request.args.get("invoice_id", type=int)
     if invoice_id:
+        inv = Invoice.query.get(invoice_id)
+        err = require_invoice_access(inv)
+        if err:
+            return err
         query = query.filter(CreditNote.invoice_id == invoice_id)
 
+    query = filter_credit_notes_query(query)
     query = query.order_by(CreditNote.created_at.desc())
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -2880,7 +2952,14 @@ def get_credit_note(cn_id):
     """Get credit note"""
     from sqlalchemy.orm import joinedload
 
-    cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first_or_404()
+    from app.utils.api_object_auth import not_found, require_invoice_access
+
+    cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first()
+    if not cn:
+        return not_found("Credit note not found")
+    err = require_invoice_access(cn.invoice)
+    if err:
+        return err
 
     return jsonify(
         {
@@ -2901,6 +2980,8 @@ def get_credit_note(cn_id):
 @require_api_token("write:invoices")
 def create_credit_note():
     """Create credit note"""
+    from app.utils.api_object_auth import require_invoice_access
+
     data = request.get_json() or {}
     required = ["invoice_id", "amount"]
     missing = [f for f in required if not data.get(f)]
@@ -2909,6 +2990,9 @@ def create_credit_note():
     inv = Invoice.query.get(data["invoice_id"])
     if not inv:
         return jsonify({"error": "Invalid invoice_id"}), 400
+    err = require_invoice_access(inv, write=True)
+    if err:
+        return err
     from decimal import Decimal
 
     try:
@@ -2950,7 +3034,14 @@ def update_credit_note(cn_id):
     """Update credit note"""
     from sqlalchemy.orm import joinedload
 
-    cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first_or_404()
+    from app.utils.api_object_auth import not_found, require_invoice_access
+
+    cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first()
+    if not cn:
+        return not_found("Credit note not found")
+    err = require_invoice_access(cn.invoice, write=True)
+    if err:
+        return err
 
     data = request.get_json() or {}
     if "reason" in data:
@@ -2972,7 +3063,14 @@ def delete_credit_note(cn_id):
     """Delete credit note"""
     from sqlalchemy.orm import joinedload
 
-    cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first_or_404()
+    from app.utils.api_object_auth import not_found, require_invoice_access
+
+    cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first()
+    if not cn:
+        return not_found("Credit note not found")
+    err = require_invoice_access(cn.invoice, write=True)
+    if err:
+        return err
 
     db.session.delete(cn)
     db.session.commit()
@@ -2983,9 +3081,17 @@ def delete_credit_note(cn_id):
 @require_api_token("read:invoices")
 def download_credit_note_pdf_api(cn_id):
     """Download credit note as PDF."""
+    from sqlalchemy.orm import joinedload
+
+    from app.utils.api_object_auth import not_found, require_invoice_access
     from app.utils.credit_note_pdf import generate_credit_note_pdf
 
-    cn = CreditNote.query.get_or_404(cn_id)
+    cn = CreditNote.query.options(joinedload(CreditNote.invoice)).filter_by(id=cn_id).first()
+    if not cn:
+        return not_found("Credit note not found")
+    err = require_invoice_access(cn.invoice)
+    if err:
+        return err
     try:
         pdf_bytes = generate_credit_note_pdf(cn)
     except Exception as e:

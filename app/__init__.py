@@ -1705,10 +1705,19 @@ def create_app(config=None):
             else:
                 admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
                 if not User.query.filter_by(username=admin_username).first():
+                    import secrets
+
                     from app.models import Role
 
                     admin_user = User(username=admin_username, role="admin")
                     admin_user.is_active = True
+                    # Always set a password so AUTH_METHOD=saml/oidc/none cannot
+                    # yield an empty-credential remote admin takeover.
+                    bootstrap_password = (app.config.get("ADMIN_BOOTSTRAP_PASSWORD") or "").strip() or secrets.token_urlsafe(
+                        24
+                    )
+                    admin_user.set_password(bootstrap_password)
+                    admin_user.password_change_required = True
 
                     admin_role = Role.query.filter_by(name="admin").first()
                     if admin_role:
@@ -1717,6 +1726,11 @@ def create_app(config=None):
                     db.session.add(admin_user)
                     db.session.commit()
                     print(f"Created default admin user: {admin_username}")
+                    if not (app.config.get("ADMIN_BOOTSTRAP_PASSWORD") or "").strip():
+                        print(
+                            f"IMPORTANT: Set a new password on first login. "
+                            f"Temporary admin password: {bootstrap_password}"
+                        )
 
             print("Database initialized successfully")
         except Exception as e:
@@ -1789,10 +1803,17 @@ def init_database(app):
             else:
                 admin_username = app.config.get("ADMIN_USERNAMES", ["admin"])[0]
                 if not User.query.filter_by(username=admin_username).first():
+                    import secrets
+
                     from app.models import Role
 
                     admin_user = User(username=admin_username, role="admin")
                     admin_user.is_active = True
+                    bootstrap_password = (app.config.get("ADMIN_BOOTSTRAP_PASSWORD") or "").strip() or secrets.token_urlsafe(
+                        24
+                    )
+                    admin_user.set_password(bootstrap_password)
+                    admin_user.password_change_required = True
 
                     admin_role = Role.query.filter_by(name="admin").first()
                     if admin_role:
@@ -1801,6 +1822,11 @@ def init_database(app):
                     db.session.add(admin_user)
                     db.session.commit()
                     print(f"Created default admin user: {admin_username}")
+                    if not (app.config.get("ADMIN_BOOTSTRAP_PASSWORD") or "").strip():
+                        print(
+                            f"IMPORTANT: Set a new password on first login. "
+                            f"Temporary admin password: {bootstrap_password}"
+                        )
 
             print("Database initialized successfully")
         except Exception as e:

@@ -237,6 +237,11 @@ def update_client_api(client_id):
     from decimal import Decimal
 
     from app.services import ClientService
+    from app.utils.api_object_auth import require_client_access
+
+    err = require_client_access(client_id, edit=True)
+    if err:
+        return err
 
     data = request.get_json() or {}
     allowed = {}
