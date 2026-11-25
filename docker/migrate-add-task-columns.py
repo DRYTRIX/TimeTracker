@@ -7,6 +7,7 @@ and creates the tasks table if they don't exist.
 
 import os
 import sys
+import time
 
 from sqlalchemy import create_engine, inspect, text
 
