@@ -534,7 +534,7 @@ class CalDAVClient:
                     logger.info(f"Following redirect from {event_url} to {redirect_url}")
                     # Make redirect URL absolute if it's relative
                     if not redirect_url.startswith("http"):
-                        from urllib.parse import urljoin, urlparse
+                        from urllib.parse import urlparse
 
                         parsed = urlparse(event_url)
                         redirect_url = f"{parsed.scheme}://{parsed.netloc}{redirect_url}"
