@@ -1237,11 +1237,7 @@ def edit_user(user_id):
 
     user = User.query.get_or_404(user_id)
     clients = Client.query.filter_by(status="active").order_by(Client.name).all()
-    from app.utils.role_assignment import (
-        filter_assignable_roles,
-        user_can_assign_role,
-        user_can_reset_password_for,
-    )
+    from app.utils.role_assignment import filter_assignable_roles, user_can_assign_role, user_can_reset_password_for
 
     all_roles = filter_assignable_roles(current_user, Role.query.order_by(Role.name).all())
     assigned_client_ids = [c.id for c in user.assigned_clients.all()]

@@ -245,7 +245,9 @@ def _install_http_auth_middleware(mcp: FastMCP) -> None:
             return JSONResponse(
                 {"error": "unauthorized", "message": "Bearer token required"},
                 status_code=401,
-                headers={"WWW-Authenticate": f'Bearer realm="TimeTracker MCP", resource_metadata="{issuer}/.well-known/oauth-protected-resource"'},
+                headers={
+                    "WWW-Authenticate": f'Bearer realm="TimeTracker MCP", resource_metadata="{issuer}/.well-known/oauth-protected-resource"'
+                },
             )
         try:
             _whoami_cached(token)

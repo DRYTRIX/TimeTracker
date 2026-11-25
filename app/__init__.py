@@ -1713,9 +1713,9 @@ def create_app(config=None):
                     admin_user.is_active = True
                     # Always set a password so AUTH_METHOD=saml/oidc/none cannot
                     # yield an empty-credential remote admin takeover.
-                    bootstrap_password = (app.config.get("ADMIN_BOOTSTRAP_PASSWORD") or "").strip() or secrets.token_urlsafe(
-                        24
-                    )
+                    bootstrap_password = (
+                        app.config.get("ADMIN_BOOTSTRAP_PASSWORD") or ""
+                    ).strip() or secrets.token_urlsafe(24)
                     admin_user.set_password(bootstrap_password)
                     admin_user.password_change_required = True
 
@@ -1809,9 +1809,9 @@ def init_database(app):
 
                     admin_user = User(username=admin_username, role="admin")
                     admin_user.is_active = True
-                    bootstrap_password = (app.config.get("ADMIN_BOOTSTRAP_PASSWORD") or "").strip() or secrets.token_urlsafe(
-                        24
-                    )
+                    bootstrap_password = (
+                        app.config.get("ADMIN_BOOTSTRAP_PASSWORD") or ""
+                    ).strip() or secrets.token_urlsafe(24)
                     admin_user.set_password(bootstrap_password)
                     admin_user.password_change_required = True
 
