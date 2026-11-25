@@ -70,6 +70,29 @@ def require_project_access(project_id: Optional[int], *, edit: bool = False):
     return None
 
 
+def require_task_write_access(task):
+    """Return an error response if the API user cannot edit/delete the task, else None.
+
+    Mirrors the web UI: the task's creator may change it, and so may anyone who can
+    edit the project. Both still need access to the project itself.
+    """
+    user = api_user()
+    if not user or task is None:
+        return not_found("Task not found")
+    err = require_project_access(task.project_id)
+    if err:
+        return err
+    if api_user_is_admin() or task.created_by == user.id:
+        return None
+    from app.models import Project
+    from app.utils.permissions import user_can_edit_project
+
+    project = Project.query.get(task.project_id)
+    if not project or not user_can_edit_project(user, project):
+        return forbidden("You do not have permission to edit this task")
+    return None
+
+
 def require_invoice_access(invoice, *, write: bool = False) -> Optional[Tuple[Any, int]]:
     """Enforce creator-or-admin invoice access (matches web + InvoiceService)."""
     user = api_user()
