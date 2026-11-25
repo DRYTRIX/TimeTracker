@@ -2225,6 +2225,7 @@ def bulk_update_status():
     updated_count = 0
     skipped_count = 0
     not_allowed_count = 0
+    has_payments_count = 0
 
     for invoice_id_str in invoice_ids:
         try:
@@ -2246,7 +2247,10 @@ def bulk_update_status():
                 payment_reference=invoice_reference or None,
             )
             if not result.get("success"):
-                not_allowed_count += 1
+                if result.get("error") == "has_payments":
+                    has_payments_count += 1
+                else:
+                    not_allowed_count += 1
                 continue
 
             # Same-status is a no-op success; only count real changes
@@ -2282,6 +2286,15 @@ def bulk_update_status():
                 "(a cancelled or paid invoice keeps its status)",
                 count=not_allowed_count,
                 status=new_status,
+            ),
+            "warning",
+        )
+    if has_payments_count > 0:
+        flash(
+            _(
+                "Skipped %(count)d invoice(s) with payments: use Correct → Credit note, "
+                "or remove the payments first",
+                count=has_payments_count,
             ),
             "warning",
         )
