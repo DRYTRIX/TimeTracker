@@ -19,11 +19,11 @@ from app import db, limiter, log_event, oauth, track_event
 from app.config import Config
 from app.models import User
 from app.utils.auth_method import (
+    allows_passwordless_login,
     auth_includes_ldap,
     auth_includes_local,
     auth_includes_oidc,
     auth_includes_saml,
-    allows_passwordless_login,
     forgot_password_available,
     normalize_auth_method,
     requires_password_form,

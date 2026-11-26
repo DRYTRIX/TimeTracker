@@ -1069,6 +1069,57 @@ class TestTasks:
         names = {t["name"] for t in data["tasks"]}
         assert names == {"Linked"}
 
+    def test_task_write_follows_web_rules(self, client, api_token, test_user, test_project):
+        """Creator may change and delete their task; a project viewer who is neither creator nor editor gets 403."""
+        from app.models import Permission, Role
+
+        viewer_role = Role(name="project_viewer", description="Sees all projects, cannot edit them")
+        db.session.add(viewer_role)
+        for name in ("view_projects", "view_clients", "create_tasks"):
+            viewer_role.add_permission(Permission.query.filter_by(name=name).first())
+        viewer = User(username="viewer", email="viewer@example.com", role="user")
+        viewer.is_active = True
+        viewer.roles.append(viewer_role)
+        task = Task(name="Owned", project_id=test_project.id, status="todo", priority="medium", created_by=test_user)
+        db.session.add_all([viewer, task])
+        db.session.commit()
+        viewer_token, viewer_plain = ApiToken.create_token(
+            user_id=viewer.id, name="Viewer", scopes="read:tasks,write:tasks"
+        )
+        db.session.add(viewer_token)
+        db.session.commit()
+
+        viewer_headers = {"Authorization": f"Bearer {viewer_plain}", "Content-Type": "application/json"}
+        assert client.patch(f"/api/v1/tasks/{task.id}", json={"name": "x"}, headers=viewer_headers).status_code == 403
+        assert client.delete(f"/api/v1/tasks/{task.id}", headers=viewer_headers).status_code == 403
+        # Seeing the project is enough to add a task to it, as in the web UI
+        created = client.post(
+            "/api/v1/tasks", json={"name": "From viewer", "project_id": test_project.id}, headers=viewer_headers
+        )
+        assert created.status_code == 201
+
+        owner_headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+        assert (
+            client.patch(f"/api/v1/tasks/{task.id}", json={"name": "Renamed"}, headers=owner_headers).status_code == 200
+        )
+        assert client.delete(f"/api/v1/tasks/{task.id}", headers=owner_headers).status_code == 200
+
+    def test_task_create_hidden_project_is_404(self, client, app, test_project):
+        """A user who cannot see the project cannot add tasks to it."""
+        from app.models import Role
+
+        outsider = User(username="outsider", email="outsider@example.com", role="user")
+        outsider.is_active = True
+        outsider.roles.append(Role.query.filter_by(name="user").first())
+        db.session.add(outsider)
+        db.session.commit()
+        token, plain = ApiToken.create_token(user_id=outsider.id, name="Outsider", scopes="read:tasks,write:tasks")
+        db.session.add(token)
+        db.session.commit()
+        headers = {"Authorization": f"Bearer {plain}", "Content-Type": "application/json"}
+        r = client.post("/api/v1/tasks", json={"name": "Nope", "project_id": test_project.id}, headers=headers)
+        assert r.status_code == 404
+
 
 class TestClients:
     """Test client endpoints"""

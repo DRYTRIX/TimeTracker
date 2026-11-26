@@ -101,11 +101,7 @@ def kiosk_login():
 
     # Get authentication method
     from app.config import Config
-    from app.utils.auth_method import (
-        allows_passwordless_login,
-        normalize_auth_method,
-        requires_password_form,
-    )
+    from app.utils.auth_method import allows_passwordless_login, normalize_auth_method, requires_password_form
 
     try:
         auth_method = normalize_auth_method(getattr(Config, "AUTH_METHOD", "local"))

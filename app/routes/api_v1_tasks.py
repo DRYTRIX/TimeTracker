@@ -162,7 +162,8 @@ def create_task():
         errors["project_id"] = ["project_id is required"]
     if errors:
         return validation_error_response(errors=errors, message="Validation failed")
-    err = require_project_access(data.get("project_id"), edit=True)
+    # Same rule as the web UI: anyone who can see the project may add tasks to it.
+    err = require_project_access(data.get("project_id"))
     if err:
         return err
 
@@ -191,12 +192,12 @@ def update_task(task_id):
     """Update a task."""
     from app.models import Task
     from app.services import TaskService
-    from app.utils.api_object_auth import not_found, require_project_access
+    from app.utils.api_object_auth import not_found, require_task_write_access
 
     task = Task.query.get(task_id)
     if not task:
         return not_found("Task not found")
-    err = require_project_access(task.project_id, edit=True)
+    err = require_task_write_access(task)
     if err:
         return err
 
@@ -239,13 +240,13 @@ def update_task(task_id):
 def delete_task(task_id):
     """Delete a task."""
     from app.repositories import TaskRepository
-    from app.utils.api_object_auth import not_found, require_project_access
+    from app.utils.api_object_auth import require_task_write_access
 
     task_repo = TaskRepository()
     task = task_repo.get_by_id(task_id)
     if not task:
         return not_found_response("Task", task_id)
-    err = require_project_access(task.project_id, edit=True)
+    err = require_task_write_access(task)
     if err:
         return err
     db.session.delete(task)

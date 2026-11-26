@@ -9,12 +9,7 @@ from flask import Blueprint, g, jsonify, request
 
 from app.routes.api_v1_common import _parse_date
 from app.utils.api_auth import require_api_token
-from app.utils.api_object_auth import (
-    api_user_is_admin,
-    filter_payments_query,
-    not_found,
-    require_invoice_access,
-)
+from app.utils.api_object_auth import api_user_is_admin, filter_payments_query, not_found, require_invoice_access
 from app.utils.api_responses import error_response, validation_error_response
 
 api_v1_payments_bp = Blueprint("api_v1_payments", __name__, url_prefix="/api/v1")

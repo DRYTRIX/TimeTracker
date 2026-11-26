@@ -14,6 +14,18 @@ from app.integrations.activitywatch import ActivityWatchConnector
 from app.models import Integration, IntegrationExternalEventLink, Project, TimeEntry, User
 
 
+@pytest.fixture(autouse=True)
+def allow_private_integration_urls(app):
+    """Since #988 LAN hosts need an explicit opt-in, so these tests turn it on.
+
+    Loopback stays blocked even with the opt-in, so the fixture uses a LAN address.
+    """
+    previous = app.config.get("INTEGRATIONS_ALLOW_PRIVATE_URLS")
+    app.config["INTEGRATIONS_ALLOW_PRIVATE_URLS"] = True
+    yield
+    app.config["INTEGRATIONS_ALLOW_PRIVATE_URLS"] = previous
+
+
 @pytest.fixture
 def test_user(db_session):
     """Create a test user."""
@@ -49,7 +61,7 @@ def activitywatch_integration(db_session, test_user, test_project):
         is_global=False,
         is_active=True,
         config={
-            "server_url": "http://localhost:5600",
+            "server_url": "http://192.168.1.50:5600",
             "default_project_id": test_project.id,
             "lookback_days": 7,
         },
@@ -61,6 +73,19 @@ def activitywatch_integration(db_session, test_user, test_project):
 
 class TestActivityWatchConnector:
     """Test ActivityWatch connector."""
+
+    def test_server_url_policy(self, app):
+        """LAN hosts need INTEGRATIONS_ALLOW_PRIVATE_URLS; loopback is rejected even with it."""
+        from app.integrations.activitywatch import _normalize_server_url
+
+        with app.app_context():
+            app.config["INTEGRATIONS_ALLOW_PRIVATE_URLS"] = False
+            with pytest.raises(ValueError):
+                _normalize_server_url("http://192.168.1.50:5600")
+            app.config["INTEGRATIONS_ALLOW_PRIVATE_URLS"] = True
+            assert _normalize_server_url("http://192.168.1.50:5600/").startswith("http://192.168.1.50:5600")
+            with pytest.raises(ValueError):
+                _normalize_server_url("http://localhost:5600")
 
     def test_provider_name(self, activitywatch_integration):
         """Test provider name."""
