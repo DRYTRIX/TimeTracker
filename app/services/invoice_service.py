@@ -1724,11 +1724,14 @@ class InvoiceService:
         try:
             from app.models import Settings
             from app.utils.invoice_pdf_postprocess import postprocess_invoice_pdf_bytes
+            from app.utils.invoice_receipts import attach_invoice_files
             from app.utils.pdf_generator import InvoicePDFGenerator
 
             settings = Settings.get_settings()
             pdf_generator = InvoicePDFGenerator(invoice, settings=settings, page_size=page_size)
             pdf_bytes = pdf_generator.generate_pdf()
+            # The receipts and bills the invoice is set to attach follow it in the same PDF
+            pdf_bytes, _attached = attach_invoice_files(pdf_bytes, invoice, "api")
             pdf_bytes, embed_err, pdfa_err = postprocess_invoice_pdf_bytes(pdf_bytes, invoice, settings)
             if embed_err or pdfa_err:
                 return {
@@ -1745,10 +1748,12 @@ class InvoiceService:
             }
         except Exception as exc:
             try:
+                from app.utils.invoice_receipts import attach_invoice_files
                 from app.utils.pdf_generator_fallback import InvoicePDFGeneratorFallback
 
                 fallback = InvoicePDFGeneratorFallback(invoice, page_size=page_size)
                 pdf_bytes = fallback.generate_pdf()
+                pdf_bytes, _attached = attach_invoice_files(pdf_bytes, invoice, "api")
                 return {
                     "success": True,
                     "pdf_bytes": pdf_bytes,

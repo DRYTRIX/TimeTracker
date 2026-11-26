@@ -35,6 +35,7 @@ COSTS_LAYOUT_LABELS = OrderedDict(
 )
 ONE_LINE_DESCRIPTION = "Project costs"
 NO_CATEGORY = "Other"
+RECURRING_FREQUENCIES = ("daily", "weekly", "monthly", "yearly")
 
 # Statuses shown next to an expense or a cost
 STATUS_PENDING = "pending"
@@ -67,6 +68,30 @@ class InvalidCostsLayoutError(InvoiceCostsError):
     """Not one of the ways to show costs (by cost, by category, one line)."""
 
     code = "invalid_costs_layout"
+
+
+class ProjectNotOnInvoiceError(InvoiceCostsError):
+    """The project is not one the invoice bills."""
+
+    code = "project_not_on_invoice"
+
+
+class InvoiceHasNoPeriodError(InvoiceCostsError):
+    """The invoice has no period (all unbilled time), so nothing can be logged on its last day."""
+
+    code = "no_period"
+
+
+class CostAlreadyLoggedError(InvoiceCostsError):
+    """The Not logged yet row is not missing any more: the period has that cost (a second "+")."""
+
+    code = "already_logged"
+
+
+class AlreadyRecurringError(InvoiceCostsError):
+    """The project already has an active recurring cost with this category and description."""
+
+    code = "already_recurring"
 
 
 class DateOutsidePeriodError(InvoiceCostsError):
@@ -576,17 +601,23 @@ class InvoiceCostsService:
         notes: Optional[str] = None,
         receipt_path: Optional[str] = None,
         repeat_monthly: bool = False,
+        ask_amount: bool = False,
+        recurring_cost_id: Optional[int] = None,
+        legacy_category: Optional[str] = None,
     ) -> ProjectCost:
         """A new project cost billed on the draft at once, in the invoice's currency. The caller commits.
 
-        With ``repeat_monthly`` a monthly recurring cost with the same amount, category and project is
-        created too; this cost is its first one, and it next runs a month later.
+        With ``repeat_monthly`` a monthly recurring cost with the same category and project is created
+        too, and this cost is its first one: with the same amount every month, or, with ``ask_amount``,
+        asking for the amount in each draft of its period (it next runs a month later).
+        ``recurring_cost_id``: the cost is one of an existing recurring cost (Not logged yet).
+        ``legacy_category``: the category when the cost has only the old category text.
         """
         self.times._require_draft(invoice)
         description = (description or "").strip()
         if not description:
             raise InvalidLineValueError("description", "required")
-        if expense_category is None:
+        if expense_category is None and not (legacy_category or "").strip():
             raise InvalidLineValueError("category", "required")
         amount = self.parse_positive_amount(amount)
         self._require_in_period(invoice, cost_date)
@@ -602,24 +633,34 @@ class InvoiceCostsService:
             currency_code=invoice.currency_code,
             receipt_path=receipt_path,
         )
-        cost.set_category(expense_category)
+        if expense_category is not None:
+            cost.set_category(expense_category)
+        else:
+            cost.set_category_from_input(category=legacy_category)
         if repeat_monthly:
-            recurring = RecurringProjectCost(
+            recurring = self.make_recurring(
                 project_id=project_id,
                 user_id=user_id,
-                description=description[:500],
-                category=expense_category.legacy_key,
+                description=description,
+                category=cost.category,
+                category_id=cost.category_id,
                 amount=amount,
-                frequency="monthly",
                 next_run_date=cost_date + relativedelta(months=1),
                 currency_code=invoice.currency_code,
-                billable=True,
+                ask_amount=ask_amount,
+                # This cost is its first one
+                start_date=cost_date,
             )
-            recurring.set_category(expense_category)
             recurring.last_generated_at = datetime.utcnow()
-            db.session.add(recurring)
-            db.session.flush()
             cost.recurring_cost_id = recurring.id
+        elif recurring_cost_id:
+            recurring = db.session.get(RecurringProjectCost, recurring_cost_id)
+            if recurring is not None and recurring.project_id == project_id:
+                cost.recurring_cost_id = recurring.id
+                if recurring.ask_amount:
+                    # The last amount asked for is the hint next time; it next asks after this period
+                    recurring.amount = amount
+                    self.advance_past(recurring, invoice.period_end or cost_date)
         db.session.add(cost)
         db.session.flush()
         self.add_cost_lines(invoice, [cost])
@@ -632,6 +673,298 @@ class InvoiceCostsService:
         if amount <= 0:
             raise InvalidLineValueError("amount", "not_positive")
         return amount.quantize(MONEY)
+
+    @staticmethod
+    def make_recurring(
+        *,
+        project_id: int,
+        user_id: int,
+        description: str,
+        category: Optional[str],
+        category_id: Optional[int],
+        amount,
+        next_run_date: date,
+        currency_code: str,
+        ask_amount: bool = False,
+        start_date: Optional[date] = None,
+    ) -> RecurringProjectCost:
+        """A monthly recurring cost in this category (``category_id``, and the old category text). The caller commits."""
+        recurring = RecurringProjectCost(
+            project_id=project_id,
+            user_id=user_id,
+            description=description.strip()[:500],
+            category=(category or "other")[:50],
+            amount=Decimal(str(amount or 0)).quantize(MONEY),
+            frequency="monthly",
+            next_run_date=next_run_date,
+            currency_code=currency_code,
+            billable=True,
+            ask_amount=ask_amount,
+        )
+        recurring.category_id = category_id
+        recurring.start_date = start_date or next_run_date
+        db.session.add(recurring)
+        db.session.flush()
+        return recurring
+
+    # ------------------------------------------------------------------
+    # Not logged yet: costs of earlier invoices that this period does not have
+    # ------------------------------------------------------------------
+    @staticmethod
+    def cost_keys(cost: ProjectCost) -> List[Tuple]:
+        """What makes two costs "the same cost": their recurring cost, else category and description."""
+        keys = [("d", cost.project_id, category_key(cost), (cost.description or "").strip().lower())]
+        if cost.recurring_cost_id:
+            keys.insert(0, ("r", cost.recurring_cost_id))
+        return keys
+
+    def not_logged(self, invoice: Invoice, project_ids: Sequence[int]) -> List[Dict]:
+        """Costs the period may be missing, oldest invoice's order kept: each a dict with ``key``,
+        ``description``, ``category_id``, ``category`` (old text), ``category_name``, ``project_id``,
+        ``last_amount``, ``last_date``, ``currency``, ``recurring_cost_id``, ``ask_amount``.
+
+        A cost billed on one of the last 3 invoices (not cancelled) of a project before this period,
+        that has no cost of the same kind in the period nor on this invoice; and every recurring cost
+        that asks for its amount and falls in the period without a cost in it.
+        """
+        from sqlalchemy import func
+
+        if invoice is None or invoice.period_start is None or invoice.period_end is None:
+            return []
+        start, end = invoice.period_start, invoice.period_end
+        ids = sorted({pid for pid in project_ids if pid})
+        if not ids:
+            return []
+
+        present: Set[Tuple] = set()
+        in_period = ProjectCost.query.filter(
+            ProjectCost.project_id.in_(ids),
+            or_(
+                and_(ProjectCost.cost_date >= start, ProjectCost.cost_date <= end), ProjectCost.invoice_id == invoice.id
+            ),
+        ).all()
+        for cost in in_period:
+            present.update(self.cost_keys(cost))
+
+        rows: "OrderedDict[Tuple, Dict]" = OrderedDict()
+
+        def add(key, cost=None, recurring=None):
+            if key in rows:
+                return
+            source = cost if cost is not None else recurring
+            rows[key] = {
+                "key": f"r{key[1]}" if key[0] == "r" else f"c{len(rows) + 1}",
+                "description": source.description,
+                "category_id": source.category_id,
+                "category": source.category,
+                "category_name": source.category_name,
+                "project_id": source.project_id,
+                "last_amount": Decimal(str((cost or recurring).amount or 0)).quantize(MONEY),
+                "last_date": cost.cost_date if cost is not None else None,
+                "currency": source.currency_code,
+                "recurring_cost_id": recurring.id if recurring is not None else None,
+                "ask_amount": bool(recurring.ask_amount) if recurring is not None else False,
+            }
+
+        day = func.coalesce(Invoice.period_end, Invoice.issue_date)
+        for pid in ids:
+            earlier = (
+                db.session.query(Invoice.id, day.label("day"))
+                .join(ProjectCost, ProjectCost.invoice_id == Invoice.id)
+                .filter(
+                    ProjectCost.project_id == pid,
+                    Invoice.status != "cancelled",
+                    Invoice.id != invoice.id,
+                    day < start,
+                )
+                .distinct()
+                .order_by(day.desc(), Invoice.id.desc())
+                .limit(3)
+                .all()
+            )
+            invoice_ids = [row[0] for row in earlier]
+            if not invoice_ids:
+                continue
+            costs = (
+                ProjectCost.query.options(joinedload(ProjectCost.expense_category))
+                .filter(ProjectCost.invoice_id.in_(invoice_ids), ProjectCost.project_id == pid)
+                .order_by(ProjectCost.cost_date.desc(), ProjectCost.id.desc())
+                .all()
+            )
+            for cost in costs:
+                keys = self.cost_keys(cost)
+                if present.intersection(keys):
+                    continue
+                recurring = (
+                    db.session.get(RecurringProjectCost, cost.recurring_cost_id) if cost.recurring_cost_id else None
+                )
+                # A recurring cost that was switched off or ended before the period: the service is
+                # over, its old costs are not missing
+                if recurring is not None and self.recurring_over(recurring, start):
+                    continue
+                # A recurring cost is missing only in a period it falls in by its frequency (a yearly
+                # one is not asked for every month)
+                if recurring is not None and self.due_in_period(recurring, start, end) is None:
+                    continue
+                add(keys[0], cost=cost, recurring=recurring)
+                if recurring is not None:
+                    rows[keys[0]]["last_amount"] = cost_amount(cost)
+
+        # Which of them fall in the period is decided by their frequency (``due_in_period``), from their start
+        asking = RecurringProjectCost.query.filter(
+            RecurringProjectCost.project_id.in_(ids),
+            RecurringProjectCost.is_active == True,  # noqa: E712
+            RecurringProjectCost.ask_amount == True,  # noqa: E712
+            or_(RecurringProjectCost.end_date.is_(None), RecurringProjectCost.end_date >= start),
+        ).all()
+        for recurring in asking:
+            key = ("r", recurring.id)
+            if key in present or self.due_in_period(recurring, start, end) is None:
+                continue
+            last = (
+                ProjectCost.query.filter(ProjectCost.recurring_cost_id == recurring.id)
+                .order_by(ProjectCost.cost_date.desc(), ProjectCost.id.desc())
+                .first()
+            )
+            add(key, cost=last, recurring=recurring)
+            if last is None:
+                rows[key]["last_amount"] = Decimal(str(recurring.amount or 0)).quantize(MONEY)
+        return list(rows.values())
+
+    @staticmethod
+    def due_in_period(recurring: RecurringProjectCost, start: date, end: date) -> Optional[date]:
+        """The day in the period a recurring cost is due by its frequency, or None.
+
+        A recurring cost that asks for its amount counts from its start (``start_date``): its days are
+        the start and every step of the frequency after it, whatever was logged since, so a draft of an
+        earlier month made later still asks. A fixed one counts from ``next_run_date``, which its
+        generator moves on. Nothing is due after ``end_date``.
+        """
+        day = (recurring.start_date or recurring.next_run_date) if recurring.ask_amount else recurring.next_run_date
+        if day is None or recurring.frequency not in RECURRING_FREQUENCIES:
+            return None
+        for _step in range(10000):
+            if day > end or (recurring.end_date is not None and day > recurring.end_date):
+                return None
+            if day >= start:
+                return day
+            following = recurring.calculate_next_run_date(day)
+            if following is None or following <= day:
+                return None
+            day = following
+        return None
+
+    @staticmethod
+    def recurring_over(recurring: RecurringProjectCost, start: date) -> bool:
+        """Whether a recurring cost no longer runs for a period from ``start``: switched off, or ended before."""
+        return not recurring.is_active or (recurring.end_date is not None and recurring.end_date < start)
+
+    @staticmethod
+    def advance_past(recurring: RecurringProjectCost, end: date) -> None:
+        """A recurring cost whose amount was logged for a period next asks after that period.
+
+        ``next_run_date`` only moves forward: logging an earlier month never moves it back.
+        """
+        day = recurring.next_run_date
+        if recurring.frequency not in RECURRING_FREQUENCIES:
+            return
+        for _step in range(10000):
+            if day is None or day > end:
+                break
+            following = recurring.calculate_next_run_date(day)
+            if following is None or following <= day:
+                break
+            day = following
+        recurring.next_run_date = day
+        recurring.last_generated_at = datetime.utcnow()
+
+    @staticmethod
+    def same_kind(row: Dict, *, recurring_cost_id, category_id, legacy_category, description) -> bool:
+        """Whether a Not logged yet row is the one a form names: its recurring cost, else category and description."""
+        if recurring_cost_id:
+            return row.get("recurring_cost_id") == recurring_cost_id
+        if row.get("recurring_cost_id"):
+            return False
+        if (description or "").strip().lower() != (row.get("description") or "").strip().lower():
+            return False
+        if category_id or row.get("category_id"):
+            return row.get("category_id") == category_id
+        return (legacy_category or "").strip().lower() == (row.get("category") or "").strip().lower()
+
+    @staticmethod
+    def active_recurring_like(
+        project_id: int, category_id, legacy_category, description
+    ) -> Optional[RecurringProjectCost]:
+        """An active recurring cost of the project with this category and description, if there is one."""
+        wanted = (description or "").strip().lower()
+        candidates = RecurringProjectCost.query.filter(
+            RecurringProjectCost.project_id == project_id,
+            RecurringProjectCost.is_active == True,  # noqa: E712
+        ).all()
+        for recurring in candidates:
+            if (recurring.description or "").strip().lower() != wanted:
+                continue
+            if category_id or recurring.category_id:
+                if recurring.category_id == category_id:
+                    return recurring
+            elif (recurring.category or "").strip().lower() == (legacy_category or "").strip().lower():
+                return recurring
+        return None
+
+    # ------------------------------------------------------------------
+    # Issued invoices lock what they bill
+    # ------------------------------------------------------------------
+    @staticmethod
+    def issued_invoice(record) -> Optional[Invoice]:
+        """The invoice that bills this expense or cost when it was issued (not a draft, not cancelled)."""
+        if record is None or not getattr(record, "invoice_id", None):
+            return None
+        invoice = db.session.get(Invoice, record.invoice_id)
+        if invoice is None or invoice.status in ("draft", "cancelled"):
+            return None
+        return invoice
+
+    @staticmethod
+    def lock_message(record, invoice: Invoice) -> str:
+        """The refusal in English, for API answers."""
+        what = "expense" if isinstance(record, Expense) else "cost"
+        return (
+            f"This {what} is on invoice {invoice.invoice_number}, which was issued: its amount, currency, date, "
+            "project and billable flag cannot change, and it cannot be deleted or rejected. Cancel the invoice first."
+        )
+
+    def edit_lock(self, record, **changes) -> Optional[Invoice]:
+        """The issued invoice that refuses this change to what it bills, or None.
+
+        ``changes``: the new values of ``amount``, ``tax_amount``, ``date``, ``project_id``, ``billable``,
+        ``currency_code`` (only those given are compared); ``delete=True`` for a deletion or a rejection.
+        """
+        invoice = self.issued_invoice(record)
+        if invoice is None:
+            return None
+        if changes.pop("delete", False):
+            return invoice
+        current = {
+            "amount": record.amount,
+            "tax_amount": getattr(record, "tax_amount", None),
+            "date": record.expense_date if isinstance(record, Expense) else record.cost_date,
+            "project_id": record.project_id,
+            "billable": record.billable,
+            "currency_code": record.currency_code,
+        }
+        for name, value in changes.items():
+            before = current.get(name)
+            if name in ("amount", "tax_amount"):
+                same = Decimal(str(before or 0)).quantize(MONEY) == Decimal(str(value or 0)).quantize(MONEY)
+            elif name == "billable":
+                same = bool(before) == bool(value)
+            elif name == "currency_code":
+                same = (before or "").strip().upper() == (value or "").strip().upper()
+            else:
+                same = before == value
+            if not same:
+                return invoice
+        return None
 
     @staticmethod
     def _require_in_period(invoice: Invoice, day: Optional[date]) -> None:
@@ -738,10 +1071,14 @@ __all__ = [
     "COSTS_LAYOUTS",
     "COSTS_LAYOUT_LABELS",
     "COSTS_ONE_LINE",
+    "AlreadyRecurringError",
+    "CostAlreadyLoggedError",
     "CostNotOnInvoiceError",
     "DateOutsidePeriodError",
     "ExpenseNotOnInvoiceError",
     "InvalidCostsLayoutError",
+    "InvoiceHasNoPeriodError",
+    "ProjectNotOnInvoiceError",
     "InvoiceCostsError",
     "InvoiceCostsService",
     "LINE_KIND_COST",

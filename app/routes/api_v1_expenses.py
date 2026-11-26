@@ -178,6 +178,8 @@ def update_expense(expense_id):
         expense_id=expense_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin, **update_kwargs
     )
     if not result.get("success"):
+        if result.get("error") == "expense_invoiced":
+            return error_response(result["message"], status_code=409, error_code="expense_invoiced")
         return error_response(result.get("message", "Could not update expense"), status_code=400)
     return jsonify({"message": "Expense updated successfully", "expense": result["expense"].to_dict()})
 
@@ -191,6 +193,8 @@ def delete_expense(expense_id):
     expense_service = ExpenseService()
     result = expense_service.delete_expense(expense_id=expense_id, user_id=g.api_user.id, is_admin=g.api_user.is_admin)
     if not result.get("success"):
+        if result.get("error") == "expense_invoiced":
+            return error_response(result["message"], status_code=409, error_code="expense_invoiced")
         return error_response(result.get("message", "Could not reject expense"), status_code=400)
     return jsonify({"message": "Expense rejected successfully"})
 
@@ -241,6 +245,15 @@ def api_reject_expense(expense_id):
     expense = Expense.query.get_or_404(expense_id)
     if expense.status != "pending":
         return error_response("Only pending expenses can be rejected", status_code=400)
+
+    # An expense an issued invoice bills is not rejected: it would stay on the invoice
+    from app.services.invoice_costs_service import InvoiceCostsService
+
+    locked = InvoiceCostsService().edit_lock(expense, delete=True)
+    if locked:
+        return error_response(
+            InvoiceCostsService.lock_message(expense, locked), status_code=409, error_code="expense_invoiced"
+        )
 
     data = request.get_json() or {}
     reason = (data.get("reason") or "").strip()
