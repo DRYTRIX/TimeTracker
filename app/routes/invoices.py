@@ -2124,7 +2124,7 @@ def update_invoice_status(invoice_id):
             jsonify(
                 {
                     "error": result.get("error") or "invalid_status_transition",
-                    "message": "Invalid status transition",
+                    "message": result.get("message") or "Invalid status transition",
                 }
             ),
             400,
