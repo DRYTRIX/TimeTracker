@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import hmac
 import logging
 import os
 import sys
@@ -18,9 +19,10 @@ from mcp_server.tools_user import register_user_tools
 
 logger = logging.getLogger("timetracker.mcp")
 
-# Simple in-process cache: sha256(token) -> (expires_monotonic, whoami_payload)
+# Simple in-process cache: HMAC-SHA256(token) -> (expires_monotonic, whoami_payload)
 _WHOAMI_CACHE: dict[str, tuple[float, dict]] = {}
 _WHOAMI_TTL_SECONDS = 60.0
+_WHOAMI_CACHE_PEPPER = b"mcp-whoami-cache"
 
 
 def _resolve_toolset(me: dict, *, http_mode: bool = False) -> tuple[str, bool]:
@@ -54,7 +56,8 @@ def _resolve_toolset(me: dict, *, http_mode: bool = False) -> tuple[str, bool]:
 
 
 def _whoami_cached(token: str) -> dict[str, Any]:
-    key = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    # codeql[py/weak-sensitive-data-hashing]: whoami cache key fingerprint, not password hashing
+    key = hmac.new(_WHOAMI_CACHE_PEPPER, token.encode("utf-8"), hashlib.sha256).hexdigest()
     now = time.monotonic()
     cached = _WHOAMI_CACHE.get(key)
     if cached and cached[0] > now:
