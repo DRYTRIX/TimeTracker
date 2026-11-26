@@ -124,4 +124,13 @@ def view_approval(approval_id):
         flash(_("Approval not found."), "error")
         return redirect(url_for("invoice_approvals.list_approvals"))
 
+    # Restrict to requester, current-stage approver, or admin
+    if not current_user.is_admin and approval.requested_by != current_user.id:
+        current_stage = None
+        if approval.stages and approval.current_stage < len(approval.stages):
+            current_stage = approval.stages[approval.current_stage]
+        if not current_stage or current_stage.get("approver_id") != current_user.id:
+            flash(_("Access denied"), "error")
+            return redirect(url_for("invoice_approvals.list_approvals"))
+
     return render_template("invoice_approvals/view.html", approval=approval)

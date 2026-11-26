@@ -170,6 +170,13 @@ class InvoiceApprovalService:
             if approval.status != "pending":
                 return {"success": False, "message": f"Approval is not pending (current status: {approval.status})."}
 
+            # Same authorization as approve() — only the current-stage approver may reject
+            current_stage_data = approval.stages[approval.current_stage] if approval.stages else None
+            if not current_stage_data:
+                return {"success": False, "message": "Invalid approval stage."}
+            if current_stage_data.get("approver_id") != rejector_id:
+                return {"success": False, "message": "You are not authorized to reject at this stage."}
+
             # Update approval
             approval.status = "rejected"
             approval.rejected_by = rejector_id
@@ -177,12 +184,10 @@ class InvoiceApprovalService:
             approval.rejection_reason = reason
 
             # Update current stage
-            if approval.stages and approval.current_stage < len(approval.stages):
-                current_stage_data = approval.stages[approval.current_stage]
-                current_stage_data["status"] = "rejected"
-                current_stage_data["comments"] = reason
-                current_stage_data["rejected_at"] = now_in_app_timezone().isoformat()
-                approval.stages[approval.current_stage] = current_stage_data
+            current_stage_data["status"] = "rejected"
+            current_stage_data["comments"] = reason
+            current_stage_data["rejected_at"] = now_in_app_timezone().isoformat()
+            approval.stages[approval.current_stage] = current_stage_data
 
             if not safe_commit("reject_invoice", {"approval_id": approval_id}):
                 return {"success": False, "message": "Could not update approval due to a database error."}

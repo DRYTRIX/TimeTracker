@@ -437,6 +437,10 @@ def request_invoice_approval(invoice_id):
     """Request approval for an invoice."""
     from app.services.invoice_approval_service import InvoiceApprovalService
 
+    invoice, err = _load_invoice_for_api(invoice_id)
+    if err:
+        return err
+
     data = request.get_json() or {}
     approvers = data.get("approver_ids") or data.get("approvers") or []
     if not isinstance(approvers, list) or not approvers:
@@ -446,7 +450,7 @@ def request_invoice_approval(invoice_id):
         )
     service = InvoiceApprovalService()
     result = service.request_approval(
-        invoice_id=invoice_id,
+        invoice_id=invoice.id,
         requested_by=g.api_user.id,
         approvers=[int(a) for a in approvers],
     )

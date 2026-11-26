@@ -116,6 +116,11 @@ class TimeApprovalService:
         if approval.status != ApprovalStatus.PENDING:
             return {"success": False, "message": "Approval is not pending", "error": "invalid_status"}
 
+        # Same authorization as approve() — only designated approvers may reject
+        approver_ids = self._get_approvers_for_entry(approval.time_entry)
+        if approver_id not in approver_ids:
+            return {"success": False, "message": "Not authorized to reject", "error": "unauthorized"}
+
         approval.reject(approver_id, reason)
 
         # Cancel any child approvals
@@ -233,31 +238,37 @@ class TimeApprovalService:
 
     def _notify_approvers(self, approval: TimeEntryApproval, approver_ids: List[int]):
         """Send notifications to approvers"""
-        from app.utils.notification_service import NotificationService
+        try:
+            from app.utils.notification_service import NotificationService
 
-        service = NotificationService()
-        for approver_id in approver_ids:
-            service.send_notification(
-                user_id=approver_id,
-                title="Time Entry Approval Requested",
-                message=f"Time entry {approval.time_entry_id} requires your approval",
-                type="info",
-                priority="normal",
-            )
+            service = NotificationService()
+            for approver_id in approver_ids:
+                service.send_notification(
+                    user_id=approver_id,
+                    title="Time Entry Approval Requested",
+                    message=f"Time entry {approval.time_entry_id} requires your approval",
+                    type="info",
+                    priority="normal",
+                )
+        except Exception:
+            logger.debug("Could not notify time-entry approvers", exc_info=True)
 
     def _notify_requester(self, approval: TimeEntryApproval, status: str, reason: str = None):
         """Send notification to requester"""
-        from app.utils.notification_service import NotificationService
+        try:
+            from app.utils.notification_service import NotificationService
 
-        service = NotificationService()
-        message = f"Your time entry {approval.time_entry_id} has been {status}."
-        if reason:
-            message += f" Reason: {reason}"
+            service = NotificationService()
+            message = f"Your time entry {approval.time_entry_id} has been {status}."
+            if reason:
+                message += f" Reason: {reason}"
 
-        service.send_notification(
-            user_id=approval.requested_by,
-            title=f"Time Entry {status.title()}",
-            message=message,
-            type="success" if status == "approved" else "error",
-            priority="normal",
-        )
+            service.send_notification(
+                user_id=approval.requested_by,
+                title=f"Time Entry {status.title()}",
+                message=message,
+                type="success" if status == "approved" else "error",
+                priority="normal",
+            )
+        except Exception:
+            logger.debug("Could not notify time-entry requester", exc_info=True)
