@@ -2120,12 +2120,15 @@ def update_invoice_status(invoice_id):
 
     result = InvoiceService().transition_status(invoice, new_status, actor_id=current_user.id)
     if not result.get("success"):
-        return jsonify(
-            {
-                "error": result.get("error") or "invalid_status_transition",
-                "message": "Invalid status transition",
-            }
-        ), 400
+        return (
+            jsonify(
+                {
+                    "error": result.get("error") or "invalid_status_transition",
+                    "message": result.get("message") or "Invalid status transition",
+                }
+            ),
+            400,
+        )
 
     previous_status = result.get("previous_status")
     new_status = result.get("status") or new_status

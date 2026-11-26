@@ -670,7 +670,9 @@ def test_status_change_cannot_cancel_an_invoice_with_payments(client, user, bill
     # The status menu and the Cancel invoice button
     resp = client.post(f"/invoices/{inv.id}/status", data={"new_status": "cancelled"})
     assert resp.status_code == 400
-    assert resp.get_json()["error"] == HAS_PAYMENTS
+    body = resp.get_json()
+    assert body["error"] == "has_payments"
+    assert body["message"] == HAS_PAYMENTS
 
     # The API (DELETE cancels)
     resp = client.delete(f"/api/v1/invoices/{inv.id}", headers=_token(user))
