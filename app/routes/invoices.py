@@ -292,6 +292,7 @@ def create_invoice():
             discount_percent=discount_percent,
             discount_amount=discount_amount,
         )
+        invoice.sync_client_snapshot_from_client()
         if billing_entity:
             billing.apply_to_invoice(invoice, billing_entity, payment_account)
 
@@ -854,6 +855,11 @@ def _step_one_values(form=None, invoice=None):
     values["issue_date"] = invoice.issue_date.isoformat() if invoice.issue_date else ""
     values["due_date"] = invoice.due_date.isoformat() if invoice.due_date else ""
     values["tax_rate"] = str(invoice.tax_rate if invoice.tax_rate is not None else "")
+    # Drafts prefill bill-to from the live client so a rename is not re-saved as the old snapshot.
+    if invoice.status == "draft" and invoice.client:
+        values["client_name"] = invoice.client.name or ""
+        values["client_email"] = invoice.client.email or ""
+        values["client_address"] = invoice.client.address or ""
     return values
 
 
@@ -1064,6 +1070,7 @@ def new_invoice():
         currency_code=currency_code,
         **header,
     )
+    invoice.sync_client_snapshot_from_client()
     invoice.period_start = selection.period.start
     invoice.period_end = selection.period.end
     if billing_entity:
@@ -1216,6 +1223,7 @@ def edit_step_one(invoice_id):
     invoice.currency_code = currency_code
     for name, value in header.items():
         setattr(invoice, name, value)
+    invoice.sync_client_snapshot_from_client()
     if billing.module_on() and "billing_entity_id" in form:
         billing_entity, payment_account, billing_error = billing.resolve_from_form(form, currency_code)
         if billing_error:
@@ -1299,7 +1307,8 @@ def step_one_summary():
     try:
         selection = _step_one_selection(data, client, projects, invoice)
     except StepOneError as exc:
-        return jsonify({"error": "invalid_period", "message": str(exc)}), 400
+        current_app.logger.info("Invoice step-one period rejected: %s", exc)
+        return jsonify({"error": "invalid_period", "message": "Invalid period"}), 400
     remove_line_ids = data.get_ids("remove_line_ids")
     summary = service.summary(selection, projects, remove_line_ids)
     payload = _step_one_payload(selection, projects, summary, remove_line_ids)
@@ -1710,10 +1719,8 @@ def edit_invoice(invoice_id):
             )
             return redirect(url_for("invoices.view_invoice", invoice_id=invoice.id))
 
-        # Update invoice details
-        invoice.client_name = request.form.get("client_name", "").strip()
-        invoice.client_email = request.form.get("client_email", "").strip()
-        invoice.client_address = request.form.get("client_address", "").strip()
+        # Update invoice details — draft bill-to follows the linked client (issue #991)
+        invoice.sync_client_snapshot_from_client()
         _br = request.form.get("buyer_reference", "").strip()
         invoice.buyer_reference = _br if _br else None
         _vc = (request.form.get("vat_category", "") or "").strip().upper() or None
@@ -2113,7 +2120,12 @@ def update_invoice_status(invoice_id):
 
     result = InvoiceService().transition_status(invoice, new_status, actor_id=current_user.id)
     if not result.get("success"):
-        return jsonify({"error": result.get("message") or "Invalid status transition"}), 400
+        return jsonify(
+            {
+                "error": result.get("error") or "invalid_status_transition",
+                "message": "Invalid status transition",
+            }
+        ), 400
 
     previous_status = result.get("previous_status")
     new_status = result.get("status") or new_status

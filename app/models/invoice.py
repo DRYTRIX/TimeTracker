@@ -175,6 +175,34 @@ class Invoice(db.Model):
         return f"<Invoice {self.invoice_number} ({self.client_name})>"
 
     @property
+    def display_client_name(self):
+        """Client name for lists/search/exports: live record, fallback to document snapshot."""
+        return self.client.name if self.client else self.client_name
+
+    @property
+    def display_client_email(self):
+        """Client email for navigation; document paths should use client_email snapshot."""
+        if self.client and self.client.email:
+            return self.client.email
+        return self.client_email
+
+    @property
+    def display_client_address(self):
+        """Client address for navigation; document paths should use client_address snapshot."""
+        if self.client and self.client.address:
+            return self.client.address
+        return self.client_address
+
+    def sync_client_snapshot_from_client(self):
+        """Copy live Client name/email/address onto this invoice's document snapshot fields."""
+        client = self.client
+        if not client:
+            return
+        self.client_name = client.name
+        self.client_email = client.email
+        self.client_address = client.address
+
+    @property
     def is_overdue(self):
         """Check if invoice is overdue"""
         return self.status in ["sent", "issued", "overdue"] and datetime.utcnow().date() > self.due_date

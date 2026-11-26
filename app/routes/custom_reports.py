@@ -612,7 +612,7 @@ def generate_report_data(config, user_id=None):
                 "invoice_number": inv.invoice_number,
                 "issue_date": inv.issue_date.isoformat() if inv.issue_date else None,
                 "due_date": inv.due_date.isoformat() if inv.due_date else None,
-                "client_name": inv.client_name,
+                "client_name": inv.display_client_name,
                 "status": inv.status,
                 "total_amount": float(inv.total_amount),
                 "currency_code": inv.currency_code,

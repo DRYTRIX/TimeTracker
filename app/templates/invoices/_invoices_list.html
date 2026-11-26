@@ -55,7 +55,7 @@
                 </td>
                 {% endif %}
                 <td class="p-4 font-medium mobile-card-header" data-label="Number">{{ invoice.invoice_number }}</td>
-                <td class="p-4" data-label="Client">{{ invoice.client_name }}</td>
+                <td class="p-4" data-label="Client">{{ invoice.display_client_name }}</td>
                 <td class="p-4" data-label="Status">
                     {% set s = invoice.status %}
                     {% if s == 'draft' %}

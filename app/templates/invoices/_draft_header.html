@@ -22,10 +22,13 @@
         </div>
         <div>
             <h3 class="text-xs font-semibold uppercase tracking-wide text-text-muted-light dark:text-text-muted-dark mb-1">{{ _('Bill to') }}</h3>
-            <p class="font-semibold">{{ invoice.client_name }}</p>
-            {% if invoice.client_address %}<p class="whitespace-pre-line">{{ invoice.client_address }}</p>{% endif %}
+            {% set bill_name = invoice.display_client_name %}
+            {% set bill_address = invoice.display_client_address %}
+            {% set bill_email = invoice.display_client_email %}
+            <p class="font-semibold">{{ bill_name }}</p>
+            {% if bill_address %}<p class="whitespace-pre-line">{{ bill_address }}</p>{% endif %}
             {% for label, value in buyer_lines %}<p>{{ label }}: {{ value }}</p>{% endfor %}
-            {% if invoice.client_email %}<p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Send to %(email)s', email=invoice.client_email) }}</p>{% endif %}
+            {% if bill_email %}<p class="text-text-muted-light dark:text-text-muted-dark">{{ _('Send to %(email)s', email=bill_email) }}</p>{% endif %}
         </div>
         <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
             <dt class="text-text-muted-light dark:text-text-muted-dark">{{ _('Invoice') }}</dt><dd>{{ invoice.invoice_number }}</dd>

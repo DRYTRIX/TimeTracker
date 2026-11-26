@@ -180,7 +180,7 @@ class ExportService:
             writer.writerow(
                 [
                     invoice.invoice_number,
-                    invoice.client_name,
+                    invoice.display_client_name,
                     invoice.project.name if invoice.project else "",
                     invoice.issue_date.isoformat() if invoice.issue_date else "",
                     invoice.due_date.isoformat() if invoice.due_date else "",
