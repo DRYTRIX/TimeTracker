@@ -464,7 +464,7 @@ def create_invoices_list_excel(invoices):
     for row_num, invoice in enumerate(invoices, 2):
         data = [
             invoice.invoice_number,
-            invoice.client_name or "N/A",
+            invoice.display_client_name or "N/A",
             invoice.project.name if invoice.project else "N/A",
             invoice.issue_date.strftime("%Y-%m-%d") if invoice.issue_date else "",
             invoice.due_date.strftime("%Y-%m-%d") if invoice.due_date else "",

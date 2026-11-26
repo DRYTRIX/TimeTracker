@@ -443,6 +443,10 @@ class InvoiceService:
                     "status": previous_status,
                 }
 
+        # Freeze buyer contact details from the live client when leaving draft (PDF/email/e-invoice).
+        if prev == "draft" and new_status != "draft":
+            invoice.sync_client_snapshot_from_client()
+
         invoice.status = new_status
 
         try:
@@ -690,13 +694,17 @@ class InvoiceService:
         if not self.user_can_access_invoice(invoice, user_id, is_admin):
             return {"success": False, "message": "Permission denied", "error": "forbidden"}
 
-        # Update fields
-        if "client_name" in kwargs:
-            invoice.client_name = kwargs["client_name"]
-        if "client_email" in kwargs:
-            invoice.client_email = kwargs["client_email"]
-        if "client_address" in kwargs:
-            invoice.client_address = kwargs["client_address"]
+        # Update fields. Drafts refresh name/email/address from the linked Client;
+        # issued invoices keep their frozen snapshot (client_* kwargs are ignored when draft sync runs).
+        if invoice.status == "draft":
+            invoice.sync_client_snapshot_from_client()
+        else:
+            if "client_name" in kwargs:
+                invoice.client_name = kwargs["client_name"]
+            if "client_email" in kwargs:
+                invoice.client_email = kwargs["client_email"]
+            if "client_address" in kwargs:
+                invoice.client_address = kwargs["client_address"]
         if "due_date" in kwargs:
             invoice.due_date = kwargs["due_date"]
         if "notes" in kwargs:
@@ -819,8 +827,16 @@ class InvoiceService:
             query = query.filter(Invoice.payment_status == payment_status)
 
         if search:
+            from app.models import Client
+
             like = f"%{search}%"
-            query = query.filter(db.or_(Invoice.invoice_number.ilike(like), Invoice.client_name.ilike(like)))
+            query = query.outerjoin(Client, Invoice.client_id == Client.id).filter(
+                db.or_(
+                    Invoice.invoice_number.ilike(like),
+                    Invoice.client_name.ilike(like),
+                    Client.name.ilike(like),
+                )
+            )
 
         if project_id:
             query = query.filter(Invoice.project_id == project_id)
