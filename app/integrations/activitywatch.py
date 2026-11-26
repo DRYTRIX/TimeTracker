@@ -38,9 +38,9 @@ def _to_local_naive(dt: datetime) -> datetime:
 def _normalize_server_url(url: str) -> str:
     """Strip trailing slash and validate against SSRF targets.
 
-    ActivityWatch typically runs on localhost/LAN. Private hosts are allowed when
-    ``INTEGRATIONS_ALLOW_PRIVATE_URLS`` is true (default). Cloud metadata hosts are
-    always rejected.
+    ActivityWatch typically runs on localhost/LAN. LAN hosts are allowed only when
+    ``INTEGRATIONS_ALLOW_PRIVATE_URLS`` is true (off by default since #988). Loopback
+    and cloud metadata hosts are always rejected.
     """
     if not url:
         return url
