@@ -34,7 +34,10 @@ def list_leads():
 
     query = Lead.query
 
-    if status:
+    if status == "all":
+        # Show every status including converted and lost
+        pass
+    elif status:
         query = query.filter_by(status=status)
     else:
         # Default to active leads (not converted or lost)

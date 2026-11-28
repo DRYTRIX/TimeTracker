@@ -25,7 +25,8 @@
         <div>
             <label for="status" class="block text-sm font-medium mb-2">{{ _('Status') }}</label>
             <select name="status" id="status" class="form-input">
-                <option value="">{{ _('All Statuses') }}</option>
+                <option value="" {% if not status %}selected{% endif %}>{{ _('Active') }}</option>
+                <option value="all" {% if status == 'all' %}selected{% endif %}>{{ _('All Statuses') }}</option>
                 {% for status_name in lead_statuses %}
                 <option value="{{ status_name }}" {% if status == status_name %}selected{% endif %}>{{ status_name|title }}</option>
                 {% endfor %}
