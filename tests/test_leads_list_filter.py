@@ -23,18 +23,14 @@ def leads_module_enabled(app):
 def sample_leads(app, admin_user):
     """Create active, converted, and lost leads."""
     active = Lead(first_name="Active", last_name="Lead", created_by=admin_user.id, status="new")
-    converted = Lead(
-        first_name="Converted", last_name="Lead", created_by=admin_user.id, status="converted"
-    )
+    converted = Lead(first_name="Converted", last_name="Lead", created_by=admin_user.id, status="converted")
     lost = Lead(first_name="Lost", last_name="Lead", created_by=admin_user.id, status="lost")
     db.session.add_all([active, converted, lost])
     db.session.commit()
     return {"active": active, "converted": converted, "lost": lost}
 
 
-def test_leads_list_default_excludes_converted_and_lost(
-    client, admin_user, leads_module_enabled, sample_leads
-):
+def test_leads_list_default_excludes_converted_and_lost(client, admin_user, leads_module_enabled, sample_leads):
     with client.session_transaction() as sess:
         sess["_user_id"] = str(admin_user.id)
 
@@ -46,9 +42,7 @@ def test_leads_list_default_excludes_converted_and_lost(
     assert "Lost Lead" not in html
 
 
-def test_leads_list_status_all_includes_converted_and_lost(
-    client, admin_user, leads_module_enabled, sample_leads
-):
+def test_leads_list_status_all_includes_converted_and_lost(client, admin_user, leads_module_enabled, sample_leads):
     with client.session_transaction() as sess:
         sess["_user_id"] = str(admin_user.id)
 
@@ -60,9 +54,7 @@ def test_leads_list_status_all_includes_converted_and_lost(
     assert "Lost Lead" in html
 
 
-def test_leads_list_status_converted_only(
-    client, admin_user, leads_module_enabled, sample_leads
-):
+def test_leads_list_status_converted_only(client, admin_user, leads_module_enabled, sample_leads):
     with client.session_transaction() as sess:
         sess["_user_id"] = str(admin_user.id)
 
